@@ -547,6 +547,25 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
     assert(buf[0 .. $ - w.length] == "@safe/pure 42");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=3479
+@safe unittest
+{
+    import std.array;
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%2$.*1$d", 12, 10);
+    assert(stream.data == "000000000010", stream.data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6893
+@safe unittest
+{
+    import std.array;
+    enum E : ulong { A, B, C }
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%s", E.C);
+    assert(stream.data == "C");
+}
+
 // Fix for https://issues.dlang.org/show_bug.cgi?id=1591
 private int getNthInt(string kind, A...)(uint index, A args)
 {

@@ -7,8 +7,6 @@ import std.traits;
 import std.range.primitives;
 import std.exception;
 
-//debug=format;                // uncomment to turn on debugging printf's
-
 package enum ctfpMessage = "Cannot format floating point types at compile-time";
 
 /**
@@ -856,238 +854,6 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assertThrown!FormatException(singleSpec("%2.3eTest"));
 }
 
-/* ======================== Unit Tests ====================================== */
-
-version (StdUnittest)
-private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-
-    auto input = w.data;
-    enforce!AssertError(
-            input == formatted,
-            input, fn, ln);
-
-    T val2;
-    formattedRead(input, fmt, &val2);
-    static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
-
-        assert(aa1.length == aa2.length);
-
-        assert(aa1.keys == aa2.keys);
-
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
-
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
-}
-
-version (StdUnittest)
-private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-
-    auto input = w.data;
-
-    foreach (cur; formatted)
-    {
-        if (input == cur) return;
-    }
-    enforce!AssertError(
-            false,
-            input,
-            fn,
-            ln);
-
-    T val2;
-    formattedRead(input, fmt, &val2);
-    static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
-
-        assert(aa1.length == aa2.length);
-
-        assert(aa1.keys == aa2.keys);
-
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
-
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
-}
-
-@system unittest
-{
-    void booleanTest()
-    {
-        auto b = true;
-        formatReflectTest(b, "%s",  `true`);
-        formatReflectTest(b, "%b",  `1`);
-        formatReflectTest(b, "%o",  `1`);
-        formatReflectTest(b, "%d",  `1`);
-        formatReflectTest(b, "%u",  `1`);
-        formatReflectTest(b, "%x",  `1`);
-    }
-
-    void integerTest()
-    {
-        auto n = 127;
-        formatReflectTest(n, "%s",  `127`);
-        formatReflectTest(n, "%b",  `1111111`);
-        formatReflectTest(n, "%o",  `177`);
-        formatReflectTest(n, "%d",  `127`);
-        formatReflectTest(n, "%u",  `127`);
-        formatReflectTest(n, "%x",  `7f`);
-    }
-
-    void floatingTest()
-    {
-        auto f = 3.14;
-        formatReflectTest(f, "%s",  `3.14`);
-        version (MinGW)
-            formatReflectTest(f, "%e",  `3.140000e+000`);
-        else
-            formatReflectTest(f, "%e",  `3.140000e+00`);
-        formatReflectTest(f, "%f",  `3.140000`);
-        formatReflectTest(f, "%g",  `3.14`);
-    }
-
-    void charTest()
-    {
-        auto c = 'a';
-        formatReflectTest(c, "%s",  `a`);
-        formatReflectTest(c, "%c",  `a`);
-        formatReflectTest(c, "%b",  `1100001`);
-        formatReflectTest(c, "%o",  `141`);
-        formatReflectTest(c, "%d",  `97`);
-        formatReflectTest(c, "%u",  `97`);
-        formatReflectTest(c, "%x",  `61`);
-    }
-
-    void strTest()
-    {
-        auto s = "hello";
-        formatReflectTest(s, "%s",                      `hello`);
-        formatReflectTest(s, "%(%c,%)",                 `h,e,l,l,o`);
-        formatReflectTest(s, "%(%s,%)",                 `'h','e','l','l','o'`);
-        formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
-    }
-
-    void daTest()
-    {
-        auto a = [1,2,3,4];
-        formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
-        formatReflectTest(a, "[%(%s; %)]",              `[1; 2; 3; 4]`);
-        formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
-    }
-
-    void saTest()
-    {
-        int[4] sa = [1,2,3,4];
-        formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
-        formatReflectTest(sa, "[%(%s; %)]",             `[1; 2; 3; 4]`);
-        formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
-    }
-
-    void aaTest()
-    {
-        auto aa = [1:"hello", 2:"world"];
-        formatReflectTest(aa, "%s",                     [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
-        formatReflectTest(aa, "[%(%s->%s, %)]",         [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
-        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
-    }
-
-    import std.exception;
-    assertCTFEable!(
-    {
-        booleanTest();
-        integerTest();
-        if (!__ctfe) floatingTest();    // snprintf
-        charTest();
-        strTest();
-        daTest();
-        saTest();
-        aaTest();
-        return true;
-    });
-}
-
-/* ======================== Unit Tests ====================================== */
-
-// https://issues.dlang.org/show_bug.cgi?id=3479
-@safe unittest
-{
-    import std.array;
-    auto stream = appender!(char[])();
-    formattedWrite(stream, "%2$.*1$d", 12, 10);
-    assert(stream.data == "000000000010", stream.data);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=6893
-@safe unittest
-{
-    import std.array;
-    enum E : ulong { A, B, C }
-    auto stream = appender!(char[])();
-    formattedWrite(stream, "%s", E.C);
-    assert(stream.data == "C");
-}
-
-// Used to check format strings are compatible with argument types
-package(std) static const checkFormatException(alias fmt, Args...) =
-{
-    import std.conv : text;
-
-    try
-    {
-        auto n = .formattedWrite(NoOpSink(), fmt, Args.init);
-
-        enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
-    }
-    catch (Exception e)
-        return (e.msg == ctfpMessage) ? null : e;
-    return null;
-}();
-
-// Like NullSink, but toString() isn't even called at all. Used to test the format string.
-package struct NoOpSink
-{
-    void put(E)(scope const E) pure @safe @nogc nothrow {}
-}
-
 /*****************************
  * The .ptr is unsafe because it could be dereferenced and the length of the array may be 0.
  * Returns:
@@ -1097,6 +863,80 @@ package struct NoOpSink
     ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2)
 {
     return array1.ptr - array2.ptr;
+}
+
+// Like NullSink, but toString() isn't even called at all. Used to test the format string.
+package struct NoOpSink
+{
+    void put(E)(scope const E) pure @safe @nogc nothrow {}
+}
+
+/**
+ * Format arguments into a string.
+ *
+ * If the format string is fixed, passing it as a template parameter checks the
+ * type correctness of the parameters at compile-time. This also can result in
+ * better performance.
+ *
+ * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
+ *         args = Variadic list of arguments to format into returned string.
+ *
+ * Throws:
+ *     $(LREF, FormatException) if the number of arguments doesn't match the number
+ *     of format parameters and vice-versa.
+ */
+typeof(fmt) format(alias fmt, Args...)(Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    import std.array : appender;
+
+    alias e = checkFormatException!(fmt, Args);
+    alias Char = Unqual!(ElementEncodingType!(typeof(fmt)));
+
+    static assert(!e, e.msg);
+    auto w = appender!(immutable(Char)[]);
+
+    // no need to traverse the string twice during compile time
+    if (!__ctfe)
+    {
+        enum len = guessLength!Char(fmt);
+        w.reserve(len);
+    }
+    else
+    {
+        w.reserve(fmt.length);
+    }
+
+    formattedWrite(w, fmt, args);
+    return w.data;
+}
+
+/// Type checking can be done when fmt is known at compile-time:
+@safe unittest
+{
+    auto s = format!"%s is %s"("Pi", 3.14);
+    assert(s == "Pi is 3.14");
+
+    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
+    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
+    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+}
+
+/// ditto
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
+if (isSomeChar!Char)
+{
+    import std.array : appender;
+    auto w = appender!(immutable(Char)[]);
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
+    }
+    return w.data;
 }
 
 @safe unittest
@@ -1318,8 +1158,6 @@ package struct NoOpSink
 
     int i;
     string s;
-
-    debug(format) printf("std.format.format.unittest\n");
 
     s = format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
     assert(s == "hello world! true 57 1000000000x foo");
@@ -1632,55 +1470,38 @@ deprecated
     assert("%2s".format("a\u0310\u0337"d) == " a\u0310\u0337");
 }
 
-/**
- * Format arguments into a string.
- *
- * If the format string is fixed, passing it as a template parameter checks the
- * type correctness of the parameters at compile-time. This also can result in
- * better performance.
- *
- * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
- *         args = Variadic list of arguments to format into returned string.
- *
- * Throws:
- *     $(LREF, FormatException) if the number of arguments doesn't match the number
- *     of format parameters and vice-versa.
- */
-typeof(fmt) format(alias fmt, Args...)(Args args)
-if (isSomeString!(typeof(fmt)))
+@safe pure unittest
 {
-    import std.array : appender;
-
-    alias e = checkFormatException!(fmt, Args);
-    alias Char = Unqual!(ElementEncodingType!(typeof(fmt)));
-
-    static assert(!e, e.msg);
-    auto w = appender!(immutable(Char)[]);
-
-    // no need to traverse the string twice during compile time
-    if (!__ctfe)
+    import core.exception;
+    import std.exception;
+    assertCTFEable!(
     {
-        enum len = guessLength!Char(fmt);
-        w.reserve(len);
-    }
-    else
-    {
-        w.reserve(fmt.length);
-    }
+//  assert(format(null) == "");
+    assert(format("foo") == "foo");
+    assert(format("foo%%") == "foo%");
+    assert(format("foo%s", 'C') == "fooC");
+    assert(format("%s foo", "bar") == "bar foo");
+    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(format("foo %d", -123) == "foo -123");
+    assert(format("foo %d", 123) == "foo 123");
 
-    formattedWrite(w, fmt, args);
-    return w.data;
+    assertThrown!FormatException(format("foo %s"));
+    assertThrown!FormatException(format("foo %s", 123, 456));
+
+    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
+                  "helworldlo-138ctrue");
+    });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
 }
 
-/// Type checking can be done when fmt is known at compile-time:
+// https://issues.dlang.org/show_bug.cgi?id=16661
 @safe unittest
 {
-    auto s = format!"%s is %s"("Pi", 3.14);
-    assert(s == "Pi is 3.14");
-
-    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
-    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
-    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+    assert(format("%.2f"d, 0.4) == "0.40");
+    assert("%02d"d.format(1) == "01"d);
 }
 
 // called during compilation to guess the length of the
@@ -1767,57 +1588,6 @@ unittest
     assert(guessLength!char("%02d:%02d:%02d") == 8);
     assert(guessLength!char("%0.2f") == 7);
     assert(guessLength!char("%0*d") == 0);
-}
-
-/// ditto
-immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
-if (isSomeChar!Char)
-{
-    import std.array : appender;
-    auto w = appender!(immutable(Char)[]);
-    auto n = formattedWrite(w, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        import std.conv : text;
-        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
-    }
-    return w.data;
-}
-
-@safe pure unittest
-{
-    import core.exception;
-    import std.exception;
-    assertCTFEable!(
-    {
-//  assert(format(null) == "");
-    assert(format("foo") == "foo");
-    assert(format("foo%%") == "foo%");
-    assert(format("foo%s", 'C') == "fooC");
-    assert(format("%s foo", "bar") == "bar foo");
-    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
-    assert(format("foo %d", -123) == "foo -123");
-    assert(format("foo %d", 123) == "foo 123");
-
-    assertThrown!FormatException(format("foo %s"));
-    assertThrown!FormatException(format("foo %s", 123, 456));
-
-    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
-                  "helworldlo-138ctrue");
-    });
-
-    assert(is(typeof(format("happy")) == string));
-    assert(is(typeof(format("happy"w)) == wstring));
-    assert(is(typeof(format("happy"d)) == dstring));
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=16661
-@safe unittest
-{
-    assert(format("%.2f"d, 0.4) == "0.40");
-    assert("%02d"d.format(1) == "01"d);
 }
 
 /*****************************************************
@@ -1909,9 +1679,6 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 @system unittest
 {
     import core.exception;
-
-    debug(string) trustedPrintf("std.string.sformat.unittest\n");
-
     import std.exception;
     assertCTFEable!(
     {
@@ -1942,5 +1709,209 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     sformat(buf, "%s", a);
     sformat(buf, "%s", 'c');
     assert(u == GC.stats().usedSize);
+}
+
+// Used to check format strings are compatible with argument types
+package(std) static const checkFormatException(alias fmt, Args...) =
+{
+    import std.conv : text;
+
+    try
+    {
+        auto n = .formattedWrite(NoOpSink(), fmt, Args.init);
+
+        enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
+    }
+    catch (Exception e)
+        return (e.msg == ctfpMessage) ? null : e;
+    return null;
+}();
+
+
+version (StdUnittest)
+private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+
+    auto input = w.data;
+    enforce!AssertError(
+            input == formatted,
+            input, fn, ln);
+
+    T val2;
+    formattedRead(input, fmt, &val2);
+    static if (isAssociativeArray!T)
+    if (__ctfe)
+    {
+        alias aa1 = val;
+        alias aa2 = val2;
+        assert(aa1 == aa2);
+
+        assert(aa1.length == aa2.length);
+
+        assert(aa1.keys == aa2.keys);
+
+        assert(aa1.values == aa2.values);
+        assert(aa1.values.length == aa2.values.length);
+        foreach (i; 0 .. aa1.values.length)
+            assert(aa1.values[i] == aa2.values[i]);
+
+        foreach (i, key; aa1.keys)
+            assert(aa1.values[i] == aa1[key]);
+        foreach (i, key; aa2.keys)
+            assert(aa2.values[i] == aa2[key]);
+        return;
+    }
+    enforce!AssertError(
+            val == val2,
+            input, fn, ln);
+}
+
+version (StdUnittest)
+private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+
+    auto input = w.data;
+
+    foreach (cur; formatted)
+    {
+        if (input == cur) return;
+    }
+    enforce!AssertError(
+            false,
+            input,
+            fn,
+            ln);
+
+    T val2;
+    formattedRead(input, fmt, &val2);
+    static if (isAssociativeArray!T)
+    if (__ctfe)
+    {
+        alias aa1 = val;
+        alias aa2 = val2;
+        assert(aa1 == aa2);
+
+        assert(aa1.length == aa2.length);
+
+        assert(aa1.keys == aa2.keys);
+
+        assert(aa1.values == aa2.values);
+        assert(aa1.values.length == aa2.values.length);
+        foreach (i; 0 .. aa1.values.length)
+            assert(aa1.values[i] == aa2.values[i]);
+
+        foreach (i, key; aa1.keys)
+            assert(aa1.values[i] == aa1[key]);
+        foreach (i, key; aa2.keys)
+            assert(aa2.values[i] == aa2[key]);
+        return;
+    }
+    enforce!AssertError(
+            val == val2,
+            input, fn, ln);
+}
+
+@system unittest
+{
+    void booleanTest()
+    {
+        auto b = true;
+        formatReflectTest(b, "%s",  `true`);
+        formatReflectTest(b, "%b",  `1`);
+        formatReflectTest(b, "%o",  `1`);
+        formatReflectTest(b, "%d",  `1`);
+        formatReflectTest(b, "%u",  `1`);
+        formatReflectTest(b, "%x",  `1`);
+    }
+
+    void integerTest()
+    {
+        auto n = 127;
+        formatReflectTest(n, "%s",  `127`);
+        formatReflectTest(n, "%b",  `1111111`);
+        formatReflectTest(n, "%o",  `177`);
+        formatReflectTest(n, "%d",  `127`);
+        formatReflectTest(n, "%u",  `127`);
+        formatReflectTest(n, "%x",  `7f`);
+    }
+
+    void floatingTest()
+    {
+        auto f = 3.14;
+        formatReflectTest(f, "%s",  `3.14`);
+        version (MinGW)
+            formatReflectTest(f, "%e",  `3.140000e+000`);
+        else
+            formatReflectTest(f, "%e",  `3.140000e+00`);
+        formatReflectTest(f, "%f",  `3.140000`);
+        formatReflectTest(f, "%g",  `3.14`);
+    }
+
+    void charTest()
+    {
+        auto c = 'a';
+        formatReflectTest(c, "%s",  `a`);
+        formatReflectTest(c, "%c",  `a`);
+        formatReflectTest(c, "%b",  `1100001`);
+        formatReflectTest(c, "%o",  `141`);
+        formatReflectTest(c, "%d",  `97`);
+        formatReflectTest(c, "%u",  `97`);
+        formatReflectTest(c, "%x",  `61`);
+    }
+
+    void strTest()
+    {
+        auto s = "hello";
+        formatReflectTest(s, "%s",                      `hello`);
+        formatReflectTest(s, "%(%c,%)",                 `h,e,l,l,o`);
+        formatReflectTest(s, "%(%s,%)",                 `'h','e','l','l','o'`);
+        formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
+    }
+
+    void daTest()
+    {
+        auto a = [1,2,3,4];
+        formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
+        formatReflectTest(a, "[%(%s; %)]",              `[1; 2; 3; 4]`);
+        formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    void saTest()
+    {
+        int[4] sa = [1,2,3,4];
+        formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
+        formatReflectTest(sa, "[%(%s; %)]",             `[1; 2; 3; 4]`);
+        formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    void aaTest()
+    {
+        auto aa = [1:"hello", 2:"world"];
+        formatReflectTest(aa, "%s",                     [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
+        formatReflectTest(aa, "[%(%s->%s, %)]",         [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
+        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
+    }
+
+    import std.exception;
+    assertCTFEable!(
+    {
+        booleanTest();
+        integerTest();
+        if (!__ctfe) floatingTest();    // snprintf
+        charTest();
+        strTest();
+        daTest();
+        saTest();
+        aaTest();
+        return true;
+    });
 }
 
