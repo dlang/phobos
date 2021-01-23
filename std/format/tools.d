@@ -1,5 +1,18 @@
 // Written in the D programming language.
 
+/**
+   This is a submodule of $(MREF std, format).
+   It provides some helpful tools.
+
+   Copyright: Copyright The D Language Foundation 2000-2013.
+
+   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+   Andrei Alexandrescu), and Kenji Hara
+
+   Source: $(PHOBOSSRC std/format/tools.d)
+ */
 module std.format.tools;
 
 import std.format;
@@ -878,7 +891,7 @@ package struct NoOpSink
  * type correctness of the parameters at compile-time. This also can result in
  * better performance.
  *
- * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(REF_ALTTEXT formattedWrite, formattedWrite, format,write).
  *         args = Variadic list of arguments to format into returned string.
  *
  * Throws:

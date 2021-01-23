@@ -1,5 +1,18 @@
 // Written in the D programming language.
 
+/**
+   This is a submodule of $(MREF std, format).
+   It provides writing values to an OutputRange.
+
+   Copyright: Copyright The D Language Foundation 2000-2013.
+
+   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+   Andrei Alexandrescu), and Kenji Hara
+
+   Source: $(PHOBOSSRC std/format/write.d)
+ */
 module std.format.write;
 
 import std.format.tools;
@@ -370,7 +383,7 @@ if (isSomeString!(typeof(fmt)))
     return .formattedWrite(w, fmt, args);
 }
 
-/// The format string can be checked at compile-time (see $(LREF format) for details):
+/// The format string can be checked at compile-time (see see $(REF_ALTTEXT format, format, std,format,tools) for details):
 @safe pure unittest
 {
     import std.array : appender;
@@ -642,7 +655,7 @@ private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
  * Params:
  *     w = The $(REF_ALTTEXT output range, isOutputRange, std,range,primitives) to write to.
  *     val = The value to write.
- *     f = The $(REF FormatSpec, std, format) defining how to write the value.
+ *     f = The $(REF FormatSpec, std, format, tools) defining how to write the value.
  */
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 {

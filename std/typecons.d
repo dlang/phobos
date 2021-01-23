@@ -1284,7 +1284,7 @@ if (distinctFieldNames!(Specs))
          *
          * Params:
          *     sink = A `char` accepting delegate
-         *     fmt = A $(REF FormatSpec, std,format)
+         *     fmt = A $(REF FormatSpec, std,format,tools)
          */
         void toString(DG)(scope DG sink) const
         {
@@ -2859,13 +2859,13 @@ struct Nullable(T)
 
     /**
      * Gives the string `"Nullable.null"` if `isNull` is `true`. Otherwise, the
-     * result is equivalent to calling $(REF formattedWrite, std,format) on the
+     * result is equivalent to calling $(REF formattedWrite, std,format,write) on the
      * underlying value.
      *
      * Params:
      *     writer = A `char` accepting
      *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-     *     fmt = A $(REF FormatSpec, std,format) which is used to represent
+     *     fmt = A $(REF FormatSpec, std,format,tools) which is used to represent
      *     the value if this Nullable is not null
      * Returns:
      *     A `string` if `writer` and `fmt` are not set; `void` otherwise.

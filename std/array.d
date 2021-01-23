@@ -3608,7 +3608,7 @@ if (isDynamicArray!A)
      * Params:
      *     w = A `char` accepting
      *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives).
-     *     fmt = A $(REF FormatSpec, std, format) which controls how the array
+     *     fmt = A $(REF FormatSpec, std, format, tools) which controls how the array
      *     is formatted.
      * Returns:
      *     A `string` if `writer` is not set; `void` otherwise.

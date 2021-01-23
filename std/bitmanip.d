@@ -2529,7 +2529,7 @@ public:
      * Params:
      *     sink = A `char` accepting
      *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives).
-     *     fmt = A $(REF FormatSpec, std,format) which controls how the data
+     *     fmt = A $(REF FormatSpec, std,format,tools) which controls how the data
      *     is displayed.
      */
     void toString(W)(ref W sink, scope const ref FormatSpec!char fmt) const

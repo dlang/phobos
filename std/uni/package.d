@@ -2421,7 +2421,7 @@ public:
         open-right intervals and feed it to `sink`.
         )
         $(P Used by various standard formatting facilities such as
-         $(REF formattedWrite, std,format), $(REF write, std,stdio),
+         $(REF formattedWrite, std,format,write), $(REF write, std,stdio),
          $(REF writef, std,stdio), $(REF to, std,conv) and others.
         )
         Example:

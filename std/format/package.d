@@ -14,16 +14,16 @@
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF formattedRead))
+    $(TR $(TD $(SUBREF read, formattedRead))
         $(TD Reads values according to the format string from an InputRange.
     ))
-    $(TR $(TD $(LREF formattedWrite))
+    $(TR $(TD $(SUBREF write, formattedWrite))
         $(TD Formats its arguments according to the format string and puts them
         to an OutputRange.
     ))
 )
 
-   Please see the documentation of function $(LREF formattedWrite) for a
+   Please see the documentation of function $(SUBREF write, formattedWrite) for a
    description of the format string.
 
    Two functions have been added for convenience:
@@ -31,10 +31,10 @@ $(TR $(TH Function Name) $(TH Description)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(LREF format))
+    $(TR $(TD $(SUBREF tools, format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
-    $(TR $(TD $(LREF sformat))
+    $(TR $(TD $(SUBREF tools, sformat))
         $(TD Puts the formatting result into a preallocated array.
     ))
 )
@@ -42,8 +42,23 @@ $(TR $(TH Function Name) $(TH Description)
    These two functions are publicly imported by $(MREF std, string)
    to be easily available.
 
-   The functions $(LREF formatValue) and $(LREF unformatValue) are
+   The functions $(SUBREF write, formatValue) and $(SUBREF read, unformatValue) are
    used for the plumbing.
+
+   Submodules:
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(SUBMODULE Reading, read)))
+    $(TR $(TD $(SUBMODULE Writing, write)))
+    $(TR $(TD $(SUBMODULE Tools, tools)))
+)
+
+Macros:
+SUBMODULE = $(MREF_ALTTEXT $1, std, format, $2)
+SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, format, $1)$(NBSP)
+
    Copyright: Copyright The D Language Foundation 2000-2013.
 
    License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -51,7 +66,7 @@ $(TR $(TH Function Name) $(TH Description)
    Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
    Andrei Alexandrescu), and Kenji Hara
 
-   Source: $(PHOBOSSRC std/format.d)
+   Source: $(PHOBOSSRC std/format/package.d)
  */
 module std.format;
 

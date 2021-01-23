@@ -1,6 +1,18 @@
 // Written in the D programming language.
 
-/// Helper functions for floating point numbers for std.format package.
+/**
+   Helper functions for floating point numbers for std.format package.
+
+   Copyright: Copyright The D Language Foundation 2000-2013.
+
+   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+   Authors: Bernhard Seckinger
+
+   Source: $(PHOBOSSRC std/format/floats.d)
+ */
+
+///
 module std.format.floats;
 
 import std.format;

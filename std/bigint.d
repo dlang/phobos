@@ -1329,7 +1329,7 @@ public:
 
     /**
         `toString` is rarely directly invoked; the usual way of using it is via
-        $(REF format, std, format):
+        $(REF format, std, format, tools):
      */
     @safe unittest
     {

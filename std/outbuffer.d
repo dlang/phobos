@@ -302,12 +302,12 @@ class OutBuffer
      * Formats and writes its arguments in text format to the OutBuffer.
      *
      * Params:
-     *  fmt = format string as described in $(REF formattedWrite, std,format)
+     *  fmt = format string as described in $(REF formattedWrite, std,format,write)
      *  args = arguments to be formatted
      *
      * See_Also:
      *  $(REF _writef, std,stdio);
-     *  $(REF formattedWrite, std,format);
+     *  $(REF formattedWrite, std,format,write);
      */
     void writef(Char, A...)(scope const(Char)[] fmt, A args)
     {
@@ -328,12 +328,12 @@ class OutBuffer
      * followed by a newline.
      *
      * Params:
-     *  fmt = format string as described in $(REF formattedWrite, std,format)
+     *  fmt = format string as described in $(REF formattedWrite, std,format,write)
      *  args = arguments to be formatted
      *
      * See_Also:
      *  $(REF _writefln, std,stdio);
-     *  $(REF formattedWrite, std,format);
+     *  $(REF formattedWrite, std,format,write);
      */
     void writefln(Char, A...)(scope const(Char)[] fmt, A args)
     {

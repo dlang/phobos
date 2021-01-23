@@ -1,5 +1,18 @@
 // Written in the D programming language.
 
+/**
+   This is a submodule of $(MREF std, format).
+   It provides reading values from an InputRange.
+
+   Copyright: Copyright The D Language Foundation 2000-2013.
+
+   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+   Andrei Alexandrescu), and Kenji Hara
+
+   Source: $(PHOBOSSRC std/format/read.d)
+ */
 module std.format.read;
 
 import std.format.tools;
@@ -94,7 +107,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     }
 }
 
-/// The format string can be checked at compile-time (see $(LREF format) for details):
+/// The format string can be checked at compile-time (see $(REF_ALTTEXT format, format, std,format,tools) for details):
 @safe pure unittest
 {
     import std.math : isClose;
