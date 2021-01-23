@@ -2,13 +2,10 @@
 
 module std.format.write;
 
-import std.format;
+import std.format.tools;
 import std.exception;
-import std.meta;
 import std.range.primitives;
 import std.traits;
-
-//debug=format;                // uncomment to turn on debugging printf's
 
 /**********************************************************************
    Interprets variadic argument list `args`, formats them according
@@ -536,7 +533,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
 
 @safe pure unittest
 {
-    import std.array;
+    import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, "%s %d", "@safe/pure", 42);
     assert(w.data == "@safe/pure 42");
@@ -1623,6 +1620,7 @@ useSnprintf:
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+    import std.meta : AliasSeq;
 
     assert(collectExceptionMsg!FormatException(format("%d", 5.1)).back == 'd');
 
@@ -1757,6 +1755,8 @@ deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+    import std.meta : AliasSeq;
+
     static foreach (T; AliasSeq!(cfloat, cdouble, creal))
     {
         formatTest( to!(          T)(1 + 1i), "1+1i" );
@@ -1808,6 +1808,8 @@ deprecated
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+    import std.meta : AliasSeq;
+
     static foreach (T; AliasSeq!(ifloat, idouble, ireal))
     {
         formatTest( to!(          T)(1i), "1i" );
@@ -1842,6 +1844,8 @@ deprecated
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.meta : AliasSeq;
+
     CharTypeOf!T[1] val = obj;
 
     if (f.spec == 's' || f.spec == 'c')
@@ -2129,6 +2133,8 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 
 @system unittest
 {
+    import std.meta : AliasSeq;
+
     // string literal from valid UTF sequence is encoding free.
     static foreach (StrType; AliasSeq!(string, wstring, dstring))
     {
@@ -3299,7 +3305,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
 @system unittest
 {
-    import std.array;
+    import std.array : appender;
     // https://issues.dlang.org/show_bug.cgi?id=7230
     static struct Bug7230
     {
@@ -3756,7 +3762,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
-    import std.array;
+    import std.array : appender;
 
     auto stream = appender!string();
     formattedWrite(stream, "%s", 1.1);
@@ -3765,8 +3771,8 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe pure unittest
 {
-    import std.algorithm;
-    import std.array;
+    import std.algorithm.iteration : map;
+    import std.array : appender;
 
     auto stream = appender!string();
     formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
@@ -3781,7 +3787,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe pure unittest
 {
-    import std.array;
+    import std.array : appender;
     auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
     assert(stream.data == "42", stream.data);
@@ -3790,7 +3796,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 @safe pure unittest
 {
     // testing raw writes
-    import std.array;
+    import std.array : appender;
     auto w = appender!(char[])();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
@@ -3805,7 +3811,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 @safe pure unittest
 {
     // testing positional parameters
-    import std.array;
+    import std.array : appender;
     auto w = appender!(char[])();
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
@@ -3830,10 +3836,7 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     import std.conv : text, octal;
     import core.stdc.stdio : snprintf;
 
-    debug(format) printf("std.format.format.unittest\n");
-
     auto stream = appender!(char[])();
-    //goto here;
 
     formattedWrite(stream,
             "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
@@ -3941,9 +3944,6 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     stream.clear(); formattedWrite(stream, "%0.0008f", 1e-05);
     assert(stream.data == "0.00001000");
 
-    //return;
-    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
-
     s = "helloworld";
     string r;
     stream.clear(); formattedWrite(stream, "%.2s", s[0 .. 5]);
@@ -4028,7 +4028,6 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     assert(stream.data == "7  ");
 
     stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
-    //writeln(stream.data);
     assert(stream.data == "7");
 
     stream.clear(); formattedWrite(stream, "%s", "abc"c);
@@ -4152,8 +4151,8 @@ here:
 
 @safe unittest
 {
-    import std.array;
-    import std.stdio;
+    import std.array : appender;
+    import std.meta : AliasSeq;
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     assert(aa[3] == "hello");
@@ -4174,14 +4173,3 @@ here:
     stream.clear();
     formattedWrite(stream, "%s", aa);
 }
-
-@system unittest
-{
-    string s = "hello!124:34.5";
-    string a;
-    int b;
-    double c;
-    formattedRead(s, "%s!%s:%s", &a, &b, &c);
-    assert(a == "hello" && b == 124 && c == 34.5);
-}
-

@@ -394,6 +394,16 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     assert(aa2 == ["hello":1, "world":2]);
 }
 
+@system unittest
+{
+    string s = "hello!124:34.5";
+    string a;
+    int b;
+    double c;
+    formattedRead(s, "%s!%s:%s", &a, &b, &c);
+    assert(a == "hello" && b == 124 && c == 34.5);
+}
+
 private void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
