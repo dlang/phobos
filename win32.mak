@@ -100,7 +100,6 @@ SRC= \
 SRC_STD_1= \
 	std\stdio.d \
 	std\string.d \
-	std\format.d \
 	std\file.d
 
 SRC_STD_2a= \
@@ -201,6 +200,13 @@ SRC_STD_DIGEST= \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
+
+SRC_STD_FORMAT= \
+	std\format\package.d \
+	std\format\floats.d \
+	std\format\read.d \
+	std\format\tools.d \
+	std\format\write.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -309,6 +315,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
+	$(SRC_STD_FORMAT) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -378,6 +385,7 @@ UNITTEST_OBJS= \
 		unittest3b.obj \
 		unittest4.obj \
 		unittest5.obj \
+		unittest5a.obj \
 		unittest6.obj \
 		unittest6a.obj \
 		unittest6b.obj \
@@ -398,6 +406,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3b.obj $(SRC_STD_DATETIME)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5.obj $(SRC_STD_ALGO)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5a.obj $(SRC_STD_FORMAT)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6a.obj $(SRC_STD_EXP_ALLOC)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_EXP_LOGGER)
@@ -425,7 +434,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	del *.lst
 	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\stdio.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\string.d
-	$(DMD) -conf= -cov=ctfe -cov=71 $(UDFLAGS) -main -run std\format.d
 	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\file.d
 	$(DMD) -conf= -cov=ctfe -cov=86 $(UDFLAGS) -main -run std\range\package.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\array.d
@@ -476,6 +484,11 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\searching.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\setops.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\sorting.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\format\package.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\format\floats.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\format\read.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\format\tools.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\format\write.d
 	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\variant.d
 	$(DMD) -conf= -cov=ctfe -cov=58 $(UDFLAGS) -main -run std\zlib.d
 	$(DMD) -conf= -cov=ctfe -cov=53 $(UDFLAGS) -main -run std\socket.d
