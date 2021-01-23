@@ -2948,6 +2948,41 @@ useSnprintf:
            ~"0000000000000000000000000000000000000000000000000000000000000000000p+0");
 }
 
+@safe unittest
+{
+    import std.math;
+
+    // std.math's FloatingPointControl isn't available on all target platforms
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+        assert(format!"%.0e"(3.5) == "4e+00");
+        assert(format!"%.0e"(4.5) == "5e+00");
+        assert(format!"%.0e"(-3.5) == "-3e+00");
+        assert(format!"%.0e"(-4.5) == "-4e+00");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+        assert(format!"%.0e"(3.5) == "3e+00");
+        assert(format!"%.0e"(4.5) == "4e+00");
+        assert(format!"%.0e"(-3.5) == "-4e+00");
+        assert(format!"%.0e"(-4.5) == "-5e+00");
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+        assert(format!"%.0e"(3.5) == "3e+00");
+        assert(format!"%.0e"(4.5) == "4e+00");
+        assert(format!"%.0e"(-3.5) == "-3e+00");
+        assert(format!"%.0e"(-4.5) == "-4e+00");
+
+        fpctrl.rounding = FloatingPointControl.roundToNearest;
+        assert(format!"%.0e"(3.5) == "4e+00");
+        assert(format!"%.0e"(4.5) == "4e+00");
+        assert(format!"%.0e"(-3.5) == "-4e+00");
+        assert(format!"%.0e"(-4.5) == "-4e+00");
+    }
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
