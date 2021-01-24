@@ -7739,7 +7739,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     //   digits. If still necessary, we decide the rounding type, mainly by looking at the
     //   next digit.
 
-    ulong[4] bigbuf;
+    ulong[18] bigbuf;
     if (exp >= T.mant_dig)
     {
         // large number without fractional digits
@@ -7749,7 +7749,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         int count = exp / 60 + 1;
 
         // saved in big endian format
-        ulong[] mybig = count <= bigbuf.length ? bigbuf[0 .. count] : new ulong[count];
+        ulong[] mybig = bigbuf[0 .. count];
 
         // only the first or the first two ulongs contain the mantiassa. The rest are zeros.
         int lower = 60 - (exp - T.mant_dig + 1) % 60;
@@ -7819,7 +7819,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         int count = (T.mant_dig - exp - 2) / 60 + 1;
 
         // saved in little endian format
-        ulong[] mybig = count <= bigbuf.length ? bigbuf[0 .. count] : new ulong[count];
+        ulong[] mybig = bigbuf[0 .. count];
 
         // only the last or the last two ulongs contain the mantiassa. Because of little endian
         // format these are the ulongs at index 0 and 1. The rest are zeros.
@@ -8433,7 +8433,7 @@ printFloat_done:
     import core.memory;
     auto stats = GC.stats;
 
-    char[256] buf;
+    char[512] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     assert(printFloat(buf[], float.nan, f) == "nan");
@@ -8456,6 +8456,13 @@ printFloat_done:
 
     f.precision = 6;
     assert(printFloat(buf[], -1.1418613e+07f, f) == "-1.141861E+07");
+
+    f.precision = 20;
+    assert(printFloat(buf[], double.max, f) == "1.79769313486231570815E+308");
+    assert(printFloat(buf[], nextUp(0.0), f) == "4.94065645841246544177E-324");
+
+    f.precision = 494;
+    assert(printFloat(buf[], 1.0, f).length == 500);
 
     assert(GC.stats.usedSize == stats.usedSize);
 }
