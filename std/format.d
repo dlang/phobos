@@ -8592,7 +8592,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     //   the fractional part by consecutive multiplication by 10. Again only until we have enough
     //   digits. Finally, we decide the rounding type, mainly by looking at the next digit.
 
-    ulong[4] bigbuf;
+    ulong[18] bigbuf;
     if (exp >= T.mant_dig)
     {
         // large number without fractional digits
@@ -8602,7 +8602,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         int count = exp/60 + 1;
 
         // saved in big endian format
-        ulong[] mybig = count <= bigbuf.length ? bigbuf[0 .. count] : new ulong[count];
+        ulong[] mybig = bigbuf[0 .. count];
 
         // only the first or the first two ulongs contain the mantiassa. The rest are zeros.
         int lower = 60 - (exp - T.mant_dig + 1) % 60;
@@ -8644,7 +8644,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         int count = (T.mant_dig - exp - 2) / 60 + 1;
 
         // saved in little endian format
-        ulong[] mybig = count <= bigbuf.length ? bigbuf[0 .. count] : new ulong[count];
+        ulong[] mybig = bigbuf[0 .. count];
 
         // only the last or the last two ulongs contain the mantiassa. Because of little endian
         // format these are the ulongs at index 0 and 1. The rest are zeros.
@@ -9246,6 +9246,17 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
     assert(printFloat(buf[], nextUp(0.0), f) == "4.94065645841246544177E-324");
 
     f.precision = 494;
+    assert(printFloat(buf[], 1.0, f).length == 500);
+
+    f.spec = 'f';
+    f.precision = 15;
+    assert(printFloat(buf[], cast(double) E, f) == "2.718281828459045");
+
+    f.precision = 20;
+    assert(printFloat(buf[], double.max, f).length == 330);
+    assert(printFloat(buf[], nextUp(0.0), f) == "0.00000000000000000000");
+
+    f.precision = 498;
     assert(printFloat(buf[], 1.0, f).length == 500);
 
     assert(GC.stats.usedSize == stats.usedSize);
