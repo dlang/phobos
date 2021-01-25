@@ -1410,7 +1410,8 @@ do
     assert(str.decodeBack(i) == 'å' && i == 2 && str.empty);
 }
 
-// Gives the maximum value that a code unit for the given range type can hold.
+// For the given range, code unit values less than this
+// are guaranteed to be valid single-codepoint encodings.
 package template codeUnitLimit(S)
 if (isSomeChar!(ElementEncodingType!S))
 {
