@@ -201,7 +201,6 @@ class FileException : Exception
                           size_t line = __LINE__) @safe
     {
         this(name, sysErrorString(errno), file, line);
-        this.errno = errno;
     }
     else version (Posix) this(in char[] name,
                              uint errno = .errno,
@@ -210,7 +209,6 @@ class FileException : Exception
     {
         import std.exception : errnoString;
         this(name, errnoString(errno), file, line);
-        this.errno = errno;
     }
 }
 
