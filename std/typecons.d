@@ -2942,6 +2942,22 @@ struct Nullable(T)
     }
 
     /**
+     * If value is null, sets this to null, otherwise assigns
+     * `value.get` to the internally-held state. If the assignment
+     * succeeds, `this` becomes non-null.
+     *
+     * Params:
+     *     value = A value of type `Nullable!T` to assign to this `Nullable`.
+     */
+    void opAssign()(Nullable!T value)
+    {
+        if (value._isNull)
+            nullify();
+        else
+            opAssign(value.get());
+    }
+
+    /**
      * If this `Nullable` wraps a type that already has a null value
      * (such as a pointer), then assigning the null value to this
      * `Nullable` is no different than assigning any other value of
