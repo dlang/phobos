@@ -422,7 +422,7 @@ if (!is(immutable T == immutable bool))
         size_t insertBack(Elem)(Elem elem)
         if (isImplicitlyConvertible!(Elem, T))
         {
-            import std.conv : emplace;
+            import core.lifetime : emplace;
             if (_capacity == length)
             {
                 reserve(1 + capacity * 3 / 2);
@@ -466,7 +466,7 @@ if (!is(immutable T == immutable bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         static if (T.sizeof == 1)
         {
@@ -947,7 +947,7 @@ if (!is(immutable T == immutable bool))
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         enforce(r._outer._data is _data && r._a <= length);
         reserve(length + 1);
         assert(_data.refCountedStore.isInitialized,
@@ -965,7 +965,7 @@ if (!is(immutable T == immutable bool))
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         enforce(r._outer._data is _data && r._a <= length);
         static if (isForwardRange!Stuff)
         {

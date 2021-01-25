@@ -2490,7 +2490,7 @@ private
             }
             if (n)
             {
-                import std.conv : emplace;
+                import core.lifetime : emplace;
                 emplace!Node(n, v);
             }
             else

@@ -1334,7 +1334,7 @@ template memoize(alias fun, uint maxSize)
         }
 
         import core.bitop : bt, bts;
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         size_t hash;
         foreach (ref arg; args)

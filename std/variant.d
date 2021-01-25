@@ -343,7 +343,7 @@ private:
                            is(T == shared const(U), U) ||
                            is(T ==    immutable(U), U))
                 {
-                    import std.conv : emplaceRef;
+                    import core.internal.lifetime : emplaceRef;
 
                     auto zat = cast(T*) target;
                     if (src)

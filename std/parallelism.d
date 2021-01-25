@@ -1720,7 +1720,7 @@ public:
         auto amap(Args...)(Args args)
         if (isRandomAccessRange!(Args[0]))
         {
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
 
             alias fun = adjoin!(staticMap!(unaryFun, functions));
 
@@ -2538,7 +2538,7 @@ public:
         auto reduce(Args...)(Args args)
         {
             import core.exception : OutOfMemoryError;
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
             import std.exception : enforce;
 
             alias fun = reduceAdjoin!functions;

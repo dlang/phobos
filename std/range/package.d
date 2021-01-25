@@ -1471,7 +1471,7 @@ private struct ChooseResult(R1, R2)
     this(bool r1Chosen, return scope R1 r1, return scope R2 r2) @trusted
     {
         // @trusted because of assignment of r1 and r2 which overlap each other
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         // This should be the only place r1Chosen is ever assigned
         // independently
@@ -11627,7 +11627,7 @@ public:
 
         private static string _genSave() @safe pure nothrow
         {
-            return `import std.conv : emplace;` ~
+            return `import core.lifetime : emplace;` ~
                    `alias S = typeof((*_range).save);` ~
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
@@ -11791,7 +11791,7 @@ public:
 
         private static string _genOpSlice() @safe pure nothrow
         {
-            return `import std.conv : emplace;` ~
+            return `import core.lifetime : emplace;` ~
                    `alias S = typeof((*_range)[begin .. end]);` ~
                    `static assert(hasSlicing!S, S.stringof ~ " is not sliceable.");` ~
                    `auto mem = new void[S.sizeof];` ~

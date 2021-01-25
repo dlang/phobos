@@ -121,7 +121,7 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
         if (length == 0)
             return null;
 
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
 
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
@@ -1223,7 +1223,7 @@ if (!isSomeString!(T[])
 {
     static if (allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
 
         immutable oldLen = array.length;
 
@@ -1986,7 +1986,7 @@ if (isInputRange!RoR &&
 
     static if (hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
         size_t length;          // length of result array
         size_t rorLength;       // length of range ror
         foreach (r; ror.save)
@@ -2083,7 +2083,7 @@ if (isInputRange!RoR &&
         }
         else
         {
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
             import std.format : format;
             size_t length;
             size_t rorLength;
@@ -2172,7 +2172,7 @@ if (isInputRange!RoR &&
 
     static if (hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
         size_t length;
         foreach (r; ror.save)
             length += r.length;
@@ -3459,7 +3459,7 @@ if (isDynamicArray!A)
         }
         else
         {
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
 
             ensureAddable(1);
             immutable len = _data.arr.length;
@@ -3525,7 +3525,7 @@ if (isDynamicArray!A)
             }
             else
             {
-                import std.conv : emplaceRef;
+                import core.internal.lifetime : emplaceRef;
                 foreach (ref it ; bigData[len .. newlen])
                 {
                     emplaceRef!T(it, items.front);
@@ -4548,7 +4548,7 @@ if (isInputRange!T && is(ElementType!T : U))
 {
     import std.algorithm.mutation : uninitializedFill;
     import std.range : take;
-    import std.conv : emplaceRef;
+    import core.internal.lifetime : emplaceRef;
 
     if (__ctfe)
     {

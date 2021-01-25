@@ -68,7 +68,7 @@ called `factory`.
 */
 struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
     import std.traits : hasMember;
