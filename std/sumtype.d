@@ -294,6 +294,7 @@ private:
 
     union Storage
     {
+        // Workaround for dlang issue 20068
         template memberName(T)
         if (IndexOf!(T, Types) >= 0)
         {
@@ -343,19 +344,19 @@ public:
         private struct T;
 
         /// Constructs a `SumType` holding a specific value.
-        this()(auto ref T value);
+        this(T value);
 
         /// ditto
-        this()(auto ref const(T) value) const;
+        this(const(T) value) const;
 
         /// ditto
-        this()(auto ref immutable(T) value) immutable;
+        this(immutable(T) value) immutable;
     }
 
     static foreach (tid, T; Types)
     {
         /// Constructs a `SumType` holding a specific value.
-        this()(auto ref T value)
+        this(T value)
         {
             import core.lifetime : forward;
 
@@ -364,7 +365,8 @@ public:
                 static if (isCopyable!T)
                 {
                     mixin("Storage newStorage = { ",
-                        Storage.memberName!T, ": value",
+                        // Workaround for dlang issue 21542
+                        Storage.memberName!T, ": (__ctfe ? value : forward!value)",
                     " };");
                 }
                 else
@@ -382,34 +384,40 @@ public:
 
         static if (isCopyable!T)
         {
-            /// ditto
-            this()(auto ref const(T) value) const
+            static if (IndexOf!(const(T), Map!(ConstOf, Types)) == tid)
             {
-                storage = ()
+                /// ditto
+                this(const(T) value) const
                 {
-                    mixin("const(Storage) newStorage = { ",
-                        Storage.memberName!T, ": value",
-                    " };");
+                    storage = ()
+                    {
+                        mixin("const(Storage) newStorage = { ",
+                            Storage.memberName!T, ": value",
+                        " };");
 
-                    return newStorage;
-                }();
+                        return newStorage;
+                    }();
 
-                tag = tid;
+                    tag = tid;
+                }
             }
 
-            /// ditto
-            this()(auto ref immutable(T) value) immutable
+            static if (IndexOf!(immutable(T), Map!(ImmutableOf, Types)) == tid)
             {
-                storage = ()
+                /// ditto
+                this(immutable(T) value) immutable
                 {
-                    mixin("immutable(Storage) newStorage = { ",
-                        Storage.memberName!T, ": value",
-                    " };");
+                    storage = ()
+                    {
+                        mixin("immutable(Storage) newStorage = { ",
+                            Storage.memberName!T, ": value",
+                        " };");
 
-                    return newStorage;
-                }();
+                        return newStorage;
+                    }();
 
-                tag = tid;
+                    tag = tid;
+                }
             }
         }
         else
@@ -546,7 +554,7 @@ public:
          * guarantee that there are no outstanding references to $(I any)
          * of the `SumType`'s members when the assignment occurs.
          */
-        ref SumType opAssign()(auto ref T rhs);
+        ref SumType opAssign(T rhs);
     }
 
     static foreach (tid, T; Types)
@@ -566,7 +574,7 @@ public:
              * guarantee that there are no outstanding references to $(I any)
              * of the `SumType`'s members when the assignment occurs.
              */
-            ref SumType opAssign()(auto ref T rhs)
+            ref SumType opAssign(T rhs)
             {
                 import core.lifetime : forward;
                 import std.traits : hasIndirections, hasNested;
@@ -1457,6 +1465,17 @@ version (D_BetterC) {} else
             {
         alias T = SumType!(int, This delegate(This));
     }));
+}
+
+// Construction and assignment from implicitly-convertible lvalue
+@safe unittest
+{
+    alias MySum = SumType!bool;
+
+    const(bool) b = true;
+
+    assert(__traits(compiles, { MySum x = b; }));
+    assert(__traits(compiles, { MySum x; x = b; }));
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
