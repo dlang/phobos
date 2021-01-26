@@ -670,7 +670,6 @@ private:
     assert( data2[$-1] == 'b' );
 
     destroy(mf);
-    GC.free(&mf);
 
     std.file.remove(test_file);
     // Create anonymous mapping
