@@ -6314,14 +6314,6 @@ if (isSomeString!S ||
     assert(!isNumeric("+"));
 }
 
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    import std.conv : to;
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
-}
-
 /*****************************
  * Soundex algorithm.
  *

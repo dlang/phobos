@@ -3001,44 +3001,6 @@ if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char
     put(w, 'i');
 }
 
-version (TestComplex)
-deprecated
-@safe /*pure*/ unittest     // formatting floating point values is now impure
-{
-    import std.conv : to;
-    static foreach (T; AliasSeq!(cfloat, cdouble, creal))
-    {
-        formatTest( to!(          T)(1 + 1i), "1+1i" );
-        formatTest( to!(    const T)(1 + 1i), "1+1i" );
-        formatTest( to!(immutable T)(1 + 1i), "1+1i" );
-    }
-    static foreach (T; AliasSeq!(cfloat, cdouble, creal))
-    {
-        formatTest( to!(          T)(0 - 3i), "0-3i" );
-        formatTest( to!(    const T)(0 - 3i), "0-3i" );
-        formatTest( to!(immutable T)(0 - 3i), "0-3i" );
-    }
-}
-
-version (TestComplex)
-deprecated
-@system unittest
-{
-    formatTest( 3+2.25i, "3+2.25i" );
-
-    class C1 { cdouble val; alias val this; this(cdouble v){ val = v; } }
-    class C2 { cdouble val; alias val this; this(cdouble v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(3+2.25i), "3+2.25i" );
-    formatTest( new C2(3+2.25i), "C" );
-
-    struct S1 { cdouble val; alias val this; }
-    struct S2 { cdouble val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(3+2.25i), "3+2.25i" );
-    formatTest( S2(3+2.25i), "S" );
-}
-
 /*
     Formatting an `ireal` is deprecated but still kept around for a while.
  */
@@ -3050,38 +3012,6 @@ if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char
 
     formatValueImpl(w, val.im, f);
     put(w, 'i');
-}
-
-version (TestComplex)
-deprecated
-@safe /*pure*/ unittest     // formatting floating point values is now impure
-{
-    import std.conv : to;
-    static foreach (T; AliasSeq!(ifloat, idouble, ireal))
-    {
-        formatTest( to!(          T)(1i), "1i" );
-        formatTest( to!(    const T)(1i), "1i" );
-        formatTest( to!(immutable T)(1i), "1i" );
-    }
-}
-
-version (TestComplex)
-deprecated
-@system unittest
-{
-    formatTest( 2.25i, "2.25i" );
-
-    class C1 { idouble val; alias val this; this(idouble v){ val = v; } }
-    class C2 { idouble val; alias val this; this(idouble v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(2.25i), "2.25i" );
-    formatTest( new C2(2.25i), "C" );
-
-    struct S1 { idouble val; alias val this; }
-    struct S2 { idouble val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(2.25i), "2.25i" );
-    formatTest( S2(2.25i), "S" );
 }
 
 /*
@@ -6136,14 +6066,6 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 
     s = format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
-}
-
-version (TestComplex)
-deprecated
-@system unittest
-{
-        string s = format("%s", 1.2 + 3.4i);
-        assert(s == "1.2+3.4i", s);
 }
 
 @system unittest

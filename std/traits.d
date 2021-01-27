@@ -6196,12 +6196,6 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(
 
     static assert(!isFloatingPoint!int);
 
-    // complex and imaginary numbers do not pass
-    static assert(
-        !isFloatingPoint!cfloat &&
-        !isFloatingPoint!ifloat
-    );
-
     // types which act as floating point values do not pass
     struct S
     {
@@ -6231,18 +6225,6 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(
             static assert(!isFloatingPoint!(Q!T));
         }
     }
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=17195
-@safe unittest
-{
-    static assert(!isFloatingPoint!cfloat);
-    static assert(!isFloatingPoint!cdouble);
-    static assert(!isFloatingPoint!creal);
-
-    static assert(!isFloatingPoint!ifloat);
-    static assert(!isFloatingPoint!idouble);
-    static assert(!isFloatingPoint!ireal);
 }
 
 /**
@@ -6625,7 +6607,6 @@ enum bool isOrderingComparable(T) = is(typeof((ref T a) => a < a ? 1 : 0));
 {
     static assert(isOrderingComparable!int);
     static assert(isOrderingComparable!string);
-    static assert(!isOrderingComparable!creal);
 
     static struct Foo {}
     static assert(!isOrderingComparable!Foo);
@@ -6665,13 +6646,6 @@ enum bool isEqualityComparable(T) = is(typeof((ref T a) => a == a ? 1 : 0));
     static assert(isEqualityComparable!Bar);
     assert(b1 == b2);
     assert(b1 != b3);
-}
-
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    static assert(isEqualityComparable!creal);
 }
 
 /**
