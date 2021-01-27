@@ -2130,7 +2130,12 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     }
 }
 
-/// Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
+/**
+ * Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
+ *
+ * Known Bug: Function attributes are not always correct.
+ *            See $(BUGZILLA 18269) for more details.
+ */
 @safe unittest
 {
     import std.conv : to;
@@ -4754,6 +4759,9 @@ if (isSIMDVector!V)
 
 /*
    Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
+
+   Known bug: Because of issue https://issues.dlang.org/show_bug.cgi?id=18269
+              the FunctionAttributes might be wrong.
  */
 private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T, scope const ref FormatSpec!Char f)
 if (isDelegate!T)
@@ -4764,7 +4772,14 @@ if (isDelegate!T)
 @safe unittest
 {
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
-    version (linux) formatTest( &func, "void delegate() @system" );
+    version (linux)
+    {
+        import std.array : appender;
+        FormatSpec!char f;
+        auto w = appender!string();
+        formatValue(w, &func, f);
+        assert(w.data.length >= 15 && w.data[0 .. 15] == "void delegate()");
+    }
 }
 
 @safe pure unittest
