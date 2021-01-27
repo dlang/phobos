@@ -2015,15 +2015,6 @@ static class VariantException : Exception
     }
 }
 
-version (TestComplex)
-deprecated
-@system unittest
-{
-    auto v3 = Variant(1+2.0i);
-    hash[v3] = 2;
-    assert( hash[v3] == 2 );
-}
-
 @system unittest
 {
     // check comparisons incompatible with AllowedTypes
