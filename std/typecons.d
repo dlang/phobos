@@ -6403,11 +6403,11 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import core.lifetime : emplace;
+            import core.lifetime : emplace, forward;
 
             allocateStore();
             version (D_Exceptions) scope(failure) deallocateStore();
-            emplace(&_store._payload, args);
+            emplace(&_store._payload, forward!args);
             _store._count = 1;
         }
 
@@ -6497,7 +6497,8 @@ Postcondition: `refCountedStore.isInitialized`
     }
     do
     {
-        _refCounted.initialize(args);
+        import core.lifetime : forward;
+        _refCounted.initialize(forward!args);
     }
 
     /// Ditto
@@ -6694,11 +6695,16 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=6436
 @betterC @system pure unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    struct S
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = RefCounted!S(val);
-    assert(val == 4);
+    auto s1 = RefCounted!S(1);
+    int lval = 3;
+    auto s2 = RefCounted!S(lval);
+    assert(lval == 4);
 }
 
 // gc_addRange coverage
@@ -8001,13 +8007,13 @@ if (is(T == class))
     */
     @system auto scoped(Args...)(auto ref Args args)
     {
-        import core.lifetime : emplace;
+        import core.lifetime : emplace, forward;
 
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], forward!args);
         return result;
     }
 }
