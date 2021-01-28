@@ -2923,8 +2923,13 @@ useSnprintf:
 
 @safe unittest
 {
-    import std.math : FloatingPointControl;
-    assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+    import std.math;
+
+    // std.math's FloatingPointControl isn't available on all target platforms
+    static if (is(FloatingPointControl))
+    {
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundToNearest);
+    }
 
     // issue 20320
     real a = 0.16;
