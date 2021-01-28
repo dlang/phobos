@@ -7123,11 +7123,15 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     size_t hex_mant_pos = 0;
     size_t pos = mant_len;
 
+    auto gap = 39 - 32 * is_upper;
     while (pos >= 4 && (mnt & ((1L << pos) - 1)) != 0)
     {
         pos -= 4;
         size_t tmp = (mnt >> pos) & 15;
-        hex_mant[hex_mant_pos++] = cast(char) (tmp < 10 ? ('0' + tmp) : ((is_upper?'A':'a') + tmp - 10));
+        // For speed reasons the better readable
+        // ... = tmp < 10 ? ('0' + tmp) : ((is_upper ? 'A' : 'a') + tmp - 10))
+        // has been replaced with an expression without branches, doing the same
+        hex_mant[hex_mant_pos++] = cast(char) (tmp + gap * ((tmp + 6) >> 4) + '0');
     }
 
     // save integer part
