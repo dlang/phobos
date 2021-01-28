@@ -8659,6 +8659,10 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
    Computes whether a values is approximately equal to a reference value,
    admitting a maximum relative difference, and a maximum absolute difference.
 
+   Warning:
+        This template is considered out-dated. It will be removed from
+        Phobos in 2.106.0. Please use $(LREF isClose) instead.
+
    Params:
         value = Value to compare.
         reference = Reference value.
@@ -8683,6 +8687,7 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
     See_Also:
         Use $(LREF feqrel) to get the number of equal bits in the mantissa.
  */
+deprecated("approxEqual will be removed in 2.106.0. Please use isClose instead.")
 bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5)
 {
     import std.range.primitives : empty, front, isInputRange, popFront;
@@ -8751,8 +8756,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     }
 }
 
-///
-@safe pure nothrow unittest
+deprecated @safe pure nothrow unittest
 {
     assert(approxEqual(1.0, 1.0099));
     assert(!approxEqual(1.0, 1.011));
@@ -8767,8 +8771,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(approxEqual(arr1, arr2));
 }
 
-///
-@safe pure nothrow unittest
+deprecated @safe pure nothrow unittest
 {
     // relative comparison depends on reference, make sure proper
     // side is used when comparing range to single value. Based on
@@ -8781,8 +8784,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(!b.approxEqual(a));
 }
 
-///
-@safe pure nothrow @nogc unittest
+deprecated @safe pure nothrow @nogc unittest
 {
     assert(!approxEqual(0.0,1e-15,1e-9,0.0));
     assert(approxEqual(0.0,1e-15,1e-9,1e-9));
@@ -8792,8 +8794,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(!approxEqual(1.0000000011,1.0,1e-9,0.0));
 }
 
-///
-@safe pure nothrow @nogc unittest
+deprecated @safe pure nothrow @nogc unittest
 {
     // maybe unintuitive behavior
     assert(approxEqual(1000.0,1010.0));
@@ -8803,7 +8804,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(!approxEqual(-1e-30,1e-30,1e-2,0.0));
 }
 
-@safe pure nothrow @nogc unittest
+deprecated @safe pure nothrow @nogc unittest
 {
     int a = 10;
     assert(approxEqual(10, a));
@@ -8818,7 +8819,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(approxEqual(0.0f,0.0));
 }
 
-@safe pure nothrow @nogc unittest
+deprecated @safe pure nothrow @nogc unittest
 {
     real num = real.infinity;
     assert(num == real.infinity);
@@ -8832,7 +8833,7 @@ bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDif
     assert(!approxEqual(real.nan,real.nan));
 }
 
-@safe pure nothrow unittest
+deprecated @safe pure nothrow unittest
 {
     assert(!approxEqual([1.0,2.0,3.0],[1.0,2.0]));
     assert(!approxEqual([1.0,2.0],[1.0,2.0,3.0]));
