@@ -228,7 +228,7 @@ import std.meta : AliasSeq, Filter, IndexOf = staticIndexOf, Map = staticMap;
 import std.meta : NoDuplicates;
 import std.meta : anySatisfy, allSatisfy;
 import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
-import std.traits : isAssignable, isCopyable, isStaticArray;
+import std.traits : isAssignable, isCopyable, isStaticArray, isRvalueAssignable;
 import std.traits : ConstOf, ImmutableOf, InoutOf, TemplateArgsOf;
 import std.traits : CommonType;
 import std.typecons : ReplaceTypeUnless;
@@ -2477,18 +2477,6 @@ version (D_Exceptions)
             return x.match!((inout(int[]) a) => a);
         }
     }));
-}
-
-static if (__traits(compiles, { import std.traits : isRvalueAssignable; }))
-{
-    import std.traits : isRvalueAssignable;
-}
-else private
-{
-    enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = rvalueOf!Rhs);
-    struct __InoutWorkaroundStruct{}
-    @property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
-    @property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
 }
 
 private void destroyIfOwner(T)(ref T value)
