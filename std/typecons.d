@@ -5723,7 +5723,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
             import std.conv : to;
-            import std.functional : forward;
+            import core.lifetime : forward;
             template generateFun(size_t i)
             {
                 enum name = TargetMembers[i].name;
@@ -8330,11 +8330,16 @@ if (alignment > 0 && !((alignment - 1) & alignment))
 
 @system unittest
 {
-    class C { this(ref int val) { assert(val == 3); ++val; } }
+    class C
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = scoped!C(val);
-    assert(val == 4);
+    auto c1 = scoped!C(1);
+    int lval = 3;
+    auto c2 = scoped!C(lval);
+    assert(lval == 4);
 }
 
 @system unittest

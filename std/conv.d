@@ -10,7 +10,6 @@ $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Generic) $(TD
         $(LREF asOriginalType)
         $(LREF castFrom)
-        $(LREF emplace)
         $(LREF parse)
         $(LREF to)
         $(LREF toChars)
