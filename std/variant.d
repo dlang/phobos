@@ -23,7 +23,7 @@ type constructor. Unlike `Variant`, `Algebraic` only allows a finite set of
 types, which are specified in the instantiation (e.g. $(D Algebraic!(int,
 string)) may only hold an `int` or a `string`).
 
-$(RED Warning: $(LREF Algebraic) is obsolete and not recommended for use in new
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
 code. Instead, use $(REF SumType, std,sumtype).)
 
 Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
@@ -1591,7 +1591,7 @@ useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
 manipulation.
 
-$(RED Warning: $(LREF Algebraic) is obsolete and not recommended for use in new
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
 code. Instead, use $(REF SumType, std,sumtype).)
 */
 template Algebraic(T...)
