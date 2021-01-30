@@ -1,0 +1,17 @@
+Fix issue 21552: Encoding cp866 ru
+
+Adds support for handling and transcoding encoding cp866 ru
+
+---
+import std.encoding;
+
+string pattern =
+    "cъешь ещё этих мягких французских булок да выпей чаю\n" ~
+    "СЪЕШЬ ЕЩЁ ЭТИХ МЯГКИХ ФРАНЦУЗСКИХ БУЛОК ДА ВЫПЕЙ ЧАЮ";
+auto scheme = EncodingScheme.create("cp866");
+Cp866String cp866str;
+scheme.transcode(pattern, cp866str);
+string utf8str;
+transcode(cp866str, utf8str);
+assert(utf8str == pattern);
+---
