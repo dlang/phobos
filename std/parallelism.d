@@ -994,6 +994,11 @@ uint totalCPUsImpl() @nogc nothrow @trusted
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
+    else version (OpenBSD)
+    {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
     else version (useSysctlbyname)
     {
         version (Darwin)
