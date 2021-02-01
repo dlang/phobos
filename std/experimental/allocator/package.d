@@ -3323,8 +3323,6 @@ nothrow:
     theAllocator.dispose(arr);
 }
 
-__EOF__
-
 /**
 
 Stores an allocator object in thread-local storage (i.e. non-`shared` D
@@ -3364,6 +3362,7 @@ struct ThreadLocal(A)
 }
 
 ///
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -3372,9 +3371,9 @@ unittest
 
     static assert(!is(ThreadLocal!Mallocator));
     static assert(!is(ThreadLocal!GCAllocator));
-    alias ThreadLocal!(FreeList!(GCAllocator, 0, 8)) Allocator;
+    alias Allocator = ThreadLocal!(FreeList!(GCAllocator, 0, 8));
     auto b = Allocator.instance.allocate(5);
-    static assert(hasMember!(Allocator, "allocate"));
+    static assert(__traits(hasMember, Allocator, "allocate"));
 }
 
 /*
@@ -3530,14 +3529,14 @@ private struct EmbeddedTree(T, alias less)
 
     void dump()
     {
-        import std.stdio;
+        import std.stdio : writeln;
         writeln(typeid(this), " @ ", cast(void*) &this);
         dump(root, 3);
     }
 
     void dump(Node* r, uint indent)
     {
-        import std.stdio;
+        import std.stdio : write, writeln;
         import std.range : repeat;
         import std.array : array;
 
@@ -3568,6 +3567,7 @@ private struct EmbeddedTree(T, alias less)
     }
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -3713,6 +3713,7 @@ private struct InternalPointersTree(Allocator)
     }
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -3751,6 +3752,7 @@ unittest
 }
 
 //version (std_allocator_benchmark)
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
@@ -3820,6 +3822,7 @@ unittest
     )(20)[].map!(t => t.to!Duration));
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -3845,6 +3848,7 @@ unittest
 }
 
 ///
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
@@ -3855,7 +3859,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
     /// Define an allocator bound to the built-in GC.
-    IAllocator alloc = allocatorObject(GCAllocator.instance);
+    auto alloc = allocatorObject(GCAllocator.instance);
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b));
