@@ -3462,28 +3462,6 @@ else version (Posix) string getcwd() @trusted
 
 version (Darwin)
     private extern (C) int _NSGetExecutablePath(char* buf, uint* bufsize);
-else version (FreeBSD)
-    private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
-        size_t* oldlenp, const void* newp, size_t newlen);
-else version (DragonFlyBSD)
-    private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
-        size_t* oldlenp, const void* newp, size_t newlen);
-else version (NetBSD)
-    private extern (C) int sysctl (const int* name, uint namelen, void* oldp,
-        size_t* oldlenp, const void* newp, size_t newlen);
-
-version (FreeBSD)
-{
-    version = thisExePathHasSysCtlProcName;
-}
-else version (NetBSD)
-{
-    version = thisExePathHasSysCtlProcName;
-}
-else version (DragonFlyBSD)
-{
-    version = thisExePathHasSysCtlProcName;
-}
 
 /**
  * Returns the full path of the current executable.
@@ -3540,45 +3518,46 @@ else version (DragonFlyBSD)
             buffer.length *= 2;
         }
     }
-    else version (thisExePathHasSysCtlProcName)
+    else version (DragonFlyBSD)
     {
+        import core.sys.dragonflybsd.sys.sysctl : sysctl, CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME;
         import std.exception : errnoEnforce, assumeUnique;
-        enum
-        {
-            CTL_KERN = 1,
-            KERN_PROC = 14
-        }
 
-        version (NetBSD)
-        {
-            enum
-            {
-                KERN_PROC_ARGS = 48,
-                KERN_PROC_PATHNAME = 5
-            }
+        int[4] mib = [CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1];
+        size_t len;
 
-            int[4] mib = [CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME];
-        }
-        else
-        {
-            version (FreeBSD)
-            {
-                enum
-                {
-                    KERN_PROC_PATHNAME = 12
-                }
-            }
-            else
-            {
-                enum
-                {
-                    KERN_PROC_PATHNAME = 9
-                }
-            }
+        auto result = sysctl(mib.ptr, mib.length, null, &len, null, 0); // get the length of the path
+        errnoEnforce(result == 0);
 
-            int[4] mib = [CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1];
-        }
+        auto buffer = new char[len - 1];
+        result = sysctl(mib.ptr, mib.length, buffer.ptr, &len, null, 0);
+        errnoEnforce(result == 0);
 
+        return buffer.assumeUnique;
+    }
+    else version (FreeBSD)
+    {
+        import core.sys.freebsd.sys.sysctl : sysctl, CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME;
+        import std.exception : errnoEnforce, assumeUnique;
+
+        int[4] mib = [CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1];
+        size_t len;
+
+        auto result = sysctl(mib.ptr, mib.length, null, &len, null, 0); // get the length of the path
+        errnoEnforce(result == 0);
+
+        auto buffer = new char[len - 1];
+        result = sysctl(mib.ptr, mib.length, buffer.ptr, &len, null, 0);
+        errnoEnforce(result == 0);
+
+        return buffer.assumeUnique;
+    }
+    else version (NetBSD)
+    {
+        import core.sys.netbsd.sys.sysctl : sysctl, CTL_KERN, KERN_PROC_ARGS, KERN_PROC_PATHNAME;
+        import std.exception : errnoEnforce, assumeUnique;
+
+        int[4] mib = [CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME];
         size_t len;
 
         auto result = sysctl(mib.ptr, mib.length, null, &len, null, 0); // get the length of the path
