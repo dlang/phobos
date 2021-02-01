@@ -95,23 +95,6 @@ import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version (Darwin)
-{
-    version = useSysctlbyname;
-}
-else version (FreeBSD)
-{
-    version = useSysctlbyname;
-}
-else version (DragonFlyBSD)
-{
-    version = useSysctlbyname;
-}
-else version (NetBSD)
-{
-    version = useSysctlbyname;
-}
-
 /*
 (For now public undocumented with reserved name.)
 
@@ -952,11 +935,6 @@ if (is(typeof(fun(args))) && isSafeTask!F)
     return ret;
 }
 
-version (useSysctlbyname)
-    private extern(C) int sysctlbyname(
-        const char *, void *, size_t *, void *, size_t
-    ) @nogc nothrow;
-
 /**
 The total number of CPU cores available on the current machine, as reported by
 the operating system.
@@ -989,6 +967,38 @@ uint totalCPUsImpl() @nogc nothrow @trusted
         }
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
+    else version (Darwin)
+    {
+        import core.sys.darwin.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.physicalcpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (DragonFlyBSD)
+    {
+        import core.sys.dragonflybsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (FreeBSD)
+    {
+        import core.sys.freebsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (NetBSD)
+    {
+        import core.sys.netbsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
+    }
     else version (Solaris)
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
@@ -998,30 +1008,6 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
-    }
-    else version (useSysctlbyname)
-    {
-        version (Darwin)
-        {
-            enum nameStr = "hw.physicalcpu";
-        }
-        else version (FreeBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-        else version (DragonFlyBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-        else version (NetBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-
-        uint result;
-        size_t len = result.sizeof;
-        sysctlbyname(nameStr, &result, &len, null, 0);
-        return result;
     }
     else
     {
