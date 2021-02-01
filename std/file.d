@@ -3460,9 +3460,6 @@ else version (Posix) string getcwd() @trusted
     assert(s.length);
 }
 
-version (Darwin)
-    private extern (C) int _NSGetExecutablePath(char* buf, uint* bufsize);
-
 /**
  * Returns the full path of the current executable.
  *
@@ -3476,6 +3473,7 @@ version (Darwin)
 {
     version (Darwin)
     {
+        import core.sys.darwin.mach.dyld : _NSGetExecutablePath;
         import core.sys.posix.stdlib : realpath;
         import std.conv : to;
         import std.exception : errnoEnforce;
