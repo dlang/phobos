@@ -4558,15 +4558,15 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(12345.6789L.quantize(0.01L) == 12345.68L);
-    assert(12345.6789L.quantize!floor(0.01L) == 12345.67L);
-    assert(12345.6789L.quantize(22.0L) == 12342.0L);
+    assert(isClose(12345.6789L.quantize(0.01L), 12345.68L));
+    assert(isClose(12345.6789L.quantize!floor(0.01L), 12345.67L));
+    assert(isClose(12345.6789L.quantize(22.0L), 12342.0L));
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(12345.6789L.quantize(0) == 12345.6789L);
+    assert(isClose(12345.6789L.quantize(0), 12345.6789L));
     assert(12345.6789L.quantize(real.infinity).isNaN);
     assert(12345.6789L.quantize(real.nan).isNaN);
     assert(real.infinity.quantize(0.01L) == real.infinity);
@@ -4599,13 +4599,13 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(12345.6789L.quantize!10(-2) == 12345.68L);
-    assert(12345.6789L.quantize!(10, -2) == 12345.68L);
-    assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
-    assert(12345.6789L.quantize!(10, -2, floor) == 12345.67L);
+    assert(isClose(12345.6789L.quantize!10(-2), 12345.68L));
+    assert(isClose(12345.6789L.quantize!(10, -2), 12345.68L));
+    assert(isClose(12345.6789L.quantize!(10, floor)(-2), 12345.67L));
+    assert(isClose(12345.6789L.quantize!(10, -2, floor), 12345.67L));
 
-    assert(12345.6789L.quantize!22(1) == 12342.0L);
-    assert(12345.6789L.quantize!22 == 12342.0L);
+    assert(isClose(12345.6789L.quantize!22(1), 12342.0L));
+    assert(isClose(12345.6789L.quantize!22, 12342.0L));
 }
 
 @safe pure nothrow @nogc unittest
@@ -4616,8 +4616,8 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
     {{
         const maxL10 = cast(int) F.max.log10.floor;
         const maxR10 = pow(cast(F) 10, maxL10);
-        assert((cast(F) 0.9L * maxR10).quantize!10(maxL10) ==  maxR10);
-        assert((cast(F)-0.9L * maxR10).quantize!10(maxL10) == -maxR10);
+        assert(isClose((cast(F) 0.9L * maxR10).quantize!10(maxL10), maxR10));
+        assert(isClose((cast(F)-0.9L * maxR10).quantize!10(maxL10), -maxR10));
 
         assert(F.max.quantize(F.min_normal) == F.max);
         assert((-F.max).quantize(F.min_normal) == -F.max);
@@ -7449,27 +7449,13 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import std.traits : Unsigned, isSigned;
+    import std.traits : Unsigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
 
-    static if (G.sizeof < 4 && !isSigned!G)
-    {
-        import std.conv : to;
-        const int n2 = n.to!int;
-    }
-    else alias n2 = n;
-
     if (n < 0)
     {
-        switch (n2)
-        {
-        case -1:
-            return 1 / x;
-        case -2:
-            return 1 / (x * x);
-        default:
-        }
+        if (n == -1) return 1 / x;
 
         m = cast(typeof(m))(0 - n);
         v = p / x;
@@ -7546,6 +7532,22 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 @safe @nogc nothrow unittest
 {
     assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21601
+@safe @nogc nothrow pure unittest
+{
+    // When reals are large enough the results of pow(b, e) can be
+    // calculated correctly, if b is of type float or double and e is
+    // not too large.
+    static if (real.mant_dig >= 64)
+    {
+        // expected result: 3.790e-42
+        assert(pow(-513645318757045764096.0f, -2) > 0.0);
+
+        // expected result: 3.763915357831797e-309
+        assert(pow(-1.6299717435255677e+154, -2) > 0.0);
+    }
 }
 
 /**
