@@ -3590,6 +3590,44 @@ else version (DragonFlyBSD)
 
         return buffer.assumeUnique;
     }
+    else version (OpenBSD)
+    {
+        import core.sys.openbsd.sys.sysctl : sysctl, CTL_KERN, KERN_PROC_ARGS, KERN_PROC_ARGV;
+        import core.sys.posix.unistd : getpid;
+        import std.conv : to;
+        import std.exception : enforce, errnoEnforce;
+        import std.process : searchPathFor;
+
+        int[4] mib = [CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV];
+        size_t len;
+
+        auto result = sysctl(mib.ptr, mib.length, null, &len, null, 0);
+        errnoEnforce(result == 0);
+
+        auto argv = new char*[len - 1];
+        result = sysctl(mib.ptr, mib.length, argv.ptr, &len, null, 0);
+        errnoEnforce(result == 0);
+
+        auto argv0 = argv[0];
+        if (*argv0 == '/' || *argv0 == '.')
+        {
+            import core.sys.posix.stdlib : realpath;
+            auto absolutePath = realpath(argv0, null);
+            scope (exit)
+            {
+                if (absolutePath)
+                    free(absolutePath);
+            }
+            errnoEnforce(absolutePath);
+            return to!(string)(absolutePath);
+        }
+        else
+        {
+            auto absolutePath = searchPathFor(to!string(argv0));
+            errnoEnforce(absolutePath);
+            return absolutePath;
+        }
+    }
     else version (Solaris)
     {
         import core.sys.posix.unistd : getpid;
