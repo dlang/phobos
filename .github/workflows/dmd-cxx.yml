@@ -19,7 +19,7 @@ jobs:
         os: [ ubuntu-16.04 ]
         target: [ clang, g++ ]
 
-    # We're using the latest available images at the time of this commit.
+    # We're using the oldest available images at the time of this commit.
     # Using a specific version for reproductibility.
     # Feel free to update when a new release has matured.
     runs-on: ${{ matrix.os }}
