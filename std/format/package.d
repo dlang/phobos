@@ -6512,7 +6512,7 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 }
 
 // Used to check format strings are compatible with argument types
-package static const checkFormatException(alias fmt, Args...) =
+package(std) static const checkFormatException(alias fmt, Args...) =
 {
     import std.conv : text;
 
