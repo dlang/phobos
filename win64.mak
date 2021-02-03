@@ -104,7 +104,6 @@ SRC= \
 SRC_STD_1= \
 	std\stdio.d \
 	std\string.d \
-	std\format.d \
 	std\file.d
 
 SRC_STD_2a= \
@@ -199,6 +198,9 @@ SRC_STD_ALGO= \
 	$(SRC_STD_ALGO_1) \
 	$(SRC_STD_ALGO_2) \
 	$(SRC_STD_ALGO_3)
+
+SRC_STD_FORMAT= \
+    std\format\package.d
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
@@ -334,6 +336,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
+	$(SRC_STD_FORMAT) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -407,6 +410,7 @@ UNITTEST_OBJS= \
 		unittest5a.obj \
 		unittest5b.obj \
 		unittest5c.obj \
+		unittest5d.obj \
 		unittest6a.obj \
 		unittest6c.obj \
 		unittest6e.obj \
@@ -435,6 +439,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5a.obj $(SRC_STD_ALGO_1)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5b.obj $(SRC_STD_ALGO_2)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5c.obj $(SRC_STD_ALGO_3)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest5d.obj $(SRC_STD_FORMAT)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6a.obj $(SRC_STD_6a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6c.obj $(SRC_STD_6c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6e.obj $(SRC_STD_6e)
