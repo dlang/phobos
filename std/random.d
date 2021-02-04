@@ -425,7 +425,7 @@ template isSeedable(Rng)
 }
 
 /**
-Linear Congruential generator.
+Linear Congruential generator. When m = 0, no modulus is used.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
 if (isUnsigned!UIntType)
@@ -603,7 +603,15 @@ Always `false` (random generators are infinite ranges).
  */
     enum bool empty = false;
 
-    private UIntType _x = m ? (a + c) % m : (a + c);
+    // https://issues.dlang.org/show_bug.cgi?id=21610
+    static if (m)
+    {
+        private UIntType _x = (a + c) % m;
+    }
+    else
+    {
+        private UIntType _x = a + c;
+    }
 }
 
 /// Declare your own linear congruential engine
@@ -626,6 +634,27 @@ Always `false` (random generators are infinite ranges).
     // Seed with an unpredictable value
     auto rnd = GLibcLCG(unpredictableSeed);
     auto n = rnd.front; // different across runs
+}
+
+/// Declare your own linear congruential engine
+@safe unittest
+{
+    // Visual C++'s LCG
+    alias MSVCLCG = LinearCongruentialEngine!(uint, 214013, 2531011, 0);
+
+    // seed with a constant
+    auto rnd = MSVCLCG(1);
+    auto n = rnd.front; // same for each run
+    assert(n == 2745024);
+}
+
+// Ensure that unseeded LCGs produce correct values
+@safe unittest
+{
+    alias LGE = LinearCongruentialEngine!(uint, 10000, 19682, 19683);
+
+    LGE rnd;
+    assert(rnd.front == 9999);
 }
 
 /**
