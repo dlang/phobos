@@ -3638,7 +3638,7 @@ private void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 // undocumented because of deprecation
 // string elements are formatted like UTF-8 string literals.
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
-if (is(StringTypeOf!T) && !is(T == enum))
+if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 {
     import std.array : appender;
     import std.utf : decode, UTFException;
@@ -3749,7 +3749,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
-if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
+if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
 }
@@ -3805,6 +3805,43 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     if (spec == 's')
         put(w, f.seqAfter);
+}
+
+@safe unittest
+{
+    // Bug #17269. Behavior similar to `struct A { Nullable!string B; }`
+    struct StringAliasThis
+    {
+        @property string value() const { assert(0); }
+        alias value this;
+        string toString() { return "helloworld"; }
+        private string _value;
+    }
+    struct TestContainer
+    {
+        StringAliasThis testVar;
+    }
+
+    import std.array : appender;
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatElement(w, TestContainer(), spec);
+
+    assert(w.data == "TestContainer(helloworld)", w.data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17269
+@safe unittest
+{
+    import std.typecons : Nullable;
+
+    struct Foo
+    {
+        Nullable!string bar;
+    }
+
+    Foo f;
+    formatTest(f, "Foo(Nullable.null)");
 }
 
 @safe unittest
