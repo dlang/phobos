@@ -161,17 +161,18 @@ private template createStorageAndFields(Ts...)
 {
     enum Name = createStoreName!Ts;
     enum Size = sizeOfBitField!Ts;
-    static if (Size == ubyte.sizeof * 8)
+    static if (Size <= ubyte.sizeof * 8)
         alias StoreType = ubyte;
-    else static if (Size == ushort.sizeof * 8)
+    else static if (Size <= ushort.sizeof * 8)
         alias StoreType = ushort;
-    else static if (Size == uint.sizeof * 8)
+    else static if (Size <= uint.sizeof * 8)
         alias StoreType = uint;
-    else static if (Size == ulong.sizeof * 8)
+    else static if (Size <= ulong.sizeof * 8)
         alias StoreType = ulong;
     else
     {
-        static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+        import std.conv : to;
+        static assert(false, "Sum of field widths must be <= 64, is " ~ to!string(Size));
         alias StoreType = ulong; // just to avoid another error msg
     }
     enum result
@@ -247,12 +248,38 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
 }
 
 /**
-Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
-class)es.
+Allows creating `bitfields` inside `structs`, `classes` and `unions`.
 
-The type of a bit field can be any integral type or enumerated
-type. The most efficient type to store in bitfields is $(D_PARAM
-bool), followed by unsigned types, followed by signed types.
+A `bitfield` consists of one or more entries with a fixed number of
+bits reserved for each. The types of the enties can be `bool`s,
+integral types or enumerated types, arbitrarily mixed.
+
+Integral and Enumerated types are accompanied by two `enums`: `min`
+and `max`, giving the minimum and the maximum number, that can be
+represented by this entry. The variable names are preceded by the
+name of the variable followed by an underscore, so variable `x` comes
+along with `x_min` and `x_max`.
+
+The most efficient type to store in `bitfields` is `bool`, followed by
+unsigned types, followed by signed types.
+
+Limitation: The maximum number of entries in a `bitfield` is 64.
+
+Implementation_details: `Bitfields` are internally stored in an
+`ubyte`, `ushort`, `uint` or `ulong`, using the shortest possible of
+these types, with possible unused bits remaining. The used bits are
+filled in in order given by the parameters, starting with the lowest
+significant bit. The name of the (private) variable used for saving
+the `bitfield` is created by sticking together all names of the
+variables, each preceded by an underscore.
+
+Params: T = A list of template parameters divided into chunks of 3
+            items. Each chunk consists (in this order) of a type a
+            variable name and a number. Together they define an entry
+            of the `bitfield`: A variable of the given type and name,
+            which can hold as many bits, as the number denotes.
+
+Returns: A string that can be used in a `mixin` to add the `bitfield`.
 
 See_Also: $(REF BitFlags, std,typecons)
 */
@@ -263,10 +290,10 @@ template bitfields(T...)
 }
 
 /**
-Create a bitfield pack of eight bits, which fit in
-one $(D_PARAM ubyte). The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
-of the bitfields storage.
+Create a `bitfield` pack of eight bits, which fit in
+one `ubyte`. The `bitfields` are allocated starting from the
+least significant bit, i.e. `x` occupies the two least significant bits
+of the `bitfields` storage.
 */
 @safe unittest
 {
@@ -291,18 +318,23 @@ of the bitfields storage.
 }
 
 /**
-The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
-must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
-one bitfield with an empty name.
+The sum of all bit lengths in one `bitfield` instantiation must be
+smaller than or equal to 64. Normally, the smallest possible storage
+type is used and the used bits occupy the least significant bits.
+If you want a large storage type, you can allocate one `bitfield`
+with an empty name at the end. You can use padding also, if the
+position of a certain `bitfield` should be at an other place.
 */
 @safe unittest
 {
     struct A
     {
         mixin(bitfields!(
-            bool, "flag1",    1,
-            bool, "flag2",    1,
-            uint, "",         6));
+            bool, "flag1",    1,    // bit 0
+            ulong, "",        2,    // 2 bits padding
+            bool, "flag2",    1,    // bit 3
+            ulong, "",       28));  // fill up with 28 more padding bits
+                                    // to ensure uint as storage type
     }
 
     A a;
