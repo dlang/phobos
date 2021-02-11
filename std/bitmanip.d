@@ -171,7 +171,8 @@ private template createStorageAndFields(Ts...)
         alias StoreType = ulong;
     else
     {
-        static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+        import std.conv : to;
+        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ to!string(Size));
         alias StoreType = ulong; // just to avoid another error msg
     }
     enum result
@@ -247,12 +248,37 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
 }
 
 /**
-Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
-class)es.
+Allows creating `bitfields` inside `structs`, `classes` and `unions`.
 
-The type of a bit field can be any integral type or enumerated
-type. The most efficient type to store in bitfields is $(D_PARAM
-bool), followed by unsigned types, followed by signed types.
+A `bitfield` consists of one or more entries with a fixed number of
+bits reserved for each of the entries. The types of the entries can
+be `bool`s, integral types or enumerated types, arbitrarily mixed.
+The most efficient type to store in `bitfields` is `bool`, followed
+by unsigned types, followed by signed types.
+
+Each non-`bool` entry of the `bitfield` will be represented by the
+number of bits specified by the user. The minimum and the maximum
+numbers that represent this domain can be queried by using the name
+of the variable followed by `_min` or `_max`.
+
+Limitation: The number of bits in a `bitfield` is limited to 8, 16,
+32 or 64. If padding is needed, an entry should be explicitly
+allocated with an empty name.
+
+Implementation_details: `Bitfields` are internally stored in an
+`ubyte`, `ushort`, `uint` or `ulong` depending on the number of bits
+used. The bits are filled in the order given by the parameters,
+starting with the lowest significant bit. The name of the (private)
+variable used for saving the `bitfield` is created by concatenating
+all of the variable names, each preceded by an underscore.
+
+Params: T = A list of template parameters divided into chunks of 3
+            items. Each chunk consists (in this order) of a type, a
+            name and a number. Together they define an entry
+            of the `bitfield`: a variable of the given type and name,
+            which can hold as many bits as the number denotes.
+
+Returns: A string that can be used in a `mixin` to add the `bitfield`.
 
 See_Also: $(REF BitFlags, std,typecons)
 */
@@ -263,10 +289,10 @@ template bitfields(T...)
 }
 
 /**
-Create a bitfield pack of eight bits, which fit in
-one $(D_PARAM ubyte). The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
-of the bitfields storage.
+Create a `bitfield` pack of eight bits, which fit in
+one `ubyte`. The `bitfields` are allocated starting from the
+least significant bit, i.e. `x` occupies the two least significant bits
+of the `bitfields` storage.
 */
 @safe unittest
 {
@@ -291,7 +317,7 @@ of the bitfields storage.
 }
 
 /**
-The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
+The sum of all bit lengths in one `bitfield` instantiation
 must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
 one bitfield with an empty name.
 */
