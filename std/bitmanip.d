@@ -326,74 +326,6 @@ one bitfield with an empty name.
     }
 }
 
-/**
-This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
-
-A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
-For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
-One can store a 2-bit integer there.
-
-The example above creates a tagged pointer in the struct A. The pointer is of type
-`uint*` as specified by the first argument, and is named x, as specified by the second
-argument.
-
-Following arguments works the same way as `bitfield`'s. The bitfield must fit into the
-bits known to be zero because of the pointer alignment.
-*/
-
-template taggedPointer(T : T*, string name, Ts...) {
-    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
-}
-
-///
-@safe unittest
-{
-    struct A
-    {
-        int a;
-        mixin(taggedPointer!(
-            uint*, "x",
-            bool, "b1", 1,
-            bool, "b2", 1));
-    }
-    A obj;
-    obj.x = new uint;
-    obj.b1 = true;
-    obj.b2 = false;
-}
-
-/**
-This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
-
-A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
-For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
-One can store a 2-bit integer there.
-
-The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
-as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
-*/
-
-template taggedClassRef(T, string name, Ts...)
-if (is(T == class))
-{
-    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
-}
-
-///
-@safe unittest
-{
-    struct A
-    {
-        int a;
-        mixin(taggedClassRef!(
-            Object, "o",
-            uint, "i", 2));
-    }
-    A obj;
-    obj.o = new Object();
-    obj.i = 3;
-}
-
 @safe pure nothrow @nogc
 unittest
 {
@@ -461,70 +393,6 @@ unittest
     t2b.d = -5; assert(t2b.d == -5);
     t2b.e = -5; assert(t2b.e == -5);
     t4b.a = -5; assert(t4b.a == -5L);
-}
-
-@system unittest
-{
-    struct Test5
-    {
-        mixin(taggedPointer!(
-            int*, "a",
-            uint, "b", 2));
-    }
-
-    Test5 t5;
-    t5.a = null;
-    t5.b = 3;
-    assert(t5.a is null);
-    assert(t5.b == 3);
-
-    int myint = 42;
-    t5.a = &myint;
-    assert(t5.a is &myint);
-    assert(t5.b == 3);
-
-    struct Test6
-    {
-        mixin(taggedClassRef!(
-            Object, "o",
-            bool, "b", 1));
-    }
-
-    Test6 t6;
-    t6.o = null;
-    t6.b = false;
-    assert(t6.o is null);
-    assert(t6.b == false);
-
-    auto o = new Object();
-    t6.o = o;
-    t6.b = true;
-    assert(t6.o is o);
-    assert(t6.b == true);
-}
-
-@safe unittest
-{
-    static assert(!__traits(compiles,
-        taggedPointer!(
-            int*, "a",
-            uint, "b", 3)));
-
-    static assert(!__traits(compiles,
-        taggedClassRef!(
-            Object, "a",
-            uint, "b", 4)));
-
-    struct S {
-        mixin(taggedClassRef!(
-            Object, "a",
-            bool, "b", 1));
-    }
-
-    const S s;
-    void bar(S s) {}
-
-    static assert(!__traits(compiles, bar(s)));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=6686
@@ -685,6 +553,157 @@ unittest
     try { s.b = int.min;  assert(0); }
     catch (AssertError ae)
     { assert(ae.msg.canFind("Value is smaller than the minimum value of bitfield 'b'"), ae.msg); }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15305
+@safe unittest
+{
+    struct S {
+            mixin(bitfields!(
+                    bool, "alice", 1,
+                    ulong, "bob", 63,
+            ));
+    }
+
+    S s;
+    s.bob = long.max - 1;
+    s.alice = false;
+    assert(s.bob == long.max - 1);
+}
+
+/**
+This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+The example above creates a tagged pointer in the struct A. The pointer is of type
+`uint*` as specified by the first argument, and is named x, as specified by the second
+argument.
+
+Following arguments works the same way as `bitfield`'s. The bitfield must fit into the
+bits known to be zero because of the pointer alignment.
+*/
+
+template taggedPointer(T : T*, string name, Ts...) {
+    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
+}
+
+///
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedPointer!(
+            uint*, "x",
+            bool, "b1", 1,
+            bool, "b2", 1));
+    }
+    A obj;
+    obj.x = new uint;
+    obj.b1 = true;
+    obj.b2 = false;
+}
+
+@system unittest
+{
+    struct Test5
+    {
+        mixin(taggedPointer!(
+            int*, "a",
+            uint, "b", 2));
+    }
+
+    Test5 t5;
+    t5.a = null;
+    t5.b = 3;
+    assert(t5.a is null);
+    assert(t5.b == 3);
+
+    int myint = 42;
+    t5.a = &myint;
+    assert(t5.a is &myint);
+    assert(t5.b == 3);
+}
+
+/**
+This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
+as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
+*/
+
+template taggedClassRef(T, string name, Ts...)
+if (is(T == class))
+{
+    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
+}
+
+///
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedClassRef!(
+            Object, "o",
+            uint, "i", 2));
+    }
+    A obj;
+    obj.o = new Object();
+    obj.i = 3;
+}
+
+@system unittest
+{
+    struct Test6
+    {
+        mixin(taggedClassRef!(
+            Object, "o",
+            bool, "b", 1));
+    }
+
+    Test6 t6;
+    t6.o = null;
+    t6.b = false;
+    assert(t6.o is null);
+    assert(t6.b == false);
+
+    auto o = new Object();
+    t6.o = o;
+    t6.b = true;
+    assert(t6.o is o);
+    assert(t6.b == true);
+}
+
+@safe unittest
+{
+    static assert(!__traits(compiles,
+        taggedPointer!(
+            int*, "a",
+            uint, "b", 3)));
+
+    static assert(!__traits(compiles,
+        taggedClassRef!(
+            Object, "a",
+            uint, "b", 4)));
+
+    struct S {
+        mixin(taggedClassRef!(
+            Object, "a",
+            bool, "b", 1));
+    }
+
+    const S s;
+    void bar(S s) {}
+
+    static assert(!__traits(compiles, bar(s)));
 }
 
 /**
@@ -868,22 +887,6 @@ struct DoubleRep
     x.exponent = 1025;
     x.sign = true;
     assert(x.value == -5.0);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=15305
-@safe unittest
-{
-    struct S {
-            mixin(bitfields!(
-                    bool, "alice", 1,
-                    ulong, "bob", 63,
-            ));
-    }
-
-    S s;
-    s.bob = long.max - 1;
-    s.alice = false;
-    assert(s.bob == long.max - 1);
 }
 
 /**
