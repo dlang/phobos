@@ -58,18 +58,22 @@ else version (CRuntime_UClibc)
 else version (OSX)
 {
     version = GENERIC_IO;
+    version = Darwin;
 }
 else version (iOS)
 {
     version = GENERIC_IO;
+    version = Darwin;
 }
 else version (TVOS)
 {
     version = GENERIC_IO;
+    version = Darwin;
 }
 else version (WatchOS)
 {
     version = GENERIC_IO;
+    version = Darwin;
 }
 else version (FreeBSD)
 {
@@ -982,7 +986,9 @@ Call $(LREF flush) before calling this function to flush the C `FILE` buffers fi
 
 This function calls
 $(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa364439%28v=vs.85%29.aspx,
-`FlushFileBuffers`) on Windows and
+`FlushFileBuffers`) on Windows,
+$(HTTP developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html,
+`F_FULLFSYNC fcntl`) on Darwin and
 $(HTTP pubs.opengroup.org/onlinepubs/7908799/xsh/fsync.html,
 `fsync`) on POSIX for the file handle.
 
@@ -998,6 +1004,12 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
         {
             import core.sys.windows.winbase : FlushFileBuffers;
             wenforce(FlushFileBuffers(windowsHandle), "FlushFileBuffers failed");
+        }
+        else version (Darwin)
+        {
+            import core.sys.darwin.fcntl : fcntl, F_FULLFSYNC;
+            import std.exception : errnoEnforce;
+            errnoEnforce(fcntl(fileno, F_FULLFSYNC, 0) != -1, "fcntl failed");
         }
         else
         {
