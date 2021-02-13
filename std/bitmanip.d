@@ -80,12 +80,12 @@ private template createAccessors(
     static if (!name.length)
     {
         // No need to create any accessor
-        enum result = "";
+        enum createAccessors = "";
     }
     else static if (len == 0)
     {
         // Fields of length 0 are always zero
-        enum result = "enum "~T.stringof~" "~name~" = 0;\n";
+        enum createAccessors = "enum "~T.stringof~" "~name~" = 0;\n";
     }
     else
     {
@@ -109,9 +109,7 @@ private template createAccessors(
 
         static if (is(T == bool))
         {
-            static assert(len == 1, "`" ~ name ~
-                    "` definition problem: type `bool` is only allowed for single-bit fields");
-            enum result =
+            enum createAccessors =
             // getter
                 "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
@@ -123,7 +121,7 @@ private template createAccessors(
         else
         {
             // getter
-            enum result = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const { auto result = "
+            enum createAccessors = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const { auto result = "
                 ~"("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -175,19 +173,20 @@ private template createStorageAndFields(Ts...)
         static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ to!string(Size));
         alias StoreType = ulong; // just to avoid another error msg
     }
-    enum result
+
+    enum createStorageAndFields
         = "private " ~ StoreType.stringof ~ " " ~ Name ~ ";"
-        ~ createFields!(Name, 0, Ts).result;
+        ~ createFields!(Name, 0, Ts);
 }
 
 private template createFields(string store, size_t offset, Ts...)
 {
     static if (Ts.length > 0)
-        enum result
-            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
-            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]).result;
+        enum createFields
+            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset)
+            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]);
     else
-        enum result = "";
+        enum createFields = "";
 }
 
 private ulong getBitsForAlign(ulong a)
@@ -224,7 +223,7 @@ private template createReferenceAccessor(string store, T, ulong bits, string nam
         ~" (("~store~" & (cast(typeof("~store~")) "~myToString(mask)~"))"
         ~" | ((cast(typeof("~store~")) cast(void*) v) & (cast(typeof("~store~")) "~myToString(~mask)~")));}\n";
 
-    enum result = storage ~ storage_accessor ~ ref_accessor;
+    enum createReferenceAccessor = storage ~ storage_accessor ~ ref_accessor;
 }
 
 private template sizeOfBitField(T...)
@@ -242,9 +241,9 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
         "Fields must fit in the bits know to be zero because of alignment."
     );
     enum StoreName = createStoreName!(T, name, 0, Ts);
-    enum result
-        = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name).result
-        ~ createFields!(StoreName, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
+    enum createTaggedReference
+        = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name)
+        ~ createFields!(StoreName, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts);
 }
 
 /**
@@ -282,10 +281,41 @@ Returns: A string that can be used in a `mixin` to add the `bitfield`.
 
 See_Also: $(REF BitFlags, std,typecons)
 */
-
-template bitfields(T...)
+string bitfields(T...)()
 {
-    enum { bitfields = createStorageAndFields!T.result }
+    import std.conv : to;
+
+    static assert(T.length % 3 == 0,
+                  "Wrong number of arguments (" ~ to!string(T.length) ~ "): Must be a multiple of 3");
+
+    static foreach (i, ARG; T)
+    {
+        static if (i % 3 == 0)
+            static assert(is (typeof({ARG tmp = cast (ARG)0; if (ARG.min < 0) {} }())),
+                          "Integral type or `bool` expected, found " ~ ARG.stringof);
+
+        // would be nice to check for valid variable names too
+        static if (i % 3 == 1)
+            static assert(is (typeof(ARG) == string),
+                          "Variable name expected, found " ~ ARG.stringof);
+
+        static if (i % 3 == 2)
+        {
+            static assert(is (typeof({ulong tmp = ARG;}())),
+                          "Integral value expected, found " ~ ARG.stringof);
+
+            static if (T[i-1] != "")
+            {
+                static assert(!is (T[i-2] : bool) || ARG <= 1,
+                              "Type `bool` is only allowed for single-bit fields");
+
+                static assert(ARG >= 0 && ARG <= T[i-2].sizeof * 8,
+                              "Wrong size of bitfield: " ~ ARG.stringof);
+            }
+        }
+    }
+
+    return createStorageAndFields!T;
 }
 
 /**
@@ -561,7 +591,6 @@ unittest
 {
     import core.exception : AssertError;
     import std.algorithm.searching : canFind;
-    import std.bitmanip : bitfields;
 
     static struct S
     {
@@ -613,7 +642,7 @@ bits known to be zero because of the pointer alignment.
 */
 
 template taggedPointer(T : T*, string name, Ts...) {
-    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
+    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts);
 }
 
 ///
@@ -668,7 +697,7 @@ as `taggedPointer`, except the first argument which must be a class type instead
 template taggedClassRef(T, string name, Ts...)
 if (is(T == class))
 {
-    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
+    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts);
 }
 
 ///
