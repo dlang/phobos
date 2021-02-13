@@ -1,0 +1,18 @@
+$(REF chunkByAny, std, algortihm, iteration) added to std.algorithm.iteration
+
+chunkByAny is a variant of existing chunkBy that does not except it's predicate
+to have an equivelance relation, letting you use the function more creatively:
+-------
+// Grouping by maximum adjacent difference:
+import std.math : abs;
+import std.algorithm.comparison : equal;
+auto r3 = [1, 3, 2, 5, 4, 9, 10].chunkByAny!((a, b) => abs(a-b) < 3);
+assert(r3.equal!equal([
+    [1, 3, 2],
+    [5, 4],
+    [9, 10]
+]));
+-------
+
+This is illegal to do with chunkBy, because it requires that if pred(a,b) and
+pred(b,c) return true, pred(a,c) must return true too.
