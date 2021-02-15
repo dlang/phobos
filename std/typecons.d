@@ -6381,6 +6381,9 @@ autoInit == RefCountedAutoInitialize.no), user code must call either
 `refCountedStore.isInitialized` or `refCountedStore.ensureInitialized`
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
+
+If `T.this()` is annotated with `@disable` then `autoInit` must be
+`RefCountedAutoInitialize.no` in order to compile.
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
@@ -6485,9 +6488,18 @@ if (!is(T == class) && !(is(T == interface)))
         /**
            Makes sure the payload was properly initialized. Such a
            call is typically inserted before using the payload.
+
+           This function is unavailable if `T.this()` is annotated with
+           `@disable`.
         */
-        void ensureInitialized()
+        void ensureInitialized()()
         {
+            // By checking for `@disable this()` and failing early we can
+            // produce a clearer error message.
+            static assert(__traits(compiles, { static T t; }),
+                "Cannot automatically initialize `" ~ fullyQualifiedName!T ~
+                "` because `" ~ fullyQualifiedName!T ~
+                ".this()` is annotated with `@disable`.");
             if (!isInitialized) initialize();
         }
 
@@ -6742,6 +6754,19 @@ pure @system unittest
     assert(b == 5);
 
     RefCounted!(int*) c;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21638
+@betterC @system pure nothrow @nogc unittest
+{
+    static struct NoDefaultCtor
+    {
+        @disable this();
+        this(int x) @nogc nothrow pure { this.x = x; }
+        int x;
+    }
+    auto rc = RefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
+    assert(rc.x == 5);
 }
 
 /**
