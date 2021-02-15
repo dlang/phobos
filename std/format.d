@@ -8596,7 +8596,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         // Generation of digits by consecutive division with reminder by 10.
         int msu = 0; // Most significant ulong; when it get's zero, we can ignore it furtheron
-        while (msu < count - 1 || mybig[$-1] != 0)
+        while (msu < count - 1 || mybig[$ - 1] != 0)
         {
             ulong mod = 0;
             foreach (i;msu .. count)
@@ -8608,10 +8608,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             if (mybig[msu] == 0)
                 ++msu;
 
-            buffer[--left] = cast(byte) ('0'+mod);
+            buffer[--left] = cast(byte) ('0' + mod);
         }
 
-        if (f.precision>0 || f.flHash) buffer[right++] = '.';
+        if (f.precision > 0 || f.flHash) buffer[right++] = '.';
 
         next = roundType.ZERO;
     }
@@ -8639,11 +8639,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         buffer[--left] = '0'; // 0 left of the dot
 
-        if (f.precision>0 || f.flHash) buffer[right++] = '.';
+        if (f.precision > 0 || f.flHash) buffer[right++] = '.';
 
         // Generation of digits by consecutive multiplication by 10.
         int lsu = 0; // Least significant ulong; when it get's zero, we can ignore it furtheron
-        while ((lsu < count - 1 || mybig[$ - 1]!=0) && right-start - 1 < f.precision)
+        while ((lsu < count - 1 || mybig[$ - 1] != 0) && right-start - 1 < f.precision)
         {
             ulong over = 0;
             foreach (i;lsu .. count)
@@ -8655,7 +8655,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             if (mybig[lsu] == 0)
                 ++lsu;
 
-            buffer[right++] = cast(byte) ('0'+over);
+            buffer[right++] = cast(byte) ('0' + over);
         }
 
         if (lsu >= count - 1 && mybig[count - 1] == 0)
@@ -8687,18 +8687,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         else
             while (int_part>0)
             {
-                buffer[--left] = '0'+(int_part%10);
+                buffer[--left] = '0' + (int_part % 10);
                 int_part /= 10;
             }
 
-        if (f.precision>0 || f.flHash)
+        if (f.precision > 0 || f.flHash)
             buffer[right++] = '.';
 
         // creating frac part
-        while (frac_part != 0 && right-start-1<f.precision)
+        while (frac_part != 0 && right - start - 1 < f.precision)
         {
             frac_part *= 10;
-            buffer[right++] = cast(byte)('0'+(frac_part >> (T.mant_dig - 1 - exp)));
+            buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
             frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
         }
 
@@ -8743,8 +8743,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             else
             {
                 // Round to nearest, ties to even
-                auto last = buffer[right-1];
-                if (last == '.') last = buffer[right-2];
+                auto last = buffer[right - 1];
+                if (last == '.') last = buffer[right - 2];
                 roundUp = last % 2 != 0;
             }
         }
