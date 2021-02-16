@@ -202,7 +202,8 @@ SRC_STD_DIGEST= \
 	std\digest\package.d
 
 SRC_STD_FORMAT= \
-    std\format\package.d
+    std\format\package.d \
+    std\format\internal\floats.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
