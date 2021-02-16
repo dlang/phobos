@@ -187,7 +187,7 @@ else
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
-    return c <= 'z' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'Z'));
+    return isAlpha(c) || isDigit(c);
 }
 
 ///
@@ -219,7 +219,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
     // Optimizer can turn this into a bitmask operation on 64 bit code
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    return (c | 32) - 'a' < 26;
 }
 
 ///
@@ -250,7 +250,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
-    return c >= 'a' && c <= 'z';
+    return c - 'a' < 26;
 }
 
 ///
@@ -282,7 +282,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
-    return c <= 'Z' && 'A' <= c;
+    return c - 'A' < 26;
 }
 
 ///
@@ -314,7 +314,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
-    return '0' <= c && c <= '9';
+    return c - '0' < 10;
 }
 
 ///
@@ -347,7 +347,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
-    return c >= '0' && c <= '7';
+    return c - '0' < 8;
 }
 
 ///
@@ -377,7 +377,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
-    return c <= 'f' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'F'));
+    return isDigit(c) || (c | 32) - 'a' < 6;
 }
 
 ///
@@ -410,7 +410,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
   +/
 bool isWhite(dchar c) @safe pure nothrow @nogc
 {
-    return c == ' ' || (c >= 0x09 && c <= 0x0D);
+    return c == ' ' || c - '\t' < 5;
 }
 
 ///
@@ -486,7 +486,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
   +/
 bool isPunctuation(dchar c) @safe pure nothrow @nogc
 {
-    return c <= '~' && c >= '!' && !isAlphaNum(c);
+    return isGraphical(c) && !isAlphaNum(c);
 }
 
 ///
@@ -530,7 +530,7 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
   +/
 bool isGraphical(dchar c) @safe pure nothrow @nogc
 {
-    return '!' <= c && c <= '~';
+    return c - 0x21 < 0x5e;
 }
 
 ///
@@ -566,7 +566,7 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
   +/
 bool isPrintable(dchar c) @safe pure nothrow @nogc
 {
-    return c >= ' ' && c <= '~';
+    return c - 0x20 < 0x5f;
 }
 
 ///
@@ -642,7 +642,7 @@ if (is(C : dchar))
     else static if (is(immutable OriginalType!C == immutable OC, OC))
         alias R = OC;
 
-    return isUpper(c) ? cast(R)(cast(R) c + 'a' - 'A') : cast(R) c;
+    return isUpper(c) ? cast(R)(cast(R) c | 32) : cast(R) c;
 }
 
 ///
@@ -704,7 +704,7 @@ if (is(C : dchar))
     else static if (is(immutable OriginalType!C == immutable OC, OC))
         alias R = OC;
 
-    return isLower(c) ? cast(R)(cast(R) c - ('a' - 'A')) : cast(R) c;
+    return isLower(c) ? cast(R)(cast(R) c & 0x5f) : cast(R) c;
 }
 
 ///
