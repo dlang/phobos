@@ -27,11 +27,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 {
     static if (is(T == float))
     {
-        ulong ival = () @trusted { return *cast(uint*)&val; }();
+        ulong ival = () @trusted { return *cast(uint*) &val; }();
     }
     else
     {
-        ulong ival = () @trusted { return *cast(ulong*)&val; }();
+        ulong ival = () @trusted { return *cast(ulong*) &val; }();
     }
 
     import std.math : log2;
@@ -45,8 +45,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     if (sgn == "" && f.flPlus) sgn = "+";
     if (sgn == "" && f.flSpace) sgn = " ";
 
-    assert(f.spec == 'a' || f.spec == 'A' || f.spec == 'e' || f.spec == 'E' || f.spec=='f' || f.spec=='F');
-    bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F';
+    assert(f.spec == 'a' || f.spec == 'A'
+           || f.spec == 'e' || f.spec == 'E'
+           || f.spec == 'f' || f.spec == 'F'
+           || f.spec == 'g' || f.spec == 'G');
+    bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F' || f.spec=='G';
 
     // special treatment for nan and inf
     if (exp == maxexp)
@@ -78,6 +81,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             return printFloatE(buf, val, f, rm, sgn, exp, mnt, is_upper);
         case 'f': case 'F':
             return printFloatF(buf, val, f, rm, sgn, exp, mnt, is_upper);
+        case 'g': case 'G':
+            return printFloatG(buf, val, f, rm, sgn, exp, mnt, is_upper);
     }
 }
 
@@ -567,6 +572,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     import std.conv : to;
     import std.algorithm.comparison : max;
 
+    bool is_g = f.spec == 'g' || f.spec == 'G';
+
     enum int bias = T.max_exp - 1;
 
     if (f.precision == f.UNSPECIFIED)
@@ -601,8 +608,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     // If the result is not left justified, we may need to add more digits here for getting the
     // correct width.
+    // %g cannot reduce the value by max_right due to trailing zeros, which are removed later
     if (!f.flDash)
-        max_left = max(max_left, f.width - max_right + max_left + 1);
+        max_left = is_g ? max(max_left, f.width + max_left)
+                        : max(max_left, f.width - max_right + max_left + 1);
 
     // If the result is left justified, we may need to add more digits to the right. This strongly
     // depends, on the exponent, see above. This time, we need to be conservative in the other direction
@@ -713,7 +722,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         // Generation of digits by consecutive division with reminder by 10.
         int msu = 0; // Most significant ulong; when it get's zero, we can ignore it further on
-        while (msu < count - 1 || mybig[$-1] != 0)
+        while (msu < count - 1 || mybig[$ - 1] != 0)
         {
             ulong mod = 0;
             foreach (i;msu .. count)
@@ -730,7 +739,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         }
         --final_exp;
 
-        start = left + f.precision + 1;
+        start = left + f.precision + (is_g ? 0 : 1);
 
         // we need more zeros for precision
         if (right < start)
@@ -809,7 +818,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         if (f.precision == 0 && !f.flHash) --right;
 
         // adding more digits
-        start = right;
+        start = is_g ? (left + 1) : right;
         while ((lsu < count - 1 || mybig[$ - 1] != 0) && right - start < f.precision)
         {
             ulong over = 0;
@@ -826,10 +835,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         }
 
         // filling up with zeros to match precision
-        if (right < start + f.precision)
+        auto limit = f.precision + (is_g ? (left + 1) : start);
+        if (right < limit)
         {
-            buffer[right .. start + f.precision] = '0';
-            right = start + f.precision;
+            buffer[right .. limit] = '0';
+            right = limit;
         }
 
         // rounding type
@@ -875,10 +885,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             buffer[--left] = '.';
             buffer[--left] = cast(byte) ('0' + int_part);
 
-            if (right - left > f.precision + 2)
+            if (right - left > f.precision + (is_g ? 1 : 2))
             {
                 auto old_right = right;
-                right = left + f.precision + 2;
+                right = left + f.precision + (is_g ? 1 : 2);
 
                 if (buffer[right] == '5' || buffer[right] == '0')
                 {
@@ -921,7 +931,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         if (f.precision == 0 && !f.flHash) right--;
 
         // the fractional part after the zeros
-        while (frac_part != 0 && start < f.precision)
+        while (frac_part != 0 && start + (is_g ? 1 : 0) < f.precision)
         {
             frac_part *= 10;
             buffer[right++] = cast(byte) ('0' + (frac_part >> (T.mant_dig - 1 - exp)));
@@ -929,11 +939,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             ++start;
         }
 
-        if (start < f.precision)
+        auto limit = is_g ? (right - left - 1) : start;
+        if (limit < f.precision)
         {
-            buffer[right .. right + f.precision - start] = '0';
-            right += f.precision - start;
-            start = f.precision;
+            buffer[right .. right + f.precision - limit] = '0';
+            right += f.precision - limit;
         }
 
         // rounding mode, if not allready known
@@ -975,8 +985,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             else
             {
                 // Round to nearest, ties to even
-                auto last = buffer[right-1];
-                if (last == '.') last = buffer[right-2];
+                auto last = buffer[right - 1];
+                if (last == '.') last = buffer[right - 2];
                 roundUp = last % 2 != 0;
             }
         }
@@ -1007,6 +1017,14 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 printFloat_done:
     }
 
+    if (is_g && !f.flHash)
+    {
+        while (right > left && buffer[right - 1]=='0')
+            right--;
+        if (right > left && buffer[right - 1]=='.')
+            right--;
+    }
+
     // printing exponent
     buffer[right++] = is_upper ? 'E' : 'e';
     buffer[right++] = final_exp >= 0 ? '+' : '-';
@@ -1023,7 +1041,7 @@ printFloat_done:
 
     do
     {
-        exp_str[--exp_pos] = '0' + final_exp%10;
+        exp_str[--exp_pos] = '0' + final_exp % 10;
         final_exp /= 10;
     } while (final_exp>0);
     if (max_exp_digits - exp_pos == 1)
@@ -1382,6 +1400,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 {
     import std.conv : to;
     import std.algorithm.comparison : max;
+    import std.math : log10, abs, floor, ceil;
+
+    bool is_g = f.spec == 'g' || f.spec == 'G';
 
     enum int bias = T.max_exp - 1;
 
@@ -1404,19 +1425,23 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     // this estimate
 
     // Default for the right side is the number of digits given by f.precision plus one for the dot.
-    auto max_right = f.precision + 1;
+    auto max_right = is_g ? max(0, (f.precision - cast(int) floor(log10(abs(val)))))
+                          : (f.precision + 1);
 
     // If the exponent is <= 0 there is only the sign and one digit left of the dot, else
     // we have to estimate the number of digits. The factor between exp, which is the number of
     // digits in binary system and the searched number is log_2(10). We round this down to 3.32 to
     // get a conservative estimate. We need to add 3, because of the sign, the fact, that the
     // logarithm is one to small and because we need to round up instead of down, which to!int does.
-    auto max_left = exp > 0 ? to!int(exp / 3.32) + 3 : 2;
+    auto max_left = is_g ? max(2, 2 + cast(int) ceil(log10(abs(val))))
+                         : (exp > 0 ? to!int(exp / 3.32) + 3 : 2);
 
     // If the result is not left justified, we may need to add more digits here for getting the
     // correct width.
+    // %g cannot reduce the value by max_right due to trailing zeros, which are removed later
     if (!f.flDash)
-        max_left = max(max_left, f.width - max_right + 2);
+        max_left = is_g ? max(max_left, f.width)
+                        : max(max_left, f.width - max_right + 2);
 
     // If the result is left justified, we may need to add more digits to the right. This strongly
     // depends, on the exponent, see above. This time, we need to be conservative in the other direction
@@ -1523,6 +1548,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         if (f.precision > 0 || f.flHash) buffer[right++] = '.';
 
+        if (is_g) start = left;
+
         next = roundType.ZERO;
     }
     else if (exp + 61 < T.mant_dig)
@@ -1553,7 +1580,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         // Generation of digits by consecutive multiplication by 10.
         int lsu = 0; // Least significant ulong; when it get's zero, we can ignore it furtheron
-        while ((lsu < count - 1 || mybig[$ - 1] != 0) && right-start - 1 < f.precision)
+        bool found = false;
+        if (is_g) start = left + 1;
+        while ((lsu < count - 1 || mybig[$ - 1] != 0) && right - start - 1 < f.precision)
         {
             ulong over = 0;
             foreach (i;lsu .. count)
@@ -1566,6 +1595,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
                 ++lsu;
 
             buffer[right++] = cast(byte) ('0' + over);
+            if (is_g)
+            {
+                if (buffer[right - 1] != '0')
+                    found = true;
+                if (!found && buffer[right - 1] == '0')
+                    start++;
+            }
         }
 
         if (lsu >= count - 1 && mybig[count - 1] == 0)
@@ -1591,6 +1627,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         ulong int_part = mnt >> (T.mant_dig - 1 - exp);
         ulong frac_part = mnt & ((1L << (T.mant_dig - 1 - exp)) - 1);
 
+        auto found = int_part > 0;
+
         // creating int part
         if (int_part == 0)
             buffer[--left] = '0';
@@ -1605,11 +1643,28 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             buffer[right++] = '.';
 
         // creating frac part
-        while (frac_part != 0 && right - start - 1 < f.precision)
+        if (is_g)
         {
-            frac_part *= 10;
-            buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
-            frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
+            start = left + (found ? 0 : 1);
+            while (frac_part != 0 && right - start - 1 < f.precision)
+            {
+                frac_part *= 10;
+                buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
+                if (buffer[right - 1] != '0')
+                    found = true;
+                if (!found && buffer[right - 1] == '0')
+                    start++;
+                frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
+            }
+        }
+        else
+        {
+            while (frac_part != 0 && right - start - 1 < f.precision)
+            {
+                frac_part *= 10;
+                buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
+                frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
+            }
         }
 
         if (frac_part == 0)
@@ -1677,11 +1732,26 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             else
             {
                 buffer[i]++;
+                if (is_g && buffer[i] == '1')
+                {
+                    foreach (j;left .. i)
+                        if (buffer[j] != '0' && buffer[j] != '.') goto printFloat_done;
+                    right--;
+                }
                 goto printFloat_done;
             }
         }
         buffer[--left] = '1';
+        if (is_g) right--;
 printFloat_done:
+    }
+
+    if (is_g && !f.flHash)
+    {
+        while (right > left && buffer[right - 1] == '0')
+            right--;
+        if (right > left && buffer[right - 1] == '.')
+            right--;
     }
 
     // sign and padding
@@ -2042,14 +2112,470 @@ printFloat_done:
            ~"7175706828388979108268586060148663818836212158203125");
 }
 
+private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
+                                  string sgn, int exp, ulong mnt, bool is_upper)
+if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+{
+    import std.math : abs;
+
+    if (f.precision == f.UNSPECIFIED)
+        f.precision = 6;
+
+    if (f.precision == 0)
+        f.precision = 1;
+
+    bool useE = false;
+    final switch (rm)
+    {
+    case RoundingMode.up:
+        useE = abs(val) >= 10.0 ^^ f.precision - (val > 0 ? 1 : 0)
+            || abs(val) < 0.0001 - (val > 0 ? (10.0 ^^ (-4 - f.precision)) : 0);
+        break;
+    case RoundingMode.down:
+        useE = abs(val) >= 10.0 ^^ f.precision - (val < 0 ? 1 : 0)
+            || abs(val) < 0.0001 - (val < 0 ? (10.0 ^^ (-4 - f.precision)) : 0);
+        break;
+    case RoundingMode.toZero:
+        useE = abs(val) >= 10.0 ^^ f.precision
+            || abs(val) < 0.0001;
+        break;
+    case RoundingMode.toNearestTiesToEven:
+    case RoundingMode.toNearestTiesAwayFromZero:
+        useE = abs(val) >= 10.0 ^^ f.precision - 0.5
+            || abs(val) < 0.0001 - 0.5 * (10.0 ^^ (-4 - f.precision));
+        break;
+    }
+
+    if (useE)
+        return printFloatE(buf, val, f, rm, sgn, exp, mnt, is_upper);
+    else
+        return printFloatF(buf, val, f, rm, sgn, exp, mnt, is_upper);
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    assert(printFloat(buf[], float.nan, f) == "nan");
+    assert(printFloat(buf[], -float.nan, f) == "-nan");
+    assert(printFloat(buf[], float.infinity, f) == "inf");
+    assert(printFloat(buf[], -float.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0f, f) == "0");
+    assert(printFloat(buf[], -0.0f, f) == "-0");
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.99995e-41");
+    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.99995e-41");
+    assert(printFloat(buf[], 1e-30f, f) == "1e-30");
+    assert(printFloat(buf[], -1e-30f, f) == "-1e-30");
+    assert(printFloat(buf[], 1e-10f, f) == "1e-10");
+    assert(printFloat(buf[], -1e-10f, f) == "-1e-10");
+    assert(printFloat(buf[], 0.1f, f) == "0.1");
+    assert(printFloat(buf[], -0.1f, f) == "-0.1");
+    assert(printFloat(buf[], 10.0f, f) == "10");
+    assert(printFloat(buf[], -10.0f, f) == "-10");
+    assert(printFloat(buf[], 1e30f, f) == "1e+30");
+    assert(printFloat(buf[], -1e30f, f) == "-1e+30");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0f), f) == "1.4013e-45");
+    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.4013e-45");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.width = 20;
+    f.precision = 10;
+
+    assert(printFloat(buf[], float.nan, f) == "                 nan");
+    assert(printFloat(buf[], -float.nan, f) == "                -nan");
+    assert(printFloat(buf[], float.infinity, f) == "                 inf");
+    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
+
+    assert(printFloat(buf[], 0.0f, f) == "                   0");
+    assert(printFloat(buf[], -0.0f, f) == "                  -0");
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], cast(float) 1e-40, f) == "     9.999946101e-41");
+    assert(printFloat(buf[], cast(float) -1e-40, f) == "    -9.999946101e-41");
+    assert(printFloat(buf[], 1e-30f, f) == "     1.000000003e-30");
+    assert(printFloat(buf[], -1e-30f, f) == "    -1.000000003e-30");
+    assert(printFloat(buf[], 1e-10f, f) == "     1.000000013e-10");
+    assert(printFloat(buf[], -1e-10f, f) == "    -1.000000013e-10");
+    assert(printFloat(buf[], 0.1f, f) == "        0.1000000015");
+    assert(printFloat(buf[], -0.1f, f) == "       -0.1000000015");
+    assert(printFloat(buf[], 10.0f, f) == "                  10");
+    assert(printFloat(buf[], -10.0f, f) == "                 -10");
+    assert(printFloat(buf[], 1e30f, f) == "     1.000000015e+30");
+    assert(printFloat(buf[], -1e30f, f) == "    -1.000000015e+30");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0f), f) == "     1.401298464e-45");
+    assert(printFloat(buf[], nextDown(-0.0f), f) == "    -1.401298464e-45");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.width = 20;
+    f.precision = 10;
+    f.flDash = true;
+
+    assert(printFloat(buf[], float.nan, f) == "nan                 ");
+    assert(printFloat(buf[], -float.nan, f) == "-nan                ");
+    assert(printFloat(buf[], float.infinity, f) == "inf                 ");
+    assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
+    assert(printFloat(buf[], 0.0f, f) == "0                   ");
+    assert(printFloat(buf[], -0.0f, f) == "-0                  ");
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41     ");
+    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41    ");
+    assert(printFloat(buf[], 1e-30f, f) == "1.000000003e-30     ");
+    assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30    ");
+    assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10     ");
+    assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10    ");
+    assert(printFloat(buf[], 0.1f, f) == "0.1000000015        ");
+    assert(printFloat(buf[], -0.1f, f) == "-0.1000000015       ");
+    assert(printFloat(buf[], 10.0f, f) == "10                  ");
+    assert(printFloat(buf[], -10.0f, f) == "-10                 ");
+    assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30     ");
+    assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30    ");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45     ");
+    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45    ");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.width = 20;
+    f.precision = 10;
+    f.flZero = true;
+
+    assert(printFloat(buf[], float.nan, f) == "                 nan");
+    assert(printFloat(buf[], -float.nan, f) == "                -nan");
+    assert(printFloat(buf[], float.infinity, f) == "                 inf");
+    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
+    assert(printFloat(buf[], 0.0f, f) == "00000000000000000000");
+    assert(printFloat(buf[], -0.0f, f) == "-0000000000000000000");
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], cast(float) 1e-40, f) == "000009.999946101e-41");
+    assert(printFloat(buf[], cast(float) -1e-40, f) == "-00009.999946101e-41");
+    assert(printFloat(buf[], 1e-30f, f) == "000001.000000003e-30");
+    assert(printFloat(buf[], -1e-30f, f) == "-00001.000000003e-30");
+    assert(printFloat(buf[], 1e-10f, f) == "000001.000000013e-10");
+    assert(printFloat(buf[], -1e-10f, f) == "-00001.000000013e-10");
+    assert(printFloat(buf[], 0.1f, f) == "000000000.1000000015");
+    assert(printFloat(buf[], -0.1f, f) == "-00000000.1000000015");
+    assert(printFloat(buf[], 10.0f, f) == "00000000000000000010");
+    assert(printFloat(buf[], -10.0f, f) == "-0000000000000000010");
+    assert(printFloat(buf[], 1e30f, f) == "000001.000000015e+30");
+    assert(printFloat(buf[], -1e30f, f) == "-00001.000000015e+30");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0f), f) == "000001.401298464e-45");
+    assert(printFloat(buf[], nextDown(-0.0f), f) == "-00001.401298464e-45");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.precision = 10;
+    f.flHash = true;
+
+    assert(printFloat(buf[], float.nan, f) == "nan");
+    assert(printFloat(buf[], -float.nan, f) == "-nan");
+    assert(printFloat(buf[], float.infinity, f) == "inf");
+    assert(printFloat(buf[], -float.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0f, f) == "0.000000000");
+    assert(printFloat(buf[], -0.0f, f) == "-0.000000000");
+    // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41");
+    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41");
+    assert(printFloat(buf[], 1e-30f, f) == "1.000000003e-30");
+    assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30");
+    assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10");
+    assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10");
+    assert(printFloat(buf[], 0.1f, f) == "0.1000000015");
+    assert(printFloat(buf[], -0.1f, f) == "-0.1000000015");
+    assert(printFloat(buf[], 10.0f, f) == "10.00000000");
+    assert(printFloat(buf[], -10.0f, f) == "-10.00000000");
+    assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30");
+    assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45");
+    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.precision = 2;
+
+    assert(printFloat(buf[], 11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(buf[], 12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "13");
+    assert(printFloat(buf[], 11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(buf[], 11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(buf[], 11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(buf[], -11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(buf[], -12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-13");
+    assert(printFloat(buf[], -11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(buf[], -11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+    assert(printFloat(buf[], -11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+
+    // ties to even
+    assert(printFloat(buf[], 11.5f, f) == "12");
+    assert(printFloat(buf[], 12.5f, f) == "12");
+    assert(printFloat(buf[], 11.7f, f) == "12");
+    assert(printFloat(buf[], 11.3f, f) == "11");
+    assert(printFloat(buf[], 11.0f, f) == "11");
+    assert(printFloat(buf[], -11.5f, f) == "-12");
+    assert(printFloat(buf[], -12.5f, f) == "-12");
+    assert(printFloat(buf[], -11.7f, f) == "-12");
+    assert(printFloat(buf[], -11.3f, f) == "-11");
+    assert(printFloat(buf[], -11.0f, f) == "-11");
+
+    assert(printFloat(buf[], 11.5f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(buf[], 12.5f, f, RoundingMode.toZero) == "12");
+    assert(printFloat(buf[], 11.7f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(buf[], 11.3f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(buf[], 11.0f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(buf[], -11.5f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(buf[], -12.5f, f, RoundingMode.toZero) == "-12");
+    assert(printFloat(buf[], -11.7f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(buf[], -11.3f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(buf[], -11.0f, f, RoundingMode.toZero) == "-11");
+
+    assert(printFloat(buf[], 11.5f, f, RoundingMode.up) == "12");
+    assert(printFloat(buf[], 12.5f, f, RoundingMode.up) == "13");
+    assert(printFloat(buf[], 11.7f, f, RoundingMode.up) == "12");
+    assert(printFloat(buf[], 11.3f, f, RoundingMode.up) == "12");
+    assert(printFloat(buf[], 11.0f, f, RoundingMode.up) == "11");
+    assert(printFloat(buf[], -11.5f, f, RoundingMode.up) == "-11");
+    assert(printFloat(buf[], -12.5f, f, RoundingMode.up) == "-12");
+    assert(printFloat(buf[], -11.7f, f, RoundingMode.up) == "-11");
+    assert(printFloat(buf[], -11.3f, f, RoundingMode.up) == "-11");
+    assert(printFloat(buf[], -11.0f, f, RoundingMode.up) == "-11");
+
+    assert(printFloat(buf[], 11.5f, f, RoundingMode.down) == "11");
+    assert(printFloat(buf[], 12.5f, f, RoundingMode.down) == "12");
+    assert(printFloat(buf[], 11.7f, f, RoundingMode.down) == "11");
+    assert(printFloat(buf[], 11.3f, f, RoundingMode.down) == "11");
+    assert(printFloat(buf[], 11.0f, f, RoundingMode.down) == "11");
+    assert(printFloat(buf[], -11.5f, f, RoundingMode.down) == "-12");
+    assert(printFloat(buf[], -12.5f, f, RoundingMode.down) == "-13");
+    assert(printFloat(buf[], -11.7f, f, RoundingMode.down) == "-12");
+    assert(printFloat(buf[], -11.3f, f, RoundingMode.down) == "-12");
+    assert(printFloat(buf[], -11.0f, f, RoundingMode.down) == "-11");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    assert(printFloat(buf[], double.nan, f) == "nan");
+    assert(printFloat(buf[], -double.nan, f) == "-nan");
+    assert(printFloat(buf[], double.infinity, f) == "inf");
+    assert(printFloat(buf[], -double.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0, f) == "0");
+    assert(printFloat(buf[], -0.0, f) == "-0");
+    // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
+    assert(printFloat(buf[], 1e-307 / 1000, f) == "1e-310");
+    assert(printFloat(buf[], -1e-307 / 1000, f) == "-1e-310");
+    assert(printFloat(buf[], 1e-30, f) == "1e-30");
+    assert(printFloat(buf[], -1e-30, f) == "-1e-30");
+    assert(printFloat(buf[], 1e-10, f) == "1e-10");
+    assert(printFloat(buf[], -1e-10, f) == "-1e-10");
+    assert(printFloat(buf[], 0.1, f) == "0.1");
+    assert(printFloat(buf[], -0.1, f) == "-0.1");
+    assert(printFloat(buf[], 10.0, f) == "10");
+    assert(printFloat(buf[], -10.0, f) == "-10");
+    assert(printFloat(buf[], 1e300, f) == "1e+300");
+    assert(printFloat(buf[], -1e300, f) == "-1e+300");
+
+    import std.math : nextUp, nextDown;
+    assert(printFloat(buf[], nextUp(0.0), f) == "4.94066e-324");
+    assert(printFloat(buf[], nextDown(-0.0), f) == "-4.94066e-324");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+
+    import std.math : nextUp;
+
+    double eps = nextUp(0.0);
+    f.precision = 1000;
+    assert(printFloat(buf[], eps, f) ==
+           "4.940656458412465441765687928682213723650598026143247644255856825006"
+           ~ "755072702087518652998363616359923797965646954457177309266567103559"
+           ~ "397963987747960107818781263007131903114045278458171678489821036887"
+           ~ "186360569987307230500063874091535649843873124733972731696151400317"
+           ~ "153853980741262385655911710266585566867681870395603106249319452715"
+           ~ "914924553293054565444011274801297099995419319894090804165633245247"
+           ~ "571478690147267801593552386115501348035264934720193790268107107491"
+           ~ "703332226844753335720832431936092382893458368060106011506169809753"
+           ~ "078342277318329247904982524730776375927247874656084778203734469699"
+           ~ "533647017972677717585125660551199131504891101451037862738167250955"
+           ~ "837389733598993664809941164205702637090279242767544565229087538682"
+           ~ "506419718265533447265625e-324");
+
+    f.precision = 50;
+    assert(printFloat(buf[], double.max, f) ==
+           "1.7976931348623157081452742373170435679807056752584e+308");
+    assert(printFloat(buf[], double.epsilon, f) ==
+           "2.220446049250313080847263336181640625e-16");
+
+    f.precision = 10;
+    assert(printFloat(buf[], 1.0/3.0, f) == "0.3333333333");
+    assert(printFloat(buf[], 1.0/7.0, f) == "0.1428571429");
+    assert(printFloat(buf[], 1.0/9.0, f) == "0.1111111111");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.precision = 15;
+
+    import std.math : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
+                      LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
+
+    assert(printFloat(buf[], cast(double) E, f) == "2.71828182845905");
+    assert(printFloat(buf[], cast(double) PI, f) == "3.14159265358979");
+    assert(printFloat(buf[], cast(double) PI_2, f) == "1.5707963267949");
+    assert(printFloat(buf[], cast(double) PI_4, f) == "0.785398163397448");
+    assert(printFloat(buf[], cast(double) M_1_PI, f) == "0.318309886183791");
+    assert(printFloat(buf[], cast(double) M_2_PI, f) == "0.636619772367581");
+    assert(printFloat(buf[], cast(double) M_2_SQRTPI, f) == "1.12837916709551");
+    assert(printFloat(buf[], cast(double) LN10, f) == "2.30258509299405");
+    assert(printFloat(buf[], cast(double) LN2, f) == "0.693147180559945");
+    assert(printFloat(buf[], cast(double) LOG2, f) == "0.301029995663981");
+    assert(printFloat(buf[], cast(double) LOG2E, f) == "1.44269504088896");
+    assert(printFloat(buf[], cast(double) LOG2T, f) == "3.32192809488736");
+    assert(printFloat(buf[], cast(double) LOG10E, f) == "0.434294481903252");
+    assert(printFloat(buf[], cast(double) SQRT2, f) == "1.4142135623731");
+    assert(printFloat(buf[], cast(double) SQRT1_2, f) == "0.707106781186548");
+}
+
+@safe unittest
+{
+    import std.math : nextDown, nextUp;
+
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+
+    double val = 999999.5;
+    assert(printFloat(buf[], val, f) == "1e+06");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f) == "999999");
+
+    val = 0.00009999995;
+    assert(printFloat(buf[], val, f) == "0.0001");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f) == "9.99999e-05");
+
+    val = 1000000;
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "1e+06");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "999999");
+
+    val = 0.0001;
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "0.0001");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "9.99999e-05");
+
+    val = 999999;
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e+05");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "999999");
+
+    // 0.0000999999 is actually represented as 0.0000999998999..., which is
+    // less than 0.0000999999, so we need to use nextUp to get the corner case here
+    val = nextUp(0.0000999999);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "0.0001");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e-05");
+
+    val = 1000000;
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "1e+06");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "999999");
+
+    val = 0.0001;
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "0.0001");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "9.99999e-05");
+}
+
+// for 100% coverage
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    f.precision = 0;
+
+    assert(printFloat(buf[], 0.009999, f) == "0.01");
+}
+
 private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
 {
     import std.algorithm.comparison : max;
 
+    bool is_g = f.spec == 'g' || f.spec == 'G';
+
+    if (is_g && !f.flHash)
+    {
+        auto length = max(f.width, 1 + sgn.length);
+        char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
+        result[] = '0';
+
+        if (f.flDash)
+        {
+            if (sgn != "")
+                result[0] = sgn[0];
+            result[1 + sgn.length .. $] = ' ';
+        }
+        else
+        {
+            if (f.flZero)
+            {
+                if (sgn != "")
+                    result[0] = sgn[0];
+            }
+            else
+            {
+                if (sgn != "")
+                    result[$ - 2] = sgn[0];
+                result[0 .. $ - 1 - sgn.length] = ' ';
+            }
+        }
+        return result;
+    }
+
     // with e or E qualifier, we need 4 more bytes for E+00 at the end
     auto E = (f.spec == 'e' || f.spec == 'E') ? 4 : 0;
 
-    auto length = max(f.width, f.precision + ((f.precision == 0 && !f.flHash) ? 1 : 2) + sgn.length + E);
+    auto length = max(f.width, f.precision + ((f.precision == 0 && !f.flHash) ? 1 : 2)
+                               + sgn.length + E - (is_g ? 1 : 0));
     char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
     result[] = '0';
 
@@ -2063,6 +2589,7 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
             result[dot_pos] = '.';
 
         auto exp_start = dot_pos + ((f.precision > 0 || f.flHash) ? 1 : 0) + f.precision;
+        if (is_g) exp_start--;
         if (exp_start + E < result.length)
             result[exp_start + E .. $] = ' ';
 
@@ -2077,15 +2604,16 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
         int sign_pos = cast(int) (result.length - (E + 2));
         if (f.precision > 0 || f.flHash)
         {
-            int dot_pos = cast(int) (result.length - f.precision - (E + 1));
+            int dot_pos = cast(int) (result.length - f.precision - (is_g ? 0 : (E + 1)));
+
             result[dot_pos] = '.';
             sign_pos = dot_pos - 2;
         }
 
         if (f.flZero)
             sign_pos = 0;
-        else if (sign_pos > 0)
-            result[0 .. sign_pos + (sgn.length == 0 ? 1 : 0)] = ' ';
+        else if (sign_pos > 0 || (is_g && sgn.length == 0))
+            result[0 .. sign_pos + 1 - sgn.length] = ' ';
 
         if (sgn != "")
             result[sign_pos] = sgn[0];
@@ -2148,6 +2676,18 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
     f.precision = 498;
     assert(printFloat(buf[], 1.0, f).length == 500);
 
+    f.spec = 'g';
+    f.precision = 15;
+    assert(printFloat(buf[], cast(double) E, f) == "2.71828182845905");
+
+    f.precision = 20;
+    assert(printFloat(buf[], double.max, f) == "1.7976931348623157081e+308");
+    assert(printFloat(buf[], nextUp(0.0), f) == "4.9406564584124654418e-324");
+
+    f.flHash = true;
+    f.precision = 499;
+    assert(printFloat(buf[], 1.0, f).length == 500);
+
     assert(GC.stats.usedSize == stats.usedSize);
 }
 
@@ -2161,7 +2701,7 @@ version (printFloatTest)
     //
     // * 20396: Subnormal floats (but not doubles) are printed wrong with %a and %A
     //          Affected versions: CRuntime_Glibc, OSX, MinGW, CRuntime_Microsoft
-    //          This difference is expected in 0.13% of all cases of the first test.
+    //          This difference is expected in 0.098% of all cases of the first test.
     //          Bit pattern of subnormals: x 00000000 xxxxxxxxxxxxxxxxxxxxxxx
     //
     // * 20288: Sometimes strange behaviour with NaNs and Infs; the test may even crash
@@ -2169,6 +2709,9 @@ version (printFloatTest)
     //
     // * 20320 and 9889: Rounding problems with -m64 on win32 and %f and %F qualifier
     //                   Affected versions: CRuntime_Microsoft
+    //
+    // * 21641: In really rare circumstances (about 1 out of a billion) numbers formatted
+    //          with %g are formatted wrong.
 
     // Change this, if you want to run the test for a different amount of time.
     // The duration is used for both tests, so the total duration is twice this duration.
@@ -2232,7 +2775,7 @@ version (printFloatTest)
             f.width = uniform(0,200,rnd);
             f.precision = uniform(0,201,rnd);
             if (f.precision == 200) f.precision = f.UNSPECIFIED;
-            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+            f.spec = "aAeEfFgG"[uniform(0,8,rnd)];
 
             auto rounding = uniform(0,4,rnd);
 
@@ -2275,6 +2818,7 @@ version (printFloatTest)
             {
                 if (wrong == 0) // only report first miss
                 {
+                    import std.format : format;
                     auto tmp = format("%032b", a.u);
                     writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 9], tmp [9 .. $]);
                     writefln("spec: '%%%s%s%s%s%s%s%s%s'",
@@ -2357,7 +2901,7 @@ version (printFloatTest)
             f.width = uniform(0,200,rnd);
             f.precision = uniform(0,201,rnd);
             if (f.precision == 200) f.precision = f.UNSPECIFIED;
-            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+            f.spec = "aAeEfFgG"[uniform(0,8,rnd)];
 
             auto rounding = uniform(0,4,rnd);
 
@@ -2400,6 +2944,7 @@ version (printFloatTest)
             {
                 if (wrong == 0) // only report first miss
                 {
+                    import std.format : format;
                     auto tmp = format("%064b", a.u);
                     writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 11], tmp [11 .. $]);
                     writefln("spec: '%%%s%s%s%s%s%s%s%s'",
