@@ -201,7 +201,8 @@ SRC_STD_ALGO= \
 
 SRC_STD_FORMAT= \
     std\format\package.d \
-    std\format\internal\floats.d
+    std\format\internal\floats.d \
+    std\format\internal\write.d
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
