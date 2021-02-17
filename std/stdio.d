@@ -1577,40 +1577,51 @@ Throws: `Exception` if the file is not opened.
     void write(S...)(S args)
     {
         import std.traits : isBoolean, isIntegral, isAggregateType;
+        import std.utf : UTFException;
         auto w = lockingTextWriter();
         foreach (arg; args)
         {
-            alias A = typeof(arg);
-            static if (isAggregateType!A || is(A == enum))
+            try
             {
-                import std.format : formattedWrite;
+                alias A = typeof(arg);
+                static if (isAggregateType!A || is(A == enum))
+                {
+                    import std.format : formattedWrite;
 
-                formattedWrite(w, "%s", arg);
-            }
-            else static if (isSomeString!A)
-            {
-                put(w, arg);
-            }
-            else static if (isIntegral!A)
-            {
-                import std.conv : toTextRange;
+                    formattedWrite(w, "%s", arg);
+                }
+                else static if (isSomeString!A)
+                {
+                    put(w, arg);
+                }
+                else static if (isIntegral!A)
+                {
+                    import std.conv : toTextRange;
 
-                toTextRange(arg, w);
-            }
-            else static if (isBoolean!A)
-            {
-                put(w, arg ? "true" : "false");
-            }
-            else static if (isSomeChar!A)
-            {
-                put(w, arg);
-            }
-            else
-            {
-                import std.format : formattedWrite;
+                    toTextRange(arg, w);
+                }
+                else static if (isBoolean!A)
+                {
+                    put(w, arg ? "true" : "false");
+                }
+                else static if (isSomeChar!A)
+                {
+                    put(w, arg);
+                }
+                else
+                {
+                    import std.format : formattedWrite;
 
-                // Most general case
-                formattedWrite(w, "%s", arg);
+                    // Most general case
+                    formattedWrite(w, "%s", arg);
+                }
+            }
+            catch (UTFException e)
+            {
+                /* Reset the writer so that it doesn't throw another
+                UTFException on destruction. */
+                w.highSurrogate = '\0';
+                throw e;
             }
         }
     }
@@ -3764,6 +3775,18 @@ void main()
     import std.exception : collectException;
     auto e = collectException({ File f; f.writeln("Hello!"); }());
     assert(e && e.msg == "Attempting to write to closed File");
+}
+
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=21592
+{
+    import std.exception : collectException;
+    import std.utf : UTFException;
+    static import std.file;
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+    auto f = File(deleteme, "w");
+    auto e = collectException!UTFException(f.writeln(wchar(0xD801)));
+    assert(e.next is null);
 }
 
 version (StdStressTest)
