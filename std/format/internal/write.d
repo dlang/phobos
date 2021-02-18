@@ -920,6 +920,14 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     static assert(format("%g",-1.234e23f) == "-1.234e+23");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21641
+@safe unittest
+{
+    float a = -999999.8125;
+    assert(format("%#.5g",a) == "-1.0000e+06");
+    assert(format("%#.6g",a) == "-1.00000e+06");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
