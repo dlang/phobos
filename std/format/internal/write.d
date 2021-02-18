@@ -907,12 +907,17 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                   "-123399999999999990477495546305353609103201879173427886566531" ~
                   "0740685826234179310516880117527217443004051984432279880308552" ~
                   "009640198043032289366552939010719744.000000");
+    static assert(format("%g",1.0) == "1");
+    static assert(format("%g",-1.234e156) == "-1.234e+156");
+
     static assert(format("%e",1.0f) == "1.000000e+00");
     static assert(format("%e",-1.234e23f) == "-1.234000e+23");
     static assert(format("%a",1.0f) == "0x1p+0");
     static assert(format("%a",-1.234e23f) == "-0x1.a2187p+76");
     static assert(format("%f",1.0f) == "1.000000");
     static assert(format("%f",-1.234e23f) == "-123399998884238311030784.000000");
+    static assert(format("%g",1.0f) == "1");
+    static assert(format("%g",-1.234e23f) == "-1.234e+23");
 }
 
 /*
