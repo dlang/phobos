@@ -204,6 +204,7 @@ SRC_STD_DIGEST= \
 SRC_STD_FORMAT= \
     std\format\package.d \
     std\format\internal\floats.d \
+    std\format\internal\read.d \
     std\format\internal\write.d
 
 SRC_STD_NET= \
