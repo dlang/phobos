@@ -313,12 +313,7 @@ if (is(immutable ElementEncodingType!Range == immutable char)
 
 private T unformatRange(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char spec)
-in
-{
-    const char ss = spec.spec;
-    assert(ss == '(', "spec.spec must be '(' not " ~ ss);
-}
-do
+in (spec.spec == '(', "spec.spec must be '(' not " ~ spec.spec)
 {
     import std.range.primitives : empty, front, popFront;
     import std.format : enforceFmt, format, unformatElement;
