@@ -33,16 +33,20 @@ package(std.format) void skipData(Range, Char)(ref Range input, scope const ref 
             break;
         default:
             assert(false,
-                    text("Format specifier not understood: %", spec.spec));
+                   text("Format specifier not understood: %", spec.spec));
     }
 }
 
 private template acceptedSpecs(T)
 {
-         static if (isIntegral!T)       enum acceptedSpecs = "bdosuxX";
-    else static if (isFloatingPoint!T)  enum acceptedSpecs = "seEfgG";
-    else static if (isSomeChar!T)       enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
-    else                                enum acceptedSpecs = "";
+    static if (isIntegral!T)
+        enum acceptedSpecs = "bdosuxX";
+    else static if (isFloatingPoint!T)
+        enum acceptedSpecs = "seEfgG";
+    else static if (isSomeChar!T)
+        enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
+    else
+        enum acceptedSpecs = "";
 }
 
 package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
@@ -54,7 +58,7 @@ if (isInputRange!Range && is(immutable T == immutable bool))
     if (spec.spec == 's') return parse!T(input);
 
     enforceFmt(find(acceptedSpecs!long, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return unformatValue!long(input, spec) != 0;
 }
@@ -64,7 +68,7 @@ if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
     enforceFmt(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
@@ -73,7 +77,6 @@ if (isInputRange!Range && is(T == typeof(null)))
 package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
-
     import std.algorithm.searching : find;
     import std.conv : parse, text;
 
@@ -90,7 +93,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     enforceFmt(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
@@ -126,7 +129,7 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
@@ -137,14 +140,16 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
 {
     import std.algorithm.searching : find;
     import std.conv : to, text;
+
     if (spec.spec == 's' || spec.spec == 'c')
     {
         auto result = to!T(input.front);
         input.popFront();
         return result;
     }
+
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     static if (T.sizeof == 1)
         return unformatValue!ubyte(input, spec);
@@ -154,7 +159,7 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
         return unformatValue!uint(input, spec);
     else
         static assert(false, T.stringof ~ ".sizeof must be 1, 2, or 4 not " ~
-                to!string(T.sizeof));
+                      to!string(T.sizeof));
 }
 
 /// ditto
@@ -169,7 +174,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return unformatRange!T(input, fmt);
     }
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     static if (isStaticArray!T)
     {
@@ -216,13 +221,15 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : parse, text;
+
     const spec = fmt.spec;
     if (spec == '(')
     {
         return unformatRange!T(input, fmt);
     }
+
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
@@ -232,18 +239,20 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
+
     const spec = fmt.spec;
     if (spec == '(')
     {
         return unformatRange!T(input, fmt);
     }
+
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-/**
+/*
  * Function that performs raw reading. Used by unformatValue
  * for integral and float types.
  */
@@ -336,9 +345,12 @@ do
 
                 result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
-            debug (unformatRange) {
-            if (input.empty) printf("-> front = [empty] ");
-            else             printf("-> front = %c ", input.front);
+            debug (unformatRange)
+            {
+                if (input.empty)
+                    printf("-> front = [empty] ");
+                else
+                    printf("-> front = %c ", input.front);
             }
 
             static if (isStaticArray!T)
@@ -349,11 +361,13 @@ do
 
             if (spec.sep !is null)
                 fmt.readUpToNextSpec(input);
-            auto sep = spec.sep !is null ? spec.sep
-                         : fmt.trailing;
-            debug (unformatRange) {
-            if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, cast(int) sep.length, sep.ptr);
-            else                            printf("\n");
+            auto sep = spec.sep !is null ? spec.sep : fmt.trailing;
+            debug (unformatRange)
+            {
+                if (!sep.empty && !input.empty)
+                    printf("-> %c, sep = %.*s\n", input.front, cast(int) sep.length, sep.ptr);
+                else
+                    printf("\n");
             }
 
             if (checkEnd())
@@ -378,4 +392,3 @@ do
     }
     return result;
 }
-
