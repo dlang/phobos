@@ -12,15 +12,19 @@
  */
 module std.format.internal.read;
 
-import std.range.primitives;
-import std.traits;
+import std.range.primitives : ElementEncodingType, ElementType, isInputRange;
 
-import std.format;
+import std.traits : isAggregateType, isArray, isAssociativeArray,
+    isDynamicArray, isFloatingPoint, isIntegral, isSomeChar, isSomeString,
+    isStaticArray, StringTypeOf;
+
+import std.format : FormatSpec;
 
 package(std.format) void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
+    import std.range.primitives : empty, front, popFront;
 
     switch (spec.spec)
     {
@@ -54,6 +58,7 @@ if (isInputRange!Range && is(immutable T == immutable bool))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, unformatValue;
 
     if (spec.spec == 's') return parse!T(input);
 
@@ -67,6 +72,8 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
+
     enforceFmt(spec.spec == 's',
                text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
@@ -79,6 +86,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, FormatException;
 
     if (spec.spec == 'r')
     {
@@ -115,6 +123,7 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, FormatException;
 
     if (spec.spec == 'r')
     {
@@ -140,6 +149,8 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
 {
     import std.algorithm.searching : find;
     import std.conv : to, text;
+    import std.range.primitives : empty, front, popFront;
+    import std.format : enforceFmt, unformatValue;
 
     if (spec.spec == 's' || spec.spec == 'c')
     {
@@ -167,6 +178,8 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
+    import std.range.primitives : empty, front, popFront, put;
+    import std.format : enforceFmt;
 
     const spec = fmt.spec;
     if (spec == '(')
@@ -221,6 +234,7 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
 
     const spec = fmt.spec;
     if (spec == '(')
@@ -239,6 +253,7 @@ package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope c
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
 
     const spec = fmt.spec;
     if (spec == '(')
@@ -261,6 +276,8 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     || is(immutable ElementEncodingType!Range == immutable byte)
     || is(immutable ElementEncodingType!Range == immutable ubyte))
 {
+    import std.range.primitives : popFront;
+
     union X
     {
         ubyte[T.sizeof] raw;
@@ -284,7 +301,7 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     return x.typed;
 }
 
-//debug = unformatRange;
+// debug = unformatRange;
 
 private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 in
@@ -294,6 +311,9 @@ in
 }
 do
 {
+    import std.range.primitives : empty, front, popFront;
+    import std.format : enforceFmt, format, unformatElement;
+
     debug (unformatRange) printf("unformatRange:\n");
 
     T result;
