@@ -20,7 +20,8 @@ import std.traits : isAggregateType, isArray, isAssociativeArray,
 
 import std.format : FormatSpec;
 
-package(std.format) void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) void skipData(Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
@@ -53,7 +54,8 @@ private template acceptedSpecs(T)
         enum acceptedSpecs = "";
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(immutable T == immutable bool))
 {
     import std.algorithm.searching : find;
@@ -68,7 +70,8 @@ if (isInputRange!Range && is(immutable T == immutable bool))
     return unformatValue!long(input, spec) != 0;
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
@@ -81,7 +84,8 @@ if (isInputRange!Range && is(T == typeof(null)))
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -117,7 +121,8 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
@@ -144,7 +149,8 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -174,7 +180,8 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
@@ -230,8 +237,10 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
-if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char fmt)
+if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
+    && !is(T == enum))
 {
     import std.conv : parse, text;
     import std.format : enforceFmt;
@@ -249,7 +258,8 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
 }
 
 /// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
+package(std.format) T unformatValueImpl(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
@@ -303,7 +313,8 @@ if (is(immutable ElementEncodingType!Range == immutable char)
 
 // debug = unformatRange;
 
-private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+private T unformatRange(T, Range, Char)(
+    ref Range input, scope const ref FormatSpec!Char spec)
 in
 {
     const char ss = spec.spec;
@@ -376,7 +387,8 @@ do
             static if (isStaticArray!T)
             {
                 debug (unformatRange) printf("i = %u < %u\n", i, T.length);
-                enforceFmt(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
+                enforceFmt(i <= T.length,
+                           "Too many format specifiers for static array of length %d".format(T.length));
             }
 
             if (spec.sep !is null)
@@ -397,8 +409,10 @@ do
             {
                 while (!sep.empty)
                 {
-                    enforceFmt(!input.empty, "Unexpected end of input when parsing range separator");
-                    enforceFmt(input.front == sep.front, "Unexpected character when parsing range separator");
+                    enforceFmt(!input.empty,
+                               "Unexpected end of input when parsing range separator");
+                    enforceFmt(input.front == sep.front,
+                               "Unexpected character when parsing range separator");
                     input.popFront();
                     sep.popFront();
                 }
@@ -408,7 +422,8 @@ do
     }
     static if (isStaticArray!T)
     {
-        enforceFmt(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
+        enforceFmt(i == T.length,
+                   "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
 }
