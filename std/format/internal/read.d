@@ -83,7 +83,6 @@ if (isInputRange!Range && is(T == typeof(null)))
     return parse!T(input);
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
@@ -120,7 +119,6 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
@@ -148,7 +146,6 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     return parse!T(input);
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
@@ -179,7 +176,6 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
                       to!string(T.sizeof));
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
@@ -236,7 +232,6 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return app.data;
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
@@ -257,7 +252,6 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
     return parse!T(input);
 }
 
-/// ditto
 package(std.format) T unformatValueImpl(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
