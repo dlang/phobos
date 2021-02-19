@@ -311,8 +311,6 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     return x.typed;
 }
 
-// debug = unformatRange;
-
 private T unformatRange(T, Range, Char)(
     ref Range input, scope const ref FormatSpec!Char spec)
 in
@@ -324,8 +322,6 @@ do
 {
     import std.range.primitives : empty, front, popFront;
     import std.format : enforceFmt, format, unformatElement;
-
-    debug (unformatRange) printf("unformatRange:\n");
 
     T result;
     static if (isStaticArray!T)
@@ -342,9 +338,6 @@ do
             break;
         }
     }
-    debug (unformatRange) printf("\t");
-    debug (unformatRange) if (!input.empty) printf("input.front = %c, ", input.front);
-    debug (unformatRange) printf("cont = %.*s\n", cast(int) cont.length, cont.ptr);
 
     bool checkEnd()
     {
@@ -359,7 +352,6 @@ do
             fmt.readUpToNextSpec(input);
             enforceFmt(!input.empty, "Unexpected end of input when parsing range");
 
-            debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
             {
                 result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
@@ -376,17 +368,9 @@ do
 
                 result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
-            debug (unformatRange)
-            {
-                if (input.empty)
-                    printf("-> front = [empty] ");
-                else
-                    printf("-> front = %c ", input.front);
-            }
 
             static if (isStaticArray!T)
             {
-                debug (unformatRange) printf("i = %u < %u\n", i, T.length);
                 enforceFmt(i <= T.length,
                            "Too many format specifiers for static array of length %d".format(T.length));
             }
@@ -394,13 +378,6 @@ do
             if (spec.sep !is null)
                 fmt.readUpToNextSpec(input);
             auto sep = spec.sep !is null ? spec.sep : fmt.trailing;
-            debug (unformatRange)
-            {
-                if (!sep.empty && !input.empty)
-                    printf("-> %c, sep = %.*s\n", input.front, cast(int) sep.length, sep.ptr);
-                else
-                    printf("\n");
-            }
 
             if (checkEnd())
                 break;
@@ -416,7 +393,6 @@ do
                     input.popFront();
                     sep.popFront();
                 }
-                debug (unformatRange) printf("input.front = %c\n", input.front);
             }
         }
     }
