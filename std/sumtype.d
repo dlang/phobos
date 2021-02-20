@@ -294,7 +294,7 @@ private:
 
     union Storage
     {
-        // Workaround for dlang issue 20068
+        // Workaround for https://issues.dlang.org/show_bug.cgi?id=20068
         template memberName(T)
         if (IndexOf!(T, Types) >= 0)
         {
@@ -337,7 +337,7 @@ private:
 
 public:
 
-    // Workaround for dlang issue 21399
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21399
     version (StdDdoc)
     {
         // Dummy type to stand in for loop variable
@@ -365,7 +365,7 @@ public:
                 static if (isCopyable!T)
                 {
                     mixin("Storage newStorage = { ",
-                        // Workaround for dlang issue 21542
+                        // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
                         Storage.memberName!T, ": (__ctfe ? value : forward!value)",
                     " };");
                 }
@@ -535,7 +535,7 @@ public:
         @disable this();
     }
 
-    // Workaround for dlang issue 21399
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21399
     version (StdDdoc)
     {
         // Dummy type to stand in for loop variable
@@ -667,7 +667,7 @@ public:
         }
     }
 
-    // Workaround for dlang issue 19407
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=19407
     static if (__traits(compiles, anySatisfy!(hasElaborateDestructor, Types)))
     {
         // If possible, include the destructor only when it's needed
@@ -705,7 +705,7 @@ public:
         });
     }
 
-    // Workaround for dlang issue 21400
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21400
     version (StdDdoc)
     {
         /**
@@ -765,7 +765,7 @@ public:
 
     static if (allSatisfy!(isHashable, Map!(ConstOf, Types)))
     {
-        // Workaround for dlang issue 21400
+        // Workaround for https://issues.dlang.org/show_bug.cgi?id=21400
         version (StdDdoc)
         {
             /**
@@ -776,7 +776,7 @@ public:
             size_t toHash() const;
         }
 
-        // Workaround for dlang issue 20095
+        // Workaround for https://issues.dlang.org/show_bug.cgi?id=20095
         version (D_BetterC) {} else
         /**
          * Returns the hash of the `SumType`'s current value.
@@ -1940,7 +1940,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
         {
             size_t[numCases] matches;
 
-            // Workaround for dlang issue 19561
+            // Workaround for https://issues.dlang.org/show_bug.cgi?id=19561
             foreach (ref match; matches)
             {
                 match = noMatch;
@@ -1978,7 +1978,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             );
         }
 
-        // Workaround for dlang issue 19993
+        // Workaround for https://issues.dlang.org/show_bug.cgi?id=19993
         enum handlerName(size_t hid) = "handler" ~ toCtString!hid;
 
         static foreach (size_t hid, handler; handlers)
