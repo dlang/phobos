@@ -240,6 +240,8 @@ struct This {}
 // Converts an unsigned integer to a compile-time string constant.
 private enum toCtString(ulong n) = n.stringof[0 .. $ - "LU".length];
 
+// Check that .stringof does what we expect, since it's not guaranteed by the
+// language spec.
 @safe unittest
 {
     assert(toCtString!0 == "0");
