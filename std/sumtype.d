@@ -833,6 +833,7 @@ public:
 }
 
 // Equality of differently-qualified SumTypes
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -944,6 +945,7 @@ version (D_BetterC) {} else
 }
 
 // Doesn't destroy reference types
+// Disabled in BetterC due to use of classes
 version (D_BetterC) {} else
 @system unittest
 {
@@ -1031,6 +1033,7 @@ version (D_BetterC) {} else
 }
 
 // toString
+// Disabled in BetterC due to use of std.conv.text
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1046,6 +1049,7 @@ version (D_BetterC) {} else
 }
 
 // string formatting
+// Disabled in BetterC due to use of std.format.format
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1058,6 +1062,7 @@ version (D_BetterC) {} else
 }
 
 // string formatting of qualified SumTypes
+// Disabled in BetterC due to use of std.format.format and dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1070,6 +1075,7 @@ version (D_BetterC) {} else
 }
 
 // Github issue #16
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1084,6 +1090,7 @@ version (D_BetterC) {} else
 }
 
 // Github issue #16 with const
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1098,6 +1105,7 @@ version (D_BetterC) {} else
 }
 
 // Stale pointers
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @system unittest
 {
@@ -1111,6 +1119,7 @@ version (D_BetterC) {} else
 }
 
 // Exception-safe assignment
+// Disabled in BetterC due to use of exceptions
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1169,6 +1178,7 @@ version (D_BetterC) {} else
 }
 
 // Github issue #22
+// Disabled in BetterC due to use of std.typecons.Nullable
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1183,6 +1193,7 @@ version (D_BetterC) {} else
 }
 
 // Static arrays of structs with postblits
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1204,6 +1215,7 @@ version (D_BetterC) {} else
 }
 
 // Replacement does not happen inside SumType
+// Disabled in BetterC due to use of associative arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1223,6 +1235,7 @@ version (D_BetterC) {} else
 }
 
 // Self-referential SumTypes inside Algebraic
+// Disabled in BetterC due to use of std.variant.Algebraic
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1269,6 +1282,7 @@ version (D_BetterC) {} else
 }
 
 // Types with invariants
+// Disabled in BetterC due to use of exceptions
 version (D_BetterC) {} else
 @system unittest
 {
@@ -1344,6 +1358,7 @@ version (D_BetterC) {} else
 }
 
 // SumTypes as associative array keys
+// Disabled in BetterC due to use of associative arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -1354,6 +1369,7 @@ version (D_BetterC) {} else
 }
 
 // toString with non-copyable types
+// Disabled in BetterC due to use of std.conv.to (in toString)
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -2035,6 +2051,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 }
 
 // Handlers with qualified parameters
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -2048,6 +2065,7 @@ version (D_BetterC) {} else
 }
 
 // Handlers for qualified types
+// Disabled in BetterC due to use of dynamic arrays
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -2070,6 +2088,7 @@ version (D_BetterC) {} else
 }
 
 // Delegate handlers
+// Disabled in BetterC due to use of closures
 version (D_BetterC) {} else
 @safe unittest
 {
@@ -2116,6 +2135,7 @@ version (unittest)
 }
 
 // Fallback to generic handler
+// Disabled in BetterC due to use of std.conv.to
 version (D_BetterC) {} else
 @safe unittest
 {
