@@ -825,16 +825,10 @@ public:
 {
     alias MySum = SumType!(int, float);
 
-    MySum x = MySum(123);
-    MySum y = MySum(123);
-    MySum z = MySum(456);
-    MySum w = MySum(123.0);
-    MySum v = MySum(456.0);
-
-    assert(x == y);
-    assert(x != z);
-    assert(x != w);
-    assert(x != v);
+    assert(MySum(123) == MySum(123));
+    assert(MySum(123) != MySum(456));
+    assert(MySum(123) != MySum(123.0));
+    assert(MySum(123) != MySum(456.0));
 
 }
 
