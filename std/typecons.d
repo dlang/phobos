@@ -6088,7 +6088,7 @@ package template GetOverloadedMethods(T)
                     enum isMethod = false;
             }
             alias follows = AliasSeq!(
-                std.meta.Filter!(isMethod, __traits(getOverloads, T, name)),
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }

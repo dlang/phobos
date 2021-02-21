@@ -4150,7 +4150,7 @@ version (StdUnittest)
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
-    import std.math : isClose, sqrt, log;
+    import std.math : isClose, sqrt, log, abs;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
     import std.stdio;
@@ -4480,7 +4480,7 @@ version (StdUnittest)
 
     assert(equal(iota(1_000_000), bufTrickTest));
 
-    auto myTask = task!(std.math.abs)(-1);
+    auto myTask = task!(abs)(-1);
     taskPool.put(myTask);
     assert(myTask.spinForce == 1);
 
