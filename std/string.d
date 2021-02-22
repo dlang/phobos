@@ -379,7 +379,7 @@ pure nothrow @system unittest
     p = toStringz(test2);
     assert(*p == 0);
 
-    assert(toStringz([]) is "".ptr);
+    assert(toStringz([]) is toStringz(""));
 }
 
 pure nothrow @system unittest // https://issues.dlang.org/show_bug.cgi?id=15136
