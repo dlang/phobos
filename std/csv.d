@@ -890,6 +890,12 @@ public:
         _separator = delimiter;
         _quote = quote;
 
+        if (_input.range.empty)
+        {
+            _empty = true;
+            return;
+        }
+
         prime();
     }
 
@@ -919,6 +925,12 @@ public:
         _input = new Input!(Range, ErrorLevel)(input);
         _separator = delimiter;
         _quote = quote;
+
+        if (_input.range.empty)
+        {
+            _empty = true;
+            return;
+        }
 
         size_t[string] colToIndex;
         foreach (h; colHeaders)
@@ -1207,6 +1219,7 @@ public:
         _input = input;
         _separator = delimiter;
         _quote = quote;
+
         _front = appender!(dchar[])();
         _popCount = indices.dup;
 
@@ -1749,4 +1762,24 @@ if (isSomeChar!Separator && isInputRange!Range
             assert(row == [4, 5, 6]);
         ++i;
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21629
+@safe pure unittest
+{
+    import std.typecons : Tuple;
+    struct Reccord
+    {
+        string a;
+        string b;
+    }
+
+    auto header = ["a" ,"b"];
+    string input = "";
+    assert(csvReader!Reccord(input).empty, "This should be empty");
+    assert(csvReader!Reccord(input, header).empty, "This should be empty");
+    assert(csvReader!(Tuple!(string,string))(input).empty, "This should be empty");
+    assert(csvReader!(string[string])(input, header).empty, "This should be empty");
+    assert(csvReader!(string[string])(input, null).empty, "This should be empty");
+    assert(csvReader!(int)(input, null).empty, "This should be empty");
 }
