@@ -10364,7 +10364,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     }
 
     // year
-    auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
+    auto found = value[2 .. value.length].find!(not!(isDigit))();
     size_t yearLen = value.length - found.length;
     if (found.length == 0)
         throw new DateTimeException("Invalid year");
@@ -10454,7 +10454,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
             case "J": case "j": throw new DateTimeException("Invalid timezone");
             default:
             {
-                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                if (all!(isAlpha)(value[0 .. tzLen]))
                 {
                     tz = new immutable SimpleTimeZone(Duration.zero);
                     break;

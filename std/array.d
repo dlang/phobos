@@ -3636,13 +3636,13 @@ if (isDynamicArray!A)
         return app.data;
     }
 
+    import std.format : FormatSpec;
+
     /// ditto
     template toString(Writer)
     if (isOutputRange!(Writer, char))
     {
-        import std.format : FormatSpec;
-
-        void toString(ref Writer w, scope const ref std.format.FormatSpec!char fmt) const
+        void toString(ref Writer w, scope const ref FormatSpec!char fmt) const
         {
             import std.format : formatValue;
             import std.range.primitives : put;
