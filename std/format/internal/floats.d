@@ -45,8 +45,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     if (sgn == "" && f.flPlus) sgn = "+";
     if (sgn == "" && f.flSpace) sgn = " ";
 
-    assert(f.spec == 'a' || f.spec == 'A' || f.spec == 'e' || f.spec == 'E' || f.spec=='f' || f.spec=='F');
-    bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F';
+    assert(f.spec == 'a' || f.spec == 'A'
+           || f.spec == 'e' || f.spec == 'E'
+           || f.spec == 'f' || f.spec == 'F'
+           || f.spec == 'g' || f.spec == 'G');
+    bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F' || f.spec=='G';
 
     // special treatment for nan and inf
     if (exp == maxexp)
@@ -78,6 +81,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             return printFloatE(buf, val, f, rm, sgn, exp, mnt, is_upper);
         case 'f': case 'F':
             return printFloatF(buf, val, f, rm, sgn, exp, mnt, is_upper);
+        case 'g': case 'G':
+            return printFloatG(buf, val, f, rm, sgn, exp, mnt, is_upper);
     }
 }
 
@@ -2042,6 +2047,102 @@ printFloat_done:
            ~"7175706828388979108268586060148663818836212158203125");
 }
 
+private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
+                                  string sgn, int exp, ulong mnt, bool is_upper)
+if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+{
+    import std.math : abs;
+
+    if (f.precision == f.UNSPECIFIED)
+        f.precision = 6;
+
+    if (f.precision == 0)
+        f.precision = 1;
+
+    bool useE = false;
+
+    final switch (rm)
+    {
+    case RoundingMode.up:
+        useE = !less(abs(val), pow10!T(f.precision) - (val > 0 ? 1 : 0))
+            || less(abs(val), (cast(T) 0.0001) - (val > 0 ? pow1_10!T(4 + f.precision) : 0));
+        break;
+    case RoundingMode.down:
+        useE = !less(abs(val), pow10!T(f.precision) - (val < 0 ? 1 : 0))
+            || less(abs(val), (cast(T) 0.0001) - (val < 0 ? pow1_10!T(4 + f.precision) : 0));
+        break;
+    case RoundingMode.toZero:
+        useE = !less(abs(val), pow10!T(f.precision))
+            || less(abs(val), (cast(T) 0.0001));
+        break;
+    case RoundingMode.toNearestTiesToEven:
+    case RoundingMode.toNearestTiesAwayFromZero:
+        useE = !less(abs(val), pow10!T(f.precision) - (cast(T) 0.5))
+            || less(abs(val), (cast(T) 0.0001) - (cast(T) 0.5) * pow1_10!T(4 + f.precision));
+        break;
+    }
+
+    // will be calls to printFloatE and printFloatF later, but for the sake of small
+    // steps it is just a single letter string for the time being.
+    if (useE)
+        buf[0] = 'E';
+    else
+        buf[0] = 'F';
+
+    return buf[0 .. 1];
+}
+
+@safe unittest
+{
+    import std.math : nextDown, nextUp;
+
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+
+    double val = 999999.5;
+    assert(printFloat(buf[], val, f) == "E");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f) == "F");
+
+    val = 0.00009999995;
+     assert(printFloat(buf[], val, f) == "F");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f) == "E");
+
+    val = 1000000;
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "E");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "F");
+
+    val = 0.0001;
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "F");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "E");
+
+    val = 999999;
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "E");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "F");
+
+    // 0.0000999999 is actually represented as 0.0000999998999..., which is
+    // less than 0.0000999999, so we need to use nextUp to get the corner case here
+    val = nextUp(0.0000999999);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "F");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "E");
+
+    val = 1000000;
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "E");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "F");
+
+    val = 0.0001;
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "F");
+    val = nextDown(val);
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "E");
+}
+
 private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
 {
     import std.algorithm.comparison : max;
@@ -2098,6 +2199,204 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
     }
 
     return result;
+}
+
+// compare two floats, without internal promotion to real.
+float less(float a, float b) @nogc nothrow pure @trusted
+{
+    int al = *cast(int*) &a;
+    int bl = *cast(int*) &b;
+
+    return al < bl;
+}
+
+double less(double a, double b) @nogc nothrow pure @trusted
+{
+    long al = *cast(long*) &a;
+    long bl = *cast(long*) &b;
+
+    return al < bl;
+}
+
+// own power of 10 function, because floating point math isn't reliable enough
+T pow10(T)(int i)
+{
+    if (i>T.max_10_exp) return T.infinity;
+
+    ulong u = void;
+    ulong e = void;
+
+    // shortcut for small numbers:
+    // 5 ^^ 27 still fits into an ulong, while 5 ^^ 28 doesn't
+    if (i <= 27)
+    {
+        u = 5L ^^ i;
+        e = i;
+    }
+    else
+    {
+        u = 5L ^^ 27;
+        e = 27;
+
+        // saving some lower bits to get rounding (almost) right
+        ulong u2 = 0;
+        uint bits = 0;
+        foreach (k; 27 .. i)
+        {
+            // when overflow is expected, we move the lower bits to u2
+            while (u > ulong.max / 5)
+            {
+                u2 = (u2 << 1) + (u & 1);
+                u >>= 1;
+                e++;
+                bits++;
+            }
+            u *= 5;
+            u2 *= 5;
+            e++;
+
+            // adding overflow bits
+            u += u2 >> bits;
+            u2 &= (1L << bits) - 1;
+
+            // Removing some trailing bits of u2 to avoid another overflow
+            // and more ulongs. This implies, that in some rare cases
+            // rounding errors might occur. We'll fix that later.
+            if (bits > 50)
+            {
+                u2 >>= 3;
+                bits -= 3;
+            }
+        }
+    }
+
+    // remove implicit bit
+    ulong l = log2(u);
+    u = u & ((1L << l) - 1);
+
+    // save exponent in e
+    e += T.max_exp - 1 + l;
+
+    // safe mantissa in m
+    ulong m = void;
+    if (l <= T.mant_dig - 1)
+        m = u << (T.mant_dig - 1 - l);
+    else
+    {
+        m = u >> (l - (T.mant_dig - 1));
+
+        // round up, if needed
+        ulong r = u & ((1L << (l - (T.mant_dig - 1))) - 1);
+        if (r > 0) m++;
+    }
+
+    // 153 needs correction
+    if (i == 153) m++;
+
+    static if (is (T == float))
+    {
+        uint tmp = cast(uint) ((e << (T.mant_dig - 1)) + m);
+        return () @trusted { return *cast(float*) &tmp; }();
+    }
+    else
+    {
+        ulong tmp = cast(ulong) ((e << (T.mant_dig - 1)) + m);
+        return () @trusted { return *cast(double*) &tmp; }();
+    }
+}
+
+// todo: add this to std.math
+ulong log2(ulong w) @safe nothrow pure
+{
+    ulong n = 63;
+    if (w >> 32 == 0) { n -= 32; w <<= 32; }
+    if (w >> 48 == 0) { n -= 16; w <<= 16; }
+    if (w >> 56 == 0) { n -= 8; w <<= 8; }
+    if (w >> 60 == 0) { n -= 4; w <<= 4; }
+    if (w >> 62 == 0) { n -= 2; w <<= 2; }
+    if (w >> 63 == 0) n--;
+    return n;
+}
+
+// own power of 1/10 function, because floating point math isn't reliable enough
+T pow1_10(T)(int i)
+{
+    // unfortunately this number is not available as a property
+    static if (is (T == float))
+    {
+        if (i > 45) return 0.0f;
+    }
+    else
+    {
+        if (i > 324) return 0.0;
+    }
+
+    // u and u2 are the fractional part of 1/10, leading zeroes removed
+    ulong u = 14757395258967641292UL;
+    ulong u2 = u >> 3;
+    ulong e = 4;
+
+    foreach (j; 1 .. i)
+    {
+        ulong tmp = u % 5;
+        u /= 5;
+        u2 += tmp << 61;
+        u2 /= 5;
+        e++;
+
+        // remove leading zeros
+        while ((u & (1L << 63)) == 0)
+        {
+            u <<= 1;
+            if ((u2 & (1L << 60)) != 0) u++;
+            u2 = (u2 << 1) & ((1L << 61) - 1);
+            e++;
+        }
+    }
+
+    ulong m = void;
+
+    if (e >= T.max_exp - 1)
+    {
+        // subnormal
+
+        auto delta = 66 + e - T.mant_dig - T.max_exp;
+        if (delta >= 64)
+            m = 1;
+        else
+        {
+            m = u >> delta;
+            m++;
+        }
+
+        e = 0;
+    }
+    else
+    {
+        // remove implicit bit
+        u = u & ((1UL << 63) - 1);
+
+        // save exponent in e
+        e = T.max_exp - 1 - e;
+
+        // safe mantissa in m
+        m = u >> (63 - (T.mant_dig - 1));
+
+        // round up, if needed
+        ulong r = u & ((1UL << (63 - (T.mant_dig - 1))) - 1);
+        if (r > 0) m++;
+    }
+
+    static if (is (T == float))
+    {
+        uint tmp = cast(uint) ((e << (T.mant_dig - 1)) + m);
+        return () @trusted { return *cast(float*) &tmp; }();
+    }
+    else
+    {
+        ulong tmp = cast(ulong) ((e << (T.mant_dig - 1)) + m);
+        return () @trusted { return *cast(double*) &tmp; }();
+    }
 }
 
 // check no allocations
