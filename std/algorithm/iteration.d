@@ -47,6 +47,8 @@ $(T2 permutations,
 $(T2 reduce,
         `reduce!((a, b) => a + b)([1, 2, 3, 4])` returns `10`.
         This is the old implementation of `fold`.)
+$(T2 splitBy,
+        Lazily splits a range by comparing adjacent elements.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 substitute,
@@ -2273,7 +2275,7 @@ if (isForwardRange!Range)
  * reflexive (`pred(x,x)` is always true), symmetric
  * (`pred(x,y) == pred(y,x)`), and transitive (`pred(x,y) && pred(y,z)`
  * implies `pred(x,z)`). If this is not the case, the range returned by
- * chunkBy may assert at runtime or behave erratically. Use $(LREF chunkByAny)
+ * chunkBy may assert at runtime or behave erratically. Use $(LREF splitBy)
  * if you want to chunk by a predicate that is not an equivalence relation.
  *
  * Params:
@@ -2284,7 +2286,8 @@ if (isForwardRange!Range)
  * all elements in a given subrange are equivalent under the given predicate.
  * With a unary predicate, a range of tuples is returned, with the tuple
  * consisting of the result of the unary predicate for each subrange, and the
- * subrange itself.
+ * subrange itself. Copying the range currently has reference semantics, but this may
+ * change in the future.
  *
  * Notes:
  *
@@ -2749,34 +2752,33 @@ if (isInputRange!Range)
 }
 
 /**
-Like $(REF chunkBy), but does not require reflexivity, symmetricity nor
-transitivity of the binary predicate. Unlike `çhunkBy`, requires the
-source to be a forward range.
-With binary predicates, the element closer to front is always passed
-first to the predicate.
-When called with unary predicate, the comparisons are still assumed
-to be reflexive, symmetric and transitive. However, the source range is
-nonetheless required to be a forward range.
+Splits a forward range into subranges in places determined by a binary
+predicate.
+
+When iterating, one element of `r` is compared with `pred` to the next
+element. If `pred` return true, a new subrange is started for the next element.
+Otherwise, they are part of the same subrange.
+
+If the elements are compared with an inequality (!=) operator, consider
+$(LREF chunkBy) instead, as it's likely faster to execute.
+
 Params:
-pred = Predicate for determining equivalence.
-r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be chunked.
-Returns: With a binary predicate, a range of ranges is returned in which
-all elements in a given subrange are equivalent under the given predicate.
-With a unary predicate, a range of tuples is returned, with the tuple
-consisting of the result of the unary predicate for each subrange, and the
-subrange itself.
+pred = Predicate for determining where to split. The earlier element in the
+source range is always given as the first argument.
+r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be split.
+Returns: a range of subranges of `r`, split such that within a given subrange,
+calling `pred` with any pair of adjacent elements as arguments returns `false`.
+Copying the range currently has reference semantics, but this may change in the future.
+
+See_also:
+$(LREF splitter), which uses elements as splitters instead of element-to-element
+relations.
 */
 
-auto chunkByAny(alias pred, Range)(Range r)
-if (isForwardRange!Range && !ChunkByImplIsUnary!(pred, Range))
-{
-    return ChunkByImpl!(pred, pred, GroupingOpType.binaryAny, Range)(r);
-}
-
-template chunkByAny(alias pred, Range)
-if (isForwardRange!Range && ChunkByImplIsUnary!(pred, Range))
-{
-    alias chunkByAny = chunkBy!(pred, Range);
+auto splitBy(alias pred, Range)(Range r)
+if (isForwardRange!Range)
+{   import std.functional : not;
+    return ChunkByImpl!(not!pred, not!pred, GroupingOpType.binaryAny, Range)(r);
 }
 
 //FIXME: these should be @safe
@@ -2787,7 +2789,7 @@ nothrow pure @system unittest
     import std.range : dropExactly;
     auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
 
-    auto result1 = source.chunkByAny!((a,b) => a > b);
+    auto result1 = source.splitBy!((a,b) => a <= b);
     assert(result1.save.equal!equal([
         [4, 3, 2],
         [11, 0, -3],
@@ -2795,7 +2797,7 @@ nothrow pure @system unittest
         [5, 3, 0]
     ]));
 
-    //chunkByAny, like chunkBy, is currently a reference range (this may change
+    //splitBy, like chunkBy, is currently a reference range (this may change
     //in future). Remember to call `save` when appropriate.
     auto result2 = result1.dropExactly(2);
     assert(result1.save.equal!equal([
@@ -2816,7 +2818,7 @@ nothrow @system unittest
         static int popfrontsSoFar;
 
         auto front(){return elements[0];}
-        auto popFront()
+        void popFront()
         {   popfrontsSoFar++;
             elements = elements[1 .. $];
         }
@@ -2825,7 +2827,7 @@ nothrow @system unittest
     }
 
     auto result = SomeRange([10, 9, 8, 5, 0, 1, 0, 8, 11, 10, 8, 12])
-        .chunkByAny!((a, b) => abs(a - b) < 3);
+        .splitBy!((a, b) => abs(a - b) >= 3);
 
     assert(result.equal!equal([
         [10, 9, 8],
@@ -2843,7 +2845,7 @@ nothrow @system unittest
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkByAny!((x, y) => ((x*y) % 3) == 0);
+    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].splitBy!((x, y) => ((x*y) % 3) > 0);
     assert(r.equal!equal([
         [1],
         [2, 3, 4],
@@ -2857,7 +2859,7 @@ nothrow pure @system unittest
     // Grouping by maximum adjacent difference:
     import std.math : abs;
     import std.algorithm.comparison : equal;
-    auto r3 = [1, 3, 2, 5, 4, 9, 10].chunkByAny!((a, b) => abs(a-b) < 3);
+    auto r3 = [1, 3, 2, 5, 4, 9, 10].splitBy!((a, b) => abs(a-b) >= 3);
     assert(r3.equal!equal([
         [1, 3, 2],
         [5, 4],
@@ -4821,9 +4823,9 @@ Returns:
     one separator is given, the result is a range with two empty elements.
 
 See_Also:
- $(REF _splitter, std,regex) for a version that splits using a regular
-expression defined separator and
- $(REF _split, std,array) for a version that splits eagerly.
+ $(REF _splitter, std,regex) for a version that splits using a regular expression defined separator,
+ $(REF _split, std,array) for a version that splits eagerly and
+ $(LREF splitBy), which compares adjacent elements instead of element against separator.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)

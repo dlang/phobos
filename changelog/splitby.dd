@@ -1,0 +1,20 @@
+splitBy added to std.algorithm.iteration
+
+$(REF splitBy, std, algortihm, iteration) is a variant of the existing $(REF
+chunkBy, std, algortihm, iteration) function that does not require its predicate
+to be an equivelance relation, allowing it to be used in ways that chunkBy
+cannot. For example:
+-------
+// Grouping by maximum adjacent difference:
+import std.math : abs;
+import std.algorithm;
+auto r3 = [1, 3, 2, 5, 4, 9, 10].splitBy!((a, b) => abs(a-b) >= 3);
+assert(r3.equal!equal([
+    [1, 3, 2],
+    [5, 4],
+    [9, 10]
+]));
+-------
+
+This is illegal with chunkBy, because it requires that if pred(a,b) and
+pred(b,c) return true, pred(a,c) must also return true.
