@@ -27,11 +27,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 {
     static if (is(T == float))
     {
-        ulong ival = () @trusted { return *cast(uint*)&val; }();
+        ulong ival = () @trusted { return *cast(uint*) &val; }();
     }
     else
     {
-        ulong ival = () @trusted { return *cast(ulong*)&val; }();
+        ulong ival = () @trusted { return *cast(ulong*) &val; }();
     }
 
     import std.math : log2;
@@ -138,9 +138,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     do
     {
-        exp_str[--exp_pos] = '0' + exp%10;
+        exp_str[--exp_pos] = '0' + exp % 10;
         exp /= 10;
-    } while (exp>0);
+    } while (exp > 0);
 
     exp_str[--exp_pos] = exp_sgn;
 
@@ -597,7 +597,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     // get a conservative estimate. We need to add 3, because of the sign, the fact, that the
     // logarithm is one to small and because we need to round up instead of down, which to!int does.
     // And then we might need one more digit in case of a rounding overflow.
-    auto max_left = exp>0 ? to!int(exp / 3.32) + 4 : 3;
+    auto max_left = exp > 0 ? to!int(exp / 3.32) + 4 : 3;
 
     // If the result is not left justified, we may need to add more digits here for getting the
     // correct width.
@@ -713,7 +713,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         // Generation of digits by consecutive division with reminder by 10.
         int msu = 0; // Most significant ulong; when it get's zero, we can ignore it further on
-        while (msu < count - 1 || mybig[$-1] != 0)
+        while (msu < count - 1 || mybig[$ - 1] != 0)
         {
             ulong mod = 0;
             foreach (i;msu .. count)
@@ -748,7 +748,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             next = buffer[start] > '5' ? roundType.UPPER : roundType.LOWER;
         else
         {
-            next = buffer[start]=='5' ? roundType.FIVE : roundType.ZERO;
+            next = buffer[start] == '5' ? roundType.FIVE : roundType.ZERO;
             foreach (i; start + 1 .. right)
                 if (buffer[i] > '0')
                 {
@@ -1025,7 +1025,7 @@ printFloat_done:
     {
         exp_str[--exp_pos] = '0' + final_exp%10;
         final_exp /= 10;
-    } while (final_exp>0);
+    } while (final_exp > 0);
     if (max_exp_digits - exp_pos == 1)
         exp_str[--exp_pos] = '0';
 
@@ -1553,7 +1553,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         // Generation of digits by consecutive multiplication by 10.
         int lsu = 0; // Least significant ulong; when it get's zero, we can ignore it furtheron
-        while ((lsu < count - 1 || mybig[$ - 1] != 0) && right-start - 1 < f.precision)
+        while ((lsu < count - 1 || mybig[$ - 1] != 0) && right - start - 1 < f.precision)
         {
             ulong over = 0;
             foreach (i;lsu .. count)
@@ -1595,7 +1595,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         if (int_part == 0)
             buffer[--left] = '0';
         else
-            while (int_part>0)
+            while (int_part > 0)
             {
                 buffer[--left] = '0' + (int_part % 10);
                 int_part /= 10;
@@ -1660,7 +1660,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         }
     }
 
-    if (f.precision>0 || f.flHash)
+    if (f.precision > 0 || f.flHash)
     {
         // adding zeros
         buffer[right .. f.precision + start + 1] = '0';
