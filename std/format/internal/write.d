@@ -12,12 +12,15 @@
  */
 module std.format.internal.write;
 
-import std.exception;
-import std.meta;
-import std.range.primitives;
+import std.format : FormatSpec;
+import std.range.primitives : isInputRange;
 import std.traits;
 
-import std.format;
+version (StdUnittest)
+{
+    import std.exception : assertCTFEable;
+    import std.format : formatTest, format;
+}
 
 /*
     `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
@@ -98,6 +101,8 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.format : enforceFmt;
+
     const spec = f.spec;
     enforceFmt(spec == 's', "null literal cannot match %" ~ spec);
 
@@ -106,6 +111,10 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 
 @safe pure unittest
 {
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+    import std.range.primitives : back;
+
     assert(collectExceptionMsg!FormatException(format("%p", null)).back == 'p');
 
     assertCTFEable!(
@@ -126,6 +135,8 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.range.primitives : put;
+
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
@@ -156,6 +167,8 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         spec == 'b' ? 2 :
         spec == 's' || spec == 'd' || spec == 'u' ? 10 :
         0;
+
+    import std.format : enforceFmt;
     enforceFmt(base > 0,
         "incompatible format character for integral argument: %" ~ spec);
 
@@ -191,6 +204,8 @@ private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, scope c
 private void formatUnsigned(Writer, T, Char)
 (ref Writer w, T arg, scope const ref FormatSpec!Char fs, uint base, bool negative)
 {
+    import std.range.primitives : put;
+
     /* Write string:
      *    leftpad prefix1 prefix2 zerofill digits rightpad
      */
@@ -352,6 +367,10 @@ private void formatUnsigned(Writer, T, Char)
 
 @safe pure unittest
 {
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+    import std.range.primitives : back;
+
     assert(collectExceptionMsg!FormatException(format("%c", 5)).back == 'c');
 
     assertCTFEable!(
@@ -401,6 +420,8 @@ private void formatUnsigned(Writer, T, Char)
 // https://issues.dlang.org/show_bug.cgi?id=9117
 @safe unittest
 {
+    import std.format : formattedWrite;
+
     static struct Frop {}
 
     static struct Foo
@@ -500,9 +521,11 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
-    import std.string : indexOf, indexOfAny, indexOfNeither;
-    import std.math : isInfinity, isNaN, signbit;
     import std.ascii : isUpper;
+    import std.format : enforceFmt;
+    import std.math : isInfinity, isNaN, signbit;
+    import std.range.primitives : put;
+    import std.string : indexOf, indexOfAny;
 
     string nanInfStr(scope const ref FormatSpec!Char f, const bool nan,
         const bool inf, const int sb, const bool up) @safe pure nothrow
@@ -569,8 +592,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
         {
-            import std.math;
-            import std.format.internal.floats : RoundingMode, printFloat;
+            import std.format.internal.floats : printFloat, RoundingMode;
+            import std.math; // cannot be selective, because FloatingPointControl might not be defined
 
             auto mode = RoundingMode.toNearestTiesToEven;
 
@@ -619,6 +642,7 @@ useSnprintf:
             co.spec = 's';
             co.width = f.width;
             co.flDash = f.flDash;
+            import std.format : formatValue;
             formatValue(w, ns, co);
             return;
         }
@@ -751,6 +775,10 @@ useSnprintf:
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+    import std.meta : AliasSeq;
+    import std.range.primitives : back;
 
     assert(collectExceptionMsg!FormatException(format("%d", 5.1)).back == 'd');
 
@@ -848,7 +876,7 @@ useSnprintf:
 
 @safe unittest
 {
-    import std.math;
+    import std.math; // cannot be selective, because FloatingPointControl might not be defined
 
     // std.math's FloatingPointControl isn't available on all target platforms
     static if (is(FloatingPointControl))
@@ -935,7 +963,7 @@ useSnprintf:
 
 @safe unittest
 {
-    import std.math;
+    import std.math; // cannot be selective, because FloatingPointControl might not be defined
 
     // std.math's FloatingPointControl isn't available on all target platforms
     static if (is(FloatingPointControl))
@@ -994,6 +1022,8 @@ deprecated("Use of complex types is deprecated. Use std.complex")
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.range.primitives : put;
+
     immutable creal val = obj;
 
     formatValueImpl(w, val.re, f);
@@ -1012,6 +1042,8 @@ deprecated("Use of imaginary types is deprecated. Use std.complex")
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.range.primitives : put;
+
     immutable ireal val = obj;
 
     formatValueImpl(w, val.im, f);
@@ -1025,6 +1057,8 @@ if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.meta : AliasSeq;
+
     CharTypeOf!T[1] val = obj;
 
     if (f.spec == 's' || f.spec == 'c')
@@ -1222,6 +1256,8 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 @safe unittest
 {
     import std.array : appender;
+    import std.format : formatValue;
+
     FormatSpec!char f;
     auto w = appender!string();
 
@@ -1262,6 +1298,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     {
         immutable(void)[] data;
     }
+
     import std.typecons : Nullable;
     Nullable!C c;
 }
@@ -1359,6 +1396,8 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 // https://issues.dlang.org/show_bug.cgi?id=6640
 @safe unittest
 {
+    import std.range.primitives : front, popFront;
+
     struct Range
     {
         @safe:
@@ -1387,6 +1426,8 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 
 @system unittest
 {
+    import std.meta : AliasSeq;
+
     // string literal from valid UTF sequence is encoding free.
     static foreach (StrType; AliasSeq!(string, wstring, dstring))
     {
@@ -1459,10 +1500,14 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
+    import std.conv : text;
+    import std.format : formatElement, FormatException, formatValue, NoOpSink;
+    import std.range.primitives : ElementType, empty, front, hasLength,
+        walkLength, isForwardRange, isInfinite, popFront, put;
+
     // in this mode, we just want to do a representative print to discover if the format spec is valid
     enum formatTestMode = is(Writer == NoOpSink);
 
-    import std.conv : text;
 
     // Formatting character ranges like string
     if (f.spec == 's')
@@ -1488,6 +1533,7 @@ if (isInputRange!T)
                     }
                     else
                     {
+                        import std.format : enforceFmt;
                         enforceFmt(f.width == 0, "Cannot right-align a range without length");
                         size_t len = 0;
                     }
@@ -1641,12 +1687,17 @@ if (isInputRange!T)
 
 @safe pure unittest
 {
+    import std.exception : collectExceptionMsg;
+    import std.range.primitives : back;
+
     assert(collectExceptionMsg(format("%d", "hi")).back == 'd');
 }
 
 // character formatting with ecaping
 package(std.format) void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 {
+    import std.format : formattedWrite;
+    import std.range.primitives : put;
     import std.uni : isGraphical;
 
     string fmt;
@@ -1688,6 +1739,9 @@ package(std.format) void formatChar(Writer)(ref Writer w, in dchar c, in char qu
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
+    import std.format : enforceFmt, formatElement, formatValue;
+    import std.range.primitives : put;
+
     AssocArrayTypeOf!T val = obj;
     const spec = f.spec;
 
@@ -1736,6 +1790,9 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
+    import std.array : appender;
+    import std.format : formatElement, singleSpec;
+
     // Bug #17269. Behavior similar to `struct A { Nullable!string B; }`
     struct StringAliasThis
     {
@@ -1749,7 +1806,6 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         StringAliasThis testVar;
     }
 
-    import std.array : appender;
     auto w = appender!string();
     auto spec = singleSpec("%s");
     formatElement(w, TestContainer(), spec);
@@ -1773,6 +1829,10 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+    import std.range.primitives : back;
+
     assert(collectExceptionMsg!FormatException(format("%d", [0:1])).back == 'd');
 
     int[string] aa0;
@@ -1916,6 +1976,8 @@ package(std.format) template hasToString(T, Char)
 
 @safe unittest
 {
+    import std.range.primitives : isOutputRange;
+
     static struct A
     {
         void toString(Writer)(ref Writer w)
@@ -2004,6 +2066,9 @@ package(std.format) template hasToString(T, Char)
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
+    import std.format : NoOpSink;
+    import std.range.primitives : put;
+
     enum overload = hasToString!(T, Char);
 
     enum noop = is(Writer == NoOpSink);
@@ -2040,6 +2105,9 @@ if (hasToString!(T, Char))
 
 @system unittest
 {
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+
     static interface IF1 { }
     class CIF1 : IF1 { }
     static struct SF1 { }
@@ -2090,6 +2158,9 @@ if (hasToString!(T, Char))
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
+    import std.format : enforceValidFormatSpec;
+    import std.range.primitives : put;
+
     enforceValidFormatSpec!(T, Char)(f);
 
     // TODO: remove this check once `@disable override` deprecation cycle is finished
@@ -2153,7 +2224,7 @@ if (is(T == class) && !is(T == enum))
 @system unittest
 {
     import std.array : appender;
-    import std.range.interfaces;
+    import std.range.interfaces : inputRangeObject;
 
     // class range (https://issues.dlang.org/show_bug.cgi?id=5154)
     auto c = inputRangeObject([1,2,3,4]);
@@ -2303,6 +2374,9 @@ version (StdUnittest)
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
+    import std.format : enforceValidFormatSpec;
+    import std.range.primitives : put;
+
     enforceValidFormatSpec!(T, Char)(f);
     if (val is null)
         put(w, "null");
@@ -2344,8 +2418,9 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 
 @system unittest
 {
+    import std.range.interfaces : InputRange, inputRangeObject;
+
     // interface
-    import std.range.interfaces;
     InputRange!int i = inputRangeObject([1,2,3,4]);
     formatTest(i, "[1, 2, 3, 4]");
     assert(i.empty);
@@ -2364,7 +2439,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     // https://issues.dlang.org/show_bug.cgi?id=11175
     version (Windows)
     {
-        import core.sys.windows.com : IUnknown, IID;
+        import core.sys.windows.com : IID, IUnknown;
         import core.sys.windows.windef : HRESULT;
 
         interface IUnknown2 : IUnknown { }
@@ -2388,6 +2463,8 @@ package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, aut
                                                           scope const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
+    import std.format : enforceValidFormatSpec, formatElement;
+    import std.range.primitives : put;
 
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
         static assert(!__traits(isDisabled, T.toString), T.stringof ~
@@ -2489,7 +2566,9 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
 @system unittest
 {
-    import std.array;
+    import std.array : appender;
+    import std.format : formatValue;
+
     // https://issues.dlang.org/show_bug.cgi?id=7230
     static struct Bug7230
     {
@@ -2514,6 +2593,8 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 @safe unittest
 {
     import std.array : appender;
+    import std.format : formatValue;
+
     static struct S{ @disable this(this); }
     S s;
 
@@ -2525,13 +2606,15 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
 @safe unittest
 {
+    import std.array : appender;
+    import std.format : formatValue;
+
     //struct Foo { @disable string toString(); }
     //Foo foo;
 
     interface Bar { @disable string toString(); }
     Bar bar;
 
-    import std.array : appender;
     auto w = appender!(char[])();
     FormatSpec!char f;
 
@@ -2547,6 +2630,9 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == enum))
 {
+    import std.array : appender;
+    import std.range.primitives : put;
+
     if (f.spec == 's')
     {
         foreach (i, e; EnumMembers!T)
@@ -2558,7 +2644,6 @@ if (is(T == enum))
             }
         }
 
-        import std.array : appender;
         auto w2 = appender!string();
 
         // val is not a member of T, output cast(T) rawValue instead.
@@ -2644,6 +2729,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
+        import std.format : enforceFmt;
         enforceFmt(f.spec == 'X' || f.spec == 'x',
             "Expected one of %s, %x or %X for pointer type.");
         formatValueImpl(w, pnum, f);
@@ -2669,7 +2755,8 @@ if (isSIMDVector!V)
 
 @safe unittest
 {
-    import core.simd;
+    import core.simd; // cannot be selective, because float4 might not be defined
+
     static if (is(float4))
     {
         version (X86)
@@ -2745,6 +2832,9 @@ if (isSIMDVector!V)
 // https://issues.dlang.org/show_bug.cgi?id=11778
 @system pure unittest
 {
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+
     int* p = null;
     assertThrown!FormatException(format("%d", p));
     assertThrown!FormatException(format("%04d", p + 2));
@@ -2771,10 +2861,12 @@ if (isDelegate!T)
 
 @safe unittest
 {
+    import std.array : appender;
+    import std.format : formatValue;
+
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
     version (linux)
     {
-        import std.array : appender;
         FormatSpec!char f;
         auto w = appender!string();
         formatValue(w, &func, f);
@@ -2803,6 +2895,7 @@ package(std.format) int getNthInt(string kind, A...)(uint index, A args)
 package(std.format) T getNth(string kind, alias Condition, T, A...)(uint index, A args)
 {
     import std.conv : text, to;
+    import std.format : FormatException;
 
     switch (index)
     {
@@ -2836,6 +2929,8 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
 if (isSomeString!T)
 {
+    import std.range.primitives : put;
+
     size_t width;
     if (f.width > 0)
     {
@@ -2873,6 +2968,8 @@ if (isSomeString!T)
 @safe pure unittest
 {
     import std.array : appender;
+    import std.format : singleSpec;
+
     auto w = appender!string();
     auto spec = singleSpec("%s");
     writeAligned(w, "a本Ä", spec);
@@ -2882,6 +2979,8 @@ if (isSomeString!T)
 @safe pure unittest
 {
     import std.array : appender;
+    import std.format : singleSpec;
+
     auto w = appender!string();
     auto spec = singleSpec("%10s");
     writeAligned(w, "a本Ä", spec);
@@ -2891,6 +2990,8 @@ if (isSomeString!T)
 @safe pure unittest
 {
     import std.array : appender;
+    import std.format : singleSpec;
+
     auto w = appender!string();
     auto spec = singleSpec("%-10s");
     writeAligned(w, "a本Ä", spec);
