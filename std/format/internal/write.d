@@ -38,27 +38,49 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     assertCTFEable!(
     {
-        formatTest( false, "false" );
-        formatTest( true,  "true"  );
+        formatTest(false, "false");
+        formatTest(true,  "true");
     });
 }
+
 @system unittest
 {
-    class C1 { bool val; alias val this; this(bool v){ val = v; } }
-    class C2 { bool val; alias val this; this(bool v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(false), "false" );
-    formatTest( new C1(true),  "true" );
-    formatTest( new C2(false), "C" );
-    formatTest( new C2(true),  "C" );
+    class C1
+    {
+        bool val;
+        alias val this;
+        this(bool v){ val = v; }
+    }
 
-    struct S1 { bool val; alias val this; }
-    struct S2 { bool val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(false), "false" );
-    formatTest( S1(true),  "true"  );
-    formatTest( S2(false), "S" );
-    formatTest( S2(true),  "S" );
+    class C2 {
+        bool val;
+        alias val this;
+        this(bool v){ val = v; }
+        override string toString() const { return "C"; }
+    }
+
+    formatTest(new C1(false), "false");
+    formatTest(new C1(true),  "true");
+    formatTest(new C2(false), "C");
+    formatTest(new C2(true),  "C");
+
+    struct S1
+    {
+        bool val;
+        alias val this;
+    }
+
+    struct S2
+    {
+        bool val;
+        alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S1(false), "false");
+    formatTest(S1(true),  "true");
+    formatTest(S2(false), "S");
+    formatTest(S2(true),  "S");
 }
 
 @safe pure unittest
@@ -72,13 +94,12 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 /*
     `null` literal is formatted as `"null"`
-*/
+ */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     const spec = f.spec;
-    enforceFmt(spec == 's',
-        "null literal cannot match %" ~ spec);
+    enforceFmt(spec == 's', "null literal cannot match %" ~ spec);
 
     writeAligned(w, "null", f);
 }
@@ -89,7 +110,7 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 
     assertCTFEable!(
     {
-        formatTest( null, "null" );
+        formatTest(null, "null");
     });
 }
 
@@ -101,7 +122,7 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 
 /*
     Integrals are formatted like $(REF printf, core, stdc, stdio).
-*/
+ */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -112,9 +133,10 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val)@trusted{
+        auto raw = (ref val) @trusted {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
+
         if (needToSwapEndianess(f))
         {
             foreach_reverse (c; raw)
@@ -244,8 +266,9 @@ private void formatUnsigned(Writer, T, Char)
         if (finalWidth < fs.width)
             finalWidth = fs.width + (padChar == '0') * (((fs.width - prefixWidth) % (fs.separators + 1) == 0) ? 1 : 0);
 
-        separatorsCount = (padChar == '0') ? (finalWidth - prefixWidth - 1) / (fs.separators + 1) :
-                         ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
+        separatorsCount = (padChar == '0')
+            ? (finalWidth - prefixWidth - 1) / (fs.separators + 1)
+            : ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
     }
     else
     {
@@ -334,23 +357,45 @@ private void formatUnsigned(Writer, T, Char)
     assertCTFEable!(
     {
         formatTest(9, "9");
-        formatTest( 10, "10" );
+        formatTest(10, "10");
     });
 }
 
 @system unittest
 {
-    class C1 { long val; alias val this; this(long v){ val = v; } }
-    class C2 { long val; alias val this; this(long v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(10), "10" );
-    formatTest( new C2(10), "C" );
+    class C1
+    {
+        long val;
+        alias val this;
+        this(long v){ val = v; }
+    }
 
-    struct S1 { long val; alias val this; }
-    struct S2 { long val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(10), "10" );
-    formatTest( S2(10), "S" );
+    class C2
+    {
+        long val;
+        alias val this;
+        this(long v){ val = v; }
+        override string toString() const { return "C"; }
+    }
+
+    formatTest(new C1(10), "10");
+    formatTest(new C2(10), "C");
+
+    struct S1
+    {
+        long val;
+        alias val this;
+    }
+
+    struct S2
+    {
+        long val;
+        alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S1(10), "10");
+    formatTest(S2(10), "S");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=9117
@@ -383,7 +428,7 @@ private void formatUnsigned(Writer, T, Char)
     }
 
     const(char)[] result;
-    void put(scope const char[] s){ result ~= s; }
+    void put(scope const char[] s) { result ~= s; }
 
     Foo foo;
     formattedWrite(&put, "%s", foo);    // OK
@@ -460,7 +505,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     import std.ascii : isUpper;
 
     string nanInfStr(scope const ref FormatSpec!Char f, const bool nan,
-            const bool inf, const int sb, const bool up) @safe pure nothrow
+        const bool inf, const int sb, const bool up) @safe pure nothrow
     {
         return nan
             ? up
@@ -479,9 +524,10 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val)@trusted{
+        auto raw = (ref val) @trusted {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
+
         if (needToSwapEndianess(f))
         {
             foreach_reverse (c; raw)
@@ -494,6 +540,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
+
     enforceFmt(find("fgFGaAeEs", spec).length,
         "incompatible format character for floating point argument: %" ~ spec);
 
@@ -594,7 +641,7 @@ useSnprintf:
 
         //writefln("'%s'", sprintfSpec[0 .. i]);
 
-        immutable n = ()@trusted{
+        immutable n = () @trusted {
             import core.stdc.stdio : snprintf;
             return snprintf(buf2.ptr, buf2.length,
                             sprintfSpec.ptr,
@@ -604,8 +651,7 @@ useSnprintf:
                             tval);
         }();
 
-        enforceFmt(n >= 0,
-                   "floating point formatting failure");
+        enforceFmt(n >= 0, "floating point formatting failure");
 
         len = min(n, buf2.length-1);
         buf = buf2;
@@ -710,29 +756,50 @@ useSnprintf:
 
     static foreach (T; AliasSeq!(float, double, real))
     {
-        formatTest( to!(          T)(5.5), "5.5" );
-        formatTest( to!(    const T)(5.5), "5.5" );
-        formatTest( to!(immutable T)(5.5), "5.5" );
+        formatTest(to!(          T)(5.5), "5.5");
+        formatTest(to!(    const T)(5.5), "5.5");
+        formatTest(to!(immutable T)(5.5), "5.5");
 
-        formatTest( T.nan, "nan" );
+        formatTest(T.nan, "nan");
     }
 }
 
 @system unittest
 {
-    formatTest( 2.25, "2.25" );
+    formatTest(2.25, "2.25");
 
-    class C1 { double val; alias val this; this(double v){ val = v; } }
-    class C2 { double val; alias val this; this(double v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(2.25), "2.25" );
-    formatTest( new C2(2.25), "C" );
+    class C1
+    {
+        double val;
+        alias val this;
+        this(double v){ val = v; }
+    }
 
-    struct S1 { double val; alias val this; }
-    struct S2 { double val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(2.25), "2.25" );
-    formatTest( S2(2.25), "S" );
+    class C2
+    {
+        double val;
+        alias val this;
+        this(double v){ val = v; }
+        override string toString() const { return "C"; }
+    }
+
+    formatTest(new C1(2.25), "2.25");
+    formatTest(new C2(2.25), "C");
+
+    struct S1
+    {
+        double val;
+        alias val this;
+    }
+    struct S2
+    {
+        double val;
+        alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S1(2.25), "2.25");
+    formatTest(S2(2.25), "S");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19939
@@ -973,38 +1040,60 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     assertCTFEable!(
     {
-        formatTest( 'c', "c" );
+        formatTest('c', "c");
     });
 }
 
 @system unittest
 {
-    class C1 { char val; alias val this; this(char v){ val = v; } }
-    class C2 { char val; alias val this; this(char v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1('c'), "c" );
-    formatTest( new C2('c'), "C" );
+    class C1
+    {
+        char val;
+        alias val this;
+        this(char v){ val = v; }
+    }
 
-    struct S1 { char val; alias val this; }
-    struct S2 { char val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1('c'), "c" );
-    formatTest( S2('c'), "S" );
+    class C2
+    {
+        char val;
+        alias val this;
+        this(char v){ val = v; }
+        override string toString() const { return "C"; }
+    }
+
+    formatTest(new C1('c'), "c");
+    formatTest(new C2('c'), "C");
+
+    struct S1
+    {
+        char val;
+        alias val this;
+    }
+
+    struct S2
+    {
+        char val;
+        alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S1('c'), "c");
+    formatTest(S2('c'), "S");
 }
 
 @safe unittest
 {
     //Little Endian
-    formatTest( "%-r", cast( char)'c', ['c'         ] );
-    formatTest( "%-r", cast(wchar)'c', ['c', 0      ] );
-    formatTest( "%-r", cast(dchar)'c', ['c', 0, 0, 0] );
-    formatTest( "%-r", '本', ['\x2c', '\x67'] );
+    formatTest("%-r", cast( char)'c', ['c'         ]);
+    formatTest("%-r", cast(wchar)'c', ['c', 0      ]);
+    formatTest("%-r", cast(dchar)'c', ['c', 0, 0, 0]);
+    formatTest("%-r", '本', ['\x2c', '\x67'] );
 
     //Big Endian
-    formatTest( "%+r", cast( char)'c', [         'c'] );
-    formatTest( "%+r", cast(wchar)'c', [0,       'c'] );
-    formatTest( "%+r", cast(dchar)'c', [0, 0, 0, 'c'] );
-    formatTest( "%+r", '本', ['\x67', '\x2c'] );
+    formatTest("%+r", cast( char)'c', [         'c']);
+    formatTest("%+r", cast(wchar)'c', [0,       'c']);
+    formatTest("%+r", cast(dchar)'c', [0, 0, 0, 'c']);
+    formatTest("%+r", '本', ['\x67', '\x2c']);
 }
 
 
@@ -1029,54 +1118,86 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 
 @safe unittest
 {
-    formatTest( "abc", "abc" );
+    formatTest("abc", "abc");
 }
 
 @system unittest
 {
     // Test for bug 5371 for classes
-    class C1 { const string var; alias var this; this(string s){ var = s; } }
-    class C2 {       string var; alias var this; this(string s){ var = s; } }
-    formatTest( new C1("c1"), "c1" );
-    formatTest( new C2("c2"), "c2" );
+    class C1
+    {
+        const string var;
+        alias var this;
+        this(string s){ var = s; }
+    }
+
+    class C2
+    {
+        string var;
+        alias var this;
+        this(string s){ var = s; }
+    }
+
+    formatTest(new C1("c1"), "c1");
+    formatTest(new C2("c2"), "c2");
 
     // Test for bug 5371 for structs
-    struct S1 { const string var; alias var this; }
-    struct S2 {       string var; alias var this; }
-    formatTest( S1("s1"), "s1" );
-    formatTest( S2("s2"), "s2" );
+    struct S1
+    {
+        const string var;
+        alias var this;
+    }
+
+    struct S2
+    {
+        string var;
+        alias var this;
+    }
+
+    formatTest(S1("s1"), "s1");
+    formatTest(S2("s2"), "s2");
 }
 
 @system unittest
 {
-    class  C3 { string val; alias val this; this(string s){ val = s; }
-                override string toString() const { return "C"; } }
-    formatTest( new C3("c3"), "C" );
+    class C3
+    {
+        string val;
+        alias val this;
+        this(string s){ val = s; }
+        override string toString() const { return "C"; }
+    }
 
-    struct S3 { string val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S3("s3"), "S" );
+    formatTest(new C3("c3"), "C");
+
+    struct S3
+    {
+        string val; alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S3("s3"), "S");
 }
 
 @safe pure unittest
 {
     //Little Endian
-    formatTest( "%-r", "ab"c, ['a'         , 'b'         ] );
-    formatTest( "%-r", "ab"w, ['a', 0      , 'b', 0      ] );
-    formatTest( "%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0] );
-    formatTest( "%-r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
-    formatTest( "%-r", "日本語"w, ['\xe5', '\x65', '\x2c', '\x67', '\x9e', '\x8a']);
-    formatTest( "%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67',
-        '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00'] );
+    formatTest("%-r", "ab"c, ['a'         , 'b'         ]);
+    formatTest("%-r", "ab"w, ['a', 0      , 'b', 0      ]);
+    formatTest("%-r", "ab"d, ['a', 0, 0, 0, 'b', 0, 0, 0]);
+    formatTest("%-r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e']);
+    formatTest("%-r", "日本語"w, ['\xe5', '\x65', '\x2c', '\x67', '\x9e', '\x8a']);
+    formatTest("%-r", "日本語"d, ['\xe5', '\x65', '\x00', '\x00', '\x2c', '\x67',
+                                  '\x00', '\x00', '\x9e', '\x8a', '\x00', '\x00']);
 
     //Big Endian
-    formatTest( "%+r", "ab"c, [         'a',          'b'] );
-    formatTest( "%+r", "ab"w, [      0, 'a',       0, 'b'] );
-    formatTest( "%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b'] );
-    formatTest( "%+r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e'] );
-    formatTest( "%+r", "日本語"w, ['\x65', '\xe5', '\x67', '\x2c', '\x8a', '\x9e'] );
-    formatTest( "%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00',
-        '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e'] );
+    formatTest("%+r", "ab"c, [         'a',          'b']);
+    formatTest("%+r", "ab"w, [      0, 'a',       0, 'b']);
+    formatTest("%+r", "ab"d, [0, 0, 0, 'a', 0, 0, 0, 'b']);
+    formatTest("%+r", "日本語"c, ['\xe6', '\x97', '\xa5', '\xe6', '\x9c', '\xac', '\xe8', '\xaa', '\x9e']);
+    formatTest("%+r", "日本語"w, ['\x65', '\xe5', '\x67', '\x2c', '\x8a', '\x9e']);
+    formatTest("%+r", "日本語"d, ['\x00', '\x00', '\x65', '\xe5', '\x00', '\x00',
+                                  '\x67', '\x2c', '\x00', '\x00', '\x8a', '\x9e']);
 }
 
 @safe pure unittest
@@ -1107,7 +1228,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     char[2] two = ['a', 'b'];
     formatValue(w, two, f);
 
-    char[2] getTwo(){ return two; }
+    char[2] getTwo() { return two; }
     formatValue(w, getTwo(), f);
 }
 
@@ -1151,19 +1272,20 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     struct S(int flags)
     {
         int[] arr;
-      static if (flags & 1)
-        alias arr this;
+        static if (flags & 1)
+            alias arr this;
 
-      static if (flags & 2)
-      {
-        @property bool empty() const { return arr.length == 0; }
-        @property int front() const { return arr[0] * 2; }
-        void popFront() { arr = arr[1..$]; }
-      }
+        static if (flags & 2)
+        {
+            @property bool empty() const { return arr.length == 0; }
+            @property int front() const { return arr[0] * 2; }
+            void popFront() { arr = arr[1 .. $]; }
+        }
 
-      static if (flags & 4)
-        string toString() const { return "S"; }
+        static if (flags & 4)
+            string toString() const { return "S"; }
     }
+
     formatTest(S!0b000([0, 1, 2]), "S!0([0, 1, 2])");
     formatTest(S!0b001([0, 1, 2]), "[0, 1, 2]");        // Test for bug 7628
     formatTest(S!0b010([0, 1, 2]), "[0, 2, 4]");
@@ -1176,21 +1298,22 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     class C(uint flags)
     {
         int[] arr;
-      static if (flags & 1)
-        alias arr this;
+        static if (flags & 1)
+            alias arr this;
 
         this(int[] a) { arr = a; }
 
-      static if (flags & 2)
-      {
-        @property bool empty() const { return arr.length == 0; }
-        @property int front() const { return arr[0] * 2; }
-        void popFront() { arr = arr[1..$]; }
-      }
+        static if (flags & 2)
+        {
+            @property bool empty() const { return arr.length == 0; }
+            @property int front() const { return arr[0] * 2; }
+            void popFront() { arr = arr[1 .. $]; }
+        }
 
-      static if (flags & 4)
-        override string toString() const { return "C"; }
+        static if (flags & 4)
+            override string toString() const { return "C"; }
     }
+
     formatTest(new C!0b000([0, 1, 2]), (new C!0b000([])).toString());
     formatTest(new C!0b001([0, 1, 2]), "[0, 1, 2]");    // Test for bug 7628
     formatTest(new C!0b010([0, 1, 2]), "[0, 2, 4]");
@@ -1205,27 +1328,32 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 {
     // void[]
     void[] val0;
-    formatTest( val0, "[]" );
+    formatTest(val0, "[]");
 
     void[] val = cast(void[]) cast(ubyte[])[1, 2, 3];
-    formatTest( val, "[1, 2, 3]" );
+    formatTest(val, "[1, 2, 3]");
 
     void[0] sval0 = [];
-    formatTest( sval0, "[]");
+    formatTest(sval0, "[]");
 
     void[3] sval = cast(void[3]) cast(ubyte[3])[1, 2, 3];
-    formatTest( sval, "[1, 2, 3]" );
+    formatTest(sval, "[1, 2, 3]");
 }
 
 @safe unittest
 {
     // const(T[]) -> const(T)[]
     const short[] a = [1, 2, 3];
-    formatTest( a, "[1, 2, 3]" );
+    formatTest(a, "[1, 2, 3]");
 
-    struct S { const(int[]) arr; alias arr this; }
+    struct S
+    {
+        const(int[]) arr;
+        alias arr this;
+    }
+
     auto s = S([1,2,3]);
-    formatTest( s, "[1, 2, 3]" );
+    formatTest(s, "[1, 2, 3]");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=6640
@@ -1233,7 +1361,8 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 {
     struct Range
     {
-      @safe:
+        @safe:
+
         string value;
         @property bool empty() const { return !value.length; }
         @property dchar front() const { return value.front; }
@@ -1262,68 +1391,68 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     static foreach (StrType; AliasSeq!(string, wstring, dstring))
     {
         // Valid and printable (ASCII)
-        formatTest( [cast(StrType)"hello"],
-                    `["hello"]` );
+        formatTest([cast(StrType)"hello"],
+                   `["hello"]`);
 
         // 1 character escape sequences (' is not escaped in strings)
-        formatTest( [cast(StrType)"\"'\0\\\a\b\f\n\r\t\v"],
-                    `["\"'\0\\\a\b\f\n\r\t\v"]` );
+        formatTest([cast(StrType)"\"'\0\\\a\b\f\n\r\t\v"],
+                   `["\"'\0\\\a\b\f\n\r\t\v"]`);
 
         // 1 character optional escape sequences
-        formatTest( [cast(StrType)"\'\?"],
-                    `["'?"]` );
+        formatTest([cast(StrType)"\'\?"],
+                   `["'?"]`);
 
         // Valid and non-printable code point (<= U+FF)
-        formatTest( [cast(StrType)"\x10\x1F\x20test"],
-                    `["\x10\x1F test"]` );
+        formatTest([cast(StrType)"\x10\x1F\x20test"],
+                   `["\x10\x1F test"]`);
 
         // Valid and non-printable code point (<= U+FFFF)
-        formatTest( [cast(StrType)"\u200B..\u200F"],
-                    `["\u200B..\u200F"]` );
+        formatTest([cast(StrType)"\u200B..\u200F"],
+                   `["\u200B..\u200F"]`);
 
         // Valid and non-printable code point (<= U+10FFFF)
-        formatTest( [cast(StrType)"\U000E0020..\U000E007F"],
-                    `["\U000E0020..\U000E007F"]` );
+        formatTest([cast(StrType)"\U000E0020..\U000E007F"],
+                   `["\U000E0020..\U000E007F"]`);
     }
 
     // invalid UTF sequence needs hex-string literal postfix (c/w/d)
     {
         // U+FFFF with UTF-8 (Invalid code point for interchange)
-        formatTest( [cast(string)[0xEF, 0xBF, 0xBF]],
-                    `[x"EF BF BF"c]` );
+        formatTest([cast(string)[0xEF, 0xBF, 0xBF]],
+                   `[x"EF BF BF"c]`);
 
         // U+FFFF with UTF-16 (Invalid code point for interchange)
-        formatTest( [cast(wstring)[0xFFFF]],
-                    `[x"FFFF"w]` );
+        formatTest([cast(wstring)[0xFFFF]],
+                   `[x"FFFF"w]`);
 
         // U+FFFF with UTF-32 (Invalid code point for interchange)
-        formatTest( [cast(dstring)[0xFFFF]],
-                    `[x"FFFF"d]` );
+        formatTest([cast(dstring)[0xFFFF]],
+                   `[x"FFFF"d]`);
     }
 }
 
 @safe unittest
 {
     // nested range formatting with array of string
-    formatTest( "%({%(%02x %)}%| %)", ["test", "msg"],
-                `{74 65 73 74} {6d 73 67}` );
+    formatTest("%({%(%02x %)}%| %)", ["test", "msg"],
+               `{74 65 73 74} {6d 73 67}`);
 }
 
 @safe unittest
 {
     // stop auto escaping inside range formatting
     auto arr = ["hello", "world"];
-    formatTest( "%(%s, %)",  arr, `"hello", "world"` );
-    formatTest( "%-(%s, %)", arr, `hello, world` );
+    formatTest("%(%s, %)",  arr, `"hello", "world"`);
+    formatTest("%-(%s, %)", arr, `hello, world`);
 
     auto aa1 = [1:"hello", 2:"world"];
-    formatTest( "%(%s:%s, %)",  aa1, [`1:"hello", 2:"world"`, `2:"world", 1:"hello"`] );
-    formatTest( "%-(%s:%s, %)", aa1, [`1:hello, 2:world`, `2:world, 1:hello`] );
+    formatTest("%(%s:%s, %)",  aa1, [`1:"hello", 2:"world"`, `2:"world", 1:"hello"`]);
+    formatTest("%-(%s:%s, %)", aa1, [`1:hello, 2:world`, `2:world, 1:hello`]);
 
     auto aa2 = [1:["ab", "cd"], 2:["ef", "gh"]];
-    formatTest( "%-(%s:%s, %)",        aa2, [`1:["ab", "cd"], 2:["ef", "gh"]`, `2:["ef", "gh"], 1:["ab", "cd"]`] );
-    formatTest( "%-(%s:%(%s%), %)",    aa2, [`1:"ab""cd", 2:"ef""gh"`, `2:"ef""gh", 1:"ab""cd"`] );
-    formatTest( "%-(%s:%-(%s%)%|, %)", aa2, [`1:abcd, 2:efgh`, `2:efgh, 1:abcd`] );
+    formatTest("%-(%s:%s, %)",        aa2, [`1:["ab", "cd"], 2:["ef", "gh"]`, `2:["ef", "gh"], 1:["ab", "cd"]`]);
+    formatTest("%-(%s:%(%s%), %)",    aa2, [`1:"ab""cd", 2:"ef""gh"`, `2:"ef""gh", 1:"ab""cd"`]);
+    formatTest("%-(%s:%-(%s%)%|, %)", aa2, [`1:abcd, 2:efgh`, `2:efgh, 1:abcd`]);
 }
 
 // input range formatting
@@ -1553,8 +1682,8 @@ package(std.format) void formatChar(Writer)(ref Writer w, in dchar c, in char qu
 }
 
 /*
-   Associative arrays are formatted by using `':'` and $(D ", ") as
-   separators, and enclosed by `'['` and `']'`.
+    Associative arrays are formatted by using `':'` and $(D ", ") as
+    separators, and enclosed by `'['` and `']'`.
  */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -1647,24 +1776,24 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(collectExceptionMsg!FormatException(format("%d", [0:1])).back == 'd');
 
     int[string] aa0;
-    formatTest( aa0, `[]` );
+    formatTest(aa0, `[]`);
 
     // elements escaping
-    formatTest(  ["aaa":1, "bbb":2],
-               [`["aaa":1, "bbb":2]`, `["bbb":2, "aaa":1]`] );
-    formatTest(  ['c':"str"],
-                `['c':"str"]` );
-    formatTest(  ['"':"\"", '\'':"'"],
-               [`['"':"\"", '\'':"'"]`, `['\'':"'", '"':"\""]`] );
+    formatTest(["aaa":1, "bbb":2],
+               [`["aaa":1, "bbb":2]`, `["bbb":2, "aaa":1]`]);
+    formatTest(['c':"str"],
+               `['c':"str"]`);
+    formatTest(['"':"\"", '\'':"'"],
+               [`['"':"\"", '\'':"'"]`, `['\'':"'", '"':"\""]`]);
 
     // range formatting for AA
     auto aa3 = [1:"hello", 2:"world"];
     // escape
-    formatTest( "{%(%s:%s $ %)}", aa3,
+    formatTest("{%(%s:%s $ %)}", aa3,
                [`{1:"hello" $ 2:"world"}`, `{2:"world" $ 1:"hello"}`]);
     // use range formatting for key and value, and use %|
-    formatTest( "{%([%04d->%(%c.%)]%| $ %)}", aa3,
-               [`{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`, `{[0002->w.o.r.l.d] $ [0001->h.e.l.l.o]}`] );
+    formatTest("{%([%04d->%(%c.%)]%| $ %)}", aa3,
+               [`{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`, `{[0002->w.o.r.l.d] $ [0001->h.e.l.l.o]}`]);
 
     // https://issues.dlang.org/show_bug.cgi?id=12135
     formatTest("%(%s:<%s>%|,%)", [1:2], "1:<2>");
@@ -1673,17 +1802,39 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @system unittest
 {
-    class C1 { int[char] val; alias val this; this(int[char] v){ val = v; } }
-    class C2 { int[char] val; alias val this; this(int[char] v){ val = v; }
-               override string toString() const { return "C"; } }
-    formatTest( new C1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`] );
-    formatTest( new C2(['c':1, 'd':2]), "C" );
+    class C1
+    {
+        int[char] val;
+        alias val this;
+        this(int[char] v){ val = v; }
+    }
 
-    struct S1 { int[char] val; alias val this; }
-    struct S2 { int[char] val; alias val this;
-                string toString() const { return "S"; } }
-    formatTest( S1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`] );
-    formatTest( S2(['c':1, 'd':2]), "S" );
+    class C2
+    {
+        int[char] val;
+        alias val this;
+        this(int[char] v){ val = v; }
+        override string toString() const { return "C"; }
+    }
+
+    formatTest(new C1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`]);
+    formatTest(new C2(['c':1, 'd':2]), "C");
+
+    struct S1
+    {
+        int[char] val;
+        alias val this;
+    }
+
+    struct S2
+    {
+        int[char] val;
+        alias val this;
+        string toString() const { return "S"; }
+    }
+
+    formatTest(S1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`]);
+    formatTest(S2(['c':1, 'd':2]), "S");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=8921
@@ -1716,26 +1867,28 @@ package(std.format) template hasToString(T, Char)
         enum hasToString = HasToStringResult.none;
     }
     else static if (is(typeof(
-        {T val = void;
-        const FormatSpec!Char f;
-        static struct S {void put(scope Char s){}}
-        S s;
-        val.toString(s, f);
-        // force toString to take parameters by ref
-        static assert(!__traits(compiles, val.toString(s, FormatSpec!Char())));
-        static assert(!__traits(compiles, val.toString(S(), f)));}
-    )))
+        {
+            T val = void;
+            const FormatSpec!Char f;
+            static struct S {void put(scope Char s){}}
+            S s;
+            val.toString(s, f);
+            // force toString to take parameters by ref
+            static assert(!__traits(compiles, val.toString(s, FormatSpec!Char())));
+            static assert(!__traits(compiles, val.toString(S(), f)));
+        })))
     {
         enum hasToString = HasToStringResult.customPutWriterFormatSpec;
     }
     else static if (is(typeof(
-        {T val = void;
-        static struct S {void put(scope Char s){}}
-        S s;
-        val.toString(s);
-        // force toString to take parameters by ref
-        static assert(!__traits(compiles, val.toString(S())));}
-    )))
+        {
+            T val = void;
+            static struct S {void put(scope Char s){}}
+            S s;
+            val.toString(s);
+            // force toString to take parameters by ref
+            static assert(!__traits(compiles, val.toString(S())));
+        })))
     {
         enum hasToString = HasToStringResult.customPutWriter;
     }
@@ -1932,7 +2085,7 @@ if (hasToString!(T, Char))
 }
 
 /*
-   Aggregates
+    Aggregates
  */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
@@ -1972,7 +2125,7 @@ if (is(T == class) && !is(T == enum))
         }
         else
         {
-          //string delegate() dg = &val.toString;
+            // string delegate() dg = &val.toString;
             Object o = val;     // workaround
             string delegate() dg = &o.toString;
             scope Object object = new Object();
@@ -2001,12 +2154,13 @@ if (is(T == class) && !is(T == enum))
 {
     import std.array : appender;
     import std.range.interfaces;
+
     // class range (https://issues.dlang.org/show_bug.cgi?id=5154)
     auto c = inputRangeObject([1,2,3,4]);
-    formatTest( c, "[1, 2, 3, 4]" );
+    formatTest(c, "[1, 2, 3, 4]");
     assert(c.empty);
     c = null;
-    formatTest( c, "null" );
+    formatTest(c, "null");
 }
 
 @system unittest
@@ -2024,7 +2178,7 @@ if (is(T == class) && !is(T == enum))
         this(int[] a){ arr = a; }
         @property int front() const { return arr[0]; }
         @property bool empty() const { return arr.length == 0; }
-        void popFront(){ arr = arr[1..$]; }
+        void popFront(){ arr = arr[1 .. $]; }
     };
 
     class C1
@@ -2056,11 +2210,11 @@ if (is(T == class) && !is(T == enum))
         mixin(inputRangeCode);
     }
 
-    formatTest( new C1([0, 1, 2]), "[012]" );
-    formatTest( new C2([0, 1, 2]), "[012]" );
-    formatTest( new C3([0, 1, 2]), "[012]" );
-    formatTest( new C4([0, 1, 2]), "[012]" );
-    formatTest( new C5([0, 1, 2]), "[0, 1, 2]" );
+    formatTest(new C1([0, 1, 2]), "[012]");
+    formatTest(new C2([0, 1, 2]), "[012]");
+    formatTest(new C3([0, 1, 2]), "[012]");
+    formatTest(new C4([0, 1, 2]), "[012]");
+    formatTest(new C5([0, 1, 2]), "[0, 1, 2]");
 }
 
 // outside the unittest block, otherwise the FQN of the
@@ -2193,10 +2347,10 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     // interface
     import std.range.interfaces;
     InputRange!int i = inputRangeObject([1,2,3,4]);
-    formatTest( i, "[1, 2, 3, 4]" );
+    formatTest(i, "[1, 2, 3, 4]");
     assert(i.empty);
     i = null;
-    formatTest( i, "null" );
+    formatTest(i, "null");
 
     // interface (downcast to Object)
     interface Whatever {}
@@ -2205,7 +2359,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         override @property string toString() const { return "ab"; }
     }
     Whatever val = new C;
-    formatTest( val, "ab" );
+    formatTest(val, "ab");
 
     // https://issues.dlang.org/show_bug.cgi?id=11175
     version (Windows)
@@ -2262,12 +2416,12 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
             else static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
-                    put(w, separator~val.tupleof[i].stringof[4..$]~"}");
+                    put(w, separator~val.tupleof[i].stringof[4 .. $]~"}");
                 else
-                    put(w, separator~val.tupleof[i].stringof[4..$]);
+                    put(w, separator~val.tupleof[i].stringof[4 .. $]);
             }
             else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
-                put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4..$]);
+                put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4 .. $]);
             else
             {
                 static if (i > 0)
@@ -2287,7 +2441,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 @safe pure unittest
 {
     struct S { int x; bool empty() { return false; } }
-    formatTest( S(), "S(0)" );
+    formatTest(S(), "S(0)");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=4638
@@ -2296,9 +2450,9 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     struct U8  {  string toString() const { return "blah"; } }
     struct U16 { wstring toString() const { return "blah"; } }
     struct U32 { dstring toString() const { return "blah"; } }
-    formatTest( U8(), "blah" );
-    formatTest( U16(), "blah" );
-    formatTest( U32(), "blah" );
+    formatTest(U8(), "blah");
+    formatTest(U16(), "blah");
+    formatTest(U32(), "blah");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=3890
@@ -2306,8 +2460,8 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 {
     struct Int{ int n; }
     struct Pair{ string s; Int i; }
-    formatTest( Pair("hello", Int(5)),
-                `Pair("hello", Int(5))` );
+    formatTest(Pair("hello", Int(5)),
+               `Pair("hello", Int(5))`);
 }
 
 @system unittest
@@ -2319,7 +2473,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
         string s;
     }
     U1 u1;
-    formatTest( u1, "U1" );
+    formatTest(u1, "U1");
 
     // union formatting with toString
     union U2
@@ -2330,7 +2484,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     }
     U2 u2;
     u2.s = "hello";
-    formatTest( u2, "hello" );
+    formatTest(u2, "hello");
 }
 
 @system unittest
@@ -2410,7 +2564,7 @@ if (is(T == enum))
         // val is not a member of T, output cast(T) rawValue instead.
         put(w2, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
-                "must not be equal to " ~ T.stringof);
+            "must not be equal to " ~ T.stringof);
 
         FormatSpec!Char f2 = f;
         f2.width = 0;
@@ -2424,20 +2578,20 @@ if (is(T == enum))
 @safe unittest
 {
     enum A { first, second, third }
-    formatTest( A.second, "second" );
-    formatTest( cast(A) 72, "cast(A)72" );
+    formatTest(A.second, "second");
+    formatTest(cast(A) 72, "cast(A)72");
 }
 @safe unittest
 {
     enum A : string { one = "uno", two = "dos", three = "tres" }
-    formatTest( A.three, "three" );
-    formatTest( cast(A)"mill\&oacute;n", "cast(A)mill\&oacute;n" );
+    formatTest(A.three, "three");
+    formatTest(cast(A)"mill\&oacute;n", "cast(A)mill\&oacute;n");
 }
 @safe unittest
 {
     enum A : bool { no, yes }
-    formatTest( A.yes, "yes" );
-    formatTest( A.no, "no" );
+    formatTest(A.yes, "yes");
+    formatTest(A.no, "no");
 }
 @safe unittest
 {
@@ -2463,7 +2617,7 @@ if (is(T == enum))
 }
 
 /*
-   Pointers are formatted as hex integers.
+    Pointers are formatted as hex integers.
  */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T val,
                                                           scope const ref FormatSpec!Char f)
@@ -2475,7 +2629,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
         alias SharedOf(T) = T;
 
     const SharedOf!(void*) p = val;
-    const pnum = ()@trusted{ return cast(ulong) p; }();
+    const pnum = () @trusted { return cast(ulong) p; }();
 
     if (f.spec == 's')
     {
@@ -2491,7 +2645,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     else
     {
         enforceFmt(f.spec == 'X' || f.spec == 'x',
-           "Expected one of %s, %x or %X for pointer type.");
+            "Expected one of %s, %x or %X for pointer type.");
         formatValueImpl(w, pnum, f);
     }
 }
@@ -2505,7 +2659,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 }
 
 /*
-   SIMD vectors are formatted as arrays.
+    SIMD vectors are formatted as arrays.
  */
 package(std.format) void formatValueImpl(Writer, V, Char)(auto ref Writer w, V val, scope const ref FormatSpec!Char f)
 if (isSIMDVector!V)
@@ -2537,10 +2691,10 @@ if (isSIMDVector!V)
 @safe pure unittest
 {
     int* p = null;
-    formatTest( p, "null" );
+    formatTest(p, "null");
 
-    auto q = ()@trusted{ return cast(void*) 0xFFEECCAA; }();
-    formatTest( q, "FFEECCAA" );
+    auto q = () @trusted { return cast(void*) 0xFFEECCAA; }();
+    formatTest(q, "FFEECCAA");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11782
@@ -2550,7 +2704,7 @@ if (isSIMDVector!V)
 
     auto a = iota(0, 10);
     auto b = iota(0, 10);
-    auto p = ()@trusted{ auto p = &a; return p; }();
+    auto p = () @trusted { auto p = &a; return p; }();
 
     assert(format("%s",p) != format("%s",b));
 }
@@ -2563,10 +2717,10 @@ if (isSIMDVector!V)
         string toString() const { return ""; }
     }
     S* p = null;
-    formatTest( p, "null" );
+    formatTest(p, "null");
 
     S* q = cast(S*) 0xFFEECCAA;
-    formatTest( q, "FFEECCAA" );
+    formatTest(q, "FFEECCAA");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=8186
@@ -2574,11 +2728,11 @@ if (isSIMDVector!V)
 {
     class B
     {
-        int*a;
-        this(){ a = new int; }
+        int* a;
+        this() { a = new int; }
         alias a this;
     }
-    formatTest( B.init, "null" );
+    formatTest(B.init, "null");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=9336
@@ -2600,14 +2754,14 @@ if (isSIMDVector!V)
 @safe pure unittest
 {
     void* p = null;
-    formatTest( "%08X", p, "00000000" );
+    formatTest("%08X", p, "00000000");
 }
 
 /*
-   Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
+    Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
 
-   Known bug: Because of issue https://issues.dlang.org/show_bug.cgi?id=18269
-              the FunctionAttributes might be wrong.
+    Known bug: Because of issue https://issues.dlang.org/show_bug.cgi?id=18269
+               the FunctionAttributes might be wrong.
  */
 package(std.format) void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T, scope const ref FormatSpec!Char f)
 if (isDelegate!T)
@@ -2631,14 +2785,13 @@ if (isDelegate!T)
 @safe pure unittest
 {
     int[] a = [ 1, 3, 2 ];
-    formatTest( "testing %(%s & %) embedded", a,
-                "testing 1 & 3 & 2 embedded");
-    formatTest( "testing %((%s) %)) wyda3", a,
-                "testing (1) (3) (2) wyda3" );
+    formatTest("testing %(%s & %) embedded", a,
+               "testing 1 & 3 & 2 embedded");
+    formatTest("testing %((%s) %)) wyda3", a,
+               "testing (1) (3) (2) wyda3");
 
     int[0] empt = [];
-    formatTest( "(%s)", empt,
-                "([])" );
+    formatTest("(%s)", empt, "([])");
 }
 
 // Fix for https://issues.dlang.org/show_bug.cgi?id=1591
@@ -2668,8 +2821,7 @@ package(std.format) T getNth(string kind, alias Condition, T, A...)(uint index, 
                 }
         }
         default:
-            throw new FormatException(
-                text("Missing ", kind, " argument"));
+            throw new FormatException(text("Missing ", kind, " argument"));
     }
 }
 
@@ -2744,4 +2896,3 @@ if (isSomeString!T)
     writeAligned(w, "a本Ä", spec);
     assert(w.data == "a本Ä       ", w.data);
 }
-
