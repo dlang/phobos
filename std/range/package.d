@@ -1471,7 +1471,7 @@ private struct ChooseResult(R1, R2)
     this(bool r1Chosen, return scope R1 r1, return scope R2 r2) @trusted
     {
         // @trusted because of assignment of r1 and r2 which overlap each other
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         // This should be the only place r1Chosen is ever assigned
         // independently
@@ -6477,7 +6477,7 @@ do
 pure @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : approxEqual;
+    import std.math : isClose;
 
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
@@ -6491,7 +6491,7 @@ pure @safe unittest
     assert(r[2] == 6);
     assert(!(2 in r));
     auto rf = iota(0.0, 0.5, 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+    assert(isClose(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
 pure nothrow @nogc @safe unittest
@@ -6539,7 +6539,7 @@ pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
-    import std.math : approxEqual, nextUp, nextDown;
+    import std.math : isClose, nextUp, nextDown;
     import std.meta : AliasSeq;
 
     static assert(is(ElementType!(typeof(iota(0f))) == float));
@@ -6597,7 +6597,7 @@ pure @safe unittest
     assert(equal(rSlice, [3, 6]));
 
     auto rf = iota(0.0, 0.5, 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
+    assert(isClose(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
     assert(rf.length == 5);
 
     rf.popFront();
@@ -6605,35 +6605,35 @@ pure @safe unittest
 
     auto rfSlice = rf[1 .. 4];
     assert(rfSlice.length == 3);
-    assert(approxEqual(rfSlice, [0.2, 0.3, 0.4]));
+    assert(isClose(rfSlice, [0.2, 0.3, 0.4]));
 
     rfSlice.popFront();
-    assert(approxEqual(rfSlice[0], 0.3));
+    assert(isClose(rfSlice[0], 0.3));
 
     rf.popFront();
     assert(rf.length == 3);
 
     rfSlice = rf[1 .. 3];
     assert(rfSlice.length == 2);
-    assert(approxEqual(rfSlice, [0.3, 0.4]));
-    assert(approxEqual(rfSlice[0], 0.3));
+    assert(isClose(rfSlice, [0.3, 0.4]));
+    assert(isClose(rfSlice[0], 0.3));
 
     // With something just above 0.5
     rf = iota(0.0, nextUp(0.5), 0.1);
-    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
+    assert(isClose(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
     rf.popBack();
     assert(rf[rf.length - 1] == rf.back);
-    assert(approxEqual(rf.back, 0.4));
+    assert(isClose(rf.back, 0.4));
     assert(rf.length == 5);
 
     // going down
     rf = iota(0.0, -0.5, -0.1);
-    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
+    assert(isClose(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
     rfSlice = rf[2 .. 5];
-    assert(approxEqual(rfSlice, [-0.2, -0.3, -0.4]));
+    assert(isClose(rfSlice, [-0.2, -0.3, -0.4]));
 
     rf = iota(0.0, nextDown(-0.5), -0.1);
-    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
+    assert(isClose(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
 
     // iota of longs
     auto rl = iota(5_000_000L);
@@ -10195,13 +10195,18 @@ in
             auto result = adds(start, range.length, overflow);
         else static if (isSigned!Enumerator)
         {
-            Largest!(Enumerator, Signed!LengthType) signedLength;
-            try signedLength = to!(typeof(signedLength))(range.length);
-            catch (ConvException)
-                overflow = true;
-            catch (Exception)
-                assert(false);
-
+            alias signed_t = Largest!(Enumerator, Signed!LengthType);
+            signed_t signedLength;
+            //This is to trick the compiler because if length is enum
+            //the compiler complains about unreachable code.
+            auto getLength()
+            {
+                return range.length;
+            }
+            //Can length fit in the signed type
+            assert(getLength() < signed_t.max,
+                "a signed length type is required but the range's length() is too great");
+            signedLength = range.length;
             auto result = adds(start, signedLength, overflow);
         }
         else
@@ -10463,7 +10468,24 @@ pure @safe unittest
         }
     }}
 }
-
+@nogc @safe unittest
+{
+   const val = iota(1, 100).enumerate(1);
+}
+@nogc @safe unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+    struct RangePayload {
+        enum length = size_t.max;
+        void popFront() {}
+        int front() { return 0; }
+        bool empty() { return true; }
+    }
+    RangePayload thePayload;
+    //Assertion won't happen when contracts are disabled for -release.
+    debug assertThrown!AssertError(enumerate(thePayload, -10));
+}
 // https://issues.dlang.org/show_bug.cgi?id=10939
 version (none)
 {
@@ -11605,7 +11627,7 @@ public:
 
         private static string _genSave() @safe pure nothrow
         {
-            return `import std.conv : emplace;` ~
+            return `import core.lifetime : emplace;` ~
                    `alias S = typeof((*_range).save);` ~
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
@@ -11769,7 +11791,7 @@ public:
 
         private static string _genOpSlice() @safe pure nothrow
         {
-            return `import std.conv : emplace;` ~
+            return `import core.lifetime : emplace;` ~
                    `alias S = typeof((*_range)[begin .. end]);` ~
                    `static assert(hasSlicing!S, S.stringof ~ " is not sliceable.");` ~
                    `auto mem = new void[S.sizeof];` ~

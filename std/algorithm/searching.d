@@ -67,10 +67,10 @@ $(T2 maxElement,
         `maxElement([3, 4, 1, 2])` returns `4`.)
 $(T2 minIndex,
         Index of the minimal element of a range.
-        `minElement([3, 4, 1, 2])` returns `2`.)
+        `minIndex([3, 4, 1, 2])` returns `2`.)
 $(T2 maxIndex,
         Index of the maximal element of a range.
-        `maxElement([3, 4, 1, 2])` returns `1`.)
+        `maxIndex([3, 4, 1, 2])` returns `1`.)
 $(T2 minPos,
         `minPos([2, 3, 1, 3, 4, 1])` returns the subrange `[1, 3, 4, 1]`,
         i.e., positions the range at the first occurrence of its minimal
@@ -965,8 +965,8 @@ if (isInputRange!R &&
     import std.ascii : isDigit;
     import std.uni : isWhite;
 
-    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
-    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!(isWhite)("hello world") == 5);
+    assert(countUntil!(isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 

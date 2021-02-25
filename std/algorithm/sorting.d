@@ -3052,7 +3052,7 @@ schwartzSort(alias transform, alias less = "a < b",
 if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     !is(typeof(binaryFun!less) == SwapStrategy))
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     import std.range : zip, SortedRange;
     import std.string : representation;
 

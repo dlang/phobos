@@ -799,21 +799,42 @@ if (distinctFieldNames!(Specs))
          *           for comparison between `Tuple`s.
          *
          * Returns:
-         * For any values `v1` on the right-hand side and `v2` on the
-         * left-hand side:
+         * For any values `v1` contained by the left-hand side tuple and any
+         * values `v2` contained by the right-hand side:
+         *
+         * 0 if `v1 == v2` for all members or the following value for the
+         * first position were the mentioned criteria is not satisfied:
          *
          * $(UL
-         *   $(LI A negative integer if the expression `v1 < v2` is true.)
-         *   $(LI A positive integer if the expression `v1 > v2` is true.)
-         *   $(LI 0 if the expression `v1 == v2` is true.))
+         *   $(LI NaN, in case one of the operands is a NaN.)
+         *   $(LI A negative number if the expression `v1 < v2` is true.)
+         *   $(LI A positive number if the expression `v1 > v2` is true.))
          */
-        int opCmp(R)(R rhs)
+        auto opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -821,13 +842,31 @@ if (distinctFieldNames!(Specs))
         }
 
         /// ditto
-        int opCmp(R)(R rhs) const
+        auto opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -1549,6 +1588,29 @@ if (distinctFieldNames!(Specs))
     enum T : Tuple!(int*) { a = T(null) }
     T t;
     t = T.a;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=13663
+@safe unittest
+{
+    auto t = tuple(real.nan);
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
+}
+
+@safe unittest
+{
+    struct S
+    {
+        float opCmp(S s) { return float.nan; }
+        bool opEquals(S s) { return false; }
+    }
+
+    auto t = tuple(S());
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
 }
 
 /**
@@ -5677,7 +5739,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
             import std.conv : to;
-            import std.functional : forward;
+            import core.lifetime : forward;
             template generateFun(size_t i)
             {
                 enum name = TargetMembers[i].name;
@@ -6026,7 +6088,7 @@ package template GetOverloadedMethods(T)
                     enum isMethod = false;
             }
             alias follows = AliasSeq!(
-                std.meta.Filter!(isMethod, __traits(getOverloads, T, name)),
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }
@@ -6319,6 +6381,9 @@ autoInit == RefCountedAutoInitialize.no), user code must call either
 `refCountedStore.isInitialized` or `refCountedStore.ensureInitialized`
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
+
+If `T.this()` is annotated with `@disable` then `autoInit` must be
+`RefCountedAutoInitialize.no` in order to compile.
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
@@ -6357,11 +6422,11 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import std.conv : emplace;
+            import core.lifetime : emplace, forward;
 
             allocateStore();
             version (D_Exceptions) scope(failure) deallocateStore();
-            emplace(&_store._payload, args);
+            emplace(&_store._payload, forward!args);
             _store._count = 1;
         }
 
@@ -6423,9 +6488,18 @@ if (!is(T == class) && !(is(T == interface)))
         /**
            Makes sure the payload was properly initialized. Such a
            call is typically inserted before using the payload.
+
+           This function is unavailable if `T.this()` is annotated with
+           `@disable`.
         */
-        void ensureInitialized()
+        void ensureInitialized()()
         {
+            // By checking for `@disable this()` and failing early we can
+            // produce a clearer error message.
+            static assert(__traits(compiles, { static T t; }),
+                "Cannot automatically initialize `" ~ fullyQualifiedName!T ~
+                "` because `" ~ fullyQualifiedName!T ~
+                ".this()` is annotated with `@disable`.");
             if (!isInitialized) initialize();
         }
 
@@ -6451,7 +6525,8 @@ Postcondition: `refCountedStore.isInitialized`
     }
     do
     {
-        _refCounted.initialize(args);
+        import core.lifetime : forward;
+        _refCounted.initialize(forward!args);
     }
 
     /// Ditto
@@ -6648,11 +6723,16 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=6436
 @betterC @system pure unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    struct S
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = RefCounted!S(val);
-    assert(val == 4);
+    auto s1 = RefCounted!S(1);
+    int lval = 3;
+    auto s2 = RefCounted!S(lval);
+    assert(lval == 4);
 }
 
 // gc_addRange coverage
@@ -6674,6 +6754,19 @@ pure @system unittest
     assert(b == 5);
 
     RefCounted!(int*) c;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21638
+@betterC @system pure nothrow @nogc unittest
+{
+    static struct NoDefaultCtor
+    {
+        @disable this();
+        this(int x) @nogc nothrow pure { this.x = x; }
+        int x;
+    }
+    auto rc = RefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
+    assert(rc.x == 5);
 }
 
 /**
@@ -7955,13 +8048,13 @@ if (is(T == class))
     */
     @system auto scoped(Args...)(auto ref Args args)
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace, forward;
 
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], forward!args);
         return result;
     }
 }
@@ -8278,11 +8371,16 @@ if (alignment > 0 && !((alignment - 1) & alignment))
 
 @system unittest
 {
-    class C { this(ref int val) { assert(val == 3); ++val; } }
+    class C
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = scoped!C(val);
-    assert(val == 4);
+    auto c1 = scoped!C(1);
+    int lval = 3;
+    auto c2 = scoped!C(lval);
+    assert(lval == 4);
 }
 
 @system unittest

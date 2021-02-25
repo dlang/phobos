@@ -343,7 +343,7 @@ private:
                            is(T == shared const(U), U) ||
                            is(T ==    immutable(U), U))
                 {
-                    import std.conv : emplaceRef;
+                    import core.internal.lifetime : emplaceRef;
 
                     auto zat = cast(T*) target;
                     if (src)
@@ -2013,15 +2013,6 @@ static class VariantException : Exception
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
-}
-
-version (TestComplex)
-deprecated
-@system unittest
-{
-    auto v3 = Variant(1+2.0i);
-    hash[v3] = 2;
-    assert( hash[v3] == 2 );
 }
 
 @system unittest

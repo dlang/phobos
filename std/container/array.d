@@ -73,8 +73,7 @@ pure @system unittest
 /// `Array!bool` packs together values efficiently by allocating one bit per element
 pure @system unittest
 {
-    Array!bool arr;
-    arr.insert([true, true, false, true, false]);
+    auto arr = Array!bool([true, true, false, true, false]);
     assert(arr.length == 5);
 }
 
@@ -423,7 +422,7 @@ if (!is(immutable T == immutable bool))
         size_t insertBack(Elem)(Elem elem)
         if (isImplicitlyConvertible!(Elem, T))
         {
-            import std.conv : emplace;
+            import core.lifetime : emplace;
             if (_capacity == length)
             {
                 reserve(1 + capacity * 3 / 2);
@@ -467,7 +466,7 @@ if (!is(immutable T == immutable bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         static if (T.sizeof == 1)
         {
@@ -948,7 +947,7 @@ if (!is(immutable T == immutable bool))
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         enforce(r._outer._data is _data && r._a <= length);
         reserve(length + 1);
         assert(_data.refCountedStore.isInitialized,
@@ -966,7 +965,7 @@ if (!is(immutable T == immutable bool))
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         enforce(r._outer._data is _data && r._a <= length);
         static if (isForwardRange!Stuff)
         {
@@ -1008,6 +1007,8 @@ if (!is(immutable T == immutable bool))
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T) ||
+            isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         import std.algorithm.mutation : bringToFront;
         enforce(r._outer._data is _data);
@@ -1616,6 +1617,19 @@ if (!is(immutable T == immutable bool))
     Array!MyClass arr;
 }
 
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    auto a = Array!int([1,2,3,4,5]);
+    assert(a.length == 5);
+
+    assert(a.insertAfter(a[0 .. 5], [7, 8]) == 2);
+    assert(equal(a[], [1,2,3,4,5,7,8]));
+
+    assert(a.insertAfter(a[0 .. 5], 6) == 1);
+    assert(equal(a[], [1,2,3,4,5,6,7,8]));
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
@@ -1751,6 +1765,46 @@ if (is(immutable T == immutable bool))
             );
             return Range(_outer, _a + low, _a + high);
         }
+    }
+
+    /**
+     * Constructor taking a number of items.
+     */
+    this(U)(U[] values...)
+    if (isImplicitlyConvertible!(U, T))
+    {
+        reserve(values.length);
+        foreach (i, v; values)
+        {
+            auto rem = i % bitsPerWord;
+            if (rem)
+            {
+                // Fits within the current array
+                if (v)
+                {
+                    data[$ - 1] |= (cast(size_t) 1 << rem);
+                }
+                else
+                {
+                    data[$ - 1] &= ~(cast(size_t) 1 << rem);
+                }
+            }
+            else
+            {
+                // Need to add more data
+                _store._backend.insertBack(v);
+            }
+        }
+        _store._length = values.length;
+    }
+
+    /**
+     * Constructor taking an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+     */
+    this(Range)(Range r)
+    if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T) && !is(Range == T[]))
+    {
+        insertBack(r);
     }
 
     /**
@@ -2071,14 +2125,17 @@ if (is(immutable T == immutable bool))
     size_t insertBack(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && is(ElementType!Stuff : bool))
     {
-        static if (!hasLength!Stuff) size_t result;
+        size_t result;
+        static if (hasLength!Stuff)
+            result = stuff.length;
+
         for (; !stuff.empty; stuff.popFront())
         {
             insertBack(stuff.front);
             static if (!hasLength!Stuff) ++result;
         }
-        static if (!hasLength!Stuff) return result;
-        else return stuff.length;
+
+        return result;
     }
 
     /// ditto
@@ -2183,6 +2240,8 @@ if (is(immutable T == immutable bool))
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+    if (isImplicitlyConvertible!(Stuff, T) ||
+            isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
@@ -2239,14 +2298,32 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
+    import std.algorithm.comparison : equal;
+
+    auto a = Array!bool([true, true, false, false, true, false]);
+    assert(equal(a[], [true, true, false, false, true, false]));
+}
+
+// using Ranges
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+    bool[] arr = [true, true, false, false, true, false];
+
+    auto a = Array!bool(retro(arr));
+    assert(equal(a[], retro(arr)));
+}
+
+@system unittest
+{
     Array!bool a;
     assert(a.empty);
 }
 
 @system unittest
 {
-    Array!bool arr;
-    arr.insert([false, false, false, false]);
+    auto arr = Array!bool([false, false, false, false]);
     assert(arr.front == false);
     assert(arr.back == false);
     assert(arr[1] == false);
@@ -2352,22 +2429,19 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[0 .. 2].length == 2);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[].length == 4);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a.front);
     a.front = false;
     assert(!a.front);
@@ -2375,15 +2449,13 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[].length == 4);
 }
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a.back);
     a.back = false;
     assert(!a.back);
@@ -2391,8 +2463,7 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     assert(a[0] && !a[1]);
     a[0] &= a[1];
     assert(!a[0]);
@@ -2401,10 +2472,8 @@ if (is(immutable T == immutable bool))
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
-    Array!bool b;
-    b.insertBack([true, true, false, true]);
+    auto a = Array!bool([true, false, true, true]);
+    auto b = Array!bool([true, true, false, true]);
     assert(equal((a ~ b)[],
                     [true, false, true, true, true, true, false, true]));
     assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
@@ -2415,10 +2484,8 @@ if (is(immutable T == immutable bool))
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
-    Array!bool b;
-    a.insertBack([false, true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
+    auto b = Array!bool([false, true, false, true, true]);
     a ~= b;
     assert(equal(
                 a[],
@@ -2427,8 +2494,7 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
-    Array!bool a;
-    a.insertBack([true, false, true, true]);
+    auto a = Array!bool([true, false, true, true]);
     a.clear();
     assert(a.capacity == 0);
 }
@@ -2498,6 +2564,30 @@ if (is(immutable T == immutable bool))
     a.insertBefore(a[1 .. $], true);
     import std.algorithm.comparison : equal;
     assert(a[].equal([false, true, true]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21555
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool arr;
+    size_t len = arr.insertBack([false, true]);
+    assert(len == 2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21556
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool a;
+    a.insertBack([true, true, false, false, true]);
+    assert(a.length == 5);
+
+    assert(a.insertAfter(a[0 .. 5], [false, false]) == 2);
+    assert(equal(a[], [true, true, false, false, true, false, false]));
+
+    assert(a.insertAfter(a[0 .. 5], true) == 1);
+    assert(equal(a[], [true, true, false, false, true, true, false, false]));
 }
 
 @system unittest

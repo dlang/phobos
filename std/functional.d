@@ -21,9 +21,6 @@ $(TR $(TH Function Name) $(TH Description)
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(LREF forward))
-        $(TD Forwards function arguments while saving ref-ness.
-    ))
     $(TR $(TD $(LREF lessThan), $(LREF greaterThan), $(LREF equalTo))
         $(TD Ready-made predicate functions to compare two values.
     ))
@@ -651,7 +648,6 @@ template not(alias pred)
 @safe unittest
 {
     import std.algorithm.searching : find;
-    import std.functional;
     import std.uni : isWhite;
     string a = "   Hello, world!";
     assert(find!(not!isWhite)(a) == "Hello, world!");
@@ -1085,7 +1081,7 @@ if (F.length > 1)
 ///
 @safe unittest
 {
-    import std.functional, std.typecons : Tuple;
+    import std.typecons : Tuple;
     static bool f1(int a) { return a != 0; }
     static int f2(int a) { return a / 2; }
     auto x = adjoin!(f1, f2)(5);
@@ -1334,7 +1330,7 @@ template memoize(alias fun, uint maxSize)
         }
 
         import core.bitop : bt, bts;
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         size_t hash;
         foreach (ref arg; args)
@@ -1812,125 +1808,9 @@ if (isCallable!(F))
     }
 }
 
-/**
-Forwards function arguments while keeping `out`, `ref`, and `lazy` on
-the parameters.
-
-Params:
-    args = a parameter list or an $(REF AliasSeq,std,meta).
-Returns:
-    An `AliasSeq` of `args` with `out`, `ref`, and `lazy` saved.
-*/
+// forward used to be here but was moved to druntime
 template forward(args...)
 {
     import core.lifetime : fun = forward;
     alias forward = fun!args;
-}
-
-///
-@safe unittest
-{
-    class C
-    {
-        static int foo(int n) { return 1; }
-        static int foo(ref int n) { return 2; }
-    }
-
-    // with forward
-    int bar()(auto ref int x) { return C.foo(forward!x); }
-
-    // without forward
-    int baz()(auto ref int x) { return C.foo(x); }
-
-    int i;
-    assert(bar(1) == 1);
-    assert(bar(i) == 2);
-
-    assert(baz(1) == 2);
-    assert(baz(i) == 2);
-}
-
-///
-@safe unittest
-{
-    void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
-
-    // forwards all arguments which are bound to parameter tuple
-    void bar(Args...)(auto ref Args args) { return foo(forward!args); }
-
-    // forwards all arguments with swapping order
-    void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
-
-    string s;
-    bar(1, s);
-    assert(s == "Hello");
-    baz(s, 2);
-    assert(s == "HelloHello");
-}
-
-///
-@safe unittest
-{
-    struct X {
-        int i;
-        this(this)
-        {
-            ++i;
-        }
-    }
-
-    struct Y
-    {
-        private X x_;
-        this()(auto ref X x)
-        {
-            x_ = forward!x;
-        }
-    }
-
-    struct Z
-    {
-        private const X x_;
-        this()(auto ref X x)
-        {
-            x_ = forward!x;
-        }
-        this()(auto const ref X x)
-        {
-            x_ = forward!x;
-        }
-    }
-
-    X x;
-    const X cx;
-    auto constX = (){ const X x; return x; };
-    static assert(__traits(compiles, { Y y = x; }));
-    static assert(__traits(compiles, { Y y = X(); }));
-    static assert(!__traits(compiles, { Y y = cx; }));
-    static assert(!__traits(compiles, { Y y = constX(); }));
-    static assert(__traits(compiles, { Z z = x; }));
-    static assert(__traits(compiles, { Z z = X(); }));
-    static assert(__traits(compiles, { Z z = cx; }));
-    static assert(__traits(compiles, { Z z = constX(); }));
-
-
-    Y y1 = x;
-    // ref lvalue, copy
-    assert(y1.x_.i == 1);
-    Y y2 = X();
-    // rvalue, move
-    assert(y2.x_.i == 0);
-
-    Z z1 = x;
-    // ref lvalue, copy
-    assert(z1.x_.i == 1);
-    Z z2 = X();
-    // rvalue, move
-    assert(z2.x_.i == 0);
-    Z z3 = cx;
-    // ref const lvalue, copy
-    assert(z3.x_.i == 1);
-    Z z4 = constX();
-    // const rvalue, copy
-    assert(z4.x_.i == 1);
 }

@@ -68,7 +68,8 @@ class MmFile
      * Open memory mapped file filename for reading.
      * File is closed when the object instance is deleted.
      * Throws:
-     *  std.file.FileException
+     *  - On POSIX, $(REF ErrnoException, std, exception).
+     *  - On Windows, $(REF WindowsException, std, windows, syserror).
      */
     this(string filename)
     {
@@ -164,7 +165,8 @@ class MmFile
      *      with 0 meaning map the entire file. The window size must be a
      *      multiple of the memory allocation page size.
      * Throws:
-     *  std.file.FileException
+     *  - On POSIX, $(REF ErrnoException, std, exception).
+     *  - On Windows, $(REF WindowsException, std, windows, syserror).
      */
     this(string filename, Mode mode, ulong size, void* address,
             size_t window = 0)
@@ -668,7 +670,6 @@ private:
     assert( data2[$-1] == 'b' );
 
     destroy(mf);
-    GC.free(&mf);
 
     std.file.remove(test_file);
     // Create anonymous mapping

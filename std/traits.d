@@ -1413,7 +1413,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ "is not a function");
+        static assert(0, func[0].stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
@@ -1526,7 +1526,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ "is not a function");
+        static assert(0, func[0].stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
@@ -6196,12 +6196,6 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(
 
     static assert(!isFloatingPoint!int);
 
-    // complex and imaginary numbers do not pass
-    static assert(
-        !isFloatingPoint!cfloat &&
-        !isFloatingPoint!ifloat
-    );
-
     // types which act as floating point values do not pass
     struct S
     {
@@ -6231,18 +6225,6 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(
             static assert(!isFloatingPoint!(Q!T));
         }
     }
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=17195
-@safe unittest
-{
-    static assert(!isFloatingPoint!cfloat);
-    static assert(!isFloatingPoint!cdouble);
-    static assert(!isFloatingPoint!creal);
-
-    static assert(!isFloatingPoint!ifloat);
-    static assert(!isFloatingPoint!idouble);
-    static assert(!isFloatingPoint!ireal);
 }
 
 /**
@@ -6625,7 +6607,6 @@ enum bool isOrderingComparable(T) = is(typeof((ref T a) => a < a ? 1 : 0));
 {
     static assert(isOrderingComparable!int);
     static assert(isOrderingComparable!string);
-    static assert(!isOrderingComparable!creal);
 
     static struct Foo {}
     static assert(!isOrderingComparable!Foo);
@@ -6665,13 +6646,6 @@ enum bool isEqualityComparable(T) = is(typeof((ref T a) => a == a ? 1 : 0));
     static assert(isEqualityComparable!Bar);
     assert(b1 == b2);
     assert(b1 != b3);
-}
-
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    static assert(isEqualityComparable!creal);
 }
 
 /**
@@ -6770,7 +6744,7 @@ template isAutodecodableString(T)
     import std.range.primitives : autodecodeStrings;
 
     enum isAutodecodableString = autodecodeStrings &&
-        (is(T : const char[]) || is(T : const wchar[])) && !isStaticArray!T;
+        (is(T : const char[]) || is(T : const wchar[])) && !is(T : U[n], U, size_t n);
 }
 
 ///
@@ -6849,7 +6823,19 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 /**
  * Detect whether type `T` is a dynamic array.
  */
-enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
+template isDynamicArray(T)
+{
+    static if (is(T == U[], U))
+        enum bool isDynamicArray = true;
+    else static if (is(T U == enum))
+        // BUG: isDynamicArray / isStaticArray considers enums
+        // with appropriate base types as dynamic/static arrays
+        // Retain old behaviour for now, see
+        // https://github.com/dlang/phobos/pull/7574
+        enum bool isDynamicArray = isDynamicArray!U;
+    else
+        enum bool isDynamicArray = false;
+}
 
 ///
 @safe unittest
@@ -6873,6 +6859,24 @@ enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
             static assert(!isDynamicArray!( SubTypeOf!(Q!T) ));
         }
     }
+
+    static assert(!isDynamicArray!(int[5]));
+
+    static struct AliasThis
+    {
+        int[] values;
+        alias values this;
+    }
+
+    static assert(!isDynamicArray!AliasThis);
+
+    // https://github.com/dlang/phobos/pull/7574/files#r464115492
+    enum E : string
+    {
+        a = "a",
+        b = "b",
+    }
+    static assert( isDynamicArray!E);
 }
 
 /**

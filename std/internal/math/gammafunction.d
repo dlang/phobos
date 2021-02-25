@@ -568,8 +568,8 @@ real logGamma(real x)
             assert( feqrel(log(fabs(gamma(testpoints[i]))), testpoints[i+1]) > real.mant_dig-5);
         }
     }
-    assert(logGamma(-50.2L) == log(fabs(gamma(-50.2L))));
-    assert(logGamma(-0.008L) == log(fabs(gamma(-0.008L))));
+    assert(feqrel(logGamma(-50.2L),log(fabs(gamma(-50.2L)))) > real.mant_dig-2);
+    assert(feqrel(logGamma(-0.008L),log(fabs(gamma(-0.008L)))) > real.mant_dig-2);
     assert(feqrel(logGamma(-38.8L),log(fabs(gamma(-38.8L)))) > real.mant_dig-4);
     static if (real.mant_dig >= 64) // incl. 80-bit reals
         assert(feqrel(logGamma(1500.0L),log(gamma(1500.0L))) > real.mant_dig-2);
@@ -1777,9 +1777,9 @@ real logmdigamma(real x)
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
     assert(logmdigamma(0.0) == real.infinity);
     for (auto x = 0.01; x < 1.0; x += 0.1)
-        assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
+        assert(isClose(digamma(x), log(x) - logmdigamma(x)));
     for (auto x = 1.0; x < 15.0; x += 1.0)
-        assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
+        assert(isClose(digamma(x), log(x) - logmdigamma(x)));
 }
 
 /** Inverse of the Log Minus Digamma function
@@ -1836,12 +1836,12 @@ real logmdigammaInverse(real y)
         tuple(1017.644138623741168814449776695062817947092468536L, 1.0L/1024),
     ];
     foreach (test; testData)
-        assert(approxEqual(logmdigammaInverse(test[0]), test[1], 2e-15L, 0));
+        assert(isClose(logmdigammaInverse(test[0]), test[1], 2e-15L));
 
-    assert(approxEqual(logmdigamma(logmdigammaInverse(1)), 1, 1e-15L, 0));
-    assert(approxEqual(logmdigamma(logmdigammaInverse(real.min_normal)), real.min_normal, 1e-15L, 0));
-    assert(approxEqual(logmdigamma(logmdigammaInverse(real.max/2)), real.max/2, 1e-15L, 0));
-    assert(approxEqual(logmdigammaInverse(logmdigamma(1)), 1, 1e-15L, 0));
-    assert(approxEqual(logmdigammaInverse(logmdigamma(real.min_normal)), real.min_normal, 1e-15L, 0));
-    assert(approxEqual(logmdigammaInverse(logmdigamma(real.max/2)), real.max/2, 1e-15L, 0));
+    assert(isClose(logmdigamma(logmdigammaInverse(1)), 1, 1e-15L));
+    assert(isClose(logmdigamma(logmdigammaInverse(real.min_normal)), real.min_normal, 1e-15L));
+    assert(isClose(logmdigamma(logmdigammaInverse(real.max/2)), real.max/2, 1e-15L));
+    assert(isClose(logmdigammaInverse(logmdigamma(1)), 1, 1e-15L));
+    assert(isClose(logmdigammaInverse(logmdigamma(real.min_normal)), real.min_normal, 1e-15L));
+    assert(isClose(logmdigammaInverse(logmdigamma(real.max/2)), real.max/2, 1e-15L));
 }

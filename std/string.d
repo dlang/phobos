@@ -325,6 +325,9 @@ out (result)
 do
 {
     import std.exception : assumeUnique;
+
+    if (s.empty) return "".ptr;
+
     /+ Unfortunately, this isn't reliable.
      We could make this work if string literals are put
      in read-only memory and we test if s[] is pointing into
@@ -346,26 +349,6 @@ do
     copy[s.length] = 0;
 
     return &assumeUnique(copy)[0];
-}
-
-/++ Ditto +/
-immutable(char)* toStringz(return scope string s) @trusted pure nothrow
-{
-    if (s.empty) return "".ptr;
-    /* Peek past end of s[], if it's 0, no conversion necessary.
-     * Note that the compiler will put a 0 past the end of static
-     * strings, and the storage allocator will put a 0 past the end
-     * of newly allocated char[]'s.
-     */
-    immutable p = s.ptr + s.length;
-    // Is p dereferenceable? A simple test: if the p points to an
-    // address multiple of 4, then conservatively assume the pointer
-    // might be pointing to a new block of memory, which might be
-    // unreadable. Otherwise, it's definitely pointing to valid
-    // memory.
-    if ((cast(size_t) p & 3) && *p == 0)
-        return &s[0];
-    return toStringz(cast(const char[]) s);
 }
 
 ///
@@ -395,6 +378,27 @@ pure nothrow @system unittest
     const string test2 = "";
     p = toStringz(test2);
     assert(*p == 0);
+
+    assert(toStringz([]) is toStringz(""));
+}
+
+pure nothrow @system unittest // https://issues.dlang.org/show_bug.cgi?id=15136
+{
+    static struct S
+    {
+        immutable char[5] str;
+        ubyte foo;
+        this(char[5] str) pure nothrow
+        {
+            this.str = str;
+        }
+    }
+    auto s = S("01234");
+    const str = s.str.toStringz;
+    assert(str !is s.str.ptr);
+    assert(*(str + 5) == 0); // Null terminated.
+    s.foo = 42;
+    assert(*(str + 5) == 0); // Still null terminated.
 }
 
 
@@ -6312,14 +6316,6 @@ if (isSomeString!S ||
 
     assert(!isNumeric("-"));
     assert(!isNumeric("+"));
-}
-
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    import std.conv : to;
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
 }
 
 /*****************************

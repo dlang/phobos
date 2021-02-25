@@ -1,0 +1,11 @@
+Deprecate `std.math : approxEqual`
+
+The template `approxEqual` for comparing floating point numbers has
+been deprecated.
+
+Please use the template `isClose` instead, which has better default
+values and is symmetric in its arguments.
+
+To (almost) keep the current behaviour of `approxEqual(a, b)` use
+`isClose(a, b, 1e-2, 1e-2)`, but we recommend to adjust the code to
+make it work with `isClose(a, b)`.

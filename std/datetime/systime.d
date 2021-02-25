@@ -322,6 +322,25 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
+            else version (OpenBSD)
+            {
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.openbsd.time : clock_gettime, CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if (clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else version (DragonFlyBSD)
             {
                 import core.sys.dragonflybsd.time : clock_gettime, CLOCK_REALTIME,
@@ -10345,7 +10364,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     }
 
     // year
-    auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
+    auto found = value[2 .. value.length].find!(not!(isDigit))();
     size_t yearLen = value.length - found.length;
     if (found.length == 0)
         throw new DateTimeException("Invalid year");
@@ -10435,7 +10454,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
             case "J": case "j": throw new DateTimeException("Invalid timezone");
             default:
             {
-                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                if (all!(isAlpha)(value[0 .. tzLen]))
                 {
                     tz = new immutable SimpleTimeZone(Duration.zero);
                     break;
