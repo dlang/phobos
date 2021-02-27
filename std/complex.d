@@ -280,26 +280,42 @@ if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const
         if (op == "/" && isNumeric!R)
     {
-        import core.math : fabs;
-        typeof(return) w = void;
-        if (fabs(re) < fabs(im))
+        version (FastMath)
         {
-            immutable ratio = re/im;
-            immutable rdivd = r/(re*ratio + im);
-
-            w.re = rdivd*ratio;
-            w.im = -rdivd;
+            // Compute norm(this)
+            immutable norm = re * re + im * im;
+            // Compute r * conj(this)
+            immutable prod_re = r * re;
+            immutable prod_im = r * -im;
+            // Divide the product by the norm
+            typeof(return) w = void;
+            w.re = prod_re / norm;
+            w.im = prod_im / norm;
+            return w;
         }
         else
         {
-            immutable ratio = im/re;
-            immutable rdivd = r/(re + im*ratio);
+            import core.math : fabs;
+            typeof(return) w = void;
+            if (fabs(re) < fabs(im))
+            {
+                immutable ratio = re/im;
+                immutable rdivd = r/(re*ratio + im);
 
-            w.re = rdivd;
-            w.im = -rdivd*ratio;
+                w.re = rdivd*ratio;
+                w.im = -rdivd;
+            }
+            else
+            {
+                immutable ratio = im/re;
+                immutable rdivd = r/(re + im*ratio);
+
+                w.re = rdivd;
+                w.im = -rdivd*ratio;
+            }
+
+            return w;
         }
-
-        return w;
     }
 
     // numeric ^^ complex
@@ -353,26 +369,41 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(const C z)
         if (op == "/" && is(C R == Complex!R))
     {
-        import core.math : fabs;
-        if (fabs(z.re) < fabs(z.im))
+        version (FastMath)
         {
-            immutable ratio = z.re/z.im;
-            immutable denom = z.re*ratio + z.im;
-
-            immutable temp = (re*ratio + im)/denom;
-            im = (im*ratio - re)/denom;
-            re = temp;
+            // Compute norm(z)
+            immutable norm = z.re * z.re + z.im * z.im;
+            // Compute this * conj(z)
+            immutable prod_re = re * z.re - im * -z.im;
+            immutable prod_im = im * z.re + re * -z.im;
+            // Divide the product by the norm
+            re = prod_re / norm;
+            im = prod_im / norm;
+            return this;
         }
         else
         {
-            immutable ratio = z.im/z.re;
-            immutable denom = z.re + z.im*ratio;
+            import core.math : fabs;
+            if (fabs(z.re) < fabs(z.im))
+            {
+                immutable ratio = z.re/z.im;
+                immutable denom = z.re*ratio + z.im;
 
-            immutable temp = (re + im*ratio)/denom;
-            im = (im - re*ratio)/denom;
-            re = temp;
+                immutable temp = (re*ratio + im)/denom;
+                im = (im*ratio - re)/denom;
+                re = temp;
+            }
+            else
+            {
+                immutable ratio = z.im/z.re;
+                immutable denom = z.re + z.im*ratio;
+
+                immutable temp = (re + im*ratio)/denom;
+                im = (im - re*ratio)/denom;
+                re = temp;
+            }
+            return this;
         }
-        return this;
     }
 
     // complex ^^= complex
