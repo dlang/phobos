@@ -797,8 +797,8 @@ public:
 {
     alias MySum = SumType!(int, float);
 
-    assert(__traits(compiles, MySum(42)));
-    assert(__traits(compiles, MySum(3.14)));
+    MySum x = MySum(42);
+    MySum y = MySum(3.14);
 }
 
 // Assignment
@@ -807,8 +807,7 @@ public:
     alias MySum = SumType!(int, float);
 
     MySum x = MySum(42);
-
-    assert(__traits(compiles, x = 3.14));
+    x = 3.14;
 }
 
 // Self assignment
@@ -818,8 +817,7 @@ public:
 
     MySum x = MySum(42);
     MySum y = MySum(3.14);
-
-    assert(__traits(compiles, y = x));
+    y = x;
 }
 
 // Equality
@@ -856,19 +854,13 @@ version (D_BetterC) {} else
 {
     import std.typecons : Tuple;
 
-    assert(__traits(compiles,
-            {
-        alias MySum = SumType!(Tuple!(int, int));
-    }));
+    alias MySum = SumType!(Tuple!(int, int));
 }
 
 // const and immutable types
 @safe unittest
 {
-    assert(__traits(compiles,
-            {
-        alias MySum = SumType!(const(int[]), immutable(float[]));
-    }));
+    alias MySum = SumType!(const(int[]), immutable(float[]));
 }
 
 // Recursive types
@@ -994,16 +986,13 @@ version (D_BetterC) {} else
     alias MySum = SumType!(NoInit, int);
 
     assert(!__traits(compiles, MySum()));
-    assert(__traits(compiles, MySum(42)));
-    auto x = MySum(42);
+    auto _ = MySum(42);
 }
 
 // const SumTypes
 @safe unittest
 {
-    assert(__traits(compiles,
-        const(SumType!(int[]))([1, 2, 3])
-    ));
+    auto _ = const(SumType!(int[]))([1, 2, 3]);
 }
 
 // Equality of const SumTypes
@@ -1011,9 +1000,7 @@ version (D_BetterC) {} else
 {
     alias MySum = SumType!int;
 
-    assert(__traits(compiles,
-        const(MySum)(123) == const(MySum)(456)
-    ));
+    auto _ = const(MySum)(123) == const(MySum)(456);
 }
 
 // Compares reference types using value equality
@@ -1168,15 +1155,15 @@ version (D_BetterC) {} else
     MySum x = NoCopy();
     MySum y = NoCopy();
 
-    assert(__traits(compiles, SumType!NoCopy(NoCopy())));
+
     assert(!__traits(compiles, SumType!NoCopy(lval)));
 
-    assert(__traits(compiles, y = NoCopy()));
-    assert(__traits(compiles, y = move(x)));
+    y = NoCopy();
+    y = move(x);
     assert(!__traits(compiles, y = lval));
     assert(!__traits(compiles, y = x));
 
-    assert(__traits(compiles, x == y));
+    bool b = x == y;
 }
 
 // Github issue #22
@@ -1185,13 +1172,11 @@ version (D_BetterC) {} else
 @safe unittest
 {
     import std.typecons;
-    assert(__traits(compiles,
-            {
-        static struct A
-        {
-            SumType!(Nullable!int) a = Nullable!int.init;
-        }
-    }));
+
+    static struct A
+    {
+        SumType!(Nullable!int) a = Nullable!int.init;
+    }
 }
 
 // Static arrays of structs with postblits
@@ -1204,8 +1189,6 @@ version (D_BetterC) {} else
         int n;
         this(this) { n++; }
     }
-
-    assert(__traits(compiles, SumType!(S[1])()));
 
     SumType!(S[1]) x = [S(0)];
     SumType!(S[1]) y = x;
@@ -1232,8 +1215,8 @@ version (D_BetterC) {} else
 {
     import std.typecons : Tuple, Flag;
     alias Nat = SumType!(Flag!"0", Tuple!(This*));
-    static assert(__traits(compiles, SumType!(Nat)));
-    static assert(__traits(compiles, SumType!(Nat*, Tuple!(This*, This*))));
+    alias Inner = SumType!Nat;
+    alias Outer = SumType!(Nat*, Tuple!(This*, This*));
 }
 
 // Self-referential SumTypes inside Algebraic
@@ -1343,20 +1326,17 @@ version (D_BetterC) {} else
 // Github issue #29
 @safe unittest
 {
-    assert(__traits(compiles, () @safe
-            {
-        alias A = SumType!string;
+    alias A = SumType!string;
 
-        @safe A createA(string arg)
-        {
+    @safe A createA(string arg)
+    {
         return A(arg);
-        }
+    }
 
-        @safe void test()
-        {
+    @safe void test()
+    {
         A a = createA("");
-        }
-    }));
+    }
 }
 
 // SumTypes as associative array keys
@@ -1364,10 +1344,7 @@ version (D_BetterC) {} else
 version (D_BetterC) {} else
 @safe unittest
 {
-    assert(__traits(compiles,
-            {
-        int[SumType!(int, string)] aa;
-    }));
+    int[SumType!(int, string)] aa;
 }
 
 // toString with non-copyable types
@@ -1382,7 +1359,7 @@ version (D_BetterC) {} else
 
     SumType!NoCopy x;
 
-    assert(__traits(compiles, x.toString()));
+    auto _ = x.toString();
 }
 
 // Can use the result of assignment
@@ -1446,7 +1423,7 @@ version (D_BetterC) {} else
         @disable bool opEquals(const S rhs) const;
     }
 
-    assert(__traits(compiles, SumType!S(S())));
+    auto _ = SumType!S(S());
 }
 
 // Types with non-const opEquals
@@ -1458,7 +1435,7 @@ version (D_BetterC) {} else
         bool opEquals(S rhs) { return i == rhs.i; }
     }
 
-    assert(__traits(compiles, SumType!S(S(123))));
+    auto _ = SumType!S(S(123));
 }
 
 // Incomparability of different SumTypes
@@ -1473,10 +1450,7 @@ version (D_BetterC) {} else
 // Self-reference in return/parameter type of function pointer member
 @safe unittest
 {
-    assert(__traits(compiles,
-            {
-        alias T = SumType!(int, This delegate(This));
-    }));
+    alias T = SumType!(int, This delegate(This));
 }
 
 // Construction and assignment from implicitly-convertible lvalue
@@ -1486,8 +1460,8 @@ version (D_BetterC) {} else
 
     const(bool) b = true;
 
-    assert(__traits(compiles, { MySum x = b; }));
-    assert(__traits(compiles, { MySum x; x = b; }));
+    MySum x = b;
+    MySum y; y = b;
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
@@ -2271,12 +2245,9 @@ version (D_Exceptions)
 {
     SumType!(int, float) x;
 
-    assert(__traits(compiles,
-        x.tryMatch!(
-            (int n) => n + 1,
-        )
-    ));
-
+    auto _ = x.tryMatch!(
+        (int n) => n + 1,
+    );
 }
 
 // Handlers with ref parameters
@@ -2328,10 +2299,10 @@ version (D_Exceptions)
         x.match!unsafeHandler;
     }));
 
-    assert(__traits(compiles, () @system
-            {
+    auto test() @system
+    {
         return x.match!unsafeHandler;
-    }));
+    }
 }
 
 // Overloaded handlers
@@ -2429,25 +2400,25 @@ version (D_Exceptions)
 // Github issue #24
 @safe unittest
 {
-    assert(__traits(compiles, () @nogc
-            {
+    void test() @nogc
+    {
         int acc = 0;
         SumType!int(1).match!((int x) => acc += x);
-    }));
+    }
 }
 
 // Github issue #31
 @safe unittest
 {
-    assert(__traits(compiles, () @nogc
-            {
+    void test() @nogc
+    {
         int acc = 0;
 
         SumType!(int, string)(1).match!(
             (int x) => acc += x,
             (string _) => 0,
         );
-    }));
+    }
 }
 
 // Types that `alias this` a SumType
@@ -2457,7 +2428,7 @@ version (D_Exceptions)
     static struct B {}
     static struct D { SumType!(A, B) value; alias value this; }
 
-    assert(__traits(compiles, D().match!(_ => true)));
+    auto _ = D().match!(_ => true);
 }
 
 // Multiple dispatch
@@ -2486,13 +2457,10 @@ version (D_Exceptions)
 // inout SumTypes
 @safe unittest
 {
-    assert(__traits(compiles,
-            {
-        inout(int[]) fun(inout(SumType!(int[])) x)
-        {
-            return x.match!((inout(int[]) a) => a);
-        }
-    }));
+    inout(int[]) fun(inout(SumType!(int[])) x)
+    {
+        return x.match!((inout(int[]) a) => a);
+    }
 }
 
 private void destroyIfOwner(T)(ref T value)
