@@ -20,8 +20,9 @@ import std.traits : isAggregateType, isArray, isAssociativeArray,
 
 import std.format : FormatSpec;
 
-package(std.format) void skipData(Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+package(std.format):
+
+void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
@@ -54,8 +55,7 @@ private template acceptedSpecs(T)
         enum acceptedSpecs = "";
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(immutable T == immutable bool))
 {
     import std.algorithm.searching : find;
@@ -70,8 +70,7 @@ if (isInputRange!Range && is(immutable T == immutable bool))
     return unformatValue!long(input, spec) != 0;
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
@@ -83,8 +82,7 @@ if (isInputRange!Range && is(T == typeof(null)))
     return parse!T(input);
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -119,8 +117,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
@@ -146,8 +143,7 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     return parse!T(input);
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -176,8 +172,7 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
                       to!string(T.sizeof));
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char fmt)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
@@ -232,8 +227,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return app.data;
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char fmt)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
     && !is(T == enum))
 {
@@ -252,8 +246,7 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
     return parse!T(input);
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char fmt)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
@@ -305,8 +298,7 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     return x.typed;
 }
 
-private T unformatRange(T, Range, Char)(
-    ref Range input, scope const ref FormatSpec!Char spec)
+private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 in (spec.spec == '(', "spec.spec must be '(' not " ~ spec.spec)
 {
     import std.range.primitives : empty, front, popFront;
