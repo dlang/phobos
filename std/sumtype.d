@@ -1448,6 +1448,8 @@ version (D_BetterC) {} else
 }
 
 // Self-reference in return/parameter type of function pointer member
+// Disabled in BetterC due to use of delegates
+version (D_BetterC) {} else
 @safe unittest
 {
     alias T = SumType!(int, This delegate(This));
