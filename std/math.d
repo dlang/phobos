@@ -7531,7 +7531,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+    assert(equalsDigit(pow(2.0L, 10L), 1024, 19));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21601
@@ -8007,6 +8007,11 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(pow(real.nan, 0.0) == 1.0);
     assert(isNaN(pow(real.nan, 3.0)));
     assert(isNaN(pow(3.0, real.nan)));
+}
+
+@safe @nogc nothrow unittest
+{
+    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
 }
 
 @safe pure nothrow @nogc unittest
