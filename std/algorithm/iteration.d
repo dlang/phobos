@@ -2818,7 +2818,7 @@ nothrow @system unittest
         static int popfrontsSoFar;
 
         auto front(){return elements[0];}
-        void popFront()
+        nothrow void popFront()
         {   popfrontsSoFar++;
             elements = elements[1 .. $];
         }
