@@ -78,9 +78,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         case 'a': case 'A':
             return printFloatA(buf, val, f, rm, sgn, exp, mnt, is_upper);
         case 'e': case 'E':
-            return printFloatE(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatE!false(buf, val, f, rm, sgn, exp, mnt, is_upper);
         case 'f': case 'F':
-            return printFloatF(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatF!false(buf, val, f, rm, sgn, exp, mnt, is_upper);
         case 'g': case 'G':
             return printFloatG(buf, val, f, rm, sgn, exp, mnt, is_upper);
     }
@@ -565,8 +565,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], 0x1.19f01p0, f) == "0X1.19FP+0");
 }
 
-private auto printFloatE(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                  string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatE(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
+                                          string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
     import std.conv : to;
@@ -574,8 +574,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     enum int bias = T.max_exp - 1;
 
-    if (f.precision == f.UNSPECIFIED)
-        f.precision = 6;
+    static if (!g)
+    {
+        if (f.precision == f.UNSPECIFIED)
+            f.precision = 6;
+    }
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
@@ -1381,8 +1384,8 @@ printFloat_done:
     assert(printFloat(buf[], -245.666f, f) == "-2.5E+02");
 }
 
-private auto printFloatF(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                  string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatF(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
+                                          string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
     import std.conv : to;
@@ -1390,8 +1393,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     enum int bias = T.max_exp - 1;
 
-    if (f.precision == f.UNSPECIFIED)
-        f.precision = 6;
+    static if (!g)
+    {
+        if (f.precision == f.UNSPECIFIED)
+            f.precision = 6;
+    }
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
@@ -2082,14 +2088,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         break;
     }
 
-    // will be calls to printFloatE and printFloatF later, but for the sake of small
-    // steps it is just a single letter string for the time being.
     if (useE)
-        buf[0] = 'E';
+        return printFloatE!true(buf, val, f, rm, sgn, exp, mnt, is_upper);
     else
-        buf[0] = 'F';
-
-    return buf[0 .. 1];
+        return printFloatF!true(buf, val, f, rm, sgn, exp, mnt, is_upper);
 }
 
 @safe unittest
@@ -2101,46 +2103,46 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'g';
 
     double val = 999999.5;
-    assert(printFloat(buf[], val, f) == "E");
+//    assert(printFloat(buf[], val, f) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f) == "F");
+//    assert(printFloat(buf[], val, f) == "999999");
 
     val = 0.00009999995;
-     assert(printFloat(buf[], val, f) == "F");
+//    assert(printFloat(buf[], val, f) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f) == "E");
+//    assert(printFloat(buf[], val, f) == "9.99999e-05");
 
     val = 1000000;
-    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "999999");
 
     val = 0.0001;
-    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "9.99999e-05");
 
     val = 999999;
-    assert(printFloat(buf[], val, f, RoundingMode.up) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e+05");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.up) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.up) == "999999");
 
     // 0.0000999999 is actually represented as 0.0000999998999..., which is
     // less than 0.0000999999, so we need to use nextUp to get the corner case here
     val = nextUp(0.0000999999);
-    assert(printFloat(buf[], val, f, RoundingMode.up) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.up) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.up) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e-05");
 
     val = 1000000;
-    assert(printFloat(buf[], val, f, RoundingMode.down) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.down) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.down) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.down) == "999999");
 
     val = 0.0001;
-    assert(printFloat(buf[], val, f, RoundingMode.down) == "F");
+//    assert(printFloat(buf[], val, f, RoundingMode.down) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val, f, RoundingMode.down) == "E");
+//    assert(printFloat(buf[], val, f, RoundingMode.down) == "9.99999e-05");
 }
 
 private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
