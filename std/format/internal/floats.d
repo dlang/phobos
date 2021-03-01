@@ -582,7 +582,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
-        return printFloat0(buf, f, sgn, is_upper);
+        return printFloat0!g(buf, f, sgn, is_upper);
 
     // add leading 1 for normalized values or correct exponent for denormalied values
     if (exp != 0)
@@ -1401,7 +1401,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
-        return printFloat0(buf, f, sgn, is_upper);
+        return printFloat0!g(buf, f, sgn, is_upper);
 
     // add leading 1 for normalized values or correct exponent for denormalied values
     if (exp != 0)
@@ -2154,9 +2154,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.nan, f) == "-nan");
     assert(printFloat(buf[], float.infinity, f) == "inf");
     assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    /*
     assert(printFloat(buf[], 0.0f, f) == "0");
     assert(printFloat(buf[], -0.0f, f) == "-0");
+    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.99995e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.99995e-41");
@@ -2189,10 +2189,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.nan, f) == "                -nan");
     assert(printFloat(buf[], float.infinity, f) == "                 inf");
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-
-    /*
     assert(printFloat(buf[], 0.0f, f) == "                   0");
     assert(printFloat(buf[], -0.0f, f) == "                  -0");
+    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "     9.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "    -9.999946101e-41");
@@ -2226,9 +2225,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.nan, f) == "-nan                ");
     assert(printFloat(buf[], float.infinity, f) == "inf                 ");
     assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
-    /*
     assert(printFloat(buf[], 0.0f, f) == "0                   ");
     assert(printFloat(buf[], -0.0f, f) == "-0                  ");
+    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41     ");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41    ");
@@ -2262,9 +2261,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.nan, f) == "                -nan");
     assert(printFloat(buf[], float.infinity, f) == "                 inf");
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    /*
     assert(printFloat(buf[], 0.0f, f) == "00000000000000000000");
     assert(printFloat(buf[], -0.0f, f) == "-0000000000000000000");
+    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "000009.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-00009.999946101e-41");
@@ -2297,9 +2296,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.nan, f) == "-nan");
     assert(printFloat(buf[], float.infinity, f) == "inf");
     assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    /*
     assert(printFloat(buf[], 0.0f, f) == "0.000000000");
     assert(printFloat(buf[], -0.0f, f) == "-0.000000000");
+    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41");
@@ -2396,9 +2395,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -double.nan, f) == "-nan");
     assert(printFloat(buf[], double.infinity, f) == "inf");
     assert(printFloat(buf[], -double.infinity, f) == "-inf");
-    /*
     assert(printFloat(buf[], 0.0, f) == "0");
     assert(printFloat(buf[], -0.0, f) == "-0");
+    /*
     // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], 1e-307 / 1000, f) == "1e-310");
     assert(printFloat(buf[], -1e-307 / 1000, f) == "-1e-310");
@@ -2497,14 +2496,49 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     //assert(printFloat(buf[], 0.009999, f) == "0.01");
 }
 
-private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
+private auto printFloat0(bool g, Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
 {
     import std.algorithm.comparison : max;
+
+    static if (g)
+    {
+        if (!f.flHash)
+        {
+            auto length = max(f.width, 1 + sgn.length);
+            char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
+            result[] = '0';
+
+            if (f.flDash)
+            {
+                if (sgn != "")
+                    result[0] = sgn[0];
+                result[1 + sgn.length .. $] = ' ';
+            }
+            else
+            {
+                if (f.flZero)
+                {
+                    if (sgn != "")
+                        result[0] = sgn[0];
+                }
+                else
+                {
+                    if (sgn != "")
+                        result[$ - 2] = sgn[0];
+                    result[0 .. $ - 1 - sgn.length] = ' ';
+                }
+            }
+            return result;
+        }
+    }
 
     // with e or E qualifier, we need 4 more bytes for E+00 at the end
     auto E = (f.spec == 'e' || f.spec == 'E') ? 4 : 0;
 
-    auto length = max(f.width, f.precision + ((f.precision == 0 && !f.flHash) ? 1 : 2) + sgn.length + E);
+    auto length = f.precision + ((f.precision == 0 && !f.flHash) ? 1 : 2) + sgn.length + E;
+    static if (g) length--;
+    length = max(f.width, length);
+
     char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
     result[] = '0';
 
@@ -2518,6 +2552,7 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
             result[dot_pos] = '.';
 
         auto exp_start = dot_pos + ((f.precision > 0 || f.flHash) ? 1 : 0) + f.precision;
+        static if (g) exp_start--;
         if (exp_start + E < result.length)
             result[exp_start + E .. $] = ' ';
 
@@ -2532,15 +2567,24 @@ private auto printFloat0(Char)(return char[] buf, FormatSpec!Char f, string sgn,
         int sign_pos = cast(int) (result.length - (E + 2));
         if (f.precision > 0 || f.flHash)
         {
-            int dot_pos = cast(int) (result.length - f.precision - (E + 1));
+            int dot_pos = cast(int) (result.length - f.precision);
+            static if (!g) dot_pos -= E + 1;
             result[dot_pos] = '.';
             sign_pos = dot_pos - 2;
         }
 
         if (f.flZero)
             sign_pos = 0;
-        else if (sign_pos > 0)
-            result[0 .. sign_pos + (sgn.length == 0 ? 1 : 0)] = ' ';
+        else
+        {
+            static if (g)
+                auto leading_spaces = sign_pos > 0 || sgn.length == 0;
+            else
+                auto leading_spaces = sign_pos > 0;
+
+            if (leading_spaces)
+                result[0 .. sign_pos + (sgn.length == 0 ? 1 : 0)] = ' ';
+        }
 
         if (sgn != "")
             result[sign_pos] = sgn[0];
