@@ -12,15 +12,21 @@
  */
 module std.format.internal.read;
 
-import std.range.primitives;
-import std.traits;
+import std.range.primitives : ElementEncodingType, ElementType, isInputRange;
 
-import std.format;
+import std.traits : isAggregateType, isArray, isAssociativeArray,
+    isDynamicArray, isFloatingPoint, isIntegral, isSomeChar, isSomeString,
+    isStaticArray, StringTypeOf;
 
-package(std.format) void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+import std.format : FormatSpec;
+
+package(std.format):
+
+void skipData(Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
+    import std.range.primitives : empty, front, popFront;
 
     switch (spec.spec)
     {
@@ -33,49 +39,55 @@ package(std.format) void skipData(Range, Char)(ref Range input, scope const ref 
             break;
         default:
             assert(false,
-                    text("Format specifier not understood: %", spec.spec));
+                   text("Format specifier not understood: %", spec.spec));
     }
 }
 
 private template acceptedSpecs(T)
 {
-         static if (isIntegral!T)       enum acceptedSpecs = "bdosuxX";
-    else static if (isFloatingPoint!T)  enum acceptedSpecs = "seEfgG";
-    else static if (isSomeChar!T)       enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
-    else                                enum acceptedSpecs = "";
+    static if (isIntegral!T)
+        enum acceptedSpecs = "bdosuxX";
+    else static if (isFloatingPoint!T)
+        enum acceptedSpecs = "seEfgG";
+    else static if (isSomeChar!T)
+        enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
+    else
+        enum acceptedSpecs = "";
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(immutable T == immutable bool))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, unformatValue;
 
     if (spec.spec == 's') return parse!T(input);
 
     enforceFmt(find(acceptedSpecs!long, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return unformatValue!long(input, spec) != 0;
 }
 
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
+
     enforceFmt(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
-
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, FormatException;
 
     if (spec.spec == 'r')
     {
@@ -90,7 +102,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     enforceFmt(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
 
@@ -105,13 +117,13 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+    import std.format : enforceFmt, FormatException;
 
     if (spec.spec == 'r')
     {
@@ -126,25 +138,28 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     }
 
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
     import std.conv : to, text;
+    import std.range.primitives : empty, front, popFront;
+    import std.format : enforceFmt, unformatValue;
+
     if (spec.spec == 's' || spec.spec == 'c')
     {
         auto result = to!T(input.front);
         input.popFront();
         return result;
     }
+
     enforceFmt(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     static if (T.sizeof == 1)
         return unformatValue!ubyte(input, spec);
@@ -154,14 +169,15 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
         return unformatValue!uint(input, spec);
     else
         static assert(false, T.stringof ~ ".sizeof must be 1, 2, or 4 not " ~
-                to!string(T.sizeof));
+                      to!string(T.sizeof));
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
+    import std.range.primitives : empty, front, popFront, put;
+    import std.format : enforceFmt;
 
     const spec = fmt.spec;
     if (spec == '(')
@@ -169,7 +185,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return unformatRange!T(input, fmt);
     }
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     static if (isStaticArray!T)
     {
@@ -211,39 +227,44 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
         return app.data;
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
-if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
+if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
+    && !is(T == enum))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
+
     const spec = fmt.spec;
     if (spec == '(')
     {
         return unformatRange!T(input, fmt);
     }
+
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-/// ditto
-package(std.format) T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
+T unformatValueImpl(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char fmt)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
+    import std.format : enforceFmt;
+
     const spec = fmt.spec;
     if (spec == '(')
     {
         return unformatRange!T(input, fmt);
     }
+
     enforceFmt(spec == 's',
-            text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
+               text("Wrong unformat specifier '%", spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-/**
+/*
  * Function that performs raw reading. Used by unformatValue
  * for integral and float types.
  */
@@ -252,6 +273,8 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     || is(immutable ElementEncodingType!Range == immutable byte)
     || is(immutable ElementEncodingType!Range == immutable ubyte))
 {
+    import std.range.primitives : popFront;
+
     union X
     {
         ubyte[T.sizeof] raw;
@@ -275,17 +298,11 @@ if (is(immutable ElementEncodingType!Range == immutable char)
     return x.typed;
 }
 
-//debug = unformatRange;
-
 private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
-in
+in (spec.spec == '(', "spec.spec must be '(' not " ~ spec.spec)
 {
-    const char ss = spec.spec;
-    assert(ss == '(', "spec.spec must be '(' not " ~ ss);
-}
-do
-{
-    debug (unformatRange) printf("unformatRange:\n");
+    import std.range.primitives : empty, front, popFront;
+    import std.format : enforceFmt, format, unformatElement;
 
     T result;
     static if (isStaticArray!T)
@@ -302,9 +319,6 @@ do
             break;
         }
     }
-    debug (unformatRange) printf("\t");
-    debug (unformatRange) if (!input.empty) printf("input.front = %c, ", input.front);
-    debug (unformatRange) printf("cont = %.*s\n", cast(int) cont.length, cont.ptr);
 
     bool checkEnd()
     {
@@ -319,7 +333,6 @@ do
             fmt.readUpToNextSpec(input);
             enforceFmt(!input.empty, "Unexpected end of input when parsing range");
 
-            debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
             static if (isStaticArray!T)
             {
                 result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
@@ -336,25 +349,16 @@ do
 
                 result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
-            debug (unformatRange) {
-            if (input.empty) printf("-> front = [empty] ");
-            else             printf("-> front = %c ", input.front);
-            }
 
             static if (isStaticArray!T)
             {
-                debug (unformatRange) printf("i = %u < %u\n", i, T.length);
-                enforceFmt(i <= T.length, "Too many format specifiers for static array of length %d".format(T.length));
+                enforceFmt(i <= T.length,
+                           "Too many format specifiers for static array of length %d".format(T.length));
             }
 
             if (spec.sep !is null)
                 fmt.readUpToNextSpec(input);
-            auto sep = spec.sep !is null ? spec.sep
-                         : fmt.trailing;
-            debug (unformatRange) {
-            if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, cast(int) sep.length, sep.ptr);
-            else                            printf("\n");
-            }
+            auto sep = spec.sep !is null ? spec.sep : fmt.trailing;
 
             if (checkEnd())
                 break;
@@ -363,19 +367,20 @@ do
             {
                 while (!sep.empty)
                 {
-                    enforceFmt(!input.empty, "Unexpected end of input when parsing range separator");
-                    enforceFmt(input.front == sep.front, "Unexpected character when parsing range separator");
+                    enforceFmt(!input.empty,
+                               "Unexpected end of input when parsing range separator");
+                    enforceFmt(input.front == sep.front,
+                               "Unexpected character when parsing range separator");
                     input.popFront();
                     sep.popFront();
                 }
-                debug (unformatRange) printf("input.front = %c\n", input.front);
             }
         }
     }
     static if (isStaticArray!T)
     {
-        enforceFmt(i == T.length, "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
+        enforceFmt(i == T.length,
+                   "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
 }
-
