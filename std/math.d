@@ -7449,6 +7449,8 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
+    if (isNaN(x)) return x;
+
     import std.traits : Unsigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
@@ -7548,6 +7550,14 @@ if (isFloatingPoint!(F) && isIntegral!(G))
         // expected result: 3.763915357831797e-309
         assert(pow(-1.6299717435255677e+154, -2) > 0.0);
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21606
+@safe @nogc nothrow pure unittest
+{
+    assert(isNaN(pow(float.nan, 0)));
+    assert(isNaN(pow(double.nan, 0)));
+    assert(isNaN(pow(real.nan, 0)));
 }
 
 /**
