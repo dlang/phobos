@@ -610,7 +610,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     // If the result is not left justified, we may need to add more digits here for getting the
     // correct width.
     if (!f.flDash)
-        max_left = max(max_left, f.width - max_right + max_left + 1);
+    {
+        static if (g)
+            // %g cannot reduce the value by max_right due to trailing zeros, which are removed later
+            max_left = max(max_left, f.width + max_left);
+        else
+            max_left = max(max_left, f.width - max_right + max_left + 1);
+    }
 
     // If the result is left justified, we may need to add more digits to the right. This strongly
     // depends, on the exponent, see above. This time, we need to be conservative in the other direction
@@ -738,7 +744,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         }
         --final_exp;
 
-        start = left + f.precision + 1;
+        static if (g)
+            start = left + f.precision;
+        else
+            start = left + f.precision + 1;
 
         // we need more zeros for precision
         if (right < start)
@@ -817,7 +826,10 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         if (f.precision == 0 && !f.flHash) --right;
 
         // adding more digits
-        start = right;
+        static if (g)
+            start = right - 1;
+        else
+            start = right;
         while ((lsu < count - 1 || mybig[$ - 1] != 0) && right - start < f.precision)
         {
             ulong over = 0;
@@ -883,10 +895,15 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             buffer[--left] = '.';
             buffer[--left] = cast(byte) ('0' + int_part);
 
-            if (right - left > f.precision + 2)
+            static if (g)
+                auto limit = f.precision + 1;
+            else
+                auto limit = f.precision + 2;
+
+            if (right - left > limit)
             {
                 auto old_right = right;
-                right = left + f.precision + 2;
+                right = left + limit;
 
                 if (buffer[right] == '5' || buffer[right] == '0')
                 {
@@ -928,8 +945,13 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
         if (f.precision == 0 && !f.flHash) right--;
 
+        static if (g)
+            size_t limit = f.precision - 1;
+        else
+            size_t limit = f.precision;
+
         // the fractional part after the zeros
-        while (frac_part != 0 && start < f.precision)
+        while (frac_part != 0 && start < limit)
         {
             frac_part *= 10;
             buffer[right++] = cast(byte) ('0' + (frac_part >> (T.mant_dig - 1 - exp)));
@@ -937,10 +959,15 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             ++start;
         }
 
-        if (start < f.precision)
+        static if (g)
+            limit = right - left - 1;
+        else
+            limit = start;
+
+        if (limit < f.precision)
         {
-            buffer[right .. right + f.precision - start] = '0';
-            right += f.precision - start;
+            buffer[right .. right + f.precision - limit] = '0';
+            right += f.precision - limit;
             start = f.precision;
         }
 
@@ -1013,6 +1040,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         final_exp++;
 
 printFloat_done:
+    }
+
+    static if (g)
+    {
+        if (!f.flHash)
+        {
+            // removing trailing 0s
+            while (right > left && buffer[right - 1]=='0')
+                right--;
+            if (right > left && buffer[right - 1]=='.')
+                right--;
+        }
     }
 
     // printing exponent
@@ -2057,7 +2096,7 @@ private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, R
                                   string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
-    import core.math : abs = fabs;
+    import std.math : abs;
 
     if (f.precision == f.UNSPECIFIED)
         f.precision = 6;
@@ -2103,27 +2142,27 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     f.spec = 'g';
 
     double val = 999999.5;
-//    assert(printFloat(buf[], val, f) == "1e+06");
+    assert(printFloat(buf[], val, f) == "1e+06");
     val = nextDown(val);
 //    assert(printFloat(buf[], val, f) == "999999");
 
     val = 0.00009999995;
 //    assert(printFloat(buf[], val, f) == "0.0001");
     val = nextDown(val);
-//    assert(printFloat(buf[], val, f) == "9.99999e-05");
+    assert(printFloat(buf[], val, f) == "9.99999e-05");
 
     val = 1000000;
-//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "1e+06");
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "1e+06");
     val = nextDown(val);
 //    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "999999");
 
     val = 0.0001;
 //    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "0.0001");
     val = nextDown(val);
-//    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "9.99999e-05");
+    assert(printFloat(buf[], val, f, RoundingMode.toZero) == "9.99999e-05");
 
     val = 999999;
-//    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e+05");
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e+05");
     val = nextDown(val);
 //    assert(printFloat(buf[], val, f, RoundingMode.up) == "999999");
 
@@ -2132,17 +2171,17 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     val = nextUp(0.0000999999);
 //    assert(printFloat(buf[], val, f, RoundingMode.up) == "0.0001");
     val = nextDown(val);
-//    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e-05");
+    assert(printFloat(buf[], val, f, RoundingMode.up) == "9.99999e-05");
 
     val = 1000000;
-//    assert(printFloat(buf[], val, f, RoundingMode.down) == "1e+06");
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "1e+06");
     val = nextDown(val);
 //    assert(printFloat(buf[], val, f, RoundingMode.down) == "999999");
 
     val = 0.0001;
 //    assert(printFloat(buf[], val, f, RoundingMode.down) == "0.0001");
     val = nextDown(val);
-//    assert(printFloat(buf[], val, f, RoundingMode.down) == "9.99999e-05");
+    assert(printFloat(buf[], val, f, RoundingMode.down) == "9.99999e-05");
 }
 
 @safe unittest
@@ -2156,7 +2195,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0f, f) == "0");
     assert(printFloat(buf[], -0.0f, f) == "-0");
-    /*
+
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.99995e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.99995e-41");
@@ -2164,17 +2203,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30f, f) == "-1e-30");
     assert(printFloat(buf[], 1e-10f, f) == "1e-10");
     assert(printFloat(buf[], -1e-10f, f) == "-1e-10");
+    /*
     assert(printFloat(buf[], 0.1f, f) == "0.1");
     assert(printFloat(buf[], -0.1f, f) == "-0.1");
     assert(printFloat(buf[], 10.0f, f) == "10");
     assert(printFloat(buf[], -10.0f, f) == "-10");
+     */
     assert(printFloat(buf[], 1e30f, f) == "1e+30");
     assert(printFloat(buf[], -1e30f, f) == "-1e+30");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0f), f) == "1.4013e-45");
     assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.4013e-45");
-     */
 }
 
 @safe unittest
@@ -2191,7 +2231,6 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "                   0");
     assert(printFloat(buf[], -0.0f, f) == "                  -0");
-    /*
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "     9.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "    -9.999946101e-41");
@@ -2199,17 +2238,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30f, f) == "    -1.000000003e-30");
     assert(printFloat(buf[], 1e-10f, f) == "     1.000000013e-10");
     assert(printFloat(buf[], -1e-10f, f) == "    -1.000000013e-10");
+    /*
     assert(printFloat(buf[], 0.1f, f) == "        0.1000000015");
     assert(printFloat(buf[], -0.1f, f) == "       -0.1000000015");
     assert(printFloat(buf[], 10.0f, f) == "                  10");
     assert(printFloat(buf[], -10.0f, f) == "                 -10");
+     */
     assert(printFloat(buf[], 1e30f, f) == "     1.000000015e+30");
     assert(printFloat(buf[], -1e30f, f) == "    -1.000000015e+30");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0f), f) == "     1.401298464e-45");
     assert(printFloat(buf[], nextDown(-0.0f), f) == "    -1.401298464e-45");
-     */
 }
 
 @safe unittest
@@ -2227,7 +2267,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
     assert(printFloat(buf[], 0.0f, f) == "0                   ");
     assert(printFloat(buf[], -0.0f, f) == "-0                  ");
-    /*
+
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41     ");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41    ");
@@ -2235,17 +2275,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30    ");
     assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10     ");
     assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10    ");
+    /*
     assert(printFloat(buf[], 0.1f, f) == "0.1000000015        ");
     assert(printFloat(buf[], -0.1f, f) == "-0.1000000015       ");
     assert(printFloat(buf[], 10.0f, f) == "10                  ");
     assert(printFloat(buf[], -10.0f, f) == "-10                 ");
+     */
     assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30     ");
     assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30    ");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45     ");
     assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45    ");
-     */
 }
 
 @safe unittest
@@ -2263,7 +2304,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.infinity, f) == "                -inf");
     assert(printFloat(buf[], 0.0f, f) == "00000000000000000000");
     assert(printFloat(buf[], -0.0f, f) == "-0000000000000000000");
-    /*
+
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "000009.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-00009.999946101e-41");
@@ -2271,17 +2312,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30f, f) == "-00001.000000003e-30");
     assert(printFloat(buf[], 1e-10f, f) == "000001.000000013e-10");
     assert(printFloat(buf[], -1e-10f, f) == "-00001.000000013e-10");
+    /*
     assert(printFloat(buf[], 0.1f, f) == "000000000.1000000015");
     assert(printFloat(buf[], -0.1f, f) == "-00000000.1000000015");
     assert(printFloat(buf[], 10.0f, f) == "00000000000000000010");
     assert(printFloat(buf[], -10.0f, f) == "-0000000000000000010");
+     */
     assert(printFloat(buf[], 1e30f, f) == "000001.000000015e+30");
     assert(printFloat(buf[], -1e30f, f) == "-00001.000000015e+30");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0f), f) == "000001.401298464e-45");
     assert(printFloat(buf[], nextDown(-0.0f), f) == "-00001.401298464e-45");
-     */
 }
 
 @safe unittest
@@ -2298,7 +2340,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -float.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0f, f) == "0.000000000");
     assert(printFloat(buf[], -0.0f, f) == "-0.000000000");
-    /*
+
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41");
     assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41");
@@ -2306,17 +2348,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30");
     assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10");
     assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10");
+    /*
     assert(printFloat(buf[], 0.1f, f) == "0.1000000015");
     assert(printFloat(buf[], -0.1f, f) == "-0.1000000015");
     assert(printFloat(buf[], 10.0f, f) == "10.00000000");
     assert(printFloat(buf[], -10.0f, f) == "-10.00000000");
+     */
     assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30");
     assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45");
     assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45");
-     */
 }
 
 @safe unittest
@@ -2397,7 +2440,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -double.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0, f) == "0");
     assert(printFloat(buf[], -0.0, f) == "-0");
-    /*
+
     // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
     assert(printFloat(buf[], 1e-307 / 1000, f) == "1e-310");
     assert(printFloat(buf[], -1e-307 / 1000, f) == "-1e-310");
@@ -2405,17 +2448,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -1e-30, f) == "-1e-30");
     assert(printFloat(buf[], 1e-10, f) == "1e-10");
     assert(printFloat(buf[], -1e-10, f) == "-1e-10");
+    /*
     assert(printFloat(buf[], 0.1, f) == "0.1");
     assert(printFloat(buf[], -0.1, f) == "-0.1");
     assert(printFloat(buf[], 10.0, f) == "10");
     assert(printFloat(buf[], -10.0, f) == "-10");
+     */
     assert(printFloat(buf[], 1e300, f) == "1e+300");
     assert(printFloat(buf[], -1e300, f) == "-1e+300");
 
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0), f) == "4.94066e-324");
     assert(printFloat(buf[], nextDown(-0.0), f) == "-4.94066e-324");
-     */
 }
 
 @safe unittest
@@ -2426,7 +2470,6 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     import std.math : nextUp;
 
-    /*
     double eps = nextUp(0.0);
     f.precision = 1000;
     assert(printFloat(buf[], eps, f) ==
@@ -2449,6 +2492,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], double.epsilon, f) ==
            "2.220446049250313080847263336181640625e-16");
 
+    /*
     f.precision = 10;
     assert(printFloat(buf[], 1.0/3.0, f) == "0.3333333333");
     assert(printFloat(buf[], 1.0/7.0, f) == "0.1428571429");
