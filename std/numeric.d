@@ -22,6 +22,7 @@ module std.numeric;
 
 import std.complex;
 import std.math;
+import core.math : fabs, ldexp, sin, sqrt;
 import std.range.primitives;
 import std.traits;
 import std.typecons;

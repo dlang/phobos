@@ -21,6 +21,7 @@ Macros:
 module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
+import core.math : fabs, sin, sqrt;
 
 pure:
 nothrow:

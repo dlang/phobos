@@ -2057,7 +2057,7 @@ private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, R
                                   string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
 {
-    import std.math : abs;
+    import core.math : abs = fabs;
 
     if (f.precision == f.UNSPECIFIED)
         f.precision = 6;
