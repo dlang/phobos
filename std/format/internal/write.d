@@ -619,7 +619,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                     case FloatingPointControl.roundToNearest:
                         mode = RoundingMode.toNearestTiesToEven;
                         break;
-                    default: assert(false);
+                    default: assert(false, "Unknown floating point rounding mode");
                     }
                 }
             }
@@ -1939,9 +1939,10 @@ template hasToString(T, Char)
             static struct S {void put(scope Char s){}}
             S s;
             val.toString(s, f);
-            // force toString to take parameters by ref
-            static assert(!__traits(compiles, val.toString(s, FormatSpec!Char())));
-            static assert(!__traits(compiles, val.toString(S(), f)));
+            static assert(!__traits(compiles, val.toString(s, FormatSpec!Char())),
+                          "force toString to take parameters by ref");
+            static assert(!__traits(compiles, val.toString(S(), f)),
+                          "force toString to take parameters by ref");
         })))
     {
         enum hasToString = HasToStringResult.customPutWriterFormatSpec;
@@ -1952,8 +1953,8 @@ template hasToString(T, Char)
             static struct S {void put(scope Char s){}}
             S s;
             val.toString(s);
-            // force toString to take parameters by ref
-            static assert(!__traits(compiles, val.toString(S())));
+            static assert(!__traits(compiles, val.toString(S())),
+                          "force toString to take parameters by ref");
         })))
     {
         enum hasToString = HasToStringResult.customPutWriter;
@@ -2376,7 +2377,6 @@ version (StdUnittest)
     assert(s == "Foo", s);
 }
 
-// ditto
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
@@ -2463,7 +2463,6 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     }
 }
 
-/// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val,
     scope const ref FormatSpec!Char f)
