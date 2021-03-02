@@ -119,6 +119,7 @@ real logGamma(real x)
  */
 real sgnGamma(real x)
 {
+    import core.math : rndtol;
     /* Author: Don Clugston. */
     if (isNaN(x)) return x;
     if (x > 0) return 1.0;

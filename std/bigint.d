@@ -706,11 +706,8 @@ public:
     }
 
     /// ditto
-    bool opEquals(T)(const T y) const nothrow @nogc if (isFloatingPoint!T)
+    bool opEquals(T)(const T y) const pure nothrow @nogc if (isFloatingPoint!T)
     {
-        // This is a separate function from the isIntegral!T case
-        // due to the impurity of std.math.scalbn which is used
-        // for 80 bit floats.
         return 0 == opCmp(y);
     }
 
@@ -992,14 +989,14 @@ public:
             }
             else
             {
-                import std.math : scalbn;
-                return scalbn(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
+                import core.math : ldexp;
+                return ldexp(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
                     cast(int) exponent - 65);
             }
         }
         else
         {
-            import std.math : scalbn;
+            import core.math : ldexp;
             const ulongLength = data.ulongLength;
             if ((ulongLength - 1) * 64L > int.max)
                 return isNegative ? -T.infinity : T.infinity;
@@ -1008,20 +1005,20 @@ public:
             if (w1 == 0)
                 return T(0); // Special: bsr(w1) is undefined.
             int bitsStillNeeded = totalNeededBits - bsr(w1) - 1;
-            T acc = scalbn(cast(T) w1, scale);
+            T acc = ldexp(cast(T) w1, scale);
             for (ptrdiff_t i = ulongLength - 2; i >= 0 && bitsStillNeeded > 0; i--)
             {
                 ulong w = data.peekUlong(i);
                 // To round towards zero we must make sure not to use too many bits.
                 if (bitsStillNeeded >= 64)
                 {
-                    acc += scalbn(cast(T) w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     bitsStillNeeded -= 64;
                 }
                 else
                 {
                     w = (w >>> (64 - bitsStillNeeded)) << (64 - bitsStillNeeded);
-                    acc += scalbn(cast(T) w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     break;
                 }
             }

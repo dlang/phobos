@@ -24,6 +24,7 @@
  */
 module std.internal.math.errorfunction;
 import std.math;
+import core.math : sqrt;
 
 pure:
 nothrow:

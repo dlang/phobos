@@ -2133,7 +2133,8 @@ template roundTo(Target)
 {
     Target roundTo(Source)(Source value)
     {
-        import std.math : abs, log2, trunc;
+        import core.math : abs = fabs;
+        import std.math : log2, trunc;
 
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
@@ -3335,7 +3336,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         ldval = ldval * msscale + lsdec;
     if (isHex)
     {
-        import std.math : ldexp;
+        import core.math : ldexp;
 
         // Exponent is power of 2, not power of 10
         ldval = ldexp(ldval,exp);
