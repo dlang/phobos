@@ -38,6 +38,7 @@ $(UL
        `std.getopt.config.passThrough` was not present.)
   $(LI A command-line option was not found, and
        `std.getopt.config.required` was present.)
+  $(LI A callback option is missing a value.)
 )
 */
 class GetOptException : Exception
@@ -97,8 +98,8 @@ void main(string[] args)
  the parameter cannot be parsed properly (e.g., a number is expected
  but not present), a `ConvException` exception is thrown.
  If `std.getopt.config.passThrough` was not passed to `getopt`
- and an unrecognized command-line argument is found, a `GetOptException`
- is thrown.
+ and an unrecognized command-line argument is found, or if a required
+ argument is missing a `GetOptException` is thrown.
 
  Depending on the type of the pointer being bound, `getopt`
  recognizes the following kinds of options:
@@ -868,7 +869,6 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         {
             import std.exception : enforce;
             // non-boolean option, which might include an argument
-            //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
             enum isCallbackWithLessThanTwoParameters =
                 (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
@@ -876,7 +876,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
-                enforce(i < args.length,
+                enforce!GetOptException(i < args.length,
                     "Missing value for argument " ~ a ~ ".");
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
@@ -1362,6 +1362,12 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
+
+    // check that GetOptException is thrown if the value is missing
+    args = ["program.name", "--verbose"];
+    try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
+    catch (GetOptException e) {}
+    catch (Exception e) { assert(0); }
 }
 
 @safe unittest // @safe std.getopt.config option use
