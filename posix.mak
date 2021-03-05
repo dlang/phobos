@@ -216,7 +216,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file \
   functional getopt json math mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
-  stdio string system traits typecons \
+  stdio string sumtype system traits typecons \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
@@ -669,6 +669,27 @@ betterc: betterc-phobos-tests
 	$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
+
+
+################################################################################
+# Full-module BetterC tests
+# -------------------------
+#
+# Test full modules with -betterC. Edit BETTERC_MODULES and
+# test/betterc_module_tests.d to add new modules to the list.
+#
+#   make -f posix.mak betterc-module-tests
+################################################################################
+
+BETTERC_MODULES=std/sumtype
+
+betterc: betterc-module-tests
+
+betterc-module-tests: $(ROOT)/betterctests/betterc_module_tests
+	$(ROOT)/betterctests/betterc_module_tests
+
+$(ROOT)/betterctests/betterc_module_tests: test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -of=$(ROOT)/betterctests/betterc_module_tests -betterC -unittest test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
 
 ################################################################################
 

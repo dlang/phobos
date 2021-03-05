@@ -164,6 +164,9 @@ SRC_STD_7= \
 	std\process.d \
 	std\package.d
 
+SRC_STD_7a= \
+	std\sumtype.d
+
 SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
@@ -178,7 +181,8 @@ SRC_STD= \
 	$(SRC_STD_6e) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
-	$(SRC_STD_7)
+	$(SRC_STD_7) \
+	$(SRC_STD_7a)
 
 SRC_STD_ALGO_1= \
 	std\algorithm\package.d \
@@ -421,6 +425,7 @@ UNITTEST_OBJS= \
 		unittest6h.obj \
 		unittest6i.obj \
 		unittest7.obj \
+		unittest7a.obj \
 		unittest8a.obj \
 		unittest8b.obj \
 		unittest8c.obj \
@@ -450,6 +455,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest7a.obj $(SRC_STD_7a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)

@@ -155,6 +155,9 @@ SRC_STD_7= \
 	std\process.d \
 	std\package.d
 
+SRC_STD_7a= \
+	std\sumtype.d
+
 SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
@@ -162,7 +165,8 @@ SRC_STD= \
 	$(SRC_STD_3a) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
-	$(SRC_STD_7)
+	$(SRC_STD_7) \
+	$(SRC_STD_7a)
 
 SRC_STD_ALGO= \
 	std\algorithm\package.d \
@@ -389,6 +393,7 @@ UNITTEST_OBJS= \
 		unittest6a.obj \
 		unittest6b.obj \
 		unittest7.obj \
+		unittest7a.obj \
 		unittest8a.obj \
 		unittest8b.obj \
 		unittest8c.obj \
@@ -410,6 +415,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6a.obj $(SRC_STD_EXP_ALLOC)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7.obj $(SRC_STD_7)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7a.obj $(SRC_STD_7a)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8b.obj $(SRC_STD_NET)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
@@ -513,6 +519,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\internal\math\errorfunction.d
 	$(DMD) -conf= -cov=ctfe -cov=31 $(UDFLAGS) -main -run std\internal\windows\advapi32.d
 	$(DMD) -conf= -cov=ctfe -cov=58 $(UDFLAGS) -main -run etc\c\zlib.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\sumtype.d
 
 ######################################################
 
