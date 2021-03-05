@@ -1918,12 +1918,17 @@ enum HasToStringResult
 {
     none,
     hasSomeToString,
+    inCharSink,
+    inCharSinkFormatString,
+    inCharSinkFormatSpec,
     constCharSink,
     constCharSinkFormatString,
     constCharSinkFormatSpec,
     customPutWriter,
     customPutWriterFormatSpec,
 }
+
+private enum hasPreviewIn = !is(typeof(mixin(q{(in ref int a) => a})));
 
 template hasToString(T, Char)
 {
@@ -1971,6 +1976,23 @@ template hasToString(T, Char)
     {
         enum hasToString = HasToStringResult.constCharSink;
     }
+
+    else static if (hasPreviewIn &&
+                    is(typeof({ T val = void; FormatSpec!Char f; val.toString((in char[] s){}, f); })))
+    {
+        enum hasToString = HasToStringResult.inCharSinkFormatSpec;
+    }
+    else static if (hasPreviewIn &&
+                    is(typeof({ T val = void; val.toString((in char[] s){}, "%s"); })))
+    {
+        enum hasToString = HasToStringResult.inCharSinkFormatString;
+    }
+    else static if (hasPreviewIn &&
+                    is(typeof({ T val = void; val.toString((in char[] s){}); })))
+    {
+        enum hasToString = HasToStringResult.inCharSink;
+    }
+
     else static if (is(typeof({ T val = void; return val.toString(); }()) S) && isSomeString!S)
     {
         enum hasToString = HasToStringResult.hasSomeToString;
@@ -2051,6 +2073,18 @@ template hasToString(T, Char)
         if (isOutputRange!(Writer, string))
         {}
     }
+    static struct M
+    {
+        void toString(scope void delegate(in char[]) sink, in FormatSpec!char fmt) {}
+    }
+    static struct N
+    {
+        void toString(scope void delegate(in char[]) sink, string fmt) {}
+    }
+    static struct O
+    {
+        void toString(scope void delegate(in char[]) sink) {}
+    }
 
     with(HasToStringResult)
     {
@@ -2066,6 +2100,12 @@ template hasToString(T, Char)
         static assert(hasToString!(J, char) == hasSomeToString);
         static assert(hasToString!(K, char) == constCharSinkFormatSpec);
         static assert(hasToString!(L, char) == none);
+        static if (hasPreviewIn)
+        {
+            static assert(hasToString!(M, char) == inCharSinkFormatSpec);
+            static assert(hasToString!(N, char) == inCharSinkFormatString);
+            static assert(hasToString!(O, char) == inCharSink);
+        }
     }
 }
 
@@ -2099,6 +2139,18 @@ if (hasToString!(T, Char))
     else static if (overload == HasToStringResult.constCharSink)
     {
         static if (!noop) val.toString((scope const(char)[] s) { put(w, s); });
+    }
+    else static if (overload == HasToStringResult.inCharSinkFormatSpec)
+    {
+        static if (!noop) val.toString((in char[] s) { put(w, s); }, f);
+    }
+    else static if (overload == HasToStringResult.inCharSinkFormatString)
+    {
+        static if (!noop) val.toString((in char[] s) { put(w, s); }, f.getCurFmtStr());
+    }
+    else static if (overload == HasToStringResult.inCharSink)
+    {
+        static if (!noop) val.toString((in char[] s) { put(w, s); });
     }
     else static if (overload == HasToStringResult.hasSomeToString)
     {
