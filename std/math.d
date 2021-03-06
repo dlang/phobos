@@ -5152,7 +5152,7 @@ private:
 
     static uint getIeeeFlags() @trusted pure
     {
-        version (InlineAsm_X87)
+        version (InlineAsm_X86_Any)
         {
             ushort sw;
             asm pure nothrow @nogc { fstsw sw; }
@@ -5196,7 +5196,7 @@ private:
 
     static void resetIeeeFlags() @trusted
     {
-        version (InlineAsm_X87)
+        version (InlineAsm_X86_Any)
         {
             asm nothrow @nogc
             {
@@ -7985,8 +7985,9 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     auto c1 = complex(-2.5, 0.0);
     auto c2 = complex(-1.5, 0.0);
     auto result = c1 ^^ c2;
-    assert(isClose(result.re, -4.64705438e-17));
-    assert(isClose(result.im, 2.52982213e-1));
+    // exact result apparently depends on `real` precision => increased tolerance
+    assert(isClose(result.re, -4.64705438e-17, 2e-4));
+    assert(isClose(result.im, 2.52982e-1, 2e-4));
 }
 
 @safe pure nothrow @nogc unittest

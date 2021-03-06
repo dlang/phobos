@@ -796,6 +796,7 @@ in
 do
 {
     import std.format : format;
+    import std.meta : allSatisfy;
     import std.typecons : Tuple;
 
     Tuple!(T) ret;
@@ -803,7 +804,7 @@ do
     thisInfo.ident.mbox.get((T val) {
         static if (T.length)
         {
-            static if (isAssignable!T)
+            static if (allSatisfy!(isAssignable, T))
             {
                 ret.field = val;
             }
@@ -886,6 +887,12 @@ do
     tid.send(1);
     string result = receiveOnly!string();
     assert(result == "Unexpected message type: expected 'string', got 'int'");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21663
+@safe unittest
+{
+    alias test = receiveOnly!(string, bool, bool);
 }
 
 /**
