@@ -2,7 +2,7 @@ splitBy added to std.algorithm.iteration
 
 $(REF splitBy, std, algortihm, iteration) is a variant of the existing $(REF
 chunkBy, std, algortihm, iteration) function that does not require its predicate
-to be an equivelance relation, allowing it to be used in ways that chunkBy
+to be an equivalence relation, allowing it to be used in ways that chunkBy
 cannot. For example:
 -------
 // Grouping by maximum adjacent difference:
@@ -16,5 +16,5 @@ assert(r3.equal!equal([
 ]));
 -------
 
-This is illegal with chunkBy, because it requires that if pred(a,b) and
-pred(b,c) return true, pred(a,c) must also return true.
+This would have an undefined result with chunkBy, because it requires that if
+pred(a,b) and pred(b,c) return true, pred(a,c) must also return true.

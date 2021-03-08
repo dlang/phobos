@@ -2202,8 +2202,6 @@ if (isForwardRange!Range)
     assert(v.chunkBy!((a,b) => a % i == b % i).equal!equal([[2,4,8],[3],[6],[9,1,5,7]]));
 }
 
-
-
 @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -2865,6 +2863,14 @@ nothrow pure @system unittest
         [5, 4],
         [9, 10]
     ]));
+}
+
+// empty range splitBy
+@nogc nothrow pure @system unittest
+{
+    int[1] sliceable;
+    auto result = sliceable[0 .. 0].splitBy!((a,b) => a+b > 10);
+    assert(result.empty);
 }
 
 // joiner
