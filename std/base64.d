@@ -604,7 +604,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         this(Range range)
         {
             range_ = range;
-            doEncoding();
+            if (!empty)
+                doEncoding();
         }
 
 
@@ -2077,4 +2078,11 @@ class Base64Exception : Exception
         assert(Base64.decode(ir2, &or2) == 6);
     }();
     assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21679
+@safe unittest
+{
+    ubyte[][] input;
+    assert(Base64.encoder(input).empty);
 }
