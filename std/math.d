@@ -7449,6 +7449,9 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
+    // NaN ^^ 0 is an exception defined by IEEE (yields 1 instead of NaN)
+    if (isNaN(x)) return n ? x : 1.0;
+
     import std.traits : Unsigned;
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
@@ -7468,13 +7471,76 @@ if (isFloatingPoint!(F) && isIntegral!(G))
             return 1.0;
         case 1:
             return x;
-        case 2:
-            return x * x;
         default:
         }
 
         v = x;
     }
+
+    // Bail out early, if we can estimate that the result is infinity or 0.0:
+    //
+    // We use the following two conclusions:
+    //
+    //    m * floor(log2(abs(v))) >= F.max_exp
+    // =>             abs(v) ^^ m >  F.max == nextDown(F.infinity)
+    //
+    //    m * (bias - ex - 1) >= bias + F.mant_dig - 1
+    // =>         abs(v) ^^ m <  2 ^^ (-bias - F.mant_dig + 2) == nextUp(0.0)
+    //
+    // floor(log2(abs(v))) == ex - bias can be directly taken from the
+    // exponent of the floating point represantation, to avoid long
+    // calculations here.
+
+    enum uint bias = F.max_exp - 1;
+
+    static if (is(F == float))
+    {
+        float f = cast(float) v;
+        uint ival = () @trusted { return *cast(uint*) &f; }();
+        ulong ex = (ival >> 23) & 255;
+    }
+    else static if (is(F == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+    {
+        double d = cast(double) v;
+        ulong ival = () @trusted { return *cast(ulong*) &d; }();
+        ulong ex = (ival >> 52) & 2047;
+    }
+    else static if (is (F == real) && real.mant_dig == 64)
+    {
+        ulong ex = void;
+        if (__ctfe)
+        {
+            // in CTFE we cannot access the bit patterns and have therefore to
+            // fall back to the (slower) general case
+            // skipping subnormals by setting ex = bias
+            ex = abs(v) == F.infinity ? 2 * bias + 1 :
+                (abs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(abs(v))) + bias));
+        }
+        else
+        {
+            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &v; }();
+            ex = ival[1] & 32767;
+        }
+    }
+    else
+    {
+        // ToDo: Add special treatment for other reals too.
+
+        // In the general case we have to fall back to log2, which is slower, but still
+        // a certain speed gain compared to not bailing out early.
+            // skipping subnormals by setting ex = bias
+        ulong ex = abs(v) == F.infinity ? 2 * bias + 1 :
+            (abs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(abs(v))) + bias));
+    }
+
+    // m * (...) can exceed ulong.max, we therefore first check m >= (...).
+    // This is sufficient to know that the result will be infinity or 0.0
+    // and at the same time it guards against an overflow.
+    if (ex > bias && (m >= F.max_exp || m * (ex - bias) >= F.max_exp))
+        return (m % 2 == 0 || v > 0) ? F.infinity : -F.infinity;
+    else if (ex < bias - 1
+             && (m >= bias + F.mant_dig - 1 || m * (bias - ex - 1) >= bias + F.mant_dig - 1))
+        return 0.0;
 
     while (1)
     {
