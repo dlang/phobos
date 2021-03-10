@@ -108,7 +108,7 @@ import std.traits;
 import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
-Checks if $(I _all) of the elements verify `pred`.
+Checks if $(I _all) of the elements satisfy `pred`.
  +/
 template all(alias pred = "a")
 {
@@ -155,8 +155,8 @@ are true.
 }
 
 /++
-Checks if $(I _any) of the elements verifies `pred`.
-`!any` can be used to verify that $(I none) of the elements verify
+Checks if $(I _any) of the elements satisfies `pred`.
+`!any` can be used to verify that $(I none) of the elements satisfy
 `pred`.
 This is sometimes called `exists` in other languages.
  +/
