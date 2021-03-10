@@ -7616,6 +7616,66 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     }
 }
 
+@safe @nogc nothrow unittest
+{
+    static float f1 = 19100.0f;
+    static float f2 = 0.000012f;
+
+    assert(isClose(pow(f1,9), 3.3829868e+38f));
+    assert(isInfinity(pow(f1,10)));
+    assert(pow(f2,9) > 0.0f);
+    assert(isClose(pow(f2,10), 0.0f, 0.0, float.min_normal));
+
+    static double d1 = 21800.0;
+    static double d2 = 0.000012;
+
+    assert(isClose(pow(d1,71), 1.0725339442974e+308));
+    assert(isInfinity(pow(d1,72)));
+    assert(pow(d2,65) > 0.0f);
+    assert(isClose(pow(d2,66), 0.0, 0.0, double.min_normal));
+
+    static if (real.mant_dig == 64) // x87
+    {
+        static real r1 = 21950.0L;
+        static real r2 = 0.000011L;
+
+        assert(isClose(pow(r1,1136), 7.4066175654969242752260330529e+4931L));
+        assert(isInfinity(pow(r1,1137)));
+        assert(pow(r2,998) > 0.0L);
+        assert(isClose(pow(r2,999), 0.0L, 0.0, real.min_normal));
+    }
+}
+
+@safe @nogc nothrow pure unittest
+{
+    enum f1 = 19100.0f;
+    enum f2 = 0.000012f;
+
+    static assert(isClose(pow(f1,9), 3.3829868e+38f));
+    static assert(pow(f1,10) > float.max);
+    static assert(pow(f2,9) > 0.0f);
+    static assert(isClose(pow(f2,10), 0.0f, 0.0, float.min_normal));
+
+    enum d1 = 21800.0;
+    enum d2 = 0.000012;
+
+    static assert(isClose(pow(d1,71), 1.0725339442974e+308));
+    static assert(pow(d1,72) > double.max);
+    static assert(pow(d2,65) > 0.0f);
+    static assert(isClose(pow(d2,66), 0.0, 0.0, double.min_normal));
+
+    static if (real.mant_dig == 64) // x87
+    {
+        enum r1 = 21950.0L;
+        enum r2 = 0.000011L;
+
+        static assert(isClose(pow(r1,1136), 7.4066175654969242752260330529e+4931L));
+        static assert(pow(r1,1137) > real.max);
+        static assert(pow(r2,998) > 0.0L);
+        static assert(isClose(pow(r2,999), 0.0L, 0.0, real.min_normal));
+    }
+}
+
 /**
  * Compute the power of two integral numbers.
  *
