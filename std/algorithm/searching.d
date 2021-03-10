@@ -108,13 +108,13 @@ import std.traits;
 import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
-Checks if $(I _all) of the elements verify `pred`.
+Checks if $(I _all) of the elements satisfy `pred`.
  +/
 template all(alias pred = "a")
 {
     /++
-    Returns `true` if and only if $(I _all) values `v` found in the
-    input range `range` satisfy the predicate `pred`.
+    Returns `true` if and only if the input range `range` is empty
+    or $(I _all) values found in `range` satisfy the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
@@ -155,16 +155,17 @@ are true.
 }
 
 /++
-Checks if $(I _any) of the elements verifies `pred`.
-`!any` can be used to verify that $(I none) of the elements verify
+Checks if $(I _any) of the elements satisfies `pred`.
+`!any` can be used to verify that $(I none) of the elements satisfy
 `pred`.
 This is sometimes called `exists` in other languages.
  +/
 template any(alias pred = "a")
 {
     /++
-    Returns `true` if and only if $(I _any) value `v` found in the
-    input range `range` satisfies the predicate `pred`.
+    Returns `true` if and only if the input range `range` is non-empty
+    and $(I _any) value found in `range` satisfies the predicate
+    `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
