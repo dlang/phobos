@@ -7632,10 +7632,6 @@ private:
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
 
-$(RED `Transposed` currently defines `save`, but does not work as a forward range.
-Consuming a copy made with `save` will consume all copies, even the original sub-ranges
-fed into `Transposed`.)
-
 Params:
     opt = Controls the assumptions the function makes about the lengths of the ranges (i.e. jagged or not)
     rr = Range of ranges
