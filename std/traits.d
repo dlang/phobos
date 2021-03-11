@@ -5036,7 +5036,7 @@ template ImplicitConversionTargets(T)
                        float, double, real, char, wchar, dchar);
     else static if (is(T == byte))
         alias ImplicitConversionTargets =
-            AliasSeq!(short, ushort, int, uint, long, ulong, CentTypeList,
+            AliasSeq!(short, int, long, SignedCentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == ubyte))
         alias ImplicitConversionTargets =
@@ -5044,13 +5044,13 @@ template ImplicitConversionTargets(T)
                        float, double, real, char, wchar, dchar);
     else static if (is(T == short))
         alias ImplicitConversionTargets =
-            AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(int, long, SignedCentTypeList, float, double, real);
     else static if (is(T == ushort))
         alias ImplicitConversionTargets =
             AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == int))
         alias ImplicitConversionTargets =
-            AliasSeq!(long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(long, SignedCentTypeList, float, double, real);
     else static if (is(T == uint))
         alias ImplicitConversionTargets =
             AliasSeq!(long, ulong, CentTypeList, float, double, real);
@@ -5102,7 +5102,7 @@ template ImplicitConversionTargets(T)
     import std.meta : AliasSeq;
 
     static assert(is(ImplicitConversionTargets!(ulong) == AliasSeq!(float, double, real)));
-    static assert(is(ImplicitConversionTargets!(int) == AliasSeq!(long, ulong, float, double, real)));
+    static assert(is(ImplicitConversionTargets!(int) == AliasSeq!(long, float, double, real)));
     static assert(is(ImplicitConversionTargets!(float) == AliasSeq!(double, real)));
     static assert(is(ImplicitConversionTargets!(double) == AliasSeq!(real)));
 

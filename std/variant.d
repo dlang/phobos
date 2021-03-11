@@ -1912,7 +1912,6 @@ static class VariantException : Exception
     assert( v.convertsTo!(long) );
     assert( v.get!(int) == 42 );
     assert( v.get!(long) == 42L );
-    assert( v.get!(ulong) == 42uL );
 
     v = "Hello, World!";
     assert( v.peek!(string) );
