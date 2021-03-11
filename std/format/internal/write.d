@@ -12,7 +12,7 @@
  */
 module std.format.internal.write;
 
-import std.format : FormatSpec;
+import std.format.spec : FormatSpec;
 import std.range.primitives : isInputRange;
 import std.traits;
 

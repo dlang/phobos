@@ -18,7 +18,7 @@ import std.traits : isAggregateType, isArray, isAssociativeArray,
     isDynamicArray, isFloatingPoint, isIntegral, isSomeChar, isSomeString,
     isStaticArray, StringTypeOf;
 
-import std.format : FormatSpec;
+import std.format.spec : FormatSpec;
 
 package(std.format):
 
