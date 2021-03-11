@@ -7564,12 +7564,6 @@ if (isForwardRange!RangeOfRanges &&
         return true;
     }
 
-    deprecated("This function is incorrect and will be removed November 2018. See the docs for more details.")
-    @property Transposed save()
-    {
-        return Transposed(_input.save);
-    }
-
     auto opSlice() { return this; }
 
 private:
