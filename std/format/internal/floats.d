@@ -1456,7 +1456,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
     // Default for the right side is the number of digits given by f.precision plus one for the dot.
     static if (g)
-        auto max_right = max(0, f.precision - cast(int) val.abs.log10.floor);
+        auto max_right = max(0, f.precision - cast(int) val.abs.log10.floor + 1);
     else
         auto max_right = f.precision + 1;
 
@@ -2746,6 +2746,18 @@ private auto printFloat0(bool g, Char)(return char[] buf, FormatSpec!Char f, str
     f.precision = 498;
     assert(printFloat(buf[], 1.0, f).length == 500);
 
+    f.spec = 'g';
+    f.precision = 15;
+    assert(printFloat(buf[], cast(double) E, f) == "2.71828182845905");
+
+    f.precision = 20;
+    assert(printFloat(buf[], double.max, f) == "1.7976931348623157081e+308");
+    assert(printFloat(buf[], nextUp(0.0), f) == "4.9406564584124654418e-324");
+
+    f.flHash = true;
+    f.precision = 499;
+    assert(printFloat(buf[], 1.0, f).length == 500);
+
     assert(GC.stats.usedSize == stats.usedSize);
 }
 
@@ -2759,7 +2771,7 @@ version (printFloatTest)
     //
     // * 20396: Subnormal floats (but not doubles) are printed wrong with %a and %A
     //          Affected versions: CRuntime_Glibc, OSX, MinGW, CRuntime_Microsoft
-    //          This difference is expected in 0.13% of all cases of the first test.
+    //          This difference is expected in 0.098% of all cases of the first test.
     //          Bit pattern of subnormals: x 00000000 xxxxxxxxxxxxxxxxxxxxxxx
     //
     // * 20288: Sometimes strange behaviour with NaNs and Infs; the test may even crash
@@ -2767,12 +2779,15 @@ version (printFloatTest)
     //
     // * 20320 and 9889: Rounding problems with -m64 on win32 and %f and %F qualifier
     //                   Affected versions: CRuntime_Microsoft
+    //
+    // * 21641: In really rare circumstances (about 1 out of a billion) numbers formatted
+    //          with %g are formatted wrong.
 
     // Change this, if you want to run the test for a different amount of time.
     // The duration is used for both tests, so the total duration is twice this duration.
     static duration = 15; // minutes
 
-    @safe unittest
+    @system unittest
     {
         import std.math : FloatingPointControl;
         import std.random : uniform, Random;
@@ -2830,7 +2845,7 @@ version (printFloatTest)
             f.width = uniform(0,200,rnd);
             f.precision = uniform(0,201,rnd);
             if (f.precision == 200) f.precision = f.UNSPECIFIED;
-            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+            f.spec = "aAeEfFgG"[uniform(0,8,rnd)];
 
             auto rounding = uniform(0,4,rnd);
 
@@ -2873,6 +2888,7 @@ version (printFloatTest)
             {
                 if (wrong == 0) // only report first miss
                 {
+                    import std.format : format;
                     auto tmp = format("%032b", a.u);
                     writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 9], tmp [9 .. $]);
                     writefln("spec: '%%%s%s%s%s%s%s%s%s'",
@@ -2896,7 +2912,7 @@ version (printFloatTest)
         writefln("%s checks run, %s (%.2f%%) checks produced different results", checks, wrong, 100.0*wrong/checks);
     }
 
-    @safe unittest
+    @system unittest
     {
         import std.math : FloatingPointControl;
         import std.random : uniform, Random;
@@ -2955,7 +2971,7 @@ version (printFloatTest)
             f.width = uniform(0,200,rnd);
             f.precision = uniform(0,201,rnd);
             if (f.precision == 200) f.precision = f.UNSPECIFIED;
-            f.spec = "aAeEfF"[uniform(0,6,rnd)];
+            f.spec = "aAeEfFgG"[uniform(0,8,rnd)];
 
             auto rounding = uniform(0,4,rnd);
 
@@ -2998,6 +3014,7 @@ version (printFloatTest)
             {
                 if (wrong == 0) // only report first miss
                 {
+                    import std.format : format;
                     auto tmp = format("%064b", a.u);
                     writefln("bitpattern: %s %s %s", tmp[0 .. 1], tmp[1 .. 11], tmp [11 .. $]);
                     writefln("spec: '%%%s%s%s%s%s%s%s%s'",
