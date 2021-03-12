@@ -7564,12 +7564,6 @@ if (isForwardRange!RangeOfRanges &&
         return true;
     }
 
-    deprecated("This function is incorrect and will be removed November 2018. See the docs for more details.")
-    @property Transposed save()
-    {
-        return Transposed(_input.save);
-    }
-
     auto opSlice() { return this; }
 
 private:
@@ -7637,10 +7631,6 @@ private:
 /**
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
-
-$(RED `Transposed` currently defines `save`, but does not work as a forward range.
-Consuming a copy made with `save` will consume all copies, even the original sub-ranges
-fed into `Transposed`.)
 
 Params:
     opt = Controls the assumptions the function makes about the lengths of the ranges (i.e. jagged or not)
