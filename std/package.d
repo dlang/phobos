@@ -69,6 +69,7 @@ public import
  std.stdint,
  std.stdio,
  std.string,
+ std.sumtype,
  std.system,
  std.traits,
  std.typecons,
