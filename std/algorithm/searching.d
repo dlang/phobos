@@ -103,6 +103,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.searching;
 
 import std.functional : unaryFun, binaryFun;
+import std.meta : allSatisfy;
 import std.range.primitives;
 import std.traits;
 import std.typecons : Tuple, Flag, Yes, No, tuple;
@@ -769,9 +770,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
 if (isForwardRange!R
     && Rs.length > 0
     && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
-    && is(typeof(startsWith!pred(haystack, needles[0])))
-    && (Rs.length == 1
-    || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
+    && allSatisfy!(canTestStartsWith!(pred, R), Rs))
 {
     typeof(return) result;
 
@@ -1027,8 +1026,7 @@ In the case when no needle parameters are given, return `true` iff back of
 */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
-    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
-    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
+    allSatisfy!(canTestStartsWith!(pred, Range), Needles))
 {
     alias haystack = doesThisEnd;
     alias needles  = withOneOfThese;
@@ -2499,8 +2497,6 @@ $(REF among, std,algorithm,comparison) for checking a value against multiple pos
  +/
 template canFind(alias pred="a == b")
 {
-    import std.meta : allSatisfy;
-
     /++
     Returns `true` if and only if any value `v` found in the
     input range `range` satisfies the predicate `pred`.
@@ -4217,8 +4213,6 @@ Params:
 */
 template skipOver(alias pred = (a, b) => a == b)
 {
-    import std.meta : allSatisfy;
-
     enum bool isPredComparable(T) = ifTestable!(T, binaryFun!pred);
 
     /**
@@ -4607,11 +4601,8 @@ In the case when no needle parameters are given, return `true` iff front of
  */
 uint startsWith(alias pred = (a, b) => a == b, Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
-    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
-    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
+    allSatisfy!(canTestStartsWith!(pred, Range), Needles))
 {
-    import std.meta : allSatisfy;
-
     template checkType(T)
     {
         enum checkType = is(immutable ElementEncodingType!Range == immutable T);
@@ -4931,6 +4922,12 @@ if (isInputRange!R &&
         assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
         assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
     }}
+}
+
+private template canTestStartsWith(alias pred, Haystack)
+{
+    enum bool canTestStartsWith(Needle) = is(typeof(
+        (ref Haystack h, ref Needle n) => startsWith!pred(h, n)));
 }
 
 /* (Not yet documented.)
