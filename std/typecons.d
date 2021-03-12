@@ -2763,7 +2763,7 @@ struct Nullable(T)
         _isNull = false;
     }
 
-    static if (is(T == struct) && hasElaborateDestructor!T)
+    static if (hasElaborateDestructor!T)
     {
         ~this()
         {
@@ -3541,6 +3541,25 @@ auto nullable(T)(T t)
 
     assert(typeid(Nullable!S).getHash(&s1) == 5);
     assert(typeid(Nullable!S).getHash(&s2) == 0);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21704
+@safe unittest
+{
+    import std.array : staticArray;
+
+    bool destroyed;
+
+    struct Probe
+    {
+        ~this() { destroyed = true; }
+    }
+
+    {
+        Nullable!(Probe[1]) test = [Probe()].staticArray;
+        destroyed = false;
+    }
+    assert(destroyed);
 }
 
 /**
