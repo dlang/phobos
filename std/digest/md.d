@@ -81,20 +81,13 @@ public import std.digest;
     hash = md5.finish();
 }
 
-//rotateLeft rotates x left n bits
-private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
-{
-    // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
-    // No assembler required.
-    return (x << n) | (x >> (32-n));
-}
-
 /**
  * Template API MD5 implementation.
  * See `std.digest` for differences between template and OOP API.
  */
 struct MD5
 {
+    import core.bitop : rol;
     private:
         // magic initialization constants
         uint[4] _state = [0x67452301,0xefcdab89,0x98badcfe,0x10325476]; // state (ABCD)
@@ -126,7 +119,7 @@ struct MD5
             @safe pure nothrow @nogc
         {
             a += F (b, c, d) + x + ac;
-            a = rotateLeft(a, s);
+            a = rol(a, s);
             a += b;
         }
 
@@ -134,7 +127,7 @@ struct MD5
             @safe pure nothrow @nogc
         {
             a += G (b, c, d) + x + ac;
-            a = rotateLeft(a, s);
+            a = rol(a, s);
             a += b;
         }
 
@@ -142,7 +135,7 @@ struct MD5
             @safe pure nothrow @nogc
         {
             a += H (b, c, d) + x + ac;
-            a = rotateLeft(a, s);
+            a = rol(a, s);
             a += b;
         }
 
@@ -150,7 +143,7 @@ struct MD5
             @safe pure nothrow @nogc
         {
             a += I (b, c, d) + x + ac;
-            a = rotateLeft(a, s);
+            a = rol(a, s);
             a += b;
         }
 
