@@ -591,48 +591,43 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     char[512] buf2 = void;
     size_t len;
     char[] buf;
-    if (fs.spec=='a' || fs.spec=='A' || fs.spec=='e' || fs.spec=='E' || fs.spec=='f' || fs.spec=='F')
+    static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
     {
-        static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+        import std.format.internal.floats : RoundingMode, printFloat;
+        import std.math; // cannot be selective, because FloatingPointControl might not be defined
+
+        auto mode = RoundingMode.toNearestTiesToEven;
+
+        if (!__ctfe)
         {
-            import std.format.internal.floats : printFloat, RoundingMode;
-            import std.math; // cannot be selective, because FloatingPointControl might not be defined
-
-            auto mode = RoundingMode.toNearestTiesToEven;
-
-            if (!__ctfe)
+            // std.math's FloatingPointControl isn't available on all target platforms
+            static if (is(FloatingPointControl))
             {
-                // std.math's FloatingPointControl isn't available on all target platforms
-                static if (is(FloatingPointControl))
+                switch (FloatingPointControl.rounding)
                 {
-                    switch (FloatingPointControl.rounding)
-                    {
-                    case FloatingPointControl.roundUp:
-                        mode = RoundingMode.up;
-                        break;
-                    case FloatingPointControl.roundDown:
-                        mode = RoundingMode.down;
-                        break;
-                    case FloatingPointControl.roundToZero:
-                        mode = RoundingMode.toZero;
-                        break;
-                    case FloatingPointControl.roundToNearest:
-                        mode = RoundingMode.toNearestTiesToEven;
-                        break;
-                    default: assert(false, "Unknown floating point rounding mode");
-                    }
+                case FloatingPointControl.roundUp:
+                    mode = RoundingMode.up;
+                    break;
+                case FloatingPointControl.roundDown:
+                    mode = RoundingMode.down;
+                    break;
+                case FloatingPointControl.roundToZero:
+                    mode = RoundingMode.toZero;
+                    break;
+                case FloatingPointControl.roundToNearest:
+                    mode = RoundingMode.toNearestTiesToEven;
+                    break;
+                default: assert(false, "Unknown floating point rounding mode");
                 }
             }
-
-            buf = printFloat(buf2[], val, fs, mode);
-            len = buf.length;
         }
-        else
-            goto useSnprintf;
+
+        fs.spec = spec2;
+        buf = printFloat(buf2[], val, fs, mode);
+        len = buf.length;
     }
     else
     {
-useSnprintf:
         import std.format.internal.floats : ctfpMessage;
         enforceFmt(!__ctfe, ctfpMessage);
 
@@ -1010,12 +1005,25 @@ useSnprintf:
                   "-123399999999999990477495546305353609103201879173427886566531" ~
                   "0740685826234179310516880117527217443004051984432279880308552" ~
                   "009640198043032289366552939010719744.000000");
+    static assert(format("%g",1.0) == "1");
+    static assert(format("%g",-1.234e156) == "-1.234e+156");
+
     static assert(format("%e",1.0f) == "1.000000e+00");
     static assert(format("%e",-1.234e23f) == "-1.234000e+23");
     static assert(format("%a",1.0f) == "0x1p+0");
     static assert(format("%a",-1.234e23f) == "-0x1.a2187p+76");
     static assert(format("%f",1.0f) == "1.000000");
     static assert(format("%f",-1.234e23f) == "-123399998884238311030784.000000");
+    static assert(format("%g",1.0f) == "1");
+    static assert(format("%g",-1.234e23f) == "-1.234e+23");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21641
+@safe unittest
+{
+    float a = -999999.8125;
+    assert(format("%#.5g",a) == "-1.0000e+06");
+    assert(format("%#.6g",a) == "-1.00000e+06");
 }
 
 /*
