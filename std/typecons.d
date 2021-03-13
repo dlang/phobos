@@ -2779,18 +2779,27 @@ struct Nullable(T)
      * is not, then they are not equal. If they are both non-null, then they are
      * equal if their values are equal.
      */
-    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (!is(CommonType!(This, Rhs) == void))
     {
-        if (_isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
-            return false;
-        return _value.payload == rhs._value.payload;
+        static if (is(This == Rhs))
+        {
+            if (_isNull)
+                return rhs._isNull;
+            if (rhs._isNull)
+                return false;
+            return _value.payload == rhs._value.payload;
+        }
+        else
+        {
+            alias Common = CommonType!(This, Rhs);
+            return cast(Common) this == cast(Common) rhs;
+        }
     }
 
     /// Ditto
-    bool opEquals(U)(auto ref const(U) rhs) const
-    if (!is(U : typeof(this)) && is(typeof(this.get == rhs)))
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (is(CommonType!(This, Rhs) == void) && is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value.payload;
     }
@@ -3560,6 +3569,22 @@ auto nullable(T)(T t)
         destroyed = false;
     }
     assert(destroyed);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21705
+@safe unittest
+{
+    static struct S
+    {
+        int n;
+        bool opEquals(S rhs) { return n == rhs.n; }
+    }
+
+    Nullable!S test1 = S(1), test2 = S(1);
+    S s = S(1);
+
+    assert(test1 == s);
+    assert(test1 == test2);
 }
 
 /**
