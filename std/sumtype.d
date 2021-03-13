@@ -647,7 +647,7 @@ public:
      * contain values of the same type, and those values are equal.
      */
     bool opEquals(this This, Rhs)(auto ref Rhs rhs)
-    if (is(CommonType!(This, Rhs)))
+    if (!is(CommonType!(This, Rhs) == void))
     {
         static if (is(This == Rhs))
         {
