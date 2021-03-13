@@ -2237,3 +2237,22 @@ class Base64Exception : Exception
     assert(Base64.decode(ir, or) == 2);
     assert(or.result == [ 123, 45 ]);
 }
+
+@system unittest
+{
+    // checking forward range
+    auto item = Base64.decoder(Base64.encoder(cast(ubyte[]) "foobar"));
+    auto copy = item.save();
+    item.popFront();
+    assert(item.front == 'o');
+    assert(copy.front == 'f');
+}
+
+@system unittest
+{
+    // checking invalid dchar
+    dchar[] c = cast(dchar[]) "ääää";
+
+    import std.exception : assertThrown;
+    assertThrown!Base64Exception(Base64.decode(c));
+}
