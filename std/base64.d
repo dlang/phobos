@@ -2089,60 +2089,9 @@ class Base64Exception : Exception
 
 @safe unittest
 {
-    // encode with empty InputRange
-
-    struct InputRange
+    struct InputRange(ubyte[] data)
     {
-        bool empty = true;
-        ubyte front = 'x';
-        void popFront() {}
-        size_t length = 0;
-    }
-
-    struct OutputRange
-    {
-        bool called = false;
-        void put(char b) { called = true; }
-    }
-
-    InputRange ir;
-    OutputRange or;
-    assert(Base64.encode(ir, or) == 0);
-    assert(!or.called);
-}
-
-@safe unittest
-{
-    // encode with InputRange with only one element
-
-    struct InputRange
-    {
-        bool empty = false;
-        ubyte front = 'x';
-        void popFront() { empty = true; }
-        size_t length() { return empty ? 0 : 1; }
-    }
-
-    struct OutputRange
-    {
-        ubyte[] result;
-        void put(ubyte b) { result ~= b; }
-    }
-
-    InputRange ir;
-    OutputRange or;
-
-    assert(Base64.encode(ir, or) == 4);
-    assert(or.result == "eA==");
-}
-
-@safe unittest
-{
-    // encode with InputRange with two elements
-
-    struct InputRange
-    {
-        ubyte[] impl = [ 123, 45 ];
+        ubyte[] impl = data;
         bool empty() { return impl.length == 0; }
         ubyte front() { return impl[0]; }
         void popFront() { impl = impl[1 .. $]; }
@@ -2155,85 +2104,27 @@ class Base64Exception : Exception
         void put(ubyte b) { result ~= b; }
     }
 
-    InputRange ir;
-    OutputRange or;
-
-    assert(Base64.encode(ir, or) == 4);
-    assert(or.result == "ey0=");
-}
-
-@safe unittest
-{
-    // decode with empty InputRange
-
-    struct InputRange
+    void test_encode(ubyte[] data, string result)()
     {
-        bool empty = true;
-        ubyte front = 'x';
-        void popFront() {}
-        size_t length = 0;
+        InputRange!data ir;
+        OutputRange or;
+        assert(Base64.encode(ir, or) == result.length);
+        assert(or.result == result);
     }
 
-    struct OutputRange
+    void test_decode(ubyte[] data, string result)()
     {
-        bool called = false;
-        void put(char b) { called = true; }
+        InputRange!data ir;
+        OutputRange or;
+        assert(Base64.decode(ir, or) == result.length);
+        assert(or.result == result);
     }
 
-    InputRange ir;
-    OutputRange or;
-    assert(Base64.decode(ir, or) == 0);
-    assert(!or.called);
-}
+    test_encode!([], "");
+    test_encode!(['x'], "eA==");
+    test_encode!([123, 45], "ey0=");
 
-@safe unittest
-{
-    // decode with InputRange with only one element
-
-    struct InputRange
-    {
-        ubyte[] impl = [ 'e', 'A', '=', '=' ];
-        bool empty() { return impl.length == 0; }
-        ubyte front() { return impl[0]; }
-        void popFront() { impl = impl[1 .. $]; }
-        size_t length() { return impl.length; }
-    }
-
-    struct OutputRange
-    {
-        ubyte[] result;
-        void put(ubyte b) { result ~= b; }
-    }
-
-    InputRange ir;
-    OutputRange or;
-
-    assert(Base64.decode(ir, or) == 1);
-    assert(or.result == "x");
-}
-
-@safe unittest
-{
-    // decode with InputRange with only two elements
-
-    struct InputRange
-    {
-        ubyte[] impl = [ 'e', 'y', '0', '=' ];
-        bool empty() { return impl.length == 0; }
-        ubyte front() { return impl[0]; }
-        void popFront() { impl = impl[1 .. $]; }
-        size_t length() { return impl.length; }
-    }
-
-    struct OutputRange
-    {
-        ubyte[] result;
-        void put(ubyte b) { result ~= b; }
-    }
-
-    InputRange ir;
-    OutputRange or;
-
-    assert(Base64.decode(ir, or) == 2);
-    assert(or.result == [ 123, 45 ]);
+    test_decode!([], "");
+    test_decode!(['e', 'A', '=', '='], "x");
+    test_decode!(['e', 'y', '0', '='], "{-");
 }
