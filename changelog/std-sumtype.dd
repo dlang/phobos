@@ -1,0 +1,77 @@
+New module: `std.sumtype`
+
+The [`sumtype` package](https://code.dlang.org/packages/sumtype) from
+code.dlang.org has been added to the standard library as `std.sumtype`.
+
+It provides `SumType`, a generic discriminated union implementation that uses
+[design-by-introspection](https://www.youtube.com/watch?v=HdzwvY8Mo-w) to
+generate safe and efficient code, and is intended to serve as a replacement for
+the legacy `std.variant.Algebraic`.
+
+Features of `SumType` include:
+
+* Pattern matching.
+* Support for self-referential types.
+* Full compatibility with `pure`, `@safe`, `@nogc`, `nothrow`, and `scope`.
+* No dependency on runtime type information (`TypeInfo`).
+* Compatibility with BetterC.
+
+Example usage:
+
+---
+import std.sumtype;
+import std.math : isClose;
+
+struct Fahrenheit { double degrees; }
+struct Celsius { double degrees; }
+struct Kelvin { double degrees; }
+
+alias Temperature = SumType!(Fahrenheit, Celsius, Kelvin);
+
+// Construct from any of the member types.
+Temperature t1 = Fahrenheit(98.6);
+Temperature t2 = Celsius(100);
+Temperature t3 = Kelvin(273);
+
+// Use pattern matching to access the value.
+Fahrenheit toFahrenheit(Temperature t)
+{
+    return Fahrenheit(
+        t.match!(
+            (Fahrenheit f) => f.degrees,
+            (Celsius c) => c.degrees * 9.0/5 + 32,
+            (Kelvin k) => k.degrees * 9.0/5 - 459.4
+        )
+    );
+}
+
+assert(toFahrenheit(t1).degrees.isClose(98.6));
+assert(toFahrenheit(t2).degrees.isClose(212));
+assert(toFahrenheit(t3).degrees.isClose(32));
+
+// Use ref to modify the value in place.
+void freeze(ref Temperature t)
+{
+    t.match!(
+        (ref Fahrenheit f) => f.degrees = 32,
+        (ref Celsius c) => c.degrees = 0,
+        (ref Kelvin k) => k.degrees = 273
+    );
+}
+
+freeze(t1);
+assert(toFahrenheit(t1).degrees.isClose(32));
+
+// Use a catch-all handler to give a default result.
+bool isFahrenheit(Temperature t)
+{
+    return t.match!(
+        (Fahrenheit f) => true,
+        _ => false
+    );
+}
+
+assert(isFahrenheit(t1));
+assert(!isFahrenheit(t2));
+assert(!isFahrenheit(t3));
+---
