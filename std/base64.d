@@ -1462,14 +1462,6 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                     data ~= cast(const(char)[])range_.front;
                 }
             }
-            else
-            {
-                while (data.length % 4 != 0)
-                {
-                    range_.popFront();
-                    data ~= cast(const(char)[])range_.front;
-                }
-            }
 
             auto size = decodeLength(data.length);
             if (size > buffer_.length)
@@ -2146,4 +2138,12 @@ class Base64Exception : Exception
 
     import std.exception : assertThrown;
     assertThrown!Base64Exception(Base64.decode(c));
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    char[][] t = [[ 'Z', 'g', '=' ]];
+    assertThrown!Base64Exception(Base64.decoder(t));
 }
