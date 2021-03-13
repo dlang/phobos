@@ -1379,7 +1379,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         this(Range range)
         {
             range_ = range;
-            doDecoding();
+            if (!empty)
+                doDecoding();
         }
 
 
@@ -2081,10 +2082,12 @@ class Base64Exception : Exception
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21679
+// https://issues.dlang.org/show_bug.cgi?id=21706
 @safe unittest
 {
     ubyte[][] input;
     assert(Base64.encoder(input).empty);
+    assert(Base64.decoder(input).empty);
 }
 
 @safe unittest
