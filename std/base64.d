@@ -2128,3 +2128,22 @@ class Base64Exception : Exception
     test_decode!(['e', 'A', '=', '='], "x");
     test_decode!(['e', 'y', '0', '='], "{-");
 }
+
+@system unittest
+{
+    // checking forward range
+    auto item = Base64.decoder(Base64.encoder(cast(ubyte[]) "foobar"));
+    auto copy = item.save();
+    item.popFront();
+    assert(item.front == 'o');
+    assert(copy.front == 'f');
+}
+
+@system unittest
+{
+    // checking invalid dchar
+    dchar[] c = cast(dchar[]) "ääää";
+
+    import std.exception : assertThrown;
+    assertThrown!Base64Exception(Base64.decode(c));
+}
