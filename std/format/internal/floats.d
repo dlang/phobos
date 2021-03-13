@@ -16,8 +16,7 @@ module std.format.internal.floats;
 
 import std.format : FormatSpec;
 
-package(std.format) enum ctfpMessage = "Cannot format all floating point types at compile-time "
-    ~ "(float and double with %a/%A, %e/%E and %f/%F do work)";
+package(std.format) enum ctfpMessage = "Cannot format reals at compile-time.";
 
 package(std.format) enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
