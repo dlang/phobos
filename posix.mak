@@ -419,7 +419,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
+	    $(DMD) -g -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
