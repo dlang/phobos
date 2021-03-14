@@ -2150,3 +2150,11 @@ class Base64Exception : Exception
     import std.exception : assertThrown;
     assertThrown!Base64Exception(Base64.decode(c));
 }
+
+@safe unittest
+{
+    import std.array : array;
+
+    char[][] input = [['e', 'y'], ['0', '=']];
+    assert(Base64.decoder(input).array == [[123, 45]]);
+}
