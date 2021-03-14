@@ -22,24 +22,81 @@ package(std.format) enum RoundingMode { up, down, toZero, toNearestTiesToEven, t
 
 package(std.format) auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,
                                              RoundingMode rm = RoundingMode.toNearestTiesToEven)
-if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
-    static if (is(T == float))
+    static if (is(T == real) && T.mant_dig == 64)
     {
-        ulong ival = () @trusted { return *cast(uint*) &val; }();
+        ulong mnt = void;
+        int exp = void;
+        string sgn = "";
+
+        if (__ctfe)
+        {
+            import std.math : abs, floor, isInfinity, isNaN, log2;
+
+            if (isNaN(val) || isInfinity(val))
+                exp = 32767;
+            else if (abs(val) < real.min_normal)
+                exp = 0;
+            else
+                exp = cast(int) (val.abs.log2.floor() + 16383);
+
+            if (exp == 32767)
+            {
+                // NaN or infinity
+                mnt = isNaN(val) ? ((1L << 63) - 1) : 0;
+            }
+            else if (exp > 16382 + 64) // bias + bits of ulong
+            {
+                val /= 2.0L ^^ (exp - (16382 + 64));
+                mnt = (cast(ulong) abs(val)) & ((1L << 63) - 1);
+            }
+            else
+            {
+                auto delta = 16382 + 64 - (exp == 0 ? 1 : exp); // -1 in case of subnormals
+                if (delta > 16383)
+                {
+                    // need two steps to avoid overflow
+                    val *= 2.0L ^^ 16383;
+                    delta -= 16383;
+                }
+                val *= 2.0L ^^ delta;
+                mnt = (cast(ulong) abs(val)) & ((1L << 63) - 1);
+            }
+
+            double d = cast(double) val;
+            ulong ival = () @trusted { return *cast(ulong*) &d; }();
+            if ((ival >> 63) & 1) sgn = "-";
+        }
+        else
+        {
+            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &val; }();
+            mnt = ival[0] & ((1L << 63) - 1);
+            exp = ival[1] & 32767;
+            if ((ival[1] >> 15) & 1) sgn = "-";
+        }
     }
     else
     {
-        ulong ival = () @trusted { return *cast(ulong*) &val; }();
+        static if (is(T == float))
+        {
+            ulong ival = () @trusted { return *cast(uint*) &val; }();
+        }
+        else
+        {
+            ulong ival = () @trusted { return *cast(ulong*) &val; }();
+        }
+
+        import std.math : log2;
+        enum log2_max_exp = cast(int) log2(T.max_exp);
+
+        ulong mnt = ival & ((1L << (T.mant_dig - 1)) - 1);
+        int exp = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
+        string sgn = (ival >> (T.mant_dig + log2_max_exp)) & 1 ? "-" : "";
     }
 
-    import std.math : log2;
-    enum log2_max_exp = cast(int) log2(T.max_exp);
-
-    ulong mnt = ival & ((1L << (T.mant_dig - 1)) - 1);
-    int exp = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
     enum maxexp = 2 * T.max_exp - 1;
-    string sgn = (ival >> (T.mant_dig + log2_max_exp)) & 1 ? "-" : "";
 
     if (sgn == "" && f.flPlus) sgn = "+";
     if (sgn == "" && f.flSpace) sgn = " ";
@@ -72,6 +129,9 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         return result;
     }
 
+    if (T.mant_dig == 64)
+        assert(false); // not yet implemented
+
     final switch (f.spec)
     {
         case 'a': case 'A':
@@ -87,13 +147,14 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
 private auto printFloatA(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
                                   string sgn, int exp, ulong mnt, bool is_upper)
-if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
     import std.algorithm.comparison : max;
 
     enum int bias = T.max_exp - 1;
 
-    static if (is(T == float))
+    static if (is(T == float) || (is(T == real) && T.mant_dig == 64))
     {
         mnt <<= 1; // make mnt dividable by 4
         enum mant_len = T.mant_dig;
@@ -295,6 +356,11 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(printFloat(buf[], -double.infinity, f) == "-inf");
     assert(printFloat(buf[], 0.0, f) == "0x0p+0");
     assert(printFloat(buf[], -0.0, f) == "-0x0p+0");
+
+    assert(printFloat(buf[], real.nan, f) == "nan");
+    assert(printFloat(buf[], -real.nan, f) == "-nan");
+    assert(printFloat(buf[], real.infinity, f) == "inf");
+    assert(printFloat(buf[], -real.infinity, f) == "-inf");
 
     import std.math : nextUp;
 
@@ -567,7 +633,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
 
 private auto printFloatE(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
                                           string sgn, int exp, ulong mnt, bool is_upper)
-if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
     import std.conv : to;
     import std.algorithm.comparison : max;
@@ -1342,6 +1409,17 @@ printFloat_done:
     char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
+    assert(printFloat(buf[], real.nan, f) == "nan");
+    assert(printFloat(buf[], -real.nan, f) == "-nan");
+    assert(printFloat(buf[], real.infinity, f) == "inf");
+    assert(printFloat(buf[], -real.infinity, f) == "-inf");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'e';
 
     import std.math : nextUp;
 
@@ -1426,7 +1504,8 @@ printFloat_done:
 
 private auto printFloatF(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
                                           string sgn, int exp, ulong mnt, bool is_upper)
-if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
     import std.conv : to;
     import std.algorithm.comparison : max;
@@ -2075,6 +2154,17 @@ printFloat_done:
     char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
+    assert(printFloat(buf[], real.nan, f) == "nan");
+    assert(printFloat(buf[], -real.nan, f) == "-nan");
+    assert(printFloat(buf[], real.infinity, f) == "inf");
+    assert(printFloat(buf[], -real.infinity, f) == "-inf");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'f';
 
     import std.math : nextUp;
 
@@ -2163,7 +2253,8 @@ printFloat_done:
 
 private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
                                   string sgn, int exp, ulong mnt, bool is_upper)
-if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
     import core.math : abs = fabs;
 
@@ -2521,6 +2612,18 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     import std.math : nextUp, nextDown;
     assert(printFloat(buf[], nextUp(0.0), f) == "4.94066e-324");
     assert(printFloat(buf[], nextDown(-0.0), f) == "-4.94066e-324");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+
+    assert(printFloat(buf[], real.nan, f) == "nan");
+    assert(printFloat(buf[], -real.nan, f) == "-nan");
+    assert(printFloat(buf[], real.infinity, f) == "inf");
+    assert(printFloat(buf[], -real.infinity, f) == "-inf");
 }
 
 @safe unittest
