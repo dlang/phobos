@@ -205,6 +205,7 @@ SRC_STD_ALGO= \
 
 SRC_STD_FORMAT= \
     std\format\package.d \
+    std\format\read.d \
     std\format\spec.d \
     std\format\internal\floats.d \
     std\format\internal\read.d \
