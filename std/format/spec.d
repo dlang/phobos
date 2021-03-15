@@ -15,12 +15,8 @@
  */
 module std.format.spec;
 
-import std.exception;
-import std.range.primitives;
-import std.traits;
-
+import std.traits : Unqual;
 import std.format;
-import std.format.internal.write;
 
 template FormatSpec(Char)
 if (!is(Unqual!Char == Char))
@@ -36,8 +32,9 @@ struct FormatSpec(Char)
 if (is(Unqual!Char == Char))
 {
     import std.algorithm.searching : startsWith;
-    import std.ascii : isDigit, isPunctuation, isAlpha;
+    import std.ascii : isDigit;
     import std.conv : parse, text, to;
+    import std.range.primitives;
 
     /**
        Minimum _width, default `0`.
@@ -512,10 +509,8 @@ if (is(Unqual!Char == Char))
                 }
                 else
                 {
-                    enforceFmt(isLower(c2) || c2 == '*' ||
-                            c2 == '(',
-                            text("'%", c2,
-                                    "' not supported with formatted read"));
+                    enforceFmt(isLower(c2) || c2 == '*' || c2 == '(',
+                        text("'%", c2, "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
                     fillUp();
                     return true;
@@ -531,8 +526,8 @@ if (is(Unqual!Char == Char))
                 else
                 {
                     enforceFmt(!r.empty,
-                            text("parseToFormatSpec: Cannot find character '",
-                                    c, "' in the input string."));
+                        text("parseToFormatSpec: Cannot find character '",
+                             c, "' in the input string."));
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
@@ -545,6 +540,7 @@ if (is(Unqual!Char == Char))
     package string getCurFmtStr() const
     {
         import std.array : appender;
+
         auto w = appender!string();
         auto f = FormatSpec!Char("%s"); // for stringnize
 
@@ -554,12 +550,12 @@ if (is(Unqual!Char == Char))
             formatValue(w, indexStart, f);
             put(w, '$');
         }
-        if (flDash)  put(w, '-');
-        if (flZero)  put(w, '0');
+        if (flDash) put(w, '-');
+        if (flZero) put(w, '0');
         if (flSpace) put(w, ' ');
-        if (flPlus)  put(w, '+');
-        if (flHash)  put(w, '#');
-        if (flSeparator)  put(w, ',');
+        if (flPlus) put(w, '+');
+        if (flHash) put(w, '#');
+        if (flSeparator) put(w, ',');
         if (width != 0)
             formatValue(w, width, f);
         if (precision != FormatSpec!Char.UNSPECIFIED)
@@ -574,6 +570,7 @@ if (is(Unqual!Char == Char))
     private const(Char)[] headUpToNextSpec()
     {
         import std.array : appender;
+
         auto w = appender!(typeof(return))();
         auto tr = trailing;
 
@@ -611,6 +608,7 @@ if (is(Unqual!Char == Char))
     string toString() const @safe pure
     {
         import std.array : appender;
+
         auto app = appender!string();
         app.reserve(200 + trailing.length);
         toString(app);
@@ -657,8 +655,10 @@ if (is(Unqual!Char == Char))
 
 @safe unittest
 {
-    import std.array;
+    import std.array : appender;
     import std.conv : text;
+    import std.exception : assertThrown;
+
     auto w = appender!(char[])();
     auto f = FormatSpec!char("abc%sdef%sghi");
     f.writeUpToNextSpec(w);
@@ -693,7 +693,8 @@ if (is(Unqual!Char == Char))
 // https://issues.dlang.org/show_bug.cgi?id=5237
 @safe unittest
 {
-    import std.array;
+    import std.array : appender;
+
     auto w = appender!string();
     auto f = FormatSpec!char("%.16f");
     f.writeUpToNextSpec(w); // dummy eating
@@ -705,7 +706,8 @@ if (is(Unqual!Char == Char))
 ///
 @safe pure unittest
 {
-    import std.array;
+    import std.array : appender;
+
     auto a = appender!(string)();
     auto fmt = "Number: %6.4e\nString: %s";
     auto f = FormatSpec!char(fmt);
@@ -732,6 +734,8 @@ if (is(Unqual!Char == Char))
 @safe unittest
 {
     import std.array : appender;
+    import std.exception : assertThrown;
+
     auto a = appender!(string)();
 
     auto f = FormatSpec!char("%-(%s%"); // %)")
@@ -744,6 +748,7 @@ if (is(Unqual!Char == Char))
 @safe unittest
 {
     import std.array : appender;
+
     auto a = appender!(string)();
 
     auto f = FormatSpec!char("%,d");
@@ -770,6 +775,7 @@ if (is(Unqual!Char == Char))
 @safe pure unittest
 {
     import std.algorithm.searching : canFind, findSplitBefore;
+
     auto expected = "width = 2" ~
         "\nprecision = 5" ~
         "\nspec = f" ~
@@ -806,10 +812,13 @@ Throws:
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
     import std.conv : text;
+    import std.range.primitives : empty, front;
+
     enforceFmt(fmt.length >= 2, "fmt must be at least 2 characters long");
     enforceFmt(fmt.front == '%', "fmt must start with a '%' character");
 
-    static struct DummyOutputRange {
+    static struct DummyOutputRange
+    {
         void put(C)(scope const C[] buf) {} // eat elements
     }
     auto a = DummyOutputRange();
@@ -818,7 +827,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     spec.writeUpToNextSpec(a);
 
     enforceFmt(spec.trailing.empty,
-            text("Trailing characters in fmt string: '", spec.trailing));
+        text("Trailing characters in fmt string: '", spec.trailing));
 
     return spec;
 }
@@ -843,6 +852,9 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 {
+    import std.range : isInputRange;
+    import std.format.internal.write : hasToString, HasToStringResult;
+
     enum overload = hasToString!(T, Char);
     static if (
             overload != HasToStringResult.constCharSinkFormatSpec &&
@@ -856,6 +868,8 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 
 @safe unittest
 {
+    import std.exception : collectExceptionMsg;
+
     // width/precision
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
         == "integer width expected, not double for argument #1");
