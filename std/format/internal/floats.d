@@ -47,7 +47,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     assert(f.spec == 'a' || f.spec == 'A'
            || f.spec == 'e' || f.spec == 'E'
            || f.spec == 'f' || f.spec == 'F'
-           || f.spec == 'g' || f.spec == 'G');
+           || f.spec == 'g' || f.spec == 'G', "unsupported format specifier");
     bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F' || f.spec=='G';
 
     // special treatment for nan and inf
@@ -100,7 +100,7 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
     }
     else
         enum mant_len = T.mant_dig - 1;
-    static assert(mant_len % 4 == 0);
+    static assert(mant_len % 4 == 0, "mantissa with wrong length");
 
     // print full mantissa
     char[(mant_len - 1) / 4 + 1] hex_mant;
@@ -218,7 +218,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
             roundUp = false;
         else
         {
-            assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero);
+            assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero,
+                   "RoundingMode is not toNearest");
             roundUp = next == roundType.UPPER;
 
             if (next == roundType.FIVE)
@@ -996,7 +997,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         roundUp = false;
     else
     {
-        assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero);
+        assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero,
+               "RoundingMode is not toNearest");
         roundUp = next == roundType.UPPER;
 
         if (next == roundType.FIVE)
@@ -1733,7 +1735,8 @@ if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.
         roundUp = false;
     else
     {
-        assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero);
+        assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero,
+               "RoundingMode is not toNearest");
         roundUp = next == roundType.UPPER;
 
         if (next == roundType.FIVE)
