@@ -1468,6 +1468,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 while (data.length % 4 != 0)
                 {
                     range_.popFront();
+                    enforce(!range_.empty, new Base64Exception("Invalid length of encoded data"));
                     data ~= cast(const(char)[])range_.front;
                 }
             }
@@ -1652,9 +1653,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *
      *  If $(D_PARAM range) is a range of ranges of characters, a `Decoder`
      *  that iterates over the decoded strings corresponding to each element of
-     *  the range. In this case, the length of each subrange must be a multiple
-     *  of 4; the returned _decoder does not keep track of Base64 decoding
-     *  state across subrange boundaries.
+     *  the range.
      *
      *  In both cases, the returned `Decoder` will be a
      * $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) if the
@@ -2157,4 +2156,16 @@ class Base64Exception : Exception
 
     char[][] input = [['e', 'y'], ['0', '=']];
     assert(Base64.decoder(input).array == [[123, 45]]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21707
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    char[][] t1 = [[ 'Z', 'g', '=' ]];
+    assertThrown!Base64Exception(Base64.decoder(t1));
+
+    char[][] t2 = [[ 'e', 'y', '0' ], ['=', '=']];
+    assertThrown!Base64Exception(Base64.decoder(t2));
 }
