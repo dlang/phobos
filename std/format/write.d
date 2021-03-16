@@ -15,10 +15,10 @@
  */
 module std.format.write;
 
-import std.traits;
-
-import std.format;
 import std.format.internal.write;
+
+import std.format.spec : FormatSpec;
+import std.traits : isSomeString;
 
 /**********************************************************************
    Interprets variadic argument list `args`, formats them according
@@ -378,6 +378,8 @@ My friends are John, Nancy.
 uint formattedWrite(alias fmt, Writer, A...)(auto ref Writer w, A args)
 if (isSomeString!(typeof(fmt)))
 {
+    import std.format : checkFormatException;
+
     alias e = checkFormatException!(fmt, A);
     static assert(!e, e.msg);
     return .formattedWrite(w, fmt, args);
@@ -402,6 +404,8 @@ if (isSomeString!(typeof(fmt)))
 uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fmt, A args)
 {
     import std.conv : text;
+    import std.format : enforceFmt, FormatException;
+    import std.traits : isSomeChar;
 
     auto spec = FormatSpec!Char(fmt);
 
@@ -541,12 +545,13 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
     assert(format("%,*?d", 4, '_', -12345) == "-1_2345");
     assert(format("%,6?d", '_', -12345678) == "-12_345678");
     assert(format("%12,3.3f", 1234.5678) == "   1,234.568", "'" ~
-            format("%12,3.3f", 1234.5678) ~ "'");
+           format("%12,3.3f", 1234.5678) ~ "'");
 }
 
 @safe pure unittest
 {
     import std.array;
+
     auto w = appender!string();
     formattedWrite(w, "%s %d", "@safe/pure", 42);
     assert(w.data == "@safe/pure 42");
@@ -616,17 +621,17 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
  +/
 @safe pure unittest
 {
-   import std.array : appender;
-   import std.format.spec : singleSpec;
+    import std.array : appender;
+    import std.format.spec : singleSpec;
 
-   auto writer1 = appender!string();
-   writer1.formattedWrite("%08b", 42);
+    auto writer1 = appender!string();
+    writer1.formattedWrite("%08b", 42);
 
-   auto writer2 = appender!string();
-   auto f = singleSpec("%08b");
-   writer2.formatValue(42, f);
+    auto writer2 = appender!string();
+    auto f = singleSpec("%08b");
+    writer2.formatValue(42, f);
 
-   assert(writer1.data == writer2.data && writer1.data == "00101010");
+    assert(writer1.data == writer2.data && writer1.data == "00101010");
 }
 
 /**
@@ -795,7 +800,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 {
     import std.array : appender;
     import std.format.spec : FormatSpec, singleSpec;
-    import std.range.primitives;
+    import std.range.primitives : isOutputRange, put;
 
     static struct Point
     {
@@ -871,7 +876,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 /// SIMD vectors are formatted as arrays.
 @safe unittest
 {
-    import core.simd;
+    import core.simd; // cannot be selective, because float4 might not be defined
     import std.array : appender;
     import std.format.spec : singleSpec;
 
