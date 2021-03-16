@@ -15,12 +15,9 @@
  */
 module std.format.read;
 
-import std.exception;
-import std.range.primitives;
-import std.traits;
-
-import std.format;
+import std.format.spec : FormatSpec;
 import std.format.internal.read;
+import std.traits : isSomeString;
 
 /**
 Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -43,6 +40,8 @@ Throws:
 uint formattedRead(alias fmt, R, S...)(auto ref R r, auto ref S args)
 if (isSomeString!(typeof(fmt)))
 {
+    import std.format : checkFormatException;
+
     alias e = checkFormatException!(fmt, S);
     static assert(!e, e.msg);
     return .formattedRead(r, fmt, args);
@@ -51,6 +50,9 @@ if (isSomeString!(typeof(fmt)))
 /// ditto
 uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S args)
 {
+    import std.format : enforceFmt;
+    import std.range.primitives : empty;
+    import std.traits : isPointer;
     import std.typecons : isTuple;
 
     auto spec = FormatSpec!Char(fmt);
@@ -83,6 +85,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
             // Input is empty, nothing to read
             return 0;
         }
+
         static if (hasPointer)
             alias A = typeof(*args[0]);
         else
@@ -123,7 +126,9 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @safe unittest
 {
-    import std.math;
+    import std.math : isClose, isNaN;
+    import std.range.primitives : empty;
+
     string s = " 1.2 3.4 ";
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", x, y, z) == 2);
@@ -160,7 +165,9 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 // for backwards compatibility
 @system pure unittest
 {
-    import std.math;
+    import std.math : isClose, isNaN;
+    import std.range.primitives : empty;
+
     string s = " 1.2 3.4 ";
     double x, y, z;
     assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
@@ -211,17 +218,18 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
-     union B
-     {
-         char[int.sizeof] untyped;
-         int typed;
-     }
-     B b;
-     b.typed = 5;
-     char[] input = b.untyped[];
-     int witness;
-     formattedRead(input, "%r", &witness);
-     assert(witness == b.typed);
+    union B
+    {
+        char[int.sizeof] untyped;
+        int typed;
+    }
+
+    B b;
+    b.typed = 5;
+    char[] input = b.untyped[];
+    int witness;
+    formattedRead(input, "%r", &witness);
+    assert(witness == b.typed);
 }
 
 @system pure unittest
@@ -231,6 +239,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
         char[float.sizeof] untyped;
         float typed;
     }
+
     A a;
     a.typed = 5.5;
     char[] input = a.untyped[];
@@ -241,7 +250,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
-    import std.typecons;
+    import std.typecons : Tuple;
+
     char[] line = "1 2".dup;
     int a, b;
     formattedRead(line, "%s %s", &a, &b);
@@ -311,6 +321,8 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
+    import std.exception : assertThrown;
+
     string line;
 
     int[4] sa1;
@@ -329,6 +341,9 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
 
 @system pure unittest
 {
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+
     string input;
 
     int[4] sa1;
