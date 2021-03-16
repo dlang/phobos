@@ -858,6 +858,7 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
     enum overload = hasToString!(T, Char);
     static if (
             overload != HasToStringResult.constCharSinkFormatSpec &&
+            overload != HasToStringResult.constCharSinkFormatString &&
             overload != HasToStringResult.customPutWriterFormatSpec &&
             !isInputRange!T)
     {

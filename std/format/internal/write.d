@@ -2690,6 +2690,21 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     static assert(!__traits(compiles, formatValue(w, bar, f)));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21722
+@system unittest
+{
+    struct Bar
+    {
+        void toString (scope void delegate (scope const(char)[]) sink, string fmt)
+        {
+            sink("Hello");
+        }
+    }
+
+    Bar b;
+    assert(format("%b", b) == "Hello");
+}
+
 /*
     `enum`s are formatted like their base value
  */
