@@ -64,8 +64,6 @@ public import std.format.read;
 public import std.format.spec;
 public import std.format.write;
 
-//debug=format;                // uncomment to turn on debugging printf's
-
 import core.vararg;
 import std.exception;
 import std.meta;
@@ -97,6 +95,7 @@ class FormatException : Exception
 @safe unittest
 {
     import std.exception : assertThrown;
+
     assertThrown!FormatException(format("%d", "foo"));
 }
 
@@ -164,6 +163,7 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 @safe pure unittest
 {
     import std.array : appender;
+
     auto w = appender!string();
     auto spec = singleSpec("%s");
     formatElement(w, "Hello World", spec);
@@ -171,9 +171,9 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
     assert(w.data == "\"Hello World\"");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=8015
 @safe unittest
 {
-    // Test for bug 8015
     import std.typecons;
 
     struct MyStruct {
@@ -206,6 +206,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 @safe unittest
 {
     import std.array : appender;
+
     auto w = appender!string();
     auto spec = singleSpec("%s");
     formatElement(w, "H", spec);
@@ -235,12 +236,12 @@ package void formatTest(T)(T val, string expected, size_t ln = __LINE__, string 
     import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
+
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
-    enforce!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+    enforce!AssertError(w.data == expected,
+        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
 version (StdUnittest)
@@ -249,11 +250,11 @@ package void formatTest(T)(string fmt, T val, string expected, size_t ln = __LIN
     import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
+
     auto w = appender!string();
     formattedWrite(w, fmt, val);
-    enforce!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+    enforce!AssertError(w.data == expected,
+        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
 version (StdUnittest)
@@ -262,6 +263,7 @@ package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, strin
     import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
+
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
@@ -269,9 +271,8 @@ package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, strin
     {
         if (w.data == cur) return;
     }
-    enforce!AssertError(
-            false,
-            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
+    enforce!AssertError(false,
+        text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
 version (StdUnittest)
@@ -280,18 +281,18 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     import core.exception : AssertError;
     import std.array : appender;
     import std.conv : text;
+
     auto w = appender!string();
     formattedWrite(w, fmt, val);
     foreach (cur; expected)
     {
         if (w.data == cur) return;
     }
-    enforce!AssertError(
-            false,
-            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
+    enforce!AssertError(false,
+        text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
-@safe /*pure*/ unittest     // formatting floating point values is now impure
+@safe pure unittest
 {
     import std.array;
 
@@ -319,6 +320,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 @safe pure unittest
 {
     import std.array;
+
     auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
     assert(stream.data == "42", stream.data);
@@ -328,11 +330,13 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 {
     // testing raw writes
     import std.array;
+
     auto w = appender!(char[])();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
     assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
         && w.data[2] == 4 && w.data[3] == 5);
+
     w.clear();
     formattedWrite(w, "%-r", a);
     assert(w.data.length == 4 && w.data[0] == 5 && w.data[1] == 4
@@ -343,6 +347,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 {
     // testing positional parameters
     import std.array;
+
     auto w = appender!(char[])();
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
@@ -367,20 +372,14 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     import std.conv : text, octal;
     import core.stdc.stdio : snprintf;
 
-    debug(format) printf("std.format.format.unittest\n");
-
     auto stream = appender!(char[])();
-    //goto here;
 
-    formattedWrite(stream,
-            "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
-    assert(stream.data == "hello world! true 57 ",
-        stream.data);
-
+    formattedWrite(stream, "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
+    assert(stream.data == "hello world! true 57 ", stream.data);
     stream.clear();
+
     formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-           stream.data);
+    assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", stream.data);
     stream.clear();
 
     formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
@@ -395,20 +394,15 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     assert(stream.data == "1193135 2947526575");
     stream.clear();
 
-    // formattedWrite(stream, "%s", 1.2 + 3.4i);
-    // assert(stream.data == "1.2+3.4i");
-    // stream.clear();
-
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
-    //formattedWrite(stream, "%x %X", 1.32);
     assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
-    formattedWrite(stream, "%#06.*f",2,12.345);
+    formattedWrite(stream, "%#06.*f", 2, 12.345);
     assert(stream.data == "012.35");
     stream.clear();
 
-    formattedWrite(stream, "%#0*.*f",6,2,12.345);
+    formattedWrite(stream, "%#0*.*f", 6, 2, 12.345);
     assert(stream.data == "012.35");
     stream.clear();
 
@@ -425,36 +419,35 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     assert(stream.data == "  12.68:");
     stream.clear();
 
-    formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
-    assert(stream.data == "-4.000000|-0010|0x001|  0x1",
-            stream.data);
+    formattedWrite(stream, "%04f|%05d|%#05x|%#5x", -4.0, -10, 1, 1);
+    assert(stream.data == "-4.000000|-0010|0x001|  0x1", stream.data);
     stream.clear();
 
     int i;
     string s;
 
     i = -10;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(stream.data == "-10|-10|-10|-10|-10.0000");
     stream.clear();
 
     i = -5;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(stream.data == "-5| -5|-05|-5|-5.0000");
     stream.clear();
 
     i = 0;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(stream.data == "0|  0|000|0|0.0000");
     stream.clear();
 
     i = 5;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(stream.data == "5|  5|005|5|5.0000");
     stream.clear();
 
     i = 10;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(stream.data == "10| 10|010|10|10.0000");
     stream.clear();
 
@@ -466,193 +459,243 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     assert(stream.data == "0.3");
     stream.clear();
 
-    stream.clear(); formattedWrite(stream, "%.0g", .34);
+    stream.clear();
+    formattedWrite(stream, "%.0g", .34);
     assert(stream.data == "0.3");
 
-    stream.clear(); formattedWrite(stream, "%.2g", .34);
+    stream.clear();
+    formattedWrite(stream, "%.2g", .34);
     assert(stream.data == "0.34");
 
-    stream.clear(); formattedWrite(stream, "%0.0008f", 1e-08);
+    stream.clear();
+    formattedWrite(stream, "%0.0008f", 1e-08);
     assert(stream.data == "0.00000001");
 
-    stream.clear(); formattedWrite(stream, "%0.0008f", 1e-05);
+    stream.clear();
+    formattedWrite(stream, "%0.0008f", 1e-05);
     assert(stream.data == "0.00001000");
-
-    //return;
-    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
 
     s = "helloworld";
     string r;
-    stream.clear(); formattedWrite(stream, "%.2s", s[0 .. 5]);
+    stream.clear();
+    formattedWrite(stream, "%.2s", s[0 .. 5]);
     assert(stream.data == "he");
-    stream.clear(); formattedWrite(stream, "%.20s", s[0 .. 5]);
+    stream.clear();
+    formattedWrite(stream, "%.20s", s[0 .. 5]);
     assert(stream.data == "hello");
-    stream.clear(); formattedWrite(stream, "%8s", s[0 .. 5]);
+    stream.clear();
+    formattedWrite(stream, "%8s", s[0 .. 5]);
     assert(stream.data == "   hello");
 
     byte[] arrbyte = new byte[4];
     arrbyte[0] = 100;
     arrbyte[1] = -99;
     arrbyte[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrbyte);
+    stream.clear();
+    formattedWrite(stream, "%s", arrbyte);
     assert(stream.data == "[100, -99, 0, 0]", stream.data);
 
     ubyte[] arrubyte = new ubyte[4];
     arrubyte[0] = 100;
     arrubyte[1] = 200;
     arrubyte[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrubyte);
+    stream.clear();
+    formattedWrite(stream, "%s", arrubyte);
     assert(stream.data == "[100, 200, 0, 0]", stream.data);
 
     short[] arrshort = new short[4];
     arrshort[0] = 100;
     arrshort[1] = -999;
     arrshort[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrshort);
+    stream.clear();
+    formattedWrite(stream, "%s", arrshort);
     assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrshort);
+    stream.clear();
+    formattedWrite(stream, "%s", arrshort);
     assert(stream.data == "[100, -999, 0, 0]");
 
     ushort[] arrushort = new ushort[4];
     arrushort[0] = 100;
     arrushort[1] = 20_000;
     arrushort[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrushort);
+    stream.clear();
+    formattedWrite(stream, "%s", arrushort);
     assert(stream.data == "[100, 20000, 0, 0]");
 
     int[] arrint = new int[4];
     arrint[0] = 100;
     arrint[1] = -999;
     arrint[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrint);
+    stream.clear();
+    formattedWrite(stream, "%s", arrint);
     assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrint);
+    stream.clear();
+    formattedWrite(stream, "%s", arrint);
     assert(stream.data == "[100, -999, 0, 0]");
 
     long[] arrlong = new long[4];
     arrlong[0] = 100;
     arrlong[1] = -999;
     arrlong[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrlong);
+    stream.clear();
+    formattedWrite(stream, "%s", arrlong);
     assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrlong);
+    stream.clear();
+    formattedWrite(stream, "%s",arrlong);
     assert(stream.data == "[100, -999, 0, 0]");
 
     ulong[] arrulong = new ulong[4];
     arrulong[0] = 100;
     arrulong[1] = 999;
     arrulong[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrulong);
+    stream.clear();
+    formattedWrite(stream, "%s", arrulong);
     assert(stream.data == "[100, 999, 0, 0]");
 
     string[] arr2 = new string[4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";
-    stream.clear(); formattedWrite(stream, "%s", arr2);
+    stream.clear();
+    formattedWrite(stream, "%s", arr2);
     assert(stream.data == `["hello", "world", "", "foo"]`, stream.data);
 
-    stream.clear(); formattedWrite(stream, "%.8d", 7);
+    stream.clear();
+    formattedWrite(stream, "%.8d", 7);
     assert(stream.data == "00000007");
 
-    stream.clear(); formattedWrite(stream, "%.8x", 10);
+    stream.clear();
+    formattedWrite(stream, "%.8x", 10);
     assert(stream.data == "0000000a");
 
-    stream.clear(); formattedWrite(stream, "%-3d", 7);
+    stream.clear();
+    formattedWrite(stream, "%-3d", 7);
     assert(stream.data == "7  ");
 
-    stream.clear(); formattedWrite(stream, "%*d", -3, 7);
+    stream.clear();
+    formattedWrite(stream, "%*d", -3, 7);
     assert(stream.data == "7  ");
 
-    stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
-    //writeln(stream.data);
+    stream.clear();
+    formattedWrite(stream, "%.*d", -3, 7);
     assert(stream.data == "7");
 
-    stream.clear(); formattedWrite(stream, "%s", "abc"c);
+    stream.clear();
+    formattedWrite(stream, "%s", "abc"c);
     assert(stream.data == "abc");
-    stream.clear(); formattedWrite(stream, "%s", "def"w);
+    stream.clear();
+    formattedWrite(stream, "%s", "def"w);
     assert(stream.data == "def", text(stream.data.length));
-    stream.clear(); formattedWrite(stream, "%s", "ghi"d);
+    stream.clear();
+    formattedWrite(stream, "%s", "ghi"d);
     assert(stream.data == "ghi");
 
-here:
     @trusted void* deadBeef() { return cast(void*) 0xDEADBEEF; }
-    stream.clear(); formattedWrite(stream, "%s", deadBeef());
+    stream.clear();
+    formattedWrite(stream, "%s", deadBeef());
     assert(stream.data == "DEADBEEF", stream.data);
 
-    stream.clear(); formattedWrite(stream, "%#x", 0xabcd);
+    stream.clear();
+    formattedWrite(stream, "%#x", 0xabcd);
     assert(stream.data == "0xabcd");
-    stream.clear(); formattedWrite(stream, "%#X", 0xABCD);
+    stream.clear();
+    formattedWrite(stream, "%#X", 0xABCD);
     assert(stream.data == "0XABCD");
 
-    stream.clear(); formattedWrite(stream, "%#o", octal!12345);
+    stream.clear();
+    formattedWrite(stream, "%#o", octal!12345);
     assert(stream.data == "012345");
-    stream.clear(); formattedWrite(stream, "%o", 9);
+    stream.clear();
+    formattedWrite(stream, "%o", 9);
     assert(stream.data == "11");
 
-    stream.clear(); formattedWrite(stream, "%+d", 123);
+    stream.clear();
+    formattedWrite(stream, "%+d", 123);
     assert(stream.data == "+123");
-    stream.clear(); formattedWrite(stream, "%+d", -123);
+    stream.clear();
+    formattedWrite(stream, "%+d", -123);
     assert(stream.data == "-123");
-    stream.clear(); formattedWrite(stream, "% d", 123);
+    stream.clear();
+    formattedWrite(stream, "% d", 123);
     assert(stream.data == " 123");
-    stream.clear(); formattedWrite(stream, "% d", -123);
+    stream.clear();
+    formattedWrite(stream, "% d", -123);
     assert(stream.data == "-123");
 
-    stream.clear(); formattedWrite(stream, "%%");
+    stream.clear();
+    formattedWrite(stream, "%%");
     assert(stream.data == "%");
 
-    stream.clear(); formattedWrite(stream, "%d", true);
+    stream.clear();
+    formattedWrite(stream, "%d", true);
     assert(stream.data == "1");
-    stream.clear(); formattedWrite(stream, "%d", false);
+    stream.clear();
+    formattedWrite(stream, "%d", false);
     assert(stream.data == "0");
 
-    stream.clear(); formattedWrite(stream, "%d", 'a');
+    stream.clear();
+    formattedWrite(stream, "%d", 'a');
     assert(stream.data == "97", stream.data);
     wchar wc = 'a';
-    stream.clear(); formattedWrite(stream, "%d", wc);
+    stream.clear();
+    formattedWrite(stream, "%d", wc);
     assert(stream.data == "97");
     dchar dc = 'a';
-    stream.clear(); formattedWrite(stream, "%d", dc);
+    stream.clear();
+    formattedWrite(stream, "%d", dc);
     assert(stream.data == "97");
 
     byte b = byte.max;
-    stream.clear(); formattedWrite(stream, "%x", b);
+    stream.clear();
+    formattedWrite(stream, "%x", b);
     assert(stream.data == "7f");
-    stream.clear(); formattedWrite(stream, "%x", ++b);
+    stream.clear();
+    formattedWrite(stream, "%x", ++b);
     assert(stream.data == "80");
-    stream.clear(); formattedWrite(stream, "%x", ++b);
+    stream.clear();
+    formattedWrite(stream, "%x", ++b);
     assert(stream.data == "81");
 
     short sh = short.max;
-    stream.clear(); formattedWrite(stream, "%x", sh);
+    stream.clear();
+    formattedWrite(stream, "%x", sh);
     assert(stream.data == "7fff");
-    stream.clear(); formattedWrite(stream, "%x", ++sh);
+    stream.clear();
+    formattedWrite(stream, "%x", ++sh);
     assert(stream.data == "8000");
-    stream.clear(); formattedWrite(stream, "%x", ++sh);
+    stream.clear();
+    formattedWrite(stream, "%x", ++sh);
     assert(stream.data == "8001");
 
     i = int.max;
-    stream.clear(); formattedWrite(stream, "%x", i);
+    stream.clear();
+    formattedWrite(stream, "%x", i);
     assert(stream.data == "7fffffff");
-    stream.clear(); formattedWrite(stream, "%x", ++i);
+    stream.clear();
+    formattedWrite(stream, "%x", ++i);
     assert(stream.data == "80000000");
-    stream.clear(); formattedWrite(stream, "%x", ++i);
+    stream.clear();
+    formattedWrite(stream, "%x", ++i);
     assert(stream.data == "80000001");
 
-    stream.clear(); formattedWrite(stream, "%x", 10);
+    stream.clear();
+    formattedWrite(stream, "%x", 10);
     assert(stream.data == "a");
-    stream.clear(); formattedWrite(stream, "%X", 10);
+    stream.clear();
+    formattedWrite(stream, "%X", 10);
     assert(stream.data == "A");
-    stream.clear(); formattedWrite(stream, "%x", 15);
+    stream.clear();
+    formattedWrite(stream, "%x", 15);
     assert(stream.data == "f");
-    stream.clear(); formattedWrite(stream, "%X", 15);
+    stream.clear();
+    formattedWrite(stream, "%X", 15);
     assert(stream.data == "F");
 
     @trusted void ObjectTest()
     {
         Object c = null;
-        stream.clear(); formattedWrite(stream, "%s", c);
+        stream.clear();
+        formattedWrite(stream, "%s", c);
         assert(stream.data == "null");
     }
     ObjectTest();
@@ -661,16 +704,19 @@ here:
     {
         Value1, Value2
     }
-    stream.clear(); formattedWrite(stream, "%s", TestEnum.Value2);
+    stream.clear();
+    formattedWrite(stream, "%s", TestEnum.Value2);
     assert(stream.data == "Value2", stream.data);
-    stream.clear(); formattedWrite(stream, "%s", cast(TestEnum) 5);
+    stream.clear();
+    formattedWrite(stream, "%s", cast(TestEnum) 5);
     assert(stream.data == "cast(TestEnum)5", stream.data);
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    //stream.clear(); formattedWrite(stream, "%s", aa.values);
-    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //stream.clear();
+    //formattedWrite(stream, "%s", aa.values);
     //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
-    //stream.clear(); formattedWrite(stream, "%s", aa);
+    //stream.clear();
+    //formattedWrite(stream, "%s", aa);
     //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 
     static const dchar[] ds = ['a','b'];
@@ -683,7 +729,8 @@ here:
             assert(stream.data == " 98");
     }
 
-    stream.clear(); formattedWrite(stream, "%.-3d", 7);
+    stream.clear();
+    formattedWrite(stream, "%.-3d", 7);
     assert(stream.data == "7", ">" ~ stream.data ~ "<");
 }
 
@@ -727,41 +774,40 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
 {
     import core.exception : AssertError;
     import std.array : appender;
+
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
     auto input = w.data;
-    enforce!AssertError(
-            input == formatted,
-            input, fn, ln);
+    enforce!AssertError(input == formatted, input, fn, ln);
 
     T val2;
     formattedRead(input, fmt, &val2);
+
     static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
+        if (__ctfe)
+        {
+            alias aa1 = val;
+            alias aa2 = val2;
+            assert(aa1 == aa2);
 
-        assert(aa1.length == aa2.length);
+            assert(aa1.length == aa2.length);
 
-        assert(aa1.keys == aa2.keys);
+            assert(aa1.keys == aa2.keys);
 
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
+            assert(aa1.values == aa2.values);
+            assert(aa1.values.length == aa2.values.length);
+            foreach (i; 0 .. aa1.values.length)
+                assert(aa1.values[i] == aa2.values[i]);
 
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
+            foreach (i, key; aa1.keys)
+                assert(aa1.values[i] == aa1[key]);
+            foreach (i, key; aa2.keys)
+                assert(aa2.values[i] == aa2[key]);
+            return;
+        }
+
+    enforce!AssertError(val == val2, input, fn, ln);
 }
 
 version (StdUnittest)
@@ -769,6 +815,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
 {
     import core.exception : AssertError;
     import std.array : appender;
+
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
@@ -778,39 +825,35 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
     {
         if (input == cur) return;
     }
-    enforce!AssertError(
-            false,
-            input,
-            fn,
-            ln);
+    enforce!AssertError(false, input, fn, ln);
 
     T val2;
     formattedRead(input, fmt, &val2);
+
     static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
+        if (__ctfe)
+        {
+            alias aa1 = val;
+            alias aa2 = val2;
+            assert(aa1 == aa2);
 
-        assert(aa1.length == aa2.length);
+            assert(aa1.length == aa2.length);
 
-        assert(aa1.keys == aa2.keys);
+            assert(aa1.keys == aa2.keys);
 
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
+            assert(aa1.values == aa2.values);
+            assert(aa1.values.length == aa2.values.length);
+            foreach (i; 0 .. aa1.values.length)
+                assert(aa1.values[i] == aa2.values[i]);
 
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
+            foreach (i, key; aa1.keys)
+                assert(aa1.values[i] == aa1[key]);
+            foreach (i, key; aa2.keys)
+                assert(aa2.values[i] == aa2[key]);
+            return;
+        }
+
+    enforce!AssertError(val == val2, input, fn, ln);
 }
 
 @system unittest
@@ -818,83 +861,81 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
     void booleanTest()
     {
         auto b = true;
-        formatReflectTest(b, "%s",  `true`);
-        formatReflectTest(b, "%b",  `1`);
-        formatReflectTest(b, "%o",  `1`);
-        formatReflectTest(b, "%d",  `1`);
-        formatReflectTest(b, "%u",  `1`);
-        formatReflectTest(b, "%x",  `1`);
+        formatReflectTest(b, "%s", `true`);
+        formatReflectTest(b, "%b", `1`);
+        formatReflectTest(b, "%o", `1`);
+        formatReflectTest(b, "%d", `1`);
+        formatReflectTest(b, "%u", `1`);
+        formatReflectTest(b, "%x", `1`);
     }
 
     void integerTest()
     {
         auto n = 127;
-        formatReflectTest(n, "%s",  `127`);
-        formatReflectTest(n, "%b",  `1111111`);
-        formatReflectTest(n, "%o",  `177`);
-        formatReflectTest(n, "%d",  `127`);
-        formatReflectTest(n, "%u",  `127`);
-        formatReflectTest(n, "%x",  `7f`);
+        formatReflectTest(n, "%s", `127`);
+        formatReflectTest(n, "%b", `1111111`);
+        formatReflectTest(n, "%o", `177`);
+        formatReflectTest(n, "%d", `127`);
+        formatReflectTest(n, "%u", `127`);
+        formatReflectTest(n, "%x", `7f`);
     }
 
     void floatingTest()
     {
         auto f = 3.14;
-        formatReflectTest(f, "%s",  `3.14`);
-        version (MinGW)
-            formatReflectTest(f, "%e",  `3.140000e+000`);
-        else
-            formatReflectTest(f, "%e",  `3.140000e+00`);
-        formatReflectTest(f, "%f",  `3.140000`);
-        formatReflectTest(f, "%g",  `3.14`);
+        formatReflectTest(f, "%s", `3.14`);
+        formatReflectTest(f, "%e", `3.140000e+00`);
+        formatReflectTest(f, "%f", `3.140000`);
+        formatReflectTest(f, "%g", `3.14`);
     }
 
     void charTest()
     {
         auto c = 'a';
-        formatReflectTest(c, "%s",  `a`);
-        formatReflectTest(c, "%c",  `a`);
-        formatReflectTest(c, "%b",  `1100001`);
-        formatReflectTest(c, "%o",  `141`);
-        formatReflectTest(c, "%d",  `97`);
-        formatReflectTest(c, "%u",  `97`);
-        formatReflectTest(c, "%x",  `61`);
+        formatReflectTest(c, "%s", `a`);
+        formatReflectTest(c, "%c", `a`);
+        formatReflectTest(c, "%b", `1100001`);
+        formatReflectTest(c, "%o", `141`);
+        formatReflectTest(c, "%d", `97`);
+        formatReflectTest(c, "%u", `97`);
+        formatReflectTest(c, "%x", `61`);
     }
 
     void strTest()
     {
         auto s = "hello";
-        formatReflectTest(s, "%s",                      `hello`);
-        formatReflectTest(s, "%(%c,%)",                 `h,e,l,l,o`);
-        formatReflectTest(s, "%(%s,%)",                 `'h','e','l','l','o'`);
-        formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
+        formatReflectTest(s, "%s",              `hello`);
+        formatReflectTest(s, "%(%c,%)",         `h,e,l,l,o`);
+        formatReflectTest(s, "%(%s,%)",         `'h','e','l','l','o'`);
+        formatReflectTest(s, "[%(<%c>%| $ %)]", `[<h> $ <e> $ <l> $ <l> $ <o>]`);
     }
 
     void daTest()
     {
         auto a = [1,2,3,4];
-        formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
-        formatReflectTest(a, "[%(%s; %)]",              `[1; 2; 3; 4]`);
-        formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
+        formatReflectTest(a, "%s",              `[1, 2, 3, 4]`);
+        formatReflectTest(a, "[%(%s; %)]",      `[1; 2; 3; 4]`);
+        formatReflectTest(a, "[%(<%s>%| $ %)]", `[<1> $ <2> $ <3> $ <4>]`);
     }
 
     void saTest()
     {
         int[4] sa = [1,2,3,4];
-        formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
-        formatReflectTest(sa, "[%(%s; %)]",             `[1; 2; 3; 4]`);
-        formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
+        formatReflectTest(sa, "%s",              `[1, 2, 3, 4]`);
+        formatReflectTest(sa, "[%(%s; %)]",      `[1; 2; 3; 4]`);
+        formatReflectTest(sa, "[%(<%s>%| $ %)]", `[<1> $ <2> $ <3> $ <4>]`);
     }
 
     void aaTest()
     {
         auto aa = [1:"hello", 2:"world"];
-        formatReflectTest(aa, "%s",                     [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
-        formatReflectTest(aa, "[%(%s->%s, %)]",         [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
-        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
+        formatReflectTest(aa, "%s",                    [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
+        formatReflectTest(aa, "[%(%s->%s, %)]",        [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
+        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}", [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
     }
 
     import std.exception;
+
     assertCTFEable!(
     {
         booleanTest();
@@ -914,6 +955,7 @@ T unformatElement(T, Range, Char)(ref Range input, scope const ref FormatSpec!Ch
 if (isInputRange!Range)
 {
     import std.conv : parseElement;
+
     static if (isSomeString!T)
     {
         if (spec.spec == 's')
@@ -941,8 +983,6 @@ if (isInputRange!Range)
     int i;
     string s;
 
-    debug(format) printf("std.format.format.unittest\n");
-
     s = format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
     assert(s == "hello world! true 57 1000000000x foo");
 
@@ -966,10 +1006,10 @@ if (isInputRange!Range)
     string s;
     int i;
 
-    s = format("%#06.*f",2,12.345);
+    s = format("%#06.*f", 2, 12.345);
     assert(s == "012.35");
 
-    s = format("%#0*.*f",6,2,12.345);
+    s = format("%#0*.*f", 6, 2, 12.345);
     assert(s == "012.35");
 
     s = format("%7.4g:", 12.678);
@@ -978,27 +1018,27 @@ if (isInputRange!Range)
     s = format("%7.4g:", 12.678L);
     assert(s == "  12.68:");
 
-    s = format("%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
+    s = format("%04f|%05d|%#05x|%#5x", -4.0, -10, 1, 1);
     assert(s == "-4.000000|-0010|0x001|  0x1");
 
     i = -10;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "-10|-10|-10|-10|-10.0000");
 
     i = -5;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "-5| -5|-05|-5|-5.0000");
 
     i = 0;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "0|  0|000|0|0.0000");
 
     i = 5;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "5|  5|005|5|5.0000");
 
     i = 10;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "10| 10|010|10|10.0000");
 
     s = format("%.0d", 0);
@@ -1236,11 +1276,11 @@ if (isInputRange!Range)
 // https://issues.dlang.org/show_bug.cgi?id=18205
 @safe pure unittest
 {
-    assert("|%8s|".format("abc")        == "|     abc|");
-    assert("|%8s|".format("αβγ")        == "|     αβγ|");
-    assert("|%8s|".format("   ")        == "|        |");
-    assert("|%8s|".format("été"d)       == "|     été|");
-    assert("|%8s|".format("été 2018"w)  == "|été 2018|");
+    assert("|%8s|".format("abc")       == "|     abc|");
+    assert("|%8s|".format("αβγ")       == "|     αβγ|");
+    assert("|%8s|".format("   ")       == "|        |");
+    assert("|%8s|".format("été"d)      == "|     été|");
+    assert("|%8s|".format("été 2018"w) == "|été 2018|");
 
     assert("%2s".format("e\u0301"w) == " e\u0301");
     assert("%2s".format("a\u0310\u0337"d) == " a\u0310\u0337");
@@ -1250,6 +1290,7 @@ if (isInputRange!Range)
 @safe unittest
 {
     import std.array;
+
     auto stream = appender!(char[])();
     formattedWrite(stream, "%2$.*1$d", 12, 10);
     assert(stream.data == "000000000010", stream.data);
@@ -1259,6 +1300,7 @@ if (isInputRange!Range)
 @safe unittest
 {
     import std.array;
+
     enum E : ulong { A, B, C }
     auto stream = appender!(char[])();
     formattedWrite(stream, "%s", E.C);
@@ -1425,6 +1467,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
     import std.array : appender;
+
     auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
@@ -1441,22 +1484,21 @@ if (isSomeChar!Char)
 {
     import core.exception;
     import std.exception;
+
     assertCTFEable!(
     {
-//  assert(format(null) == "");
-    assert(format("foo") == "foo");
-    assert(format("foo%%") == "foo%");
-    assert(format("foo%s", 'C') == "fooC");
-    assert(format("%s foo", "bar") == "bar foo");
-    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
-    assert(format("foo %d", -123) == "foo -123");
-    assert(format("foo %d", 123) == "foo 123");
+        assert(format("foo") == "foo");
+        assert(format("foo%%") == "foo%");
+        assert(format("foo%s", 'C') == "fooC");
+        assert(format("%s foo", "bar") == "bar foo");
+        assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+        assert(format("foo %d", -123) == "foo -123");
+        assert(format("foo %d", 123) == "foo 123");
 
-    assertThrown!FormatException(format("foo %s"));
-    assertThrown!FormatException(format("foo %s", 123, 456));
+        assertThrown!FormatException(format("foo %s"));
+        assertThrown!FormatException(format("foo %s", 123, 456));
 
-    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
-                  "helworldlo-138ctrue");
+        assert(format("hel%slo%s%s%s", "world", -138, 'c', true) == "helworldlo-138ctrue");
     });
 
     assert(is(typeof(format("happy")) == string));
@@ -1560,32 +1602,31 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 @system unittest
 {
     import core.exception;
-
-    debug(string) trustedPrintf("std.string.sformat.unittest\n");
-
     import std.exception;
+
     assertCTFEable!(
     {
-    char[10] buf;
+        char[10] buf;
 
-    assert(sformat(buf[], "foo") == "foo");
-    assert(sformat(buf[], "foo%%") == "foo%");
-    assert(sformat(buf[], "foo%s", 'C') == "fooC");
-    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
-    assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
-    assert(sformat(buf[], "foo %d", -123) == "foo -123");
-    assert(sformat(buf[], "foo %d", 123) == "foo 123");
+        assert(sformat(buf[], "foo") == "foo");
+        assert(sformat(buf[], "foo%%") == "foo%");
+        assert(sformat(buf[], "foo%s", 'C') == "fooC");
+        assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+        assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+        assert(sformat(buf[], "foo %d", -123) == "foo -123");
+        assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
-    assertThrown!FormatException(sformat(buf[], "foo %s"));
-    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
+        assertThrown!FormatException(sformat(buf[], "foo %s"));
+        assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
 
-    assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+        assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
     });
 }
 
 @system unittest // ensure that sformat avoids the GC
 {
     import core.memory : GC;
+
     const a = ["foo", "bar"];
     const u = GC.stats().usedSize;
     char[20] buf;
@@ -1600,35 +1641,35 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
  * Returns:
  *      the difference between the starts of the arrays
  */
-@trusted package pure nothrow @nogc
-    ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2)
+package ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2) @trusted pure nothrow @nogc
 {
     return array1.ptr - array2.ptr;
 }
 
 @safe unittest
 {
-    assertCTFEable!({
-    auto tmp = format("%,d", 1000);
-    assert(tmp == "1,000", "'" ~ tmp ~ "'");
+    assertCTFEable!(
+    {
+        auto tmp = format("%,d", 1000);
+        assert(tmp == "1,000", "'" ~ tmp ~ "'");
 
-    tmp = format("%,?d", 'z', 1234567);
-    assert(tmp == "1z234z567", "'" ~ tmp ~ "'");
+        tmp = format("%,?d", 'z', 1234567);
+        assert(tmp == "1z234z567", "'" ~ tmp ~ "'");
 
-    tmp = format("%10,?d", 'z', 1234567);
-    assert(tmp == " 1z234z567", "'" ~ tmp ~ "'");
+        tmp = format("%10,?d", 'z', 1234567);
+        assert(tmp == " 1z234z567", "'" ~ tmp ~ "'");
 
-    tmp = format("%11,2?d", 'z', 1234567);
-    assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
+        tmp = format("%11,2?d", 'z', 1234567);
+        assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
 
-    tmp = format("%11,*?d", 2, 'z', 1234567);
-    assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
+        tmp = format("%11,*?d", 2, 'z', 1234567);
+        assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
 
-    tmp = format("%11,*d", 2, 1234567);
-    assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
+        tmp = format("%11,*d", 2, 1234567);
+        assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
 
-    tmp = format("%11,2d", 1234567);
-    assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
+        tmp = format("%11,2d", 1234567);
+        assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
     });
 }
 
