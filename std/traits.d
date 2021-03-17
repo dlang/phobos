@@ -5014,11 +5014,11 @@ Returns:
     An $(REF AliasSeq,std,meta) with all possible target types of an implicit
     conversion `T`.
 
-    If `T` is a class derived from `Object`, the the result of
+    If `T` is a class derived from `Object`, the result of
     $(LREF TransitiveBaseTypeTuple) is returned.
 
     If the type is not a built-in value type or a class derived from
-    `Object`, the an empty $(REF AliasSeq,std,meta) is returned.
+    `Object`, an empty $(REF AliasSeq,std,meta) is returned.
 
 Note:
     The possible targets are computed more conservatively than the
