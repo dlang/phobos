@@ -64,14 +64,10 @@ public import std.format.read;
 public import std.format.spec;
 public import std.format.write;
 
-import core.vararg;
-import std.exception;
-import std.meta;
-import std.range.primitives;
-import std.traits;
-
-import std.format.internal.read;
-import std.format.internal.write;
+import std.exception : enforce;
+import std.range.primitives : isInputRange;
+import std.traits : CharTypeOf, isSomeChar, isSomeString, StringTypeOf;
+import std.format.internal.write : hasToString;
 
 /**
 Signals a mismatch between a format and its corresponding argument.
@@ -107,6 +103,8 @@ void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref Fo
 if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 {
     import std.array : appender;
+    import std.format.internal.write : formatChar;
+    import std.range.primitives : put;
     import std.utf : decode, UTFException;
 
     StringTypeOf!T str = val;   // https://issues.dlang.org/show_bug.cgi?id=8015
@@ -174,11 +172,13 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 // https://issues.dlang.org/show_bug.cgi?id=8015
 @safe unittest
 {
-    import std.typecons;
+    import std.typecons : Tuple;
 
-    struct MyStruct {
+    struct MyStruct
+    {
         string str;
-        @property string toStr() {
+        @property string toStr()
+        {
             return str;
         }
         alias toStr this;
@@ -192,6 +192,9 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
+    import std.range.primitives : put;
+    import std.format.internal.write : formatChar;
+
     if (f.spec == 's')
     {
         put(w, '\'');
@@ -294,7 +297,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe pure unittest
 {
-    import std.array;
+    import std.array : appender;
 
     auto stream = appender!string();
     formattedWrite(stream, "%s", 1.1);
@@ -303,8 +306,8 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe pure unittest
 {
-    import std.algorithm;
-    import std.array;
+    import std.algorithm.iteration : map;
+    import std.array : appender;
 
     auto stream = appender!string();
     formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
@@ -319,7 +322,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe pure unittest
 {
-    import std.array;
+    import std.array : appender;
 
     auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
@@ -329,7 +332,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 @safe pure unittest
 {
     // testing raw writes
-    import std.array;
+    import std.array : appender;
 
     auto w = appender!(char[])();
     uint a = 0x02030405;
@@ -346,7 +349,8 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 @safe pure unittest
 {
     // testing positional parameters
-    import std.array;
+    import std.array : appender;
+    import std.exception : collectExceptionMsg;
 
     auto w = appender!(char[])();
     formattedWrite(w,
@@ -367,10 +371,8 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe unittest
 {
-    import core.stdc.string : strlen;
     import std.array : appender;
     import std.conv : text, octal;
-    import core.stdc.stdio : snprintf;
 
     auto stream = appender!(char[])();
 
@@ -736,8 +738,8 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
 @safe unittest
 {
-    import std.array;
-    import std.stdio;
+    import std.array : appender;
+    import std.meta : AliasSeq;
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     assert(aa[3] == "hello");
@@ -774,6 +776,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
 {
     import core.exception : AssertError;
     import std.array : appender;
+    import std.traits : isAssociativeArray;
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -815,6 +818,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
 {
     import core.exception : AssertError;
     import std.array : appender;
+    import std.traits : isAssociativeArray;
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -934,7 +938,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
         formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}", [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
     }
 
-    import std.exception;
+    import std.exception : assertCTFEable;
 
     assertCTFEable!(
     {
@@ -978,8 +982,6 @@ if (isInputRange!Range)
 
 @system unittest
 {
-    import std.conv : octal;
-
     int i;
     string s;
 
@@ -1289,7 +1291,7 @@ if (isInputRange!Range)
 // https://issues.dlang.org/show_bug.cgi?id=3479
 @safe unittest
 {
-    import std.array;
+    import std.array : appender;
 
     auto stream = appender!(char[])();
     formattedWrite(stream, "%2$.*1$d", 12, 10);
@@ -1299,7 +1301,7 @@ if (isInputRange!Range)
 // https://issues.dlang.org/show_bug.cgi?id=6893
 @safe unittest
 {
-    import std.array;
+    import std.array : appender;
 
     enum E : ulong { A, B, C }
     auto stream = appender!(char[])();
@@ -1343,6 +1345,8 @@ typeof(fmt) format(alias fmt, Args...)(Args args)
 if (isSomeString!(typeof(fmt)))
 {
     import std.array : appender;
+    import std.range.primitives : ElementEncodingType;
+    import std.traits : Unqual;
 
     alias e = checkFormatException!(fmt, Args);
     alias Char = Unqual!(ElementEncodingType!(typeof(fmt)));
@@ -1482,8 +1486,7 @@ if (isSomeChar!Char)
 
 @safe pure unittest
 {
-    import core.exception;
-    import std.exception;
+    import std.exception : assertCTFEable, assertThrown;
 
     assertCTFEable!(
     {
@@ -1539,6 +1542,7 @@ if (isSomeString!(typeof(fmt)))
 char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
 {
     import core.exception : RangeError;
+    import std.range.primitives;
     import std.utf : encode;
 
     static struct Sink
@@ -1601,8 +1605,8 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 
 @system unittest
 {
-    import core.exception;
-    import std.exception;
+    import core.exception : RangeError;
+    import std.exception : assertCTFEable, assertThrown;
 
     assertCTFEable!(
     {
@@ -1648,6 +1652,8 @@ package ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2) @trusted p
 
 @safe unittest
 {
+    import std.exception : assertCTFEable;
+
     assertCTFEable!(
     {
         auto tmp = format("%,d", 1000);
@@ -1859,4 +1865,3 @@ package ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2) @trusted p
     assert(c == "^-nan         $", "\ngot:'"~ c ~ "'\nexp:'^-nan         $'");
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
-
