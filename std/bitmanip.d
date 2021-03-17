@@ -297,7 +297,7 @@ string bitfields(T...)()
 
         // would be nice to check for valid variable names too
         static if (i % 3 == 1)
-            static assert(is (typeof(ARG) == string),
+            static assert(is (typeof(ARG) : string),
                           "Variable name expected, found " ~ ARG.stringof);
 
         static if (i % 3 == 2)
@@ -634,6 +634,18 @@ unittest
     {
         mixin(bitfields!(int, "", 1,
                          int, "gshared", 7));
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21725
+@safe unittest
+{
+    struct S
+    {
+        mixin(bitfields!(
+            uint, q{foo}, 4,
+            uint, null, 4,
+        ));
     }
 }
 
