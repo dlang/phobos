@@ -47,7 +47,7 @@ $(T2 permutations,
 $(T2 reduce,
         `reduce!((a, b) => a + b)([1, 2, 3, 4])` returns `10`.
         This is the old implementation of `fold`.)
-$(T2 splitBy,
+$(T2 splitWhen,
         Lazily splits a range by comparing adjacent elements.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
@@ -2273,7 +2273,7 @@ if (isForwardRange!Range)
  * reflexive (`pred(x,x)` is always true), symmetric
  * (`pred(x,y) == pred(y,x)`), and transitive (`pred(x,y) && pred(y,z)`
  * implies `pred(x,z)`). If this is not the case, the range returned by
- * chunkBy may assert at runtime or behave erratically. Use $(LREF splitBy)
+ * chunkBy may assert at runtime or behave erratically. Use $(LREF splitWhen)
  * if you want to chunk by a predicate that is not an equivalence relation.
  *
  * Params:
@@ -2773,7 +2773,7 @@ $(LREF splitter), which uses elements as splitters instead of element-to-element
 relations.
 */
 
-auto splitBy(alias pred, Range)(Range r)
+auto splitWhen(alias pred, Range)(Range r)
 if (isForwardRange!Range)
 {   import std.functional : not;
     return ChunkByImpl!(not!pred, not!pred, GroupingOpType.binaryAny, Range)(r);
@@ -2787,7 +2787,7 @@ nothrow pure @system unittest
     import std.range : dropExactly;
     auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
 
-    auto result1 = source.splitBy!((a,b) => a <= b);
+    auto result1 = source.splitWhen!((a,b) => a <= b);
     assert(result1.save.equal!equal([
         [4, 3, 2],
         [11, 0, -3],
@@ -2795,7 +2795,7 @@ nothrow pure @system unittest
         [5, 3, 0]
     ]));
 
-    //splitBy, like chunkBy, is currently a reference range (this may change
+    //splitWhen, like chunkBy, is currently a reference range (this may change
     //in future). Remember to call `save` when appropriate.
     auto result2 = result1.dropExactly(2);
     assert(result1.save.equal!equal([
@@ -2825,7 +2825,7 @@ nothrow @system unittest
     }
 
     auto result = SomeRange([10, 9, 8, 5, 0, 1, 0, 8, 11, 10, 8, 12])
-        .splitBy!((a, b) => abs(a - b) >= 3);
+        .splitWhen!((a, b) => abs(a - b) >= 3);
 
     assert(result.equal!equal([
         [10, 9, 8],
@@ -2843,7 +2843,7 @@ nothrow @system unittest
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].splitBy!((x, y) => ((x*y) % 3) > 0);
+    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].splitWhen!((x, y) => ((x*y) % 3) > 0);
     assert(r.equal!equal([
         [1],
         [2, 3, 4],
@@ -2857,7 +2857,7 @@ nothrow pure @system unittest
     // Grouping by maximum adjacent difference:
     import std.math : abs;
     import std.algorithm.comparison : equal;
-    auto r3 = [1, 3, 2, 5, 4, 9, 10].splitBy!((a, b) => abs(a-b) >= 3);
+    auto r3 = [1, 3, 2, 5, 4, 9, 10].splitWhen!((a, b) => abs(a-b) >= 3);
     assert(r3.equal!equal([
         [1, 3, 2],
         [5, 4],
@@ -2865,11 +2865,11 @@ nothrow pure @system unittest
     ]));
 }
 
-// empty range splitBy
+// empty range splitWhen
 @nogc nothrow pure @system unittest
 {
     int[1] sliceable;
-    auto result = sliceable[0 .. 0].splitBy!((a,b) => a+b > 10);
+    auto result = sliceable[0 .. 0].splitWhen!((a,b) => a+b > 10);
     assert(result.empty);
 }
 
@@ -4831,7 +4831,7 @@ Returns:
 See_Also:
  $(REF _splitter, std,regex) for a version that splits using a regular expression defined separator,
  $(REF _split, std,array) for a version that splits eagerly and
- $(LREF splitBy), which compares adjacent elements instead of element against separator.
+ $(LREF splitWhen), which compares adjacent elements instead of element against separator.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
