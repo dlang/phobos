@@ -1296,7 +1296,9 @@ if (distinctFieldNames!(Specs))
         /// ditto
         void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
         {
-            import std.format : formatElement, formattedWrite, FormatException;
+            import std.format : format, FormatException;
+            import std.format.write : formattedWrite;
+            import std.range : only;
             if (fmt.nested)
             {
                 if (fmt.sep)
@@ -1335,15 +1337,14 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
-                    // TODO: Change this once formatElement() works for shared objects.
+                    // TODO: Change this once format() works for shared objects.
                     static if (is(Type == class) && is(Type == shared))
                     {
                         sink(Type.stringof);
                     }
                     else
                     {
-                        FormatSpec!Char f;
-                        formatElement(sink, field[i], f);
+                        sink(format!("%(%s%)")(only(field[i])));
                     }
                 }
                 sink(footer);

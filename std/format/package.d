@@ -411,132 +411,34 @@ class FormatException : Exception
 
 package alias enforceFmt = enforce!FormatException;
 
-// undocumented because of deprecation
-// string elements are formatted like UTF-8 string literals.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 {
-    import std.array : appender;
-    import std.format.internal.write : formatChar;
-    import std.range.primitives : put;
-    import std.utf : decode, UTFException;
+    import std.format.internal.write : fe = formatElement;
 
-    StringTypeOf!T str = val;   // https://issues.dlang.org/show_bug.cgi?id=8015
-
-    if (f.spec == 's')
-    {
-        try
-        {
-            // ignore other specifications and quote
-            for (size_t i = 0; i < str.length; )
-            {
-                auto c = decode(str, i);
-                // \uFFFE and \uFFFF are considered valid by isValidDchar,
-                // so need checking for interchange.
-                if (c == 0xFFFE || c == 0xFFFF)
-                    goto LinvalidSeq;
-            }
-            put(w, '\"');
-            for (size_t i = 0; i < str.length; )
-            {
-                auto c = decode(str, i);
-                formatChar(w, c, '"');
-            }
-            put(w, '\"');
-            return;
-        }
-        catch (UTFException)
-        {
-        }
-
-        // If val contains invalid UTF sequence, formatted like HexString literal
-    LinvalidSeq:
-        static if (is(typeof(str[0]) : const(char)))
-        {
-            enum postfix = 'c';
-            alias IntArr = const(ubyte)[];
-        }
-        else static if (is(typeof(str[0]) : const(wchar)))
-        {
-            enum postfix = 'w';
-            alias IntArr = const(ushort)[];
-        }
-        else static if (is(typeof(str[0]) : const(dchar)))
-        {
-            enum postfix = 'd';
-            alias IntArr = const(uint)[];
-        }
-        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr) str, postfix);
-    }
-    else
-        formatValue(w, str, f);
+    fe(w, val, f);
 }
 
-@safe pure unittest
-{
-    import std.array : appender;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatElement(w, "Hello World", spec);
-
-    assert(w.data == "\"Hello World\"");
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=8015
-@safe unittest
-{
-    import std.typecons : Tuple;
-
-    struct MyStruct
-    {
-        string str;
-        @property string toStr()
-        {
-            return str;
-        }
-        alias toStr this;
-    }
-
-    Tuple!(MyStruct) t;
-}
-
-// undocumented because of deprecation
-// Character elements are formatted like UTF-8 character literals.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
-    import std.range.primitives : put;
-    import std.format.internal.write : formatChar;
+    import std.format.internal.write : fe = formatElement;
 
-    if (f.spec == 's')
-    {
-        put(w, '\'');
-        formatChar(w, val, '\'');
-        put(w, '\'');
-    }
-    else
-        formatValue(w, val, f);
+    fe(w, val, f);
 }
 
-///
-@safe unittest
-{
-    import std.array : appender;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatElement(w, "H", spec);
-
-    assert(w.data == "\"H\"", w.data);
-}
-
-// undocumented
-// Maybe T is noncopyable struct, so receive it by 'auto ref'.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T == enum))
 {
-    formatValue(w, val, f);
+    import std.format.internal.write : fe = formatElement;
+
+    fe(w, val, f);
 }
 
 // Like NullSink, but toString() isn't even called at all. Used to test the format string.

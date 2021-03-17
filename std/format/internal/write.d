@@ -1514,7 +1514,7 @@ private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const r
 if (isInputRange!T)
 {
     import std.conv : text;
-    import std.format : formatElement, FormatException, formatValue, NoOpSink;
+    import std.format : FormatException, formatValue, NoOpSink;
     import std.range.primitives : ElementType, empty, front, hasLength,
         walkLength, isForwardRange, isInfinite, popFront, put;
 
@@ -1752,7 +1752,7 @@ void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.format : enforceFmt, formatElement, formatValue;
+    import std.format : enforceFmt, formatValue;
     import std.range.primitives : put;
 
     AssocArrayTypeOf!T val = obj;
@@ -1804,7 +1804,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 @safe unittest
 {
     import std.array : appender;
-    import std.format : formatElement, singleSpec;
+    import std.format : singleSpec;
 
     // Bug #17269. Behavior similar to `struct A { Nullable!string B; }`
     struct StringAliasThis
@@ -2529,7 +2529,7 @@ void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val,
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T))
     && !is(T == enum))
 {
-    import std.format : enforceValidFormatSpec, formatElement;
+    import std.format : enforceValidFormatSpec;
     import std.range.primitives : put;
 
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
@@ -2964,6 +2964,134 @@ if (isDelegate!T)
 
     int[0] empt = [];
     formatTest("(%s)", empt, "([])");
+}
+
+// string elements are formatted like UTF-8 string literals.
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
+if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
+{
+    import std.array : appender;
+    import std.format.write : formattedWrite, formatValue;
+    import std.range.primitives : put;
+    import std.utf : decode, UTFException;
+
+    StringTypeOf!T str = val;   // https://issues.dlang.org/show_bug.cgi?id=8015
+
+    if (f.spec == 's')
+    {
+        try
+        {
+            // ignore other specifications and quote
+            for (size_t i = 0; i < str.length; )
+            {
+                auto c = decode(str, i);
+                // \uFFFE and \uFFFF are considered valid by isValidDchar,
+                // so need checking for interchange.
+                if (c == 0xFFFE || c == 0xFFFF)
+                    goto LinvalidSeq;
+            }
+            put(w, '\"');
+            for (size_t i = 0; i < str.length; )
+            {
+                auto c = decode(str, i);
+                formatChar(w, c, '"');
+            }
+            put(w, '\"');
+            return;
+        }
+        catch (UTFException)
+        {
+        }
+
+        // If val contains invalid UTF sequence, formatted like HexString literal
+    LinvalidSeq:
+        static if (is(typeof(str[0]) : const(char)))
+        {
+            enum postfix = 'c';
+            alias IntArr = const(ubyte)[];
+        }
+        else static if (is(typeof(str[0]) : const(wchar)))
+        {
+            enum postfix = 'w';
+            alias IntArr = const(ushort)[];
+        }
+        else static if (is(typeof(str[0]) : const(dchar)))
+        {
+            enum postfix = 'd';
+            alias IntArr = const(uint)[];
+        }
+        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr) str, postfix);
+    }
+    else
+        formatValue(w, str, f);
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatElement(w, "Hello World", spec);
+
+    assert(w.data == "\"Hello World\"");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8015
+@safe unittest
+{
+    import std.typecons : Tuple;
+
+    struct MyStruct
+    {
+        string str;
+        @property string toStr()
+        {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
+}
+
+@safe unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatElement(w, "H", spec);
+
+    assert(w.data == "\"H\"", w.data);
+}
+
+// Character elements are formatted like UTF-8 character literals.
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
+if (is(CharTypeOf!T) && !is(T == enum))
+{
+    import std.range.primitives : put;
+    import std.format.write : formatValue;
+
+    if (f.spec == 's')
+    {
+        put(w, '\'');
+        formatChar(w, val, '\'');
+        put(w, '\'');
+    }
+    else
+        formatValue(w, val, f);
+}
+
+// Maybe T is noncopyable struct, so receive it by 'auto ref'.
+void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
+if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T == enum))
+{
+    import std.format.write : formatValue;
+
+    formatValue(w, val, f);
 }
 
 // Fix for https://issues.dlang.org/show_bug.cgi?id=1591
