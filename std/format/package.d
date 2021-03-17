@@ -792,21 +792,25 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
         {
             alias aa1 = val;
             alias aa2 = val2;
-            assert(aa1 == aa2);
+            assert(aa1 == aa2, "Identical associative arrays differ.");
 
-            assert(aa1.length == aa2.length);
+            assert(aa1.length == aa2.length, "Length of identical associative arrays differs.");
 
-            assert(aa1.keys == aa2.keys);
+            assert(aa1.keys == aa2.keys, "Keys of identical associative arrays differ.");
 
-            assert(aa1.values == aa2.values);
-            assert(aa1.values.length == aa2.values.length);
+            assert(aa1.values == aa2.values, "Values of identical associative arrays differ.");
+            assert(aa1.values.length == aa2.values.length,
+                "Length of values of identical associative arrays differ.");
             foreach (i; 0 .. aa1.values.length)
-                assert(aa1.values[i] == aa2.values[i]);
+                assert(aa1.values[i] == aa2.values[i],
+                    "Element of identical associative arrays differs.");
 
             foreach (i, key; aa1.keys)
-                assert(aa1.values[i] == aa1[key]);
+                assert(aa1.values[i] == aa1[key],
+                    "Value of associative array cannot accessed via values.");
             foreach (i, key; aa2.keys)
-                assert(aa2.values[i] == aa2[key]);
+                assert(aa2.values[i] == aa2[key],
+                    "Value of associative array cannot accessed via values.");
             return;
         }
 
@@ -839,21 +843,25 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
         {
             alias aa1 = val;
             alias aa2 = val2;
-            assert(aa1 == aa2);
+            assert(aa1 == aa2, "Identical associative arrays differ.");
 
-            assert(aa1.length == aa2.length);
+            assert(aa1.length == aa2.length, "Length of identical associative arrays differs.");
 
-            assert(aa1.keys == aa2.keys);
+            assert(aa1.keys == aa2.keys, "Keys of identical associative arrays differ.");
 
-            assert(aa1.values == aa2.values);
-            assert(aa1.values.length == aa2.values.length);
+            assert(aa1.values == aa2.values, "Values of identical associative arrays differ.");
+            assert(aa1.values.length == aa2.values.length,
+                "Length of values of identical associative arrays differ.");
             foreach (i; 0 .. aa1.values.length)
-                assert(aa1.values[i] == aa2.values[i]);
+                assert(aa1.values[i] == aa2.values[i],
+                    "Element of identical associative arrays differs.");
 
             foreach (i, key; aa1.keys)
-                assert(aa1.values[i] == aa1[key]);
+                assert(aa1.values[i] == aa1[key],
+                    "Value of associative array cannot accessed via values.");
             foreach (i, key; aa2.keys)
-                assert(aa2.values[i] == aa2[key]);
+                assert(aa2.values[i] == aa2[key],
+                    "Value of associative array cannot accessed via values.");
             return;
         }
 
