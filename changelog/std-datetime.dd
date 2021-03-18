@@ -1,0 +1,5 @@
+The old benchmarking functionality in `std.datetime` has been removed.
+
+It had been deprecated in 2.077.0 in favor of
+`std.datetime.stopwatch`, which uses `core.time.MonoTime` and
+`core.time.Duration`.
