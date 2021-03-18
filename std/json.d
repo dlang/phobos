@@ -1680,12 +1680,17 @@ if (isOutputRange!(Out,char))
                 }
                 else
                 {
-                    import std.format : format;
+                    import std.algorithm.searching : canFind;
+                    import std.format : sformat;
                     // The correct formula for the number of decimal digits needed for lossless round
                     // trips is actually:
                     //     ceil(log(pow(2.0, double.mant_dig - 1)) / log(10.0) + 1) == (double.dig + 2)
                     // Anything less will round off (1 + double.epsilon)
-                    json.put("%.18g".format(val));
+                    char[25] buf;
+                    auto result = buf[].sformat!"%.18g"(val);
+                    json.put(result);
+                    if (!result.canFind('e') && !result.canFind('.'))
+                        json.put(".0");
                 }
                 break;
 
@@ -1731,6 +1736,61 @@ if (isOutputRange!(Out,char))
 
     outputRangeObject!(const(char)[])(nullSink)
         .formattedWrite!"%s"(JSONValue.init);
+}
+
+// Issue 16432 - JSON incorrectly parses to string
+@safe unittest
+{
+    // Floating points numbers are rounded to the nearest integer and thus get
+    // incorrectly parsed
+
+    import std.math : isClose;
+
+    string s = "{\"rating\": 3.0 }";
+    JSONValue j = parseJSON(s);
+    assert(j["rating"].type == JSONType.float_);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSONType.float_);
+    assert(isClose(j["rating"].floating, 3.0));
+
+    s = "{\"rating\": -3.0 }";
+    j = parseJSON(s);
+    assert(j["rating"].type == JSONType.float_);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSONType.float_);
+    assert(isClose(j["rating"].floating, -3.0));
+
+    // https://issues.dlang.org/show_bug.cgi?id=13660
+    auto jv1 = JSONValue(4.0);
+    auto textual = jv1.toString();
+    auto jv2 = parseJSON(textual);
+    assert(jv1.type == JSONType.float_);
+    assert(textual == "4.0");
+    assert(jv2.type == JSONType.float_);
+}
+
+@safe unittest
+{
+    // Adapted from https://github.com/dlang/phobos/pull/5005
+    // Result from toString is not checked here, because this
+    // might differ (%e-like or %f-like output) depending
+    // on OS and compiler optimization.
+    import std.math : isClose;
+
+    // test positive extreme values
+    JSONValue j;
+    j["rating"] = 1e18 - 65;
+    assert(isClose(j.toString.parseJSON["rating"].floating, 1e18 - 65));
+
+    j["rating"] = 1e18 - 64;
+    assert(isClose(j.toString.parseJSON["rating"].floating, 1e18 - 64));
+
+    // negative extreme values
+    j["rating"] = -1e18 + 65;
+    assert(isClose(j.toString.parseJSON["rating"].floating, -1e18 + 65));
+
+    j["rating"] = -1e18 + 64;
+    assert(isClose(j.toString.parseJSON["rating"].floating, -1e18 + 64));
 }
 
 /**
