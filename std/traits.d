@@ -59,6 +59,7 @@
  * ))
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
+ *           $(LREF AllImplicitConversionTargets)
  *           $(LREF ImplicitConversionTargets)
  *           $(LREF CopyTypeQualifiers)
  *           $(LREF CopyConstness)
@@ -5003,6 +5004,135 @@ template CommonType(T...)
     static assert(is(CommonType!(string, char[]) == const(char)[]));
     static assert(is(CommonType!(3, 3U) == uint));
     static assert(is(CommonType!(double, int) == double));
+}
+
+
+/**
+Params:
+    T = The type to check
+
+Returns:
+    An $(REF AliasSeq,std,meta) with all possible target types of an implicit
+    conversion `T`.
+
+    If `T` is a class derived from `Object`, the result of
+    $(LREF TransitiveBaseTypeTuple) is returned.
+
+    If the type is not a built-in value type or a class derived from
+    `Object`, an empty $(REF AliasSeq,std,meta) is returned.
+
+See_Also:
+    $(LREF isImplicitlyConvertible)
+ */
+template AllImplicitConversionTargets(T)
+{
+    static if (is(T == bool))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == byte))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == ubyte))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(byte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == short))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(ushort, int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == ushort))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(short, int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == int))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == uint))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(int, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == long))
+        alias AllImplicitConversionTargets = AliasSeq!(ulong, float, double, real);
+    else static if (is(T == ulong))
+        alias AllImplicitConversionTargets = AliasSeq!(long, float, double, real);
+    else static if (is(cent) && is(T == cent))
+        alias AllImplicitConversionTargets = AliasSeq!(UnsignedCentTypeList, float, double, real);
+    else static if (is(ucent) && is(T == ucent))
+        alias AllImplicitConversionTargets = AliasSeq!(SignedCentTypeList, float, double, real);
+    else static if (is(T == float))
+        alias AllImplicitConversionTargets = AliasSeq!(double, real);
+    else static if (is(T == double))
+        alias AllImplicitConversionTargets = AliasSeq!(float, real);
+    else static if (is(T == real))
+        alias AllImplicitConversionTargets = AliasSeq!(float, double);
+    else static if (is(T == char))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(wchar, dchar, byte, ubyte, short, ushort,
+                       int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == wchar))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(dchar, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real);
+    else static if (is(T == dchar))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T : typeof(null)))
+        alias AllImplicitConversionTargets = AliasSeq!(typeof(null));
+    else static if (is(T == class))
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
+    else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
+    {
+       static if (is(typeof(T.init[0]) == shared))
+           alias AllImplicitConversionTargets =
+           AliasSeq!(const(shared(Unqual!(typeof(T.init[0]))))[]);
+       else
+           alias AllImplicitConversionTargets =
+           AliasSeq!(const(Unqual!(typeof(T.init[0])))[]);
+    }
+    else static if (is(T : void*))
+        alias AllImplicitConversionTargets = AliasSeq!(void*);
+    else
+        alias AllImplicitConversionTargets = AliasSeq!();
+}
+
+///
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    static assert(is(AllImplicitConversionTargets!(ulong) == AliasSeq!(long, float, double, real)));
+    static assert(is(AllImplicitConversionTargets!(int) == AliasSeq!(uint, long, ulong, float, double, real)));
+    static assert(is(AllImplicitConversionTargets!(float) == AliasSeq!(double, real)));
+    static assert(is(AllImplicitConversionTargets!(double) == AliasSeq!(float, real)));
+
+    static assert(is(AllImplicitConversionTargets!(char) == AliasSeq!(
+        wchar, dchar, byte, ubyte, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(AllImplicitConversionTargets!(wchar) == AliasSeq!(
+        dchar, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(AllImplicitConversionTargets!(dchar) == AliasSeq!(
+        int, uint, long, ulong, float, double, real
+    )));
+
+    static assert(is(AllImplicitConversionTargets!(string) == AliasSeq!(const(char)[])));
+    static assert(is(AllImplicitConversionTargets!(void*) == AliasSeq!(void*)));
+
+    interface A {}
+    interface B {}
+    class C : A, B {}
+
+    static assert(is(AllImplicitConversionTargets!(C) == AliasSeq!(Object, A, B)));
+    static assert(is(AllImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
+    static assert(is(AllImplicitConversionTargets!(immutable C) == AliasSeq!(
+        immutable Object, immutable A, immutable B
+    )));
+}
+
+@safe unittest
+{
+    static assert(is(AllImplicitConversionTargets!(double)[0] == float));
+    static assert(is(AllImplicitConversionTargets!(double)[1] == real));
+    static assert(is(AllImplicitConversionTargets!(string)[0] == const(char)[]));
 }
 
 
