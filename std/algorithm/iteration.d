@@ -47,6 +47,8 @@ $(T2 permutations,
 $(T2 reduce,
         `reduce!((a, b) => a + b)([1, 2, 3, 4])` returns `10`.
         This is the old implementation of `fold`.)
+$(T2 splitWhen,
+        Lazily splits a range by comparing adjacent elements.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 substitute,
@@ -1991,37 +1993,48 @@ if (isInputRange!Range && !isForwardRange!Range)
     }
 }
 // Outer range for forward range version of chunkBy
-private struct ChunkByOuter(Range)
+private struct ChunkByOuter(Range, bool eqEquivalenceAssured)
 {
     size_t groupNum;
     Range  current;
     Range  next;
+    static if (!eqEquivalenceAssured)
+    {
+        bool nextUpdated;
+    }
 }
 
 // Inner range for forward range version of chunkBy
-private struct ChunkByGroup(alias eq, Range)
+private struct ChunkByGroup(alias eq, Range, bool eqEquivalenceAssured)
 {
     import std.typecons : RefCounted;
 
+    alias OuterRange = ChunkByOuter!(Range, eqEquivalenceAssured);
+
     private size_t groupNum;
-    private Range  start;
+    static if (eqEquivalenceAssured)
+    {
+        private Range  start;
+    }
     private Range  current;
 
-    private RefCounted!(ChunkByOuter!Range) mothership;
+    private RefCounted!(OuterRange) mothership;
 
-    this(RefCounted!(ChunkByOuter!Range) origin)
+    this(RefCounted!(OuterRange) origin)
     {
         groupNum = origin.groupNum;
-
-        start = origin.current.save;
         current = origin.current.save;
-        assert(!start.empty, "Passed range 'r' must not be empty");
+        assert(!current.empty, "Passed range 'r' must not be empty");
+        static if (eqEquivalenceAssured)
+        {
+            start = origin.current.save;
+
+            // Check for reflexivity.
+            assert(eq(start.front, current.front),
+                "predicate is not reflexive");
+        }
 
         mothership = origin;
-
-        // Note: this requires reflexivity.
-        assert(eq(start.front, current.front),
-               "predicate is not reflexive");
     }
 
     @property bool empty() { return groupNum == size_t.max; }
@@ -2029,16 +2042,35 @@ private struct ChunkByGroup(alias eq, Range)
 
     void popFront()
     {
+        static if (!eqEquivalenceAssured)
+        {
+            auto prevElement = current.front;
+        }
+
         current.popFront();
 
-        // Note: this requires transitivity.
-        if (current.empty || !eq(start.front, current.front))
+        static if (eqEquivalenceAssured)
+        {
+            //this requires transitivity from the predicate.
+            immutable nowEmpty = current.empty || !eq(start.front, current.front);
+        }
+        else
+        {
+            immutable nowEmpty = current.empty || !eq(prevElement, current.front);
+        }
+
+
+        if (nowEmpty)
         {
             if (groupNum == mothership.groupNum)
             {
                 // If parent range hasn't moved on yet, help it along by
                 // saving location of start of next Group.
                 mothership.next = current.save;
+                static if (!eqEquivalenceAssured)
+                {
+                    mothership.nextUpdated = true;
+                }
             }
 
             groupNum = size_t.max;
@@ -2053,37 +2085,44 @@ private struct ChunkByGroup(alias eq, Range)
     }
 }
 
+private enum GroupingOpType{binaryEquivalent, binaryAny, unary}
+
 // Single-pass implementation of chunkBy for forward ranges.
-private struct ChunkByImpl(alias pred, alias eq, bool isUnary, Range)
+private struct ChunkByImpl(alias pred, alias eq, GroupingOpType opType, Range)
 if (isForwardRange!Range)
 {
     import std.typecons : RefCounted;
 
-    static assert(isForwardRange!(ChunkByGroup!(eq,Range)));
+    enum bool eqEquivalenceAssured = opType != GroupingOpType.binaryAny;
+    alias OuterRange = ChunkByOuter!(Range, eqEquivalenceAssured);
+    alias InnerRange = ChunkByGroup!(eq, Range, eqEquivalenceAssured);
 
-    private RefCounted!(ChunkByOuter!Range) impl;
+    static assert(isForwardRange!InnerRange);
+
+    private RefCounted!OuterRange impl;
 
     this(Range r)
     {
-        impl = RefCounted!(ChunkByOuter!Range)(0, r, r.save);
+        static if (eqEquivalenceAssured)
+        {
+            impl = RefCounted!OuterRange(0, r, r.save);
+        }
+        else impl = RefCounted!OuterRange(0, r, r.save, false);
     }
 
     @property bool empty() { return impl.current.empty; }
 
-    @property auto front()
+    static if (opType == GroupingOpType.unary) @property auto front()
     {
-        static if (isUnary)
-        {
-            import std.typecons : tuple;
-            return tuple(unaryFun!pred(impl.current.front), ChunkByGroup!(eq,Range)(impl));
-        }
-        else
-        {
-            return ChunkByGroup!(eq,Range)(impl);
-        }
+        import std.typecons : tuple;
+        return tuple(unaryFun!pred(impl.current.front), InnerRange(impl));
+    }
+    else @property auto front()
+    {
+        return InnerRange(impl);
     }
 
-    void popFront()
+    static if (eqEquivalenceAssured) void popFront()
     {
         // Scan for next group. If we're lucky, one of our Groups would have
         // already set .next to the start of the next group, in which case the
@@ -2095,6 +2134,24 @@ if (isForwardRange!Range)
 
         impl.current = impl.next.save;
 
+        // Indicate to any remaining Groups that we have moved on.
+        impl.groupNum++;
+    }
+    else void popFront()
+    {
+        if (impl.nextUpdated)
+        {
+            impl.current = impl.next.save;
+        }
+        else while (true)
+        {
+            auto prevElement = impl.current.front;
+            impl.current.popFront();
+            if (impl.current.empty) break;
+            if (!eq(prevElement, impl.current.front)) break;
+        }
+
+        impl.nextUpdated = false;
         // Indicate to any remaining Groups that we have moved on.
         impl.groupNum++;
     }
@@ -2144,8 +2201,6 @@ if (isForwardRange!Range)
     auto i = 2;
     assert(v.chunkBy!((a,b) => a % i == b % i).equal!equal([[2,4,8],[3],[6],[9,1,5,7]]));
 }
-
-
 
 @system unittest
 {
@@ -2218,7 +2273,8 @@ if (isForwardRange!Range)
  * reflexive (`pred(x,x)` is always true), symmetric
  * (`pred(x,y) == pred(y,x)`), and transitive (`pred(x,y) && pred(y,z)`
  * implies `pred(x,z)`). If this is not the case, the range returned by
- * chunkBy may assert at runtime or behave erratically.
+ * chunkBy may assert at runtime or behave erratically. Use $(LREF splitWhen)
+ * if you want to chunk by a predicate that is not an equivalence relation.
  *
  * Params:
  *  pred = Predicate for determining equivalence.
@@ -2228,7 +2284,8 @@ if (isForwardRange!Range)
  * all elements in a given subrange are equivalent under the given predicate.
  * With a unary predicate, a range of tuples is returned, with the tuple
  * consisting of the result of the unary predicate for each subrange, and the
- * subrange itself.
+ * subrange itself. Copying the range currently has reference semantics, but this may
+ * change in the future.
  *
  * Notes:
  *
@@ -2244,17 +2301,20 @@ if (isForwardRange!Range)
 auto chunkBy(alias pred, Range)(Range r)
 if (isInputRange!Range)
 {
-
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
-
-    static if (isUnary)
+    static if (ChunkByImplIsUnary!(pred, Range))
+    {
+        enum opType = GroupingOpType.unary;
         alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
+    }
     else
+    {
+        enum opType = GroupingOpType.binaryEquivalent;
         alias eq = binaryFun!pred;
+    }
     static if (isForwardRange!Range)
-        return ChunkByImpl!(pred, eq, isUnary, Range)(r);
+        return ChunkByImpl!(pred, eq, opType, Range)(r);
     else
-        return  ChunkByImpl!(pred, Range)(r);
+        return ChunkByImpl!(pred, Range)(r);
 }
 
 /// Showing usage with binary predicate:
@@ -2282,20 +2342,6 @@ if (isInputRange!Range)
         [[1, 2], [2, 2]],
         [[2, 3]]
     ]));
-}
-
-version (none) // this example requires support for non-equivalence relations
-@safe unittest
-{
-    // Grouping by maximum adjacent difference:
-    import std.math : abs;
-    auto r3 = [1, 3, 2, 5, 4, 9, 10].chunkBy!((a, b) => abs(a-b) < 3);
-    assert(r3.equal!equal([
-        [1, 3, 2],
-        [5, 4],
-        [9, 10]
-    ]));
-
 }
 
 /// Showing usage with unary predicate:
@@ -2695,12 +2741,109 @@ version (none) // this example requires support for non-equivalence relations
     }
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=13595
-version (none) // This requires support for non-equivalence relations
+
+
+// https://issues.dlang.org/show_bug.cgi?id=13805
+@system unittest
+{
+    [""].map!((s) => s).chunkBy!((x, y) => true);
+}
+
+/**
+Splits a forward range into subranges in places determined by a binary
+predicate.
+
+When iterating, one element of `r` is compared with `pred` to the next
+element. If `pred` return true, a new subrange is started for the next element.
+Otherwise, they are part of the same subrange.
+
+If the elements are compared with an inequality (!=) operator, consider
+$(LREF chunkBy) instead, as it's likely faster to execute.
+
+Params:
+pred = Predicate for determining where to split. The earlier element in the
+source range is always given as the first argument.
+r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be split.
+Returns: a range of subranges of `r`, split such that within a given subrange,
+calling `pred` with any pair of adjacent elements as arguments returns `false`.
+Copying the range currently has reference semantics, but this may change in the future.
+
+See_also:
+$(LREF splitter), which uses elements as splitters instead of element-to-element
+relations.
+*/
+
+auto splitWhen(alias pred, Range)(Range r)
+if (isForwardRange!Range)
+{   import std.functional : not;
+    return ChunkByImpl!(not!pred, not!pred, GroupingOpType.binaryAny, Range)(r);
+}
+
+//FIXME: these should be @safe
+///
+nothrow pure @system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : dropExactly;
+    auto source = [4, 3, 2, 11, 0, -3, -3, 5, 3, 0];
+
+    auto result1 = source.splitWhen!((a,b) => a <= b);
+    assert(result1.save.equal!equal([
+        [4, 3, 2],
+        [11, 0, -3],
+        [-3],
+        [5, 3, 0]
+    ]));
+
+    //splitWhen, like chunkBy, is currently a reference range (this may change
+    //in future). Remember to call `save` when appropriate.
+    auto result2 = result1.dropExactly(2);
+    assert(result1.save.equal!equal([
+        [-3],
+        [5, 3, 0]
+    ]));
+}
+
+//ensure we don't iterate the underlying range twice
+nothrow @system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.math : abs;
+
+    struct SomeRange
+    {
+        int[] elements;
+        static int popfrontsSoFar;
+
+        auto front(){return elements[0];}
+        nothrow void popFront()
+        {   popfrontsSoFar++;
+            elements = elements[1 .. $];
+        }
+        auto empty(){return elements.length == 0;}
+        auto save(){return this;}
+    }
+
+    auto result = SomeRange([10, 9, 8, 5, 0, 1, 0, 8, 11, 10, 8, 12])
+        .splitWhen!((a, b) => abs(a - b) >= 3);
+
+    assert(result.equal!equal([
+        [10, 9, 8],
+        [5],
+        [0, 1, 0],
+        [8],
+        [11, 10, 8],
+        [12]
+    ]));
+
+    assert(SomeRange.popfrontsSoFar == 12);
+}
+
+// Issue 13595
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkBy!((x, y) => ((x*y) % 3) == 0);
+    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].splitWhen!((x, y) => ((x*y) % 3) > 0);
     assert(r.equal!equal([
         [1],
         [2, 3, 4],
@@ -2709,10 +2852,25 @@ version (none) // This requires support for non-equivalence relations
     ]));
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=13805
-@system unittest
+nothrow pure @system unittest
 {
-    [""].map!((s) => s).chunkBy!((x, y) => true);
+    // Grouping by maximum adjacent difference:
+    import std.math : abs;
+    import std.algorithm.comparison : equal;
+    auto r3 = [1, 3, 2, 5, 4, 9, 10].splitWhen!((a, b) => abs(a-b) >= 3);
+    assert(r3.equal!equal([
+        [1, 3, 2],
+        [5, 4],
+        [9, 10]
+    ]));
+}
+
+// empty range splitWhen
+@nogc nothrow pure @system unittest
+{
+    int[1] sliceable;
+    auto result = sliceable[0 .. 0].splitWhen!((a,b) => a+b > 10);
+    assert(result.empty);
 }
 
 // joiner
@@ -4671,9 +4829,9 @@ Returns:
     one separator is given, the result is a range with two empty elements.
 
 See_Also:
- $(REF _splitter, std,regex) for a version that splits using a regular
-expression defined separator and
- $(REF _split, std,array) for a version that splits eagerly.
+ $(REF _splitter, std,regex) for a version that splits using a regular expression defined separator,
+ $(REF _split, std,array) for a version that splits eagerly and
+ $(LREF splitWhen), which compares adjacent elements instead of element against separator.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
