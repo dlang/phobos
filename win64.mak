@@ -119,9 +119,6 @@ SRC_STD_3= \
 	std\numeric.d \
 	std\bigint.d
 
-SRC_STD_3a= \
-	std\math.d
-
 SRC_STD_3b= \
 	std\base64.d \
 	std\ascii.d \
@@ -211,6 +208,9 @@ SRC_STD_FORMAT= \
     std\format\internal\floats.d \
     std\format\internal\read.d \
     std\format\internal\write.d
+
+SRC_STD_MATH = \
+    std\math\package.d
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
@@ -347,6 +347,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
 	$(SRC_STD_FORMAT) \
+	$(SRC_STD_MATH) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -412,7 +413,6 @@ UNITTEST_OBJS= \
 		unittest2.obj \
 		unittest2a.obj \
 		unittest3.obj \
-		unittest3a.obj \
 		unittest3b.obj \
 		unittest3c.obj \
 		unittest3d.obj \
@@ -421,6 +421,7 @@ UNITTEST_OBJS= \
 		unittest5b.obj \
 		unittest5c.obj \
 		unittest5d.obj \
+		unittest5e.obj \
 		unittest6a.obj \
 		unittest6c.obj \
 		unittest6e.obj \
@@ -442,7 +443,6 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2.obj $(SRC_STD_RANGE)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2a.obj $(SRC_STD_2a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3.obj $(SRC_STD_3)
-	"$(DMD)" $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_3a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3b.obj $(SRC_STD_3b)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3c.obj $(SRC_STD_3c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
@@ -451,6 +451,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5b.obj $(SRC_STD_ALGO_2)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5c.obj $(SRC_STD_ALGO_3)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5d.obj $(SRC_STD_FORMAT)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest5e.obj $(SRC_STD_MATH)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6a.obj $(SRC_STD_6a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6c.obj $(SRC_STD_6c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6e.obj $(SRC_STD_6e)
