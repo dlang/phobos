@@ -355,23 +355,13 @@ private struct _Cache(R, bool bidir)
         }
         else
         {
-            // needed, because the compiler cannot deduce, that 'caches' is initialized
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
+            // Needed because the compiler cannot deduce that 'caches' is initialized.
+            // See https://issues.dlang.org/show_bug.cgi?id=15891
             caches[0] = UE.init;
             static if (bidir)
                 caches[1] = UE.init;
         }
     }
-
-    static if (isInfinite!R)
-        enum empty = false;
-    else
-        bool empty() @property
-        {
-            return source.empty;
-        }
-
-    mixin ImplementLength!source;
 
     E front() @property
     {
@@ -390,13 +380,6 @@ private struct _Cache(R, bool bidir)
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            static if (bidir)
-                caches[1] = UE.init;
-        }
     }
     static if (bidir) void popBack()
     {
@@ -404,12 +387,6 @@ private struct _Cache(R, bool bidir)
         source.popBack();
         if (!source.empty)
             caches[1] = source.back;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            caches[1] = UE.init;
-        }
     }
 
     static if (isForwardRange!R)
@@ -425,42 +402,9 @@ private struct _Cache(R, bool bidir)
         }
     }
 
-    static if (hasSlicing!R)
-    {
-        enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
-
-        static if (hasEndSlicing)
-        {
-            private static struct DollarToken{}
-            enum opDollar = DollarToken.init;
-
-            auto opSlice(size_t low, DollarToken)
-            {
-                return typeof(this)(source[low .. $]);
-            }
-        }
-
-        static if (!isInfinite!R)
-        {
-            typeof(this) opSlice(size_t low, size_t high)
-            {
-                return typeof(this)(source[low .. high]);
-            }
-        }
-        else static if (hasEndSlicing)
-        {
-            auto opSlice(size_t low, size_t high)
-            in
-            {
-                assert(low <= high, "Bounds error when slicing cache.");
-            }
-            do
-            {
-                import std.range : takeExactly;
-                return this[low .. $].takeExactly(high - low);
-            }
-        }
-    }
+    mixin ImplementEmpty!source;
+    mixin ImplementLength!source;
+    mixin ImplementSlicing!source;
 }
 
 /**
@@ -479,6 +423,93 @@ See_Also:
 template map(fun...)
 if (fun.length >= 1)
 {
+    import std.meta : AliasSeq, staticMap;
+    static if (fun.length > 1)
+    {
+        import std.functional : adjoin;
+        import std.meta : staticIndexOf;
+        alias _funs = staticMap!(unaryFun, fun);
+        alias _fun = adjoin!_funs;
+    }
+    else
+    {
+        alias _fun = unaryFun!fun;
+        alias _funs = AliasSeq!(_fun);
+    }
+
+    struct Result(Range)
+    {
+        alias R = Unqual!Range;
+        R _input;
+
+        static if (isBidirectionalRange!R)
+        {
+            @property auto ref back()()
+            {
+                assert(!empty, "Attempting to fetch the back of an empty map.");
+                return _fun(_input.back);
+            }
+
+            void popBack()()
+            {
+                assert(!empty, "Attempting to popBack an empty map.");
+                _input.popBack();
+            }
+        }
+
+        this(R input)
+        {
+            _input = input;
+        }
+
+        mixin ImplementEmpty!_input;
+
+        void popFront()
+        {
+            assert(!empty, "Attempting to popFront an empty map.");
+            _input.popFront();
+        }
+
+        @property auto ref front()
+        {
+            assert(!empty, "Attempting to fetch the front of an empty map.");
+            return _fun(_input.front);
+        }
+
+        static if (isRandomAccessRange!R)
+        {
+            static if (is(typeof(Range.init[ulong.max])))
+                private alias opIndex_t = ulong;
+            else
+                private alias opIndex_t = uint;
+
+            auto ref opIndex(opIndex_t index)
+            {
+                return _fun(_input[index]);
+            }
+        }
+
+        static if (hasLength!R)
+        {
+            @property auto length()
+            {
+                return _input.length;
+            }
+
+            alias opDollar = length;
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return typeof(this)(_input.save);
+            }
+        }
+
+        mixin ImplementSlicing!_input;
+    }
+
     /**
     Params:
         r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -488,38 +519,13 @@ if (fun.length >= 1)
      */
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : AliasSeq, staticMap;
-
         alias RE = ElementType!(Range);
-        static if (fun.length > 1)
+        foreach (f; _funs)
         {
-            import std.functional : adjoin;
-            import std.meta : staticIndexOf;
-
-            alias _funs = staticMap!(unaryFun, fun);
-            alias _fun = adjoin!_funs;
-
-            // Once https://issues.dlang.org/show_bug.cgi?id=5710 is fixed
-            // accross all compilers (as of 2020-04, it wasn't fixed in LDC and GDC),
-            // this validation loop can be moved into a template.
-            foreach (f; _funs)
-            {
-                static assert(!is(typeof(f(RE.init)) == void),
-                    "Mapping function(s) must not return void: " ~ _funs.stringof);
-            }
-        }
-        else
-        {
-            alias _fun = unaryFun!fun;
-            alias _funs = AliasSeq!(_fun);
-
-            // Do the validation separately for single parameters due to
-            // https://issues.dlang.org/show_bug.cgi?id=15777.
-            static assert(!is(typeof(_fun(RE.init)) == void),
+            static assert(!is(typeof(f(RE.init)) == void),
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
-
-        return MapResult!(_fun, Range)(r);
+        return Result!Range(r);
     }
 }
 
@@ -572,111 +578,6 @@ it separately:
     auto foo(string[] args)
     {
         return args.map!strip;
-    }
-}
-
-private struct MapResult(alias fun, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-
-    static if (isBidirectionalRange!R)
-    {
-        @property auto ref back()()
-        {
-            assert(!empty, "Attempting to fetch the back of an empty map.");
-            return fun(_input.back);
-        }
-
-        void popBack()()
-        {
-            assert(!empty, "Attempting to popBack an empty map.");
-            _input.popBack();
-        }
-    }
-
-    this(R input)
-    {
-        _input = input;
-    }
-
-    static if (isInfinite!R)
-    {
-        // Propagate infinite-ness.
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _input.empty;
-        }
-    }
-
-    void popFront()
-    {
-        assert(!empty, "Attempting to popFront an empty map.");
-        _input.popFront();
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty map.");
-        return fun(_input.front);
-    }
-
-    static if (isRandomAccessRange!R)
-    {
-        static if (is(typeof(Range.init[ulong.max])))
-            private alias opIndex_t = ulong;
-        else
-            private alias opIndex_t = uint;
-
-        auto ref opIndex(opIndex_t index)
-        {
-            return fun(_input[index]);
-        }
-    }
-
-    mixin ImplementLength!_input;
-
-    static if (hasSlicing!R)
-    {
-        static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias opSlice_t = ulong;
-        else
-            private alias opSlice_t = uint;
-
-        static if (hasLength!R)
-        {
-            auto opSlice(opSlice_t low, opSlice_t high)
-            {
-                return typeof(this)(_input[low .. high]);
-            }
-        }
-        else static if (is(typeof(_input[opSlice_t.max .. $])))
-        {
-            struct DollarToken{}
-            enum opDollar = DollarToken.init;
-            auto opSlice(opSlice_t low, DollarToken)
-            {
-                return typeof(this)(_input[low .. $]);
-            }
-
-            auto opSlice(opSlice_t low, opSlice_t high)
-            {
-                import std.range : takeExactly;
-                return this[low .. $].takeExactly(high - low);
-            }
-        }
-    }
-
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save);
-        }
     }
 }
 
@@ -878,7 +779,7 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
-Eagerly iterates over `r` and calls `fun` over _each element.
+Eagerly iterates over `range` and calls `fun` over _each element.
 
 If no function to call is specified, `each` defaults to doing nothing but
 consuming the entire range. `r.front` will be evaluated, but that can be avoided
@@ -894,182 +795,113 @@ iteration).
 
 Params:
     fun = function to apply to _each element of the range
-    r = range or iterable over which `each` iterates
+    range = range or iterable over which `each` iterates
 
 Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
 stopping.
 
 See_Also: $(REF tee, std,range)
  */
-template each(alias fun = "a")
+Flag!"each" each(alias fun = "a", Range)(auto ref Range range)
+if (is(typeof({ foreach (ref e; range) {} })) || isInputRange!Range || hasMember!(Range, "opApply"))
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
-    import std.typecons : Flag, Yes, No;
+    import std.typecons : Yes, No;
 
-private:
     alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
-    enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!fun(R.init.front)));
-
-    enum isRangeBinaryIterable(R) =
-        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
-
-    enum isRangeIterable(R) =
-        isInputRange!R &&
-        (isRangeUnaryIterable!R || isRangeBinaryIterable!R);
-
-    enum isForeachUnaryIterable(R) =
-        is(typeof((R r) {
-            foreach (ref a; r)
-                cast(void) unaryFun!fun(a);
-        }));
-
-    enum isForeachUnaryWithIndexIterable(R) =
-        is(typeof((R r) {
-            foreach (i, ref a; r)
-                cast(void) binaryFun!BinaryArgs(i, a);
-        }));
-
-    enum isForeachBinaryIterable(R) =
-        is(typeof((R r) {
-            foreach (ref a, ref b; r)
-                cast(void) binaryFun!fun(a, b);
-        }));
-
-    enum isForeachIterable(R) =
-        (!isForwardRange!R || isDynamicArray!R) &&
-        (isForeachUnaryIterable!R || isForeachBinaryIterable!R ||
-         isForeachUnaryWithIndexIterable!R);
-
-public:
-    /**
-    Params:
-        r = range or iterable over which each iterates
-     */
-    Flag!"each" each(Range)(Range r)
-    if (!isForeachIterable!Range && (
-        isRangeIterable!Range ||
-        __traits(compiles, typeof(r.front).length)))
+    static if (isStaticArray!Range)
     {
-        static if (isRangeIterable!Range)
-        {
-            debug(each) pragma(msg, "Using while for ", Range.stringof);
-            static if (isRangeUnaryIterable!Range)
-            {
-                while (!r.empty)
-                {
-                    static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
-                    {
-                        cast(void) unaryFun!fun(r.front);
-                    }
-                    else
-                    {
-                        if (unaryFun!fun(r.front) == No.each) return No.each;
-                    }
-
-                    r.popFront();
-                }
-            }
-            else // if (isRangeBinaryIterable!Range)
-            {
-                size_t i = 0;
-                while (!r.empty)
-                {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!BinaryArgs(i, r.front);
-                    }
-                    else
-                    {
-                        if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
-                    }
-                    r.popFront();
-                    i++;
-                }
-            }
-        }
+        // Just "recurse" to the range version.
+        return .each!fun(range[]);
+    }
+    else
+    {
+        // Under certain conditions we need to "preprocess" the range.
+        static if (is(typeof(range[])))
+            /*
+            This test captures two distinct legit cases: (1) an array that's not a range because
+            it's qualified, such as `const(string[])`. Using the slicing operator on it will convert
+            it to `const(string)[]`; (2) a object such as `DList!T` that defines a range-returning
+            `opSlice()`. These objects are detected by `foreach`.
+            */
+            auto r = range[];
+        else static if (__traits(isRef, range) && isInputRange!Range)
+            // An input range by ref. Need to make a copy of the range so iteration doesn't "eat" it.
+            auto r = range;
         else
+            // All other cases use the range (lvalue or rvalue) as is.
+            alias r = range;
+
+        // Strategy: try all iteration patterns, pick the first that fits.
+
+        auto f1()() // input range iteration with one argument
         {
-            // range interface with >2 parameters.
-            for (auto range = r; !range.empty; range.popFront())
-            {
-                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+            for (; !r.empty; r.popFront)
+                static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
                 {
-                    cast(void) fun(range.front.expand);
+                    cast(void) unaryFun!fun(r.front);
                 }
                 else
                 {
-                    if (fun(range.front.expand)) return No.each;
+                    if (unaryFun!fun(r.front) == No.each) return No.each;
                 }
-            }
-        }
-        return Yes.each;
-    }
-
-    /// ditto
-    Flag!"each" each(Iterable)(auto ref Iterable r)
-    if (isForeachIterable!Iterable ||
-        __traits(compiles, Parameters!(Parameters!(r.opApply))))
-    {
-        static if (isForeachIterable!Iterable)
-        {
-            static if (isForeachUnaryIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach UNARY for ", Iterable.stringof);
-                {
-                    foreach (ref e; r)
-                    {
-                        static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
-                        {
-                            cast(void) unaryFun!fun(e);
-                        }
-                        else
-                        {
-                            if (unaryFun!fun(e) == No.each) return No.each;
-                        }
-                    }
-                }
-            }
-            else static if (isForeachBinaryIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach BINARY for ", Iterable.stringof);
-                foreach (ref a, ref b; r)
-                {
-                    static if (!is(typeof(binaryFun!fun(a, b)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!fun(a, b);
-                    }
-                    else
-                    {
-                        if (binaryFun!fun(a, b) == No.each) return No.each;
-                    }
-                }
-            }
-            else static if (isForeachUnaryWithIndexIterable!Iterable)
-            {
-                debug(each) pragma(msg, "Using foreach INDEX for ", Iterable.stringof);
-                foreach (i, ref e; r)
-                {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
-                    {
-                        cast(void) binaryFun!BinaryArgs(i, e);
-                    }
-                    else
-                    {
-                        if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
-                    }
-                }
-            }
-            else
-            {
-                static assert(0, "Invalid foreach iteratable type " ~ Iterable.stringof ~ " met.");
-            }
             return Yes.each;
         }
-        else
+
+        auto f2()() // input range, function takes a tuple
         {
+            for (; !r.empty; r.popFront)
+                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                {
+                    cast(void) fun(r.front.expand);
+                }
+                else
+                {
+                    if (fun(r.front.expand) == No.each) return No.each;
+                }
+            return Yes.each;
+        }
+
+        auto f3()() // input range, function takes an index and an element
+        {
+            for (size_t i = 0; !r.empty; r.popFront, ++i)
+                static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                {
+                    cast(void) binaryFun!BinaryArgs(i, r.front);
+                }
+                else
+                {
+                    if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+                }
+            return Yes.each;
+        }
+
+        auto f4()() // opApply with one argument
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (ref e; r) unaryFun!fun(e);
+            return Yes.each;
+        }
+
+        auto f5()() // opApply with two arguments
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (ref i, ref e; r) binaryFun!BinaryArgs(i, e);
+            return Yes.each;
+        }
+
+        auto f6()() // opApply with two arguments, first by value
+        {
+            static assert(hasMember!(Range, "opApply"));
+            foreach (i, ref e; r) binaryFun!BinaryArgs(i, e);
+            return Yes.each;
+        }
+
+        auto f7()() // opApply with arbitrary args
+        {
+            static assert(hasMember!(Range, "opApply"));
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
             auto result = Yes.each;
@@ -1083,18 +915,28 @@ public:
                 else
                 {
                     result = fun(params);
-                    return result == Yes.each ? 0 : -1;
+                    return int(result == Yes.each) - 1;
                 }
             }
             r.opApply(&dg);
             return result;
         }
+
+        static if (is(typeof(f1!()))) return f1();
+        else static if (is(typeof(f2!()))) return f2();
+        else static if (is(typeof(f3!()))) return f3();
+        else static if (is(typeof(f4!()))) return f4();
+        else static if (is(typeof(f5!()))) return f5();
+        else static if (is(typeof(f6!()))) return f6();
+        else static if (is(typeof(f7!()))) return f7();
+        else static assert(0, "Cannot iterate " ~ Range.stringof ~ " with each().");
     }
 }
 
 ///
 @system unittest
 {
+    import std.container : DList;
     import std.range : iota;
     import std.typecons : Flag, Yes, No;
 
@@ -1134,6 +976,13 @@ public:
     auto s = new S;
     s.each!"a++";
     assert(s.x == 1);
+
+    // Try an immutable array of strings. Should be converted to array of immutable strings.
+    immutable(string[]) y = [ "hello", "world" ];
+    cast(void) y.each!();
+
+    DList!int lst;
+    lst.each!();
 }
 
 // binary foreach with two ref args
@@ -1322,7 +1171,71 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!predicate, Range)(range);
+        return Result!Range(range);
+    }
+
+    private struct Result(Range)
+    {
+        alias pred = unaryFun!predicate;
+        alias R = Unqual!Range;
+        R _input;
+        private bool _primed;
+
+        private void prime()
+        {
+            if (_primed) return;
+            while (!_input.empty && !pred(_input.front))
+            {
+                _input.popFront();
+            }
+            _primed = true;
+        }
+
+        this(R r)
+        {
+            _input = r;
+        }
+
+        private this(R r, bool primed)
+        {
+            _input = r;
+            _primed = primed;
+        }
+
+        auto opSlice() { return this; }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty() { prime; return _input.empty; }
+        }
+
+        void popFront()
+        {
+            prime;
+            do
+            {
+                _input.popFront();
+            } while (!_input.empty && !pred(_input.front));
+        }
+
+        @property auto ref front()
+        {
+            prime;
+            assert(!empty, "Attempting to fetch the front of an empty filter.");
+            return _input.front;
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return typeof(this)(_input.save, _primed);
+            }
+        }
     }
 }
 
@@ -1338,6 +1251,7 @@ if (is(typeof(unaryFun!predicate)))
     // Filter below 3
     auto small = filter!(a => a < 3)(arr);
     assert(equal(small, [ 1, 2 ]));
+    assert(equal(small[], [ 1, 2 ]));
 
     // Filter again, but with Uniform Function Call Syntax (UFCS)
     auto sum = arr.filter!(a => a < 3);
@@ -1353,69 +1267,6 @@ if (is(typeof(unaryFun!predicate)))
     double[] c = [ 2.5, 3.0 ];
     auto r1 = chain(c, a, b).filter!(a => cast(int) a != a);
     assert(isClose(r1, [ 2.5 ]));
-}
-
-private struct FilterResult(alias pred, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-    private bool _primed;
-
-    private void prime()
-    {
-        if (_primed) return;
-        while (!_input.empty && !pred(_input.front))
-        {
-            _input.popFront();
-        }
-        _primed = true;
-    }
-
-    this(R r)
-    {
-        _input = r;
-    }
-
-    private this(R r, bool primed)
-    {
-        _input = r;
-        _primed = primed;
-    }
-
-    auto opSlice() { return this; }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty() { prime; return _input.empty; }
-    }
-
-    void popFront()
-    {
-        prime;
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
-    }
-
-    @property auto ref front()
-    {
-        prime;
-        assert(!empty, "Attempting to fetch the front of an empty filter.");
-        return _input.front;
-    }
-
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save, _primed);
-        }
-    }
 }
 
 @safe unittest
@@ -1547,9 +1398,10 @@ private struct FilterResult(alias pred, Range)
  * accept a string, or any callable that can be executed via `pred(element)`.
  *
  * Params:
- *     pred = Function to apply to each element of range
+ *     predicate = Function to apply to each element of range
  */
-template filterBidirectional(alias pred)
+template filterBidirectional(alias predicate)
+if (is(typeof(unaryFun!predicate)))
 {
     /**
     Params:
@@ -1559,7 +1411,56 @@ template filterBidirectional(alias pred)
      */
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        return FilterBidiResult!(unaryFun!pred, Range)(r);
+        return Result!Range(r);
+    }
+
+    private struct Result(Range)
+    {
+        alias pred = unaryFun!predicate;
+        alias R = Unqual!Range;
+        R _input;
+
+        this(R r)
+        {
+            _input = r;
+            while (!_input.empty && !pred(_input.front)) _input.popFront();
+            while (!_input.empty && !pred(_input.back)) _input.popBack();
+        }
+
+        @property bool empty() { return _input.empty; }
+
+        void popFront()
+        {
+            do
+            {
+                _input.popFront();
+            } while (!_input.empty && !pred(_input.front));
+        }
+
+        @property auto ref front()
+        {
+            assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
+            return _input.front;
+        }
+
+        void popBack()
+        {
+            do
+            {
+                _input.popBack();
+            } while (!_input.empty && !pred(_input.back));
+        }
+
+        @property auto ref back()
+        {
+            assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
+            return _input.back;
+        }
+
+        @property auto save()
+        {
+            return typeof(this)(_input.save);
+        }
     }
 }
 
@@ -1580,54 +1481,6 @@ template filterBidirectional(alias pred)
     int[] b = [ 100, -101, 102 ];
     auto r = filterBidirectional!("a > 0")(chain(a, b));
     assert(r.back == 102);
-}
-
-private struct FilterBidiResult(alias pred, Range)
-{
-    alias R = Unqual!Range;
-    R _input;
-
-    this(R r)
-    {
-        _input = r;
-        while (!_input.empty && !pred(_input.front)) _input.popFront();
-        while (!_input.empty && !pred(_input.back)) _input.popBack();
-    }
-
-    @property bool empty() { return _input.empty; }
-
-    void popFront()
-    {
-        do
-        {
-            _input.popFront();
-        } while (!_input.empty && !pred(_input.front));
-    }
-
-    @property auto ref front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
-        return _input.front;
-    }
-
-    void popBack()
-    {
-        do
-        {
-            _input.popBack();
-        } while (!_input.empty && !pred(_input.back));
-    }
-
-    @property auto ref back()
-    {
-        assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
-        return _input.back;
-    }
-
-    @property auto save()
-    {
-        return typeof(this)(_input.save);
-    }
 }
 
 /**
@@ -1657,13 +1510,14 @@ See_Also: $(LREF chunkBy), which chunks an input range into subranges
     of equivalent adjacent elements.
 */
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
+if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front))))
 {
     return typeof(return)(r);
 }
 
 /// ditto
 struct Group(alias pred, R)
-if (isInputRange!R)
+if (isInputRange!R && is(typeof(binaryFun!pred(R.init.front, R.init.front))))
 {
     import std.typecons : Rebindable, tuple, Tuple;
 
@@ -1875,64 +1729,10 @@ pure @safe unittest
     assert(equal(r, "foo".group));
 }
 
-// Used by implementation of chunkBy for non-forward input ranges.
-private struct ChunkByChunkImpl(alias pred, Range)
-if (isInputRange!Range && !isForwardRange!Range)
-{
-    alias fun = binaryFun!pred;
-
-    private Range *r;
-    private ElementType!Range prev;
-
-    this(ref Range range, ElementType!Range _prev)
-    {
-        r = &range;
-        prev = _prev;
-    }
-
-    @property bool empty()
-    {
-        return r.empty || !fun(prev, r.front);
-    }
-
-    @property ElementType!Range front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
-        return r.front;
-    }
-
-    void popFront()
-    {
-        assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
-        r.popFront();
-    }
-}
-
-private template ChunkByImplIsUnary(alias pred, Range)
-{
-    alias e = lvalueOf!(ElementType!Range);
-
-    static if (is(typeof(binaryFun!pred(e, e)) : bool))
-        enum ChunkByImplIsUnary = false;
-    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
-        enum ChunkByImplIsUnary = true;
-    else
-        static assert(0, "chunkBy expects either a binary predicate or "~
-                         "a unary predicate on range elements of type: "~
-                         ElementType!Range.stringof);
-}
-
 // Implementation of chunkBy for non-forward input ranges.
-private struct ChunkByImpl(alias pred, Range)
+private struct ChunkByImpl(alias pred, alias eq, bool isUnary, Range)
 if (isInputRange!Range && !isForwardRange!Range)
 {
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
-
-    static if (isUnary)
-        alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
-    else
-        alias eq = binaryFun!pred;
-
     private Range r;
     private ElementType!Range _prev;
     private bool openChunk = false;
@@ -1944,8 +1744,7 @@ if (isInputRange!Range && !isForwardRange!Range)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
             // relation.
-            assert(eq(r.front, r.front),
-                   "predicate is not reflexive");
+            assert(eq(r.front, r.front), "predicate is not reflexive");
 
             // _prev's type may be a nested struct, so must be initialized
             // directly in the constructor (cannot call savePred()).
@@ -1962,16 +1761,45 @@ if (isInputRange!Range && !isForwardRange!Range)
     @property auto front()
     {
         assert(!empty, "Attempting to fetch the front of an empty chunkBy.");
+
+        static struct Result
+        {
+            private Range *r;
+            private ElementType!Range prev;
+
+            this(ref Range range, ElementType!Range _prev)
+            {
+                r = &range;
+                prev = _prev;
+            }
+
+            @property bool empty()
+            {
+                return r.empty || !eq(prev, r.front);
+            }
+
+            @property ElementType!Range front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty chunkBy chunk.");
+                return r.front;
+            }
+
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty chunkBy chunk.");
+                r.popFront();
+            }
+        }
+
         openChunk = true;
         static if (isUnary)
         {
             import std.typecons : tuple;
-            return tuple(unaryFun!pred(_prev),
-                         ChunkByChunkImpl!(eq, Range)(r, _prev));
+            return tuple(unaryFun!pred(_prev), Result(r, _prev));
         }
         else
         {
-            return ChunkByChunkImpl!(eq, Range)(r, _prev);
+            return Result(r, _prev);
         }
     }
 
@@ -1979,14 +1807,13 @@ if (isInputRange!Range && !isForwardRange!Range)
     {
         assert(!empty, "Attempting to popFront an empty chunkBy.");
         openChunk = false;
-        while (!r.empty)
+        for (; !r.empty; r.popFront)
         {
             if (!eq(_prev, r.front))
             {
                 _prev = r.front;
                 break;
             }
-            r.popFront();
         }
     }
 }
@@ -2088,15 +1915,18 @@ if (isForwardRange!Range)
         // Scan for next group. If we're lucky, one of our Groups would have
         // already set .next to the start of the next group, in which case the
         // loop is skipped.
-        while (!impl.next.empty && eq(impl.current.front, impl.next.front))
+        with (impl)
         {
-            impl.next.popFront();
+            while (!next.empty && eq(current.front, next.front))
+            {
+                next.popFront();
+            }
+
+            current = next.save;
+
+            // Indicate to any remaining Groups that we have moved on.
+            groupNum++;
         }
-
-        impl.current = impl.next.save;
-
-        // Indicate to any remaining Groups that we have moved on.
-        impl.groupNum++;
     }
 
     @property auto save()
@@ -2244,17 +2074,23 @@ if (isForwardRange!Range)
 auto chunkBy(alias pred, Range)(Range r)
 if (isInputRange!Range)
 {
+    alias e = lvalueOf!(ElementType!Range);
 
-    enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
+    static if (is(typeof(binaryFun!pred(e, e)) : bool))
+        enum bool isUnary = false;
+    else static if (is(typeof(unaryFun!pred(e) == unaryFun!pred(e)) : bool))
+        enum bool isUnary = true;
+    else
+        static assert(0, "chunkBy expects either a binary predicate or "~
+                        "a unary predicate on range elements of type: "~
+                        ElementType!Range.stringof);
 
     static if (isUnary)
         alias eq = binaryFun!((a, b) => unaryFun!pred(a) == unaryFun!pred(b));
     else
         alias eq = binaryFun!pred;
-    static if (isForwardRange!Range)
-        return ChunkByImpl!(pred, eq, isUnary, Range)(r);
-    else
-        return  ChunkByImpl!(pred, Range)(r);
+
+    return ChunkByImpl!(pred, eq, isUnary, Range)(r);
 }
 
 /// Showing usage with binary predicate:
@@ -3094,17 +2930,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             static if (isBidirectional)
                 mixin(popBackEmptyElements);
         }
-        static if (isInfinite!RoR)
-        {
-            enum bool empty = false;
-        }
-        else
-        {
-            @property auto empty()
-            {
-                return _items.empty;
-            }
-        }
+        mixin ImplementEmpty!_items;
+
         @property auto ref front()
         {
             assert(!empty, "Attempting to fetch the front of an empty joiner.");
@@ -3670,11 +3497,11 @@ Implements the homonym function (also known as `accumulate`, $(D
 compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
-The call `reduce!(fun)(seed, range)` first assigns `seed` to
+The call `reduce!fun(seed, range)` first assigns `seed` to
 an internal variable `result`, also called the accumulator.
 Then, for each element `x` in `range`, `result = fun(result, x)`
 gets evaluated. Finally, `result` is returned.
-The one-argument version `reduce!(fun)(range)`
+The one-argument version `reduce!fun(range)`
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
@@ -3731,21 +3558,15 @@ if (fun.length >= 1)
 
         static if (isInputRange!R)
         {
-            // no need to throw if range is statically known to be non-empty
-            static if (!__traits(compiles,
-            {
-                static assert(r.length > 0);
-            }))
-                enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
-
+            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
             Args result = r.front;
             r.popFront();
-            return reduceImpl!false(r, result);
+            return impl!false(r, result);
         }
         else
         {
             auto result = Args.init;
-            return reduceImpl!true(r, result);
+            return impl!true(r, result);
         }
     }
 
@@ -3771,31 +3592,24 @@ if (fun.length >= 1)
     if (isIterable!R)
     {
         static if (fun.length == 1)
-            return reducePreImpl(r, seed);
+            alias spawn = seed;
         else
-        {
-            import std.algorithm.internal : algoFormat;
-            static assert(isTuple!S, algoFormat("Seed %s should be a Tuple", S.stringof));
-            return reducePreImpl(r, seed.expand);
-        }
+            auto spawn = seed.expand;
+        alias Result = staticMap!(Unqual, typeof(spawn));
+        static if (is(Result == typeof(spawn)))
+            alias result = spawn;
+        else
+            Result result = spawn;
+        return impl!false(r, result);
     }
 
-    private auto reducePreImpl(R, Args...)(R r, ref Args args)
-    {
-        alias Result = staticMap!(Unqual, Args);
-        static if (is(Result == Args))
-            alias result = args;
-        else
-            Result result = args;
-        return reduceImpl!false(r, result);
-    }
-
-    private auto reduceImpl(bool mustInitialize, R, Args...)(R r, ref Args args)
+    private auto impl(bool mustInitialize, R, Args...)(R r, ref Args args)
     if (isIterable!R)
     {
         import std.algorithm.internal : algoFormat;
         static assert(Args.length == fun.length,
-            algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
+            algoFormat("Seed %s does not have the correct amount of fields (should be %s)",
+            Args.stringof, fun.length));
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
 
         static if (mustInitialize) bool initialized = false;
@@ -3826,15 +3640,12 @@ if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        // no need to throw if range is statically known to be non-empty
-        static if (!__traits(compiles,
-        {
-            static assert(r.length > 0);
-        }))
-        {
-            if (!initialized)
-                throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
-        }
+            // no need to throw if range is statically known to be non-empty
+            static if (!__traits(compiles, { static assert(r.length > 0); }))
+            {
+                import std.exception : enforce;
+                enforce(initialized, "Cannot reduce an empty iterable w/o an explicit seed value.");
+            }
 
         static if (Args.length == 1)
             return args[0];
@@ -4294,7 +4105,7 @@ if (fun.length >= 1)
     auto cumulativeFold(R)(R range)
     if (isInputRange!(Unqual!R))
     {
-        return cumulativeFoldImpl(range);
+        return impl(range);
     }
 
     /++
@@ -4315,12 +4126,12 @@ if (fun.length >= 1)
     if (isInputRange!(Unqual!R))
     {
         static if (fun.length == 1)
-            return cumulativeFoldImpl(range, seed);
+            return impl(range, seed);
         else
-            return cumulativeFoldImpl(range, seed.expand);
+            return impl(range, seed.expand);
     }
 
-    private auto cumulativeFoldImpl(R, Args...)(R range, ref Args args)
+    private auto impl(R, Args...)(R range, ref Args args)
     {
         import std.algorithm.internal : algoFormat;
 
@@ -6977,14 +6788,7 @@ private struct UniqResult(alias pred, Range)
         }
     }
 
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
+    mixin ImplementEmpty!_input;
 
     static if (isForwardRange!Range)
     {
@@ -7126,4 +6930,61 @@ if (isRandomAccessRange!Range && hasLength!Range)
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+/*
+Implements `empty` for a range by forwarding it to `member`. TODO: make this available
+and used throughout Phobos.
+*/
+private mixin template ImplementEmpty(alias member)
+{
+    static if (isInfinite!(typeof(member)))
+        enum bool empty = false;        // Propagate infinite-ness.
+    else
+        @property bool empty()
+        {
+            return member.empty;
+        }
+}
+
+/*
+Implements slicing for a range by forwarding it to `member`. TODO: make this available
+and used throughout Phobos.
+*/
+private mixin template ImplementSlicing(alias member)
+{
+    static if (hasSlicing!(typeof(member)))
+    {
+        private enum hasEndSlicing = is(typeof(member[size_t.max .. $]));
+
+        static if (hasEndSlicing)
+        {
+            static if (!hasLength!(typeof(member)))
+            {
+                private static struct DollarToken {}
+                enum opDollar = DollarToken.init;
+                auto opSlice(size_t low, DollarToken)
+                {
+                    return typeof(this)(member[low .. $]);
+                }
+            }
+        }
+
+        static if (!isInfinite!(typeof(member)))
+        {
+            auto opSlice(size_t low, size_t high)
+            {
+                return typeof(this)(member[low .. high]);
+            }
+        }
+        else static if (hasEndSlicing)
+        {
+            auto opSlice(size_t low, size_t high)
+            in(low <= high, "Bounds error when slicing cache.")
+            {
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
+            }
+        }
+    }
 }
