@@ -881,13 +881,16 @@ public:
     ///
     @system unittest
     {
-        assert(0x1.abcd_e8p+124f        == cast(float)  BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124  == cast(double) BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124L == cast(real)   BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
+        assert(cast(float)  BigInt("35540592535949172786332045140593475584")
+                == 35540592535949172786332045140593475584.0f);
+        assert(cast(double) BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0);
+        assert(cast(real)   BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0L);
 
-        assert(-0x1.3456_78p+108f        == cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108  == cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108L == cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
+        assert(cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000") == -0x1.3456_78p+108f       );
+        assert(cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108 );
+        assert(cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108L);
     }
 
     /// Rounding when casting to floating point
@@ -900,42 +903,42 @@ public:
 
         // BigInts that fall somewhere between two non-infinite floats/doubles
         // are rounded to the closer value when cast to float/double.
-        assert(0x1.aaa_aaep+28f == cast(float) BigInt(0x1aaa_aae7));
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaff));
-        assert(-0x1.aaaaaep+28f == cast(float) BigInt(-0x1aaa_aae7));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaff));
+        assert(cast(float) BigInt(0x1aaa_aae7) == 0x1.aaa_aaep+28f);
+        assert(cast(float) BigInt(0x1aaa_aaff) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aae7) == -0x1.aaaaaep+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaff) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77));
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff));
-        assert(-0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77) == 0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77) == -0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that fall exactly between two non-infinite floats/doubles
         // are rounded away from zero when cast to float/double. (Note that
         // in most environments this is NOT the same rounding rule rule used
         // when casting int/long to float/double.)
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaf0));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaf0));
+        assert(cast(float) BigInt(0x1aaa_aaf0) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaf0) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that are bounded on one side by the largest positive or
         // most negative finite float/double and on the other side by infinity
         // or -infinity are rounded as if in place of infinity was the value
         // `2^^(T.max_exp)` when cast to float/double.
-        assert(float.infinity == cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(-float.infinity == cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") == float.infinity);
+        assert(cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999") == -float.infinity);
 
-        assert(double.infinity > cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(real.infinity > cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < double.infinity);
+        assert(cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < real.infinity);
     }
 
     @safe unittest
     {
         // Test exponent overflow is correct.
-        assert(0x1.000000p+29f == cast(float) BigInt(0x1fffffff));
-        assert(0x1.000000p+61 == cast(double) BigInt(0x1fff_ffff_ffff_fff0));
+        assert(cast(float) BigInt(0x1fffffff) == 0x1.000000p+29f);
+        assert(cast(double) BigInt(0x1fff_ffff_ffff_fff0) == 0x1.000000p+61);
     }
 
     private T toFloat(T, string roundingMode)() @safe nothrow @nogc const
