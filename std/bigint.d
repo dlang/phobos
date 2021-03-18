@@ -979,7 +979,8 @@ public:
                 uint resultBits = (uint(isNegative) << 31) | // sign bit
                     ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
                     cast(uint) ((sansExponent << 1) >>> (64 - 23)); // mantissa.
-                return *cast(float*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(float*) &resultBits)();
             }
             else static if (T.mant_dig == double.mant_dig)
             {
@@ -988,7 +989,8 @@ public:
                 ulong resultBits = (ulong(isNegative) << 63) | // sign bit
                     ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
                     ((sansExponent << 1) >>> (64 - 52)); // mantissa.
-                return *cast(double*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(double*) &resultBits)();
             }
             else
             {
