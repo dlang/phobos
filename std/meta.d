@@ -787,27 +787,67 @@ template DerivedToFront(TList...)
     static assert(is(TL == AliasSeq!(C, B, A)));
 }
 
-private enum staticMapExpandFactor = 150;
-private string generateCases()
+private enum staticMapExpandFactor = 5008;
+private char[] generateCases()
 {
-    string[staticMapExpandFactor] chunks;
-    chunks[0] = q{};
-    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
-    string ret = `AliasSeq!(`;
-    foreach (chunk; chunks)
-        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
-    return ret ~ `)`;
+    assert(__ctfe, "Only call this in ctfe");
+    static immutable char[16] digits = ['0', '1', '2', '3', '4', '5', '6', '7',
+                                        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+    char[6] idx;
+    char[] block;
+    // build a block of 16 elements
+    idx[] = "0x0000";
+    enum prefix = `F!(Args[`;
+    foreach (i; 0 .. 16)
+    {
+        idx[$-1] = digits[i];
+        block ~= prefix;
+        block ~= idx[];
+        block ~= `]),`;
+    }
+    size_t offset = block.length / 16;
+    char[] ret = new char[staticMapExpandFactor * offset];
+    // work on blocks of 16 elements at a time, editing all but the lower nibble of the index
+    for (size_t i = 0; i * 16 < staticMapExpandFactor; ++i)
+    {
+        for (size_t v = i, p = idx.length - 2; v; --p, v = v >> 4)
+            idx[p] = digits[v & 0x0f];
+        foreach (j; 0 .. 16)
+            (&block[offset * j + prefix.length])[0 .. idx.length - 1] = idx[0 .. $-1];
+        ret[i * block.length .. (i + 1) * block.length] = block[];
+    }
+    return ret;
 }
-private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
+
+private enum staticMapBasicCases = generateCases();
+// size of one mapping in the string
+private enum staticMapCaseSize =
+   staticMapBasicCases.length / staticMapExpandFactor;
 
 /**
 Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+
+Params:
+   expandFactor = the threshold at which to use recursion/caching instead
+   of a mixin expansion. Must be less than or equal to staticMapExpandFactor
+   (currently 5008). If unspecified, a default threshold of 150 is used.
  */
+
+template staticMap(size_t expandFactor, alias F, Args ...)
+if (expandFactor <= staticMapExpandFactor)
+{
+    static if (Args.length <= expandFactor)
+        mixin(`alias staticMap = AliasSeq!(`, staticMapBasicCases[0 .. Args.length * staticMapCaseSize], `);`);
+    else
+        alias staticMap = AliasSeq!(staticMap!(expandFactor, F, Args[0 .. $/2]),
+                                    staticMap!(expandFactor, F, Args[$/2 .. $]));
+}
+
+/// ditto
 template staticMap(alias F, Args ...)
 {
-    static if (Args.length < staticMapExpandFactor)
-        mixin(staticMapBasicCases[Args.length]);
+    static if (Args.length <= 150)
+        mixin(`alias staticMap = AliasSeq!(`, staticMapBasicCases[0 .. Args.length * staticMapCaseSize], `);`);
     else
         alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
 }
@@ -843,6 +883,16 @@ template staticMap(alias F, Args ...)
     alias A = staticMap!(getTypeId, int);
 
     assert(A == typeid(int));
+}
+
+// test threshold limit
+@safe unittest
+{
+    alias constOf(T) = const(T);
+    alias src = Repeat!(100, int, char, bool, float);
+    alias result = Repeat!(100, const(int), const(char), const(bool), const(float));
+    alias computed = staticMap!(500, constOf, src);
+    static assert(is(result == computed));
 }
 
 /**
