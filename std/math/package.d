@@ -117,7 +117,7 @@ $(TR $(TDNW Hardware Control) $(TD
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright), Don Clugston,
  *            Conversion of CEPHES math library to D by Iain Buclaw and David Nadlinger
- * Source: $(PHOBOSSRC std/math.d)
+ * Source: $(PHOBOSSRC std/math/package.d)
  */
 module std.math;
 
@@ -765,7 +765,7 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testTan!T();
 
-    assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0L), useDigits));
+    assert(equalsDigit(tan(PI / 3), sqrt(3.0L), useDigits));
 }
 
 /***************
@@ -794,13 +794,13 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 @safe unittest
 {
     assert(acos(0.0).isClose(1.570796327));
-    assert(acos(0.5).isClose(std.math.PI / 3));
+    assert(acos(0.5).isClose(PI / 3));
     assert(acos(PI).isNaN);
 }
 
 @safe @nogc nothrow unittest
 {
-    assert(equalsDigit(acos(0.5), std.math.PI / 3, useDigits));
+    assert(equalsDigit(acos(0.5), PI / 3, useDigits));
 }
 
 /***************
@@ -1077,7 +1077,7 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan!T();
 
-    assert(equalsDigit(atan(std.math.sqrt(3.0L)), PI / 3, useDigits));
+    assert(equalsDigit(atan(sqrt(3.0L)), PI / 3, useDigits));
 }
 
 /***************
@@ -1278,7 +1278,7 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan2!T();
 
-    assert(equalsDigit(atan2(1.0L, std.math.sqrt(3.0L)), PI / 6, useDigits));
+    assert(equalsDigit(atan2(1.0L, sqrt(3.0L)), PI / 6, useDigits));
 }
 
 /***********************************
@@ -9982,7 +9982,7 @@ if (isNumeric!X)
     }}
 }
 
-package: // Not public yet
+package(std): // Not public yet
 /* Return the value that lies halfway between x and y on the IEEE number line.
  *
  * Formally, the result is the arithmetic mean of the binary significands of x
