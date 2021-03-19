@@ -344,7 +344,7 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 

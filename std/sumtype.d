@@ -203,7 +203,7 @@ version (D_BetterC) {} else
     // Return a "pretty-printed" representation of expr
     string pprint(Expr expr)
     {
-        import std.format;
+        import std.format : format;
 
         return expr.match!(
             (double num) => "%g".format(num),
@@ -223,7 +223,7 @@ version (D_BetterC) {} else
     assert(pprint(*myExpr) == "(a + (2 * b))");
 }
 
-import std.format : FormatSpec, singleSpec;
+import std.format.spec : FormatSpec, singleSpec;
 import std.meta : AliasSeq, Filter, IndexOf = staticIndexOf, Map = staticMap;
 import std.meta : NoDuplicates;
 import std.meta : anySatisfy, allSatisfy;
@@ -758,7 +758,7 @@ public:
      */
     void toString(this This, Sink, Char)(ref Sink sink, const ref FormatSpec!Char fmt)
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
 
         this.match!((ref value) {
             formatValue(sink, value, fmt);

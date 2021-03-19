@@ -68,7 +68,7 @@ version (Windows):
 import core.sys.windows.winbase, core.sys.windows.winnt;
 import std.array : appender;
 import std.conv : to;
-import std.format : formattedWrite;
+import std.format.write : formattedWrite;
 import std.windows.charset;
 
 string sysErrorString(

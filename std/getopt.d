@@ -1667,7 +1667,7 @@ Params:
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, string style = "%*s %*s%*s%s\n")
 {
     import std.algorithm.comparison : min, max;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     output.formattedWrite("%s\n", text);
 

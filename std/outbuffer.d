@@ -311,7 +311,7 @@ class OutBuffer
      */
     void writef(Char, A...)(scope const(Char)[] fmt, A args)
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(this, fmt, args);
     }
 
@@ -337,7 +337,7 @@ class OutBuffer
      */
     void writefln(Char, A...)(scope const(Char)[] fmt, A args)
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(this, fmt, args);
         put('\n');
     }

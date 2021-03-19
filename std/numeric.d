@@ -605,7 +605,8 @@ public:
     /// ditto
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {

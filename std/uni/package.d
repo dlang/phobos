@@ -960,7 +960,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -2431,7 +2431,7 @@ public:
         ---
     */
 
-    private import std.format : FormatSpec;
+    private import std.format.spec : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2444,7 +2444,7 @@ public:
      */
     void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
         auto range = byInterval;
         if (range.empty)
             return;

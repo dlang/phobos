@@ -108,7 +108,7 @@ if (is(R : double) && is(I : double))
 struct Complex(T)
 if (isFloatingPoint!T)
 {
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
     import std.range.primitives : isOutputRange;
 
     /** The real part of the number. */
@@ -158,7 +158,7 @@ if (isFloatingPoint!T)
     void toString(Writer, Char)(scope Writer w, scope const ref FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
         import std.math : signbit;
         import std.range.primitives : put;
         formatValue(w, re, formatSpec);
@@ -1124,7 +1124,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 @safe unittest
 {
     // Test wide string formatting
-    import std.format;
+    import std.format.write : formattedWrite;
     wstring wformat(T)(string format, Complex!T c)
     {
         import std.array : appender;

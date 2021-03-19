@@ -312,7 +312,7 @@ public:
     {
         import std.conv : text;
         import std.exception : enforce;
-        import std.format : formattedRead;
+        import std.format.read : formattedRead;
         import std.string : chomp;
 
         enforce(file.isOpen, "ByRecord: File must be open");
@@ -1586,7 +1586,7 @@ Throws: `Exception` if the file is not opened.
                 alias A = typeof(arg);
                 static if (isAggregateType!A || is(A == enum))
                 {
-                    import std.format : formattedWrite;
+                    import std.format.write : formattedWrite;
 
                     formattedWrite(w, "%s", arg);
                 }
@@ -1610,7 +1610,7 @@ Throws: `Exception` if the file is not opened.
                 }
                 else
                 {
-                    import std.format : formattedWrite;
+                    import std.format.write : formattedWrite;
 
                     // Most general case
                     formattedWrite(w, "%s", arg);
@@ -1663,7 +1663,7 @@ Throws: `Exception` if the file is not opened.
     /// ditto
     void writef(Char, A...)(in Char[] fmt, A args)
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
 
         formattedWrite(lockingTextWriter(), fmt, args);
     }
@@ -1682,7 +1682,7 @@ Throws: `Exception` if the file is not opened.
     /// ditto
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
 
         auto w = lockingTextWriter();
         formattedWrite(w, fmt, args);
@@ -2028,7 +2028,7 @@ $(CONSOLE
     /// ditto
     uint readf(Data...)(scope const(char)[] format, auto ref Data data)
     {
-        import std.format : formattedRead;
+        import std.format.read : formattedRead;
 
         assert(isOpen);
         auto input = LockingTextReader(this);

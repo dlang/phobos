@@ -814,7 +814,7 @@ pure @safe unittest
 // https://issues.dlang.org/show_bug.cgi?id=10571
 @safe unittest
 {
-    import std.format;
+    import std.format.write : formattedWrite;
     string buf;
     formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
     assert(buf == "hello");
@@ -822,7 +822,7 @@ pure @safe unittest
 
 @safe unittest
 {
-    import std.format;
+    import std.format.write : formattedWrite;
     import std.meta : AliasSeq;
     struct PutC(C)
     {

@@ -966,7 +966,7 @@ struct BitArray
 private:
 
     import core.bitop : btc, bts, btr, bsf, bt;
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
 
     size_t _len;
     size_t* _ptr;
