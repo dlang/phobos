@@ -199,7 +199,7 @@ version (D_HardFloat)
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
 
-version (StdUnittest) package(std)
+version (StdUnittest) public
 {
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
@@ -213,7 +213,7 @@ version (StdUnittest) package(std)
      *  0       nomatch
      */
 
-    package(std) bool equalsDigit(real x, real y, uint ndigits) @safe nothrow @nogc
+    public bool equalsDigit(real x, real y, uint ndigits) @safe nothrow @nogc
     {
         import core.stdc.stdio : sprintf;
 
@@ -250,6 +250,12 @@ version (StdUnittest) package(std)
         assert(ix < bufy.length && ix > 0);
 
         return bufx[0 .. ix] == bufy[0 .. iy];
+    }
+
+    ///
+    @safe unittest
+    {
+        // just a test, so let's make dscanner happy ;-)
     }
 }
 
