@@ -199,8 +199,8 @@ version (D_HardFloat)
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
 
-version (StdUnittest) public
-{
+//version (StdUnittest) package
+//{
     static if (real.sizeof > double.sizeof)
         enum uint useDigits = 16;
     else
@@ -257,7 +257,7 @@ version (StdUnittest) public
     {
         // just a test, so let's make dscanner happy ;-)
     }
-}
+//}
 
 
 // Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
