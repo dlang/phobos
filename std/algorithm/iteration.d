@@ -880,7 +880,7 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
-Eagerly iterates over `r` and calls `fun` over _each element.
+Eagerly iterates over `r` and calls `fun` with _each element.
 
 If no function to call is specified, `each` defaults to doing nothing but
 consuming the entire range. `r.front` will be evaluated, but that can be avoided
@@ -1095,14 +1095,16 @@ public:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.range : iota;
-    import std.typecons : Flag, Yes, No;
+    import std.typecons : No;
 
     long[] arr;
     iota(5).each!(n => arr ~= n);
     assert(arr == [0, 1, 2, 3, 4]);
+
+    // stop iterating early
     iota(5).each!((n) { arr ~= n; return No.each; });
     assert(arr == [0, 1, 2, 3, 4, 0]);
 
@@ -1113,11 +1115,11 @@ public:
     arr.each!"a++";
     assert(arr == [2, 3, 4, 5, 6, 2]);
 
+    auto m = arr.map!(n => n);
     // by-ref lambdas are not allowed for non-ref ranges
-    static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
+    static assert(!__traits(compiles, m.each!((ref n) => n++)));
 
     // The default predicate consumes the range
-    auto m = arr.map!(n => n);
     (&m).each();
     assert(m.empty);
 
@@ -1125,8 +1127,11 @@ public:
     arr[] = 0;
     arr.each!"a=i"();
     assert(arr == [0, 1, 2, 3, 4, 5]);
+}
 
-    // opApply iterators work as well
+/// opApply iterators work as well
+@system unittest
+{
     static class S
     {
         int x;
