@@ -1100,7 +1100,7 @@ public:
     import std.range : iota;
     import std.typecons : No;
 
-    long[] arr;
+    int[] arr;
     iota(5).each!(n => arr ~= n);
     assert(arr == [0, 1, 2, 3, 4]);
 
@@ -1127,12 +1127,12 @@ public:
 /// `each` can pass an index variable for iterable objects which support this
 @safe unittest
 {
-    auto arr = new int[4];
+    auto arr = new size_t[4];
 
     arr.each!"a=i"();
     assert(arr == [0, 1, 2, 3]);
 
-    arr.each!((i, ref e) => e = cast(int) i * 2);
+    arr.each!((i, ref e) => e = i * 2);
     assert(arr == [0, 2, 4, 6]);
 }
 
