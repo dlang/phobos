@@ -5211,7 +5211,7 @@ slurp(Types...)(string filename, scope const(char)[] format)
     import std.array : appender;
     import std.conv : text;
     import std.exception : enforce;
-    import std.format : formattedRead;
+    import std.format.read : formattedRead;
     import std.stdio : File;
     import std.string : stripRight;
 

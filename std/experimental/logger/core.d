@@ -168,7 +168,7 @@ The fractional second part is in milliseconds and is always 3 digits.
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
 if (isOutputRange!(OutputRange,string))
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     const auto dt = cast(DateTime) time;
     const auto fsec = time.fracSecs.total!"msecs";
@@ -657,7 +657,7 @@ private struct MsgRange
 
 private void formatString(A...)(MsgRange oRange, A args)
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     foreach (arg; args)
     {
@@ -1043,7 +1043,7 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
-                import std.format : formattedWrite;
+                import std.format.write : formattedWrite;
 
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
                                      condition))
@@ -1091,7 +1091,7 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
-                import std.format : formattedWrite;
+                import std.format.write : formattedWrite;
 
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
                 {
@@ -1444,7 +1444,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
@@ -1492,7 +1492,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
@@ -1541,7 +1541,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
@@ -1587,7 +1587,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel))

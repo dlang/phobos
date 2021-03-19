@@ -69,7 +69,8 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
-import std.format : singleSpec, FormatSpec, formatValue;
+import std.format.spec : singleSpec, FormatSpec;
+import std.format.write : formatValue;
 import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
@@ -1268,7 +1269,7 @@ if (distinctFieldNames!(Specs))
             return app.data;
         }
 
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
 
         /**
          * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
@@ -2945,7 +2946,7 @@ struct Nullable(T)
     @safe unittest
     {
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
 
         auto app = appender!string();
         Nullable!int a = 1;
@@ -3617,7 +3618,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -4126,7 +4128,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {

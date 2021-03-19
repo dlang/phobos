@@ -1806,7 +1806,7 @@ if (isSomeString!S)
 @safe unittest
 {
     import std.conv : to;
-    import std.format;
+    import std.format : format;
     import std.typecons;
 
     static auto makeEntry(S)(string l, string[] r)
@@ -3613,7 +3613,7 @@ if (isDynamicArray!A)
      */
     string toString()() const
     {
-        import std.format : singleSpec;
+        import std.format.spec : singleSpec;
 
         auto app = appender!string();
         auto spec = singleSpec("%s");
@@ -3634,7 +3634,7 @@ if (isDynamicArray!A)
         return app.data;
     }
 
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
 
     /// ditto
     template toString(Writer)
@@ -3642,7 +3642,7 @@ if (isDynamicArray!A)
     {
         void toString(ref Writer w, scope const ref FormatSpec!char fmt) const
         {
-            import std.format : formatValue;
+            import std.format.write : formatValue;
             import std.range.primitives : put;
             put(w, Unqual!(typeof(this)).stringof);
             put(w, '(');
@@ -3670,7 +3670,8 @@ if (isDynamicArray!A)
 
 @safe pure unittest
 {
-    import std.format : format, singleSpec;
+    import std.format : format;
+    import std.format.spec : singleSpec;
 
     auto app = appender!(int[])();
     app.put(1);

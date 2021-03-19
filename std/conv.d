@@ -145,7 +145,8 @@ private
         else
         {
             import std.array : appender;
-            import std.format : FormatSpec, formatValue;
+            import std.format.spec : FormatSpec;
+            import std.format.write : formatValue;
 
             auto w = appender!T();
             FormatSpec!(ElementEncodingType!T) f;
@@ -1038,7 +1039,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
         }
 
         import std.array : appender;
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
 
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
@@ -1100,7 +1102,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
     !isInfinite!S && isExactSomeString!T && !isCopyable!S && !isStaticArray!S)
 {
     import std.array : appender;
-    import std.format : FormatSpec, formatValue;
+    import std.format.spec : FormatSpec;
+    import std.format.write : formatValue;
 
     auto w = appender!T();
     FormatSpec!(ElementEncodingType!T) f;

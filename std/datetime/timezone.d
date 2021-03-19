@@ -1420,7 +1420,7 @@ package:
     {
         import std.datetime.date : DateTimeException;
         import std.exception : enforce;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
                                   "Offset from UTC must be within range (-24:00 - 24:00).");
@@ -1489,7 +1489,7 @@ package:
     static void toISOExtString(W)(ref W writer, Duration utcOffset)
     {
         import std.datetime.date : DateTimeException;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         import std.exception : enforce;
 
         immutable absOffset = abs(utcOffset);

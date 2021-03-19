@@ -376,7 +376,7 @@ struct Group(DataIndex)
         if (begin < end)
             return "(unmatched)";
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
@@ -387,7 +387,7 @@ struct Group(DataIndex)
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
     import std.array : appender;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
     switch (irb[pc].code)

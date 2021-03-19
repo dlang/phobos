@@ -21,7 +21,7 @@ class FileLogger : Logger
 {
     import std.concurrency : Tid;
     import std.datetime.systime : SysTime;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     /** A constructor for the `FileLogger` Logger.
 

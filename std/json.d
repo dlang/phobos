@@ -1726,7 +1726,7 @@ if (isOutputRange!(Out,char))
 // https://issues.dlang.org/show_bug.cgi?id=20511
 @system unittest
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
     import std.range : nullSink, outputRangeObject;
 
     outputRangeObject!(const(char)[])(nullSink)
@@ -2325,7 +2325,7 @@ pure nothrow @safe unittest
 @safe unittest
 {
     import std.array : appender;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     string s =
 `{

@@ -27,7 +27,8 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-import std.format : FormatSpec, FormatException;
+import std.format.spec : FormatSpec;
+import std.format : FormatException;
 import std.internal.math.biguintcore;
 import std.internal.math.biguintnoasm : BigDigit;
 import std.range.primitives;
@@ -1366,7 +1367,7 @@ public:
     // the function failed to instantiate.
     @system unittest
     {
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
         import std.array : appender;
         BigInt num = 503;
         auto dst = appender!string();
@@ -1746,7 +1747,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1797,7 +1798,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1848,7 +1849,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1900,7 +1901,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     auto w1 = appender!string();
     auto w2 = appender!string();
