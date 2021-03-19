@@ -1645,10 +1645,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *
      * Params:
      *  range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-     *      over the data to be decoded.
+     *      over the data to be decoded, or a `char` array. Will not accept
+     *      `wchar[]` nor `dchar[]`.
      *
      * Returns:
-     *  If $(D_PARAM range) is a range of characters, a `Decoder` that
+     *  If $(D_PARAM range) is a range or array of `char`, a `Decoder` that
      *  iterates over the bytes of the corresponding Base64 decoding.
      *
      *  If $(D_PARAM range) is a range of ranges of characters, a `Decoder`
@@ -1656,7 +1657,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  the range.
      *
      *  In both cases, the returned `Decoder` will be a
-     * $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) if the
+     *  $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) if the
      *  given `range` is at least a forward range, otherwise it will be only
      *  an input range.
      *
@@ -1673,7 +1674,6 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * }
      * -----
      *
-     * Example:
      * This example shows decoding one byte at a time.
      * -----
      * auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
@@ -1686,6 +1686,24 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     Decoder!(Range) decoder(Range)(Range range) if (isInputRange!Range)
     {
         return typeof(return)(range);
+    }
+
+    /// ditto
+    Decoder!(const(ubyte)[]) decoder()(const(char)[] range)
+    {
+        import std.string : representation;
+        return typeof(return)(range.representation);
+    }
+
+    ///
+    @safe pure unittest
+    {
+        import std.algorithm.comparison : equal;
+        string encoded =
+            "VGhvdSBzaGFsdCBuZXZlciBjb250aW51ZSBhZnRlciBhc3NlcnRpbmcgbnVsbA==";
+
+        assert(Base64.decoder(encoded)
+            .equal("Thou shalt never continue after asserting null"));
     }
 
 
