@@ -1122,11 +1122,18 @@ public:
     // The default predicate consumes the range
     (&m).each();
     assert(m.empty);
+}
 
-    // Indexes are also available for in-place mutations
-    arr[] = 0;
+/// `each` can pass an index variable for iterable objects which support this
+@safe unittest
+{
+    auto arr = new int[4];
+
     arr.each!"a=i"();
-    assert(arr == [0, 1, 2, 3, 4, 5]);
+    assert(arr == [0, 1, 2, 3]);
+
+    arr.each!((i, ref e) => e = cast(int) i * 2);
+    assert(arr == [0, 2, 4, 6]);
 }
 
 /// opApply iterators work as well
@@ -1225,10 +1232,9 @@ public:
 
 // https://issues.dlang.org/show_bug.cgi?id=15357
 // `each` should behave similar to foreach
-/// `each` works with iterable objects which provide an index variable, along with each element
 @safe unittest
 {
-    import std.range : iota, lockstep;
+    import std.range : iota;
 
     auto arr = [1, 2, 3, 4];
 
