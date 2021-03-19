@@ -1,0 +1,12 @@
+Module `std.math` has been split into smaller modules
+
+The module `std.math` has been split into submodules:
+
+$(UL
+    $(LI `std.math.trig`: Trigonometric functions)
+)
+
+All public symbols are still accessible using `std.math` as usual.
+
+$(I Please note: The splitting process is still underway, more modules
+will be split off in the near future.)

@@ -234,7 +234,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
 PACKAGE_std_format = package read spec write $(addprefix internal/, floats read write)
-PACKAGE_std_math = package
+PACKAGE_std_math = package trig
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
