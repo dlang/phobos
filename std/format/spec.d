@@ -842,9 +842,6 @@ Throws:
     A $(REF_ALTTEXT FormatException, FormatException, std,format) when the
     format string contains no format specifier or more than a single format
     specifier or when the format specifier is malformed.
-
-Known_bugs:
-    Does not throw on %%. ($(BUGZILLA 21738))
   */
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
@@ -854,6 +851,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 
     enforceFmt(fmt.length >= 2, "fmt must be at least 2 characters long");
     enforceFmt(fmt.front == '%', "fmt must start with a '%' character");
+    enforceFmt(fmt[1] != '%', "'%%' is not a permissible format specifier");
 
     static struct DummyOutputRange
     {
@@ -901,6 +899,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assertThrown!FormatException(singleSpec("2.3e"));
     assertThrown!FormatException(singleSpec("Test%2.3e"));
     assertThrown!FormatException(singleSpec("%2.3eTest"));
+    assertThrown!FormatException(singleSpec("%%"));
 }
 
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
