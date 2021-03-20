@@ -9,8 +9,9 @@
  *     $(MYREF register)
  *     $(MYREF spawn)
  *     $(MYREF spawnLinked)
- *     $(MYREF Tid)
  *     $(MYREF thisTid)
+ *     $(MYREF Tid)
+ *     $(MYREF TidMissingException)
  *     $(MYREF unregister)
  * ))
  * $(TR $(TD Message passing) $(TD
@@ -28,7 +29,6 @@
  *     $(MYREF OnCrowding)
  *     $(MYREF OwnerTerminated)
  *     $(MYREF PriorityMessageException)
- *     $(MYREF TidMissingException)
  * ))
  * $(TR $(TD Scheduler) $(TD
  *     $(MYREF FiberScheduler)
