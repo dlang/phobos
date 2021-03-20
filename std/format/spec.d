@@ -16,7 +16,6 @@
 module std.format.spec;
 
 import std.traits : Unqual;
-import std.format;
 
 template FormatSpec(Char)
 if (!is(Unqual!Char == Char))
@@ -221,6 +220,8 @@ if (is(Unqual!Char == Char))
      */
     bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
     {
+        import std.format : enforceFmt;
+
         if (trailing.empty)
             return false;
         for (size_t i = 0; i < trailing.length; ++i)
@@ -248,6 +249,8 @@ if (is(Unqual!Char == Char))
 
     private void fillUp() scope
     {
+        import std.format : arrayPtrDiff, enforceFmt, FormatException;
+
         // Reset content
         if (__ctfe)
         {
@@ -473,6 +476,7 @@ if (is(Unqual!Char == Char))
     package bool readUpToNextSpec(R)(ref R r) scope
     {
         import std.ascii : isLower, isWhite;
+        import std.format : enforceFmt;
         import std.utf : stride;
 
         // Reset content
@@ -540,6 +544,7 @@ if (is(Unqual!Char == Char))
     package string getCurFmtStr() const
     {
         import std.array : appender;
+        import std.format.write : formatValue;
 
         auto w = appender!string();
         auto f = FormatSpec!Char("%s"); // for stringnize
@@ -619,6 +624,8 @@ if (is(Unqual!Char == Char))
     void toString(OutputRange)(ref OutputRange writer) const
     if (isOutputRange!(OutputRange, char))
     {
+        import std.format.write : formatValue;
+
         auto s = singleSpec("%s");
 
         put(writer, "address = ");
@@ -658,6 +665,7 @@ if (is(Unqual!Char == Char))
     import std.array : appender;
     import std.conv : text;
     import std.exception : assertThrown;
+    import std.format : FormatException;
 
     auto w = appender!(char[])();
     auto f = FormatSpec!char("abc%sdef%sghi");
@@ -735,6 +743,7 @@ if (is(Unqual!Char == Char))
 {
     import std.array : appender;
     import std.exception : assertThrown;
+    import std.format : FormatException;
 
     auto a = appender!(string)();
 
@@ -748,6 +757,7 @@ if (is(Unqual!Char == Char))
 @safe unittest
 {
     import std.array : appender;
+    import std.format : format;
 
     auto a = appender!(string)();
 
@@ -812,6 +822,7 @@ Throws:
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
     import std.conv : text;
+    import std.format : enforceFmt;
     import std.range.primitives : empty, front;
 
     enforceFmt(fmt.length >= 2, "fmt must be at least 2 characters long");
@@ -852,6 +863,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 {
+    import std.format : enforceFmt;
     import std.range : isInputRange;
     import std.format.internal.write : hasToString, HasToStringResult;
 
@@ -870,6 +882,7 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 @safe unittest
 {
     import std.exception : collectExceptionMsg;
+    import std.format : format, FormatException;
 
     // width/precision
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))

@@ -14,7 +14,7 @@
 
 module std.format.internal.floats;
 
-import std.format : FormatSpec;
+import std.format.spec : FormatSpec;
 
 package(std.format) enum ctfpMessage = "Cannot format reals at compile-time.";
 
