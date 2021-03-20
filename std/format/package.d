@@ -1953,7 +1953,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     assert(u == GC.stats().usedSize);
 }
 
-/*****************************
+/*
  * The .ptr is unsafe because it could be dereferenced and the length of the array may be 0.
  * Returns:
  *      the difference between the starts of the arrays
