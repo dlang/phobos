@@ -1,4 +1,49 @@
 /**
+ * $(SCRIPT inhibitQuickIndex = 1;)
+ * $(DIVC quickindex,
+ * $(BOOKTABLE,
+ * $(TR $(TH Category) $(TH Symbols))
+ * $(TR $(TD Tid) $(TD
+ *     $(LREF locate)
+ *     $(LREF ownerTid)
+ *     $(LREF register)
+ *     $(LREF spawn)
+ *     $(LREF spawnLinked)
+ *     $(LREF Tid)
+ *     $(LREF thisTid)
+ *     $(LREF unregister)
+ * ))
+ * $(TR $(TD Message passing) $(TD
+ *     $(LREF prioritySend)
+ *     $(LREF receive)
+ *     $(LREF receiveOnly)
+ *     $(LREF receiveTimeout)
+ *     $(LREF send)
+ *     $(LREF setMaxMailboxSize)
+ * ))
+ * $(TR $(TD Message-related types) $(TD
+ *     $(LREF LinkTerminated)
+ *     $(LREF MailboxFull)
+ *     $(LREF MessageMismatch)
+ *     $(LREF OnCrowding)
+ *     $(LREF OwnerTerminated)
+ *     $(LREF PriorityMessageException)
+ *     $(LREF TidMissingException)
+ * ))
+ * $(TR $(TD Scheduler) $(TD
+ *     $(LREF FiberScheduler)
+ *     $(LREF Generator)
+ *     $(LREF Scheduler)
+ *     $(LREF scheduler)
+ *     $(LREF ThreadInfo)
+ *     $(LREF ThreadScheduler)
+ *     $(LREF yield)
+ * ))
+ * $(TR $(TD Misc) $(TD
+ *     $(LREF initOnce)
+ * ))
+ * ))
+ *
  * This is a low-level messaging API upon which more structured or restrictive
  * APIs may be built.  The general idea is that every messageable entity is
  * represented by a common handle type called a Tid, which allows messages to
