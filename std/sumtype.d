@@ -795,8 +795,8 @@ public:
      * Returns the index of the type of the `SumType`'s current value in the
      * `SumType`'s `Types`.
      *
-     * If the `SumType` is qualified, then its qualifiers are applied to
-     * `Types` before determining the index.
+     * If the `SumType` is qualified, returns the index of the type in `Types`
+     * whose qualified version matches the `SumType`'s current value.
      */
     size_t typeIndex() const
     {
