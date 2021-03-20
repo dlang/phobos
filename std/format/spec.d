@@ -797,17 +797,23 @@ if (is(Unqual!Char == Char))
 }
 
 /**
-Helper function that returns a `FormatSpec` for a single specifier given
-in `fmt`.
+Helper function that returns a `FormatSpec` for a single format specifier.
 
 Params:
-    fmt = A format specifier.
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+          containing a single format specifier
+    Char = character type of `fmt`
 
 Returns:
-    A `FormatSpec` with the specifier parsed.
+    A $(LREF FormatSpec) with the format specifier parsed.
+
 Throws:
-    A `FormatException` when more than one specifier is given or the specifier
-    is malformed.
+    A $(REF_ALTTEXT FormatException, FormatException, std,format) when the
+    format string contains no format specifier or more than a single format
+    specifier or when the format specifier is malformed.
+
+Known_bugs:
+    Does not throw on %%. ($(BUGZILLA 21738))
   */
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
@@ -835,6 +841,18 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 ///
 @safe pure unittest
 {
+    import std.array : appender;
+    import std.format.write : formatValue;
+
+    auto spec = singleSpec("%10.3e");
+    auto writer = appender!string();
+    writer.formatValue(42.0, spec);
+
+    assert(writer.data == " 4.200e+01");
+}
+
+@safe pure unittest
+{
     import std.exception : assertThrown;
     import std.format : FormatException;
 
@@ -846,7 +864,10 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assert(spec.precision == 3);
 
     assertThrown!FormatException(singleSpec(""));
+    assertThrown!FormatException(singleSpec("%"));
+    assertThrown!FormatException(singleSpec("%2.3"));
     assertThrown!FormatException(singleSpec("2.3e"));
+    assertThrown!FormatException(singleSpec("Test%2.3e"));
     assertThrown!FormatException(singleSpec("%2.3eTest"));
 }
 
