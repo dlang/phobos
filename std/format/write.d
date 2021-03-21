@@ -167,6 +167,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
             auto separatorChar =
                 getNth!("separator character", isSomeChar, dchar)(currentArg, args);
             spec.separatorChar = separatorChar;
+            spec.separatorCharPos = spec.UNSPECIFIED;
             ++currentArg;
         }
 
@@ -301,6 +302,12 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
  */
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 {
+    import std.format : enforceFmt;
+
+    enforceFmt(f.width != f.DYNAMIC && f.precision != f.DYNAMIC
+               && f.separators != f.DYNAMIC && f.separatorCharPos != f.DYNAMIC,
+               "Dynamic argument not allowed for `formatValue`");
+
     formatValueImpl(w, val, f);
 }
 
@@ -614,4 +621,33 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 
     assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
     assert(() @trusted { return bar()(3); }() == 4);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15386
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : FormatSpec;
+    import std.format : FormatException;
+    import std.exception : assertThrown;
+
+    auto w = appender!(char[])();
+    auto dor = appender!(char[])();
+    auto fs = FormatSpec!char("%.*s");
+    fs.writeUpToNextSpec(dor);
+    assertThrown!FormatException(formatValue(w, 0, fs));
+
+    fs = FormatSpec!char("%*s");
+    fs.writeUpToNextSpec(dor);
+    assertThrown!FormatException(formatValue(w, 0, fs));
+
+    fs = FormatSpec!char("%,*s");
+    fs.writeUpToNextSpec(dor);
+    assertThrown!FormatException(formatValue(w, 0, fs));
+
+    fs = FormatSpec!char("%,?s");
+    fs.writeUpToNextSpec(dor);
+    assertThrown!FormatException(formatValue(w, 0, fs));
+
+    assertThrown!FormatException(formattedWrite(w, "%(%0*d%)", new int[1]));
 }
