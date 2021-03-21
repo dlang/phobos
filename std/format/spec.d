@@ -349,7 +349,7 @@ if (is(Unqual!Char == Char))
                     width = -parse!(typeof(width))(trailing);
                     i = 0;
                     enforceFmt(trailing[i++] == '$',
-                        "$ expected");
+                        text("$ expected after '*", -width, "' in format string"));
                 }
                 else
                 {
@@ -804,6 +804,20 @@ if (is(Unqual!Char == Char))
     // make sure the address exists, then skip it
     assert(res.canFind("address"));
     assert(res.findSplitBefore("width")[1] == expected);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15348
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+
+    auto w = appender!(char[])();
+    auto f = FormatSpec!char("%*10d");
+
+    assert(collectExceptionMsg!FormatException(f.writeUpToNextSpec(w))
+           == "$ expected after '*10' in format string");
 }
 
 /**
