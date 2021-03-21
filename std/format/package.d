@@ -1641,19 +1641,86 @@ package(std) static const checkFormatException(alias fmt, Args...) =
 }();
 
 /**
- * Format arguments into a string.
- *
- * If the format string is fixed, passing it as a template parameter checks the
- * type correctness of the parameters at compile-time. This also can result in
- * better performance.
- *
- * Params: fmt  = Format string.
- *         args = Variadic list of arguments to format into returned string.
- *
- * Throws:
- *     $(LREF, FormatException) if the number of arguments doesn't match the number
- *     of format parameters and vice-versa.
+Converts its arguments according to a format string into a string.
+
+The second version of `format` takes the format string as template
+argument. In this case, it is checked for consistency at
+compile-time and produces slightly faster code, because the length of
+the output buffer can be estimated in advance.
+
+Params:
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments to be formatted
+    Char = character type of `fmt`
+    Args = a variadic list of types of the arguments
+
+Returns:
+    The formatted string.
+
+Throws:
+    A $(LREF FormatException) if formatting did not succeed.
+
+See_Also:
+    $(LREF sformat) for a variant, that tries to avoid garbage collection.
  */
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
+if (isSomeChar!Char)
+{
+    import std.array : appender;
+
+    auto w = appender!(immutable(Char)[]);
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
+    }
+    return w.data;
+}
+
+///
+@safe pure unittest
+{
+    assert(format("Here are %d %s.", 3, "apples") == "Here are 3 apples.");
+
+    assert("Increase: %7.2f %%".format(17.4285) == "Increase:   17.43 %");
+}
+
+@safe pure unittest
+{
+    import std.exception : assertCTFEable, assertThrown;
+
+    assertCTFEable!(
+    {
+        assert(format("foo") == "foo");
+        assert(format("foo%%") == "foo%");
+        assert(format("foo%s", 'C') == "fooC");
+        assert(format("%s foo", "bar") == "bar foo");
+        assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+        assert(format("foo %d", -123) == "foo -123");
+        assert(format("foo %d", 123) == "foo 123");
+
+        assertThrown!FormatException(format("foo %s"));
+        assertThrown!FormatException(format("foo %s", 123, 456));
+
+        assert(format("hel%slo%s%s%s", "world", -138, 'c', true) == "helworldlo-138ctrue");
+    });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=16661
+@safe pure unittest
+{
+    assert(format("%.2f"d, 0.4) == "0.40");
+    assert("%02d"d.format(1) == "01"d);
+}
+
+/// ditto
 typeof(fmt) format(alias fmt, Args...)(Args args)
 if (isSomeString!(typeof(fmt)))
 {
@@ -1682,12 +1749,19 @@ if (isSomeString!(typeof(fmt)))
     return w.data;
 }
 
-/// Type checking can be done when fmt is known at compile-time:
-@safe unittest
+/// The format string can be checked at compile-time:
+@safe pure unittest
 {
     auto s = format!"%s is %s"("Pi", 3.14);
     assert(s == "Pi is 3.14");
 
+    // This line doesn't compile, because 3.14 cannot be formatted with %d:
+    // s = format!"%s is %d"("Pi", 3.14);
+}
+
+@safe pure unittest
+{
+    string s;
     static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
     static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
     static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
@@ -1777,56 +1851,6 @@ unittest
     assert(guessLength!char("%02d:%02d:%02d") == 8);
     assert(guessLength!char("%0.2f") == 7);
     assert(guessLength!char("%0*d") == 0);
-}
-
-/// ditto
-immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
-if (isSomeChar!Char)
-{
-    import std.array : appender;
-
-    auto w = appender!(immutable(Char)[]);
-    auto n = formattedWrite(w, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        import std.conv : text;
-        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
-    }
-    return w.data;
-}
-
-@safe pure unittest
-{
-    import std.exception : assertCTFEable, assertThrown;
-
-    assertCTFEable!(
-    {
-        assert(format("foo") == "foo");
-        assert(format("foo%%") == "foo%");
-        assert(format("foo%s", 'C') == "fooC");
-        assert(format("%s foo", "bar") == "bar foo");
-        assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
-        assert(format("foo %d", -123) == "foo -123");
-        assert(format("foo %d", 123) == "foo 123");
-
-        assertThrown!FormatException(format("foo %s"));
-        assertThrown!FormatException(format("foo %s", 123, 456));
-
-        assert(format("hel%slo%s%s%s", "world", -138, 'c', true) == "helworldlo-138ctrue");
-    });
-
-    assert(is(typeof(format("happy")) == string));
-    assert(is(typeof(format("happy"w)) == wstring));
-    assert(is(typeof(format("happy"d)) == dstring));
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=16661
-@safe unittest
-{
-    assert(format("%.2f"d, 0.4) == "0.40");
-    assert("%02d"d.format(1) == "01"d);
 }
 
 /*****************************************************
