@@ -656,12 +656,12 @@ do
             static if (hasSlicing!R && hasLength!R)
                 typeof(this) opSlice(size_t lower, size_t upper)
                 {
-                    assert(upper >= lower && upper <= length);
+                    assert(upper >= lower && upper <= length, "Attempt to get out-of-bounds slice of `stride` range");
                     immutable translatedUpper = (upper == 0) ? 0 :
                         (upper * _n - (_n - 1));
                     immutable translatedLower = min(lower * _n, translatedUpper);
 
-                    assert(translatedLower <= translatedUpper);
+                    assert(translatedLower <= translatedUpper, "Overflow when calculating slice of `stride` range");
 
                     return typeof(this)(source[translatedLower .. translatedUpper], _n);
                 }
