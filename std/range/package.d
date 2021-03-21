@@ -983,6 +983,7 @@ if (Ranges.length > 0 &&
                     source[i].popFront();
                     return;
                 }
+                assert(false);
             }
 
             @property auto ref front()
@@ -1045,6 +1046,7 @@ if (Ranges.length > 0 &&
                         source[i].popBack();
                         return;
                     }
+                    assert(false);
                 }
 
                 static if (allSatisfy!(hasMobileElements, R))
