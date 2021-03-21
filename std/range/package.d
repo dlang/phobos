@@ -983,7 +983,7 @@ if (Ranges.length > 0 &&
                     source[i].popFront();
                     return;
                 }
-                assert(false);
+                assert(false, "Attempt to `popFront` of empty `chain` range");
             }
 
             @property auto ref front()
@@ -993,7 +993,7 @@ if (Ranges.length > 0 &&
                     if (source[i].empty) continue;
                     return fixRef(source[i].front);
                 }
-                assert(false);
+                assert(false, "Attempt to get `front` of empty `chain` range");
             }
 
             static if (allSameType && allSatisfy!(hasAssignableElements, R))
@@ -1009,7 +1009,7 @@ if (Ranges.length > 0 &&
                         source[i].front = v;
                         return;
                     }
-                    assert(false);
+                    assert(false, "Attempt to set `front` of empty `chain` range");
                 }
             }
 
@@ -1022,7 +1022,7 @@ if (Ranges.length > 0 &&
                         if (source[i].empty) continue;
                         return source[i].moveFront();
                     }
-                    assert(false);
+                    assert(false, "Attempt to `moveFront` of empty `chain` range");
                 }
             }
 
@@ -1035,7 +1035,7 @@ if (Ranges.length > 0 &&
                         if (source[i].empty) continue;
                         return fixRef(source[i].back);
                     }
-                    assert(false);
+                    assert(false, "Attempt to get `back` of empty `chain` range");
                 }
 
                 void popBack()
@@ -1046,7 +1046,7 @@ if (Ranges.length > 0 &&
                         source[i].popBack();
                         return;
                     }
-                    assert(false);
+                    assert(false, "Attempt to `popBack` of empty `chain` range");
                 }
 
                 static if (allSatisfy!(hasMobileElements, R))
@@ -1058,7 +1058,7 @@ if (Ranges.length > 0 &&
                             if (source[i].empty) continue;
                             return source[i].moveBack();
                         }
-                        assert(false);
+                        assert(false, "Attempt to `moveBack` of empty `chain` range");
                     }
                 }
 
@@ -1072,7 +1072,7 @@ if (Ranges.length > 0 &&
                             source[i].back = v;
                             return;
                         }
-                        assert(false);
+                        assert(false, "Attempt to set `back` of empty `chain` range");
                     }
                 }
             }
@@ -1109,7 +1109,7 @@ if (Ranges.length > 0 &&
                             index -= length;
                         }
                     }
-                    assert(false);
+                    assert(false, "Attempt to access out-of-bounds index of `chain` range");
                 }
 
                 static if (allSatisfy!(hasMobileElements, R))
@@ -1129,7 +1129,7 @@ if (Ranges.length > 0 &&
                                 index -= length;
                             }
                         }
-                        assert(false);
+                        assert(false, "Attempt to move out-of-bounds index of `chain` range");
                     }
                 }
 
@@ -1153,7 +1153,7 @@ if (Ranges.length > 0 &&
                                 index -= length;
                             }
                         }
-                        assert(false);
+                        assert(false, "Attempt to write out-of-bounds index of `chain` range");
                     }
             }
 
