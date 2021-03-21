@@ -24,8 +24,15 @@ if (!is(Unqual!Char == Char))
 }
 
 /**
- * A General handler for `printf` style format specifiers. Used for building more
- * specific formatting functions.
+A general handler for format strings.
+
+This handler centers around the function $(LREF writeUpToNextSpec),
+which parses the $(MREF_ALTTEXT format string, std,format) until the
+next format specifier is found. After the call, it provides
+information about this format specifier in its numerous variables.
+
+Params:
+    Char = the character type of the format string
  */
 struct FormatSpec(Char)
 if (is(Unqual!Char == Char))
@@ -36,97 +43,96 @@ if (is(Unqual!Char == Char))
     import std.range.primitives;
 
     /**
-       Minimum _width, default `0`.
+       Minimum width.
+
+       _Default: `0`.
      */
     int width = 0;
 
     /**
-       Precision. Its semantics depends on the argument type. For
-       floating point numbers, _precision dictates the number of
-       decimals printed.
+       Precision. Its semantic depends on the format character.
+
+       See $(MREF_ALTTEXT format string, std,format) for more details.
+       _Default: `UNSPECIFIED`.
      */
     int precision = UNSPECIFIED;
 
     /**
-       Number of digits printed between _separators.
-    */
+       Number of elements between separators.
+
+       _Default: `UNSPECIFIED`.
+     */
     int separators = UNSPECIFIED;
 
     /**
        Set to `DYNAMIC` when the separator character is supplied at runtime.
-    */
+
+       _Default: `UNSPECIFIED`.
+     */
     int separatorCharPos = UNSPECIFIED;
 
     /**
-       Character to insert between digits.
-    */
+       Character to use as separator.
+
+       _Default: `','`.
+     */
     dchar separatorChar = ',';
 
     /**
-       Special value for width and precision. `DYNAMIC` width or
-       precision means that they were specified with `'*'` in the
-       format string and are passed at runtime through the varargs.
+       Special value for `width`, `precision`, `separators` and
+       `separatorCharPos`.
+
+       It flags that these values will be passed at runtime through
+       variadic arguments.
      */
     enum int DYNAMIC = int.max;
 
     /**
-       Special value for precision, meaning the format specifier
-       contained no explicit precision.
+       Special value for `precision`, `separators` and `separatorCharPos`.
+
+       It flags that these values have not been specified.
      */
     enum int UNSPECIFIED = DYNAMIC - 1;
 
     /**
-       The actual format specifier, `'s'` by default.
-    */
+       The format character.
+
+       _Default: `'s'`.
+     */
     char spec = 's';
 
     /**
-       Index of the argument for positional parameters, from `1` to
-       `ubyte.max`. (`0` means not used).
-    */
+       Index of the argument for positional parameters.
+
+       Counting starts with `1`. Set to `0` if not used. Default: `0`.
+     */
     ubyte indexStart;
 
     /**
-       Index of the last argument for positional parameter range, from
-       `1` to `ubyte.max`. (`0` means not used).
+       Index of the last argument for positional parameter ranges.
+
+       Counting starts with `1`. Set to `0` if not used. Default: `0`.
     */
     ubyte indexEnd;
 
     version (StdDdoc)
     {
-        /**
-         The format specifier contained a `'-'` (`printf`
-         compatibility).
-         */
+        /// The format specifier contained a `'-'`.
         bool flDash;
 
-        /**
-         The format specifier contained a `'0'` (`printf`
-         compatibility).
-         */
+        /// The format specifier contained a `'0'`.
         bool flZero;
 
-        /**
-         The format specifier contained a $(D ' ') (`printf`
-         compatibility).
-         */
+        /// The format specifier contained a space.
         bool flSpace;
 
-        /**
-         The format specifier contained a `'+'` (`printf`
-         compatibility).
-         */
+        /// The format specifier contained a `'+'`.
         bool flPlus;
 
-        /**
-         The format specifier contained a `'#'` (`printf`
-         compatibility).
-         */
+        /// The format specifier contained a `'#'`.
         bool flHash;
 
-        /**
-         The format specifier contained a `','`
-         */
+        /// The format specifier contained a `','`.
         bool flSeparator;
 
         // Fake field to allow compilation
@@ -149,53 +155,46 @@ if (is(Unqual!Char == Char))
         }
     }
 
-    /**
-       In case of a compound format specifier starting with $(D
-       "%$(LPAREN)") and ending with `"%$(RPAREN)"`, `_nested`
-       contains the string contained within the two separators.
-     */
+    /// The inner format string of a nested format specifier.
     const(Char)[] nested;
 
     /**
-       In case of a compound format specifier, `_sep` contains the
-       string positioning after `"%|"`.
-       `sep is null` means no separator else `sep.empty` means 0 length
-        separator.
+       The separator of a nested format specifier.
+
+       `null` means, there is no separator. `empty`, but not `null`,
+       means zero length separator.
      */
     const(Char)[] sep;
 
-    /**
-       `_trailing` contains the rest of the format string.
-     */
+    /// Contains the part of the format string, that has not yet been parsed.
     const(Char)[] trailing;
 
-    /*
-       This string is inserted before each sequence (e.g. array)
-       formatted (by default `"["`).
-     */
+    /// Sequence `"["` inserted before each range or range like structure.
     enum immutable(Char)[] seqBefore = "[";
 
-    /*
-       This string is inserted after each sequence formatted (by
-       default `"]"`).
-     */
+    /// Sequence `"]"` inserted after each range or range like structure.
     enum immutable(Char)[] seqAfter = "]";
 
-    /*
-       This string is inserted after each element keys of a sequence (by
-       default `":"`).
+    /**
+       Sequence `":"` inserted between element key and element value of
+       an associative array.
      */
     enum immutable(Char)[] keySeparator = ":";
 
-    /*
-       This string is inserted in between elements of a sequence (by
-       default $(D ", ")).
+    /**
+       Sequence `", "` inserted between elements of a range, a range like
+       structure or the elements of an associative array.
      */
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Construct a new `FormatSpec` using the format string `fmt`, no
-       processing is done until needed.
+       Creates a new `FormatSpec`.
+
+       The string is lazily evaluated. That means, nothing is done,
+       until $(LREF writeUpToNextSpec) is called.
+
+       Params:
+           fmt = a $(MREF_ALTTEXT format string, std,format)
      */
     this(in Char[] fmt) @safe pure
     {
@@ -203,20 +202,24 @@ if (is(Unqual!Char == Char))
     }
 
     /**
-       Write the format string to an output range until the next format
+       Writes the format string to an output range until the next format
        specifier is found and parse that format specifier.
 
-       See $(LREF FormatSpec) for an example, how to use `writeUpToNextSpec`.
+       See the $(MREF_ALTTEXT description of format strings, std,format) for more
+       details about the format specifier.
 
        Params:
-           writer = the $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+           writer = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
+                    where the format string is written to
+           OutputRange = type of the output range
 
        Returns:
-           True, when a format specifier is found.
+           True, if a format specifier is found and false, if the end of the
+           format string has been reached.
 
        Throws:
-           A $(LREF FormatException) when the found format specifier
-           could not be parsed.
+           A $(REF_ALTTEXT FormatException, FormatException, std,format)
+           when parsing the format specifier did not succeed.
      */
     bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
     {
@@ -601,14 +604,10 @@ if (is(Unqual!Char == Char))
     }
 
     /**
-     * Gives a string containing all of the member variables on their own
-     * line.
-     *
-     * Params:
-     *     writer = A `char` accepting
-     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-     * Returns:
-     *     A `string` when not using an output range; `void` otherwise.
+       Provides a string representation.
+
+       Returns:
+           The string representation.
      */
     string toString() const @safe pure
     {
@@ -620,7 +619,14 @@ if (is(Unqual!Char == Char))
         return app.data;
     }
 
-    /// ditto
+    /**
+       Writes a string representation to an output range.
+
+       Params:
+           writer = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
+                    where the representation is written to
+           OutputRange = type of the output range
+     */
     void toString(OutputRange)(ref OutputRange writer) const
     if (isOutputRange!(OutputRange, char))
     {
@@ -658,6 +664,34 @@ if (is(Unqual!Char == Char))
         formatValue(writer, trailing, s);
         put(writer, '\n');
     }
+}
+
+///
+@safe pure unittest
+{
+    import std.array : appender;
+
+    auto a = appender!(string)();
+    auto fmt = "Number: %6.4e\nString: %s";
+    auto f = FormatSpec!char(fmt);
+
+    assert(f.writeUpToNextSpec(a) == true);
+
+    assert(a.data == "Number: ");
+    assert(f.trailing == "\nString: %s");
+    assert(f.spec == 'e');
+    assert(f.width == 6);
+    assert(f.precision == 4);
+
+    assert(f.writeUpToNextSpec(a) == true);
+
+    assert(a.data == "Number: \nString: ");
+    assert(f.trailing == "");
+    assert(f.spec == 's');
+
+    assert(f.writeUpToNextSpec(a) == false);
+
+    assert(a.data == "Number: \nString: ");
 }
 
 @safe unittest
@@ -709,33 +743,6 @@ if (is(Unqual!Char == Char))
     assert(f.spec == 'f');
     auto fmt = f.getCurFmtStr();
     assert(fmt == "%.16f");
-}
-
-///
-@safe pure unittest
-{
-    import std.array : appender;
-
-    auto a = appender!(string)();
-    auto fmt = "Number: %6.4e\nString: %s";
-    auto f = FormatSpec!char(fmt);
-
-    assert(f.writeUpToNextSpec(a) == true);
-
-    assert(a.data == "Number: ");
-    assert(f.trailing == "\nString: %s");
-    assert(f.spec == 'e');
-    assert(f.width == 6);
-    assert(f.precision == 4);
-
-    assert(f.writeUpToNextSpec(a) == true);
-
-    assert(a.data == "Number: \nString: ");
-    assert(f.trailing == "");
-    assert(f.spec == 's');
-
-    assert(f.writeUpToNextSpec(a) == false);
-    assert(a.data == "Number: \nString: ");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=14059
