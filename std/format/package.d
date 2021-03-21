@@ -1853,29 +1853,39 @@ unittest
     assert(guessLength!char("%0*d") == 0);
 }
 
-/*****************************************************
- * Format arguments into buffer $(I buf) which must be large
- * enough to hold the result.
- *
- * Returns:
- *     The slice of `buf` containing the formatted string.
- *
- * Throws:
- *     A `RangeError` if `buf` isn't large enough to hold the
- *     formatted string.
- *
- *     A $(LREF FormatException) if the length of `args` is different
- *     than the number of format specifiers in `fmt`.
- */
-char[] sformat(alias fmt, Args...)(char[] buf, Args args)
-if (isSomeString!(typeof(fmt)))
-{
-    alias e = checkFormatException!(fmt, Args);
-    static assert(!e, e.msg);
-    return .sformat(buf, fmt, args);
-}
+/**
+Converts its arguments according to a format string into a buffer.
+The buffer has to be large enough to hold the formatted string.
 
-/// ditto
+The second version of `sformat` takes the format string as a template
+argument. In this case, it is checked for consistency at
+compile-time.
+
+Params:
+    buf = the buffer where the formatted string should go
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments to be formatted
+    Char = character type of `fmt`
+    Args = a variadic list of types of the arguments
+
+Returns:
+    A slice of `buf` containing the formatted string.
+
+Throws:
+    A $(REF_ALTTEXT RangeError, RangeError, core, exception) if `buf`
+    isn't large enough to hold the formatted string
+    and a $(LREF FormatException) if formatting did not succeed.
+
+Note:
+    In theory this function should be `@nogc`. But with the current
+    implementation there are some cases where allocations occur:
+
+    $(UL
+    $(LI An exception is thrown.)
+    $(LI A floating point number of type `real` is formatted.)
+    $(LI The representation of a floating point number exceeds 500 characters.)
+    $(LI A custom `toString` function of a compound type allocates.))
+ */
 char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
 {
     import core.exception : RangeError;
@@ -1931,13 +1941,43 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     return buf[0 .. sink.i];
 }
 
-/// The format string can be checked at compile-time (see $(LREF format) for details):
+/// ditto
+char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .sformat(buf, fmt, args);
+}
+
+///
+@safe pure unittest
+{
+    char[20] buf;
+    assert(sformat(buf[], "Here are %d %s.", 3, "apples") == "Here are 3 apples.");
+
+    assert(buf[].sformat("Increase: %7.2f %%", 17.4285) == "Increase:   17.43 %");
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    char[20] buf;
+
+    assert(sformat!"Here are %d %s."(buf[], 3, "apples") == "Here are 3 apples.");
+
+    // This line doesn't compile, because 3.14 cannot be formatted with %d:
+    // writeln(sformat!"Here are %d %s."(buf[], 3.14, "apples"));
+}
+
+// checking, what is implicitly and explicitly stated in the public unittest
 @system unittest
 {
-    char[10] buf;
+    import std.exception : assertThrown;
 
-    assert(buf[].sformat!"foo%s"('C') == "fooC");
-    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+    char[20] buf;
+    assertThrown!FormatException(sformat(buf[], "Here are %d %s.", 3.14, "apples"));
+    assert(!__traits(compiles, sformat!"Here are %d %s."(buf[], 3.14, "apples")));
 }
 
 @system unittest
