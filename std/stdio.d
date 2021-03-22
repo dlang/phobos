@@ -1,6 +1,39 @@
 // Written in the D programming language.
 
 /**
+$(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Symbols))
+$(TR $(TD File handles) $(TD
+    $(MYREF _popen)
+    $(MYREF File)
+    $(MYREF isFileHandle)
+    $(MYREF openNetwork)
+    $(MYREF stderr)
+    $(MYREF stdin)
+    $(MYREF stdout)
+))
+$(TR $(TD Reading) $(TD
+    $(MYREF chunks)
+    $(MYREF lines)
+    $(MYREF readf)
+    $(MYREF readln)
+))
+$(TR $(TD Writing) $(TD
+    $(MYREF toFile)
+    $(MYREF write)
+    $(MYREF writef)
+    $(MYREF writefln)
+    $(MYREF writeln)
+))
+$(TR $(TD Misc) $(TD
+    $(MYREF KeepTerminator)
+    $(MYREF LockType)
+    $(MYREF StdioException)
+))
+))
+
 Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
