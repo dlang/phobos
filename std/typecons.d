@@ -7,7 +7,7 @@ that allow construction of new, useful general-purpose types.
 $(SCRIPT inhibitQuickIndex = 1;)
 $(DIVC quickindex,
 $(BOOKTABLE,
-$(TR $(TH Category) $(TH Functions))
+$(TR $(TH Category) $(TH Symbols))
 $(TR $(TD Tuple) $(TD
     $(LREF isTuple)
     $(LREF Tuple)
