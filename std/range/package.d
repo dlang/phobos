@@ -656,12 +656,14 @@ do
             static if (hasSlicing!R && hasLength!R)
                 typeof(this) opSlice(size_t lower, size_t upper)
                 {
-                    assert(upper >= lower && upper <= length, "Attempt to get out-of-bounds slice of `stride` range");
+                    assert(upper >= lower && upper <= length,
+                        "Attempt to get out-of-bounds slice of `stride` range");
                     immutable translatedUpper = (upper == 0) ? 0 :
                         (upper * _n - (_n - 1));
                     immutable translatedLower = min(lower * _n, translatedUpper);
 
-                    assert(translatedLower <= translatedUpper, "Overflow when calculating slice of `stride` range");
+                    assert(translatedLower <= translatedUpper,
+                        "Overflow when calculating slice of `stride` range");
 
                     return typeof(this)(source[translatedLower .. translatedUpper], _n);
                 }
@@ -6326,7 +6328,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             if (current < pastLast)
             {
-                assert(unsigned(pastLast - current) <= size_t.max, "`iota` range is too long");
+                assert(unsigned(pastLast - current) <= size_t.max,
+                    "`iota` range is too long");
 
                 this.current = current;
                 this.pastLast = pastLast;
@@ -6339,17 +6342,34 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
 
         @property bool empty() const { return current == pastLast; }
-        @property inout(Value) front() inout { assert(!empty, "Attempt to access `front` of empty `iota` range"); return current; }
-        void popFront() { assert(!empty, "Attempt to `popFront` of empty `iota` range"); ++current; }
+        @property inout(Value) front() inout
+        {
+            assert(!empty, "Attempt to access `front` of empty `iota` range");
+            return current;
+        }
+        void popFront()
+        {
+            assert(!empty, "Attempt to `popFront` of empty `iota` range");
+            ++current;
+        }
 
-        @property inout(Value) back() inout { assert(!empty, "Attempt to access `back` of empty `iota` range"); return cast(inout(Value))(pastLast - 1); }
-        void popBack() { assert(!empty, "Attempt to `popBack` of empty `iota` range"); --pastLast; }
+        @property inout(Value) back() inout
+        {
+            assert(!empty, "Attempt to access `back` of empty `iota` range");
+            return cast(inout(Value))(pastLast - 1);
+        }
+        void popBack()
+        {
+            assert(!empty, "Attempt to `popBack` of empty `iota` range");
+            --pastLast;
+        }
 
         @property auto save() { return this; }
 
         inout(Value) opIndex(size_t n) inout
         {
-            assert(n < this.length, "Attempt to read out-of-bounds index of `iota` range");
+            assert(n < this.length,
+                "Attempt to read out-of-bounds index of `iota` range");
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
@@ -6364,7 +6384,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
-            assert(upper >= lower && upper <= this.length, "Attempt to get out-of-bounds slice of `iota` range");
+            assert(upper >= lower && upper <= this.length,
+                "Attempt to get out-of-bounds slice of `iota` range");
 
             return cast(inout Result) Result(cast(Value)(current + lower),
                                             cast(Value)(pastLast - (length - upper)));
