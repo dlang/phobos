@@ -6,7 +6,7 @@ $(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Symbols))
 $(TR $(TD File handles) $(TD
-    $(MYREF _popen)
+    $(MYREF __popen)
     $(MYREF File)
     $(MYREF isFileHandle)
     $(MYREF openNetwork)
