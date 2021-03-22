@@ -384,16 +384,26 @@ import std.traits : CharTypeOf, isSomeChar, isSomeString, StringTypeOf;
 import std.format.internal.write : hasToString;
 
 /**
-Signals a mismatch between a format and its corresponding argument.
+Signals an issue encountered while formatting.
  */
 class FormatException : Exception
 {
+    /// Generic constructor.
     @safe @nogc pure nothrow
     this()
     {
         super("format error");
     }
 
+    /**
+       Creates a new instance of `FormatException`.
+
+       Params:
+           msg = message of the exception
+           fn = file name of the file where the exception was created (optional)
+           ln = line number of the file where the exception was created (optional)
+           next = for internal use, should always be null (optional)
+     */
     @safe @nogc pure nothrow
     this(string msg, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
