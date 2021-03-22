@@ -4958,7 +4958,7 @@ version (StdDdoc)
 {
     string[] listdir(string pathname)
     {
-        import std.algorithm : filter, map;
+        import std.algorithm.iteration : filter, map;
         import std.array : array;
         import std.path : baseName;
 
