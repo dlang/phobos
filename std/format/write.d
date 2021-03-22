@@ -255,50 +255,33 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
 }
 
 /**
- * Formats any value into `Char` accepting `OutputRange`, using the given `FormatSpec`.
- *
- * Aggregates:
- * `struct`, `union`, `class`, and `interface` are formatted by calling `toString`.
- *
- * `toString` should have one of the following signatures:
- *
- * ---
- * void toString(Writer, Char)(ref Writer w, scope const ref FormatSpec!Char fmt)
- * void toString(Writer)(ref Writer w)
- * string toString();
- * ---
- *
- * Where `Writer` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
- * which accepts characters. The template type does not have to be called `Writer`.
- *
- * The following overloads are also accepted for legacy reasons or for use in virtual
- * functions. It's recommended that any new code forgo these overloads if possible for
- * speed and attribute acceptance reasons.
- *
- * ---
- * void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt);
- * void toString(scope void delegate(const(char)[]) sink, string fmt);
- * void toString(scope void delegate(const(char)[]) sink);
- * ---
- *
- * For the class objects which have input range interface,
- * $(UL
- *     $(LI If the instance `toString` has overridden `Object.toString`, it is used.)
- *     $(LI Otherwise, the objects are formatted as input range.)
- * )
- *
- * For the `struct` and `union` objects which does not have `toString`,
- * $(UL
- *     $(LI If they have range interface, formatted as input range.)
- *     $(LI Otherwise, they are formatted like `Type(field1, filed2, ...)`.)
- * )
- *
- * Otherwise, are formatted just as their type name.
- *
- * Params:
- *     w = The $(REF_ALTTEXT output range, isOutputRange, std,range,primitives) to write to.
- *     val = The value to write.
- *     f = The $(REF FormatSpec, std, format, spec) defining how to write the value.
+Formats a value of any type according to a format specifier and
+writes the result to an output range.
+
+More details about how types are formatted, and how the format
+specifier influences the outcome, can be found in the definition of a
+$(MREF_ALTTEXT format string, std,format).
+
+Params:
+    w = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives) where
+        the formatted value is written to
+    val = the value to write
+    f = a $(REF_ALTTEXT FormatSpec, FormatSpec, std, format, spec) defining the
+        format specifier
+    Writer = the type of the output range `w`
+    T = the type of value `val`
+    Char = the character type used for `f`
+
+Throws:
+    A $(LREF FormatException) if formatting did not succeed.
+
+Note:
+    In theory this function should be `@nogc`. But with the current
+    implementation there are some cases where allocations occur.
+    See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
+
+See_Also:
+    $(LREF formattedWrite) which formats several values at once.
  */
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 {
@@ -311,316 +294,24 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     formatValueImpl(w, val, f);
 }
 
-/++
-   The following code compares the use of `formatValue` and `formattedWrite`.
- +/
+///
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto writer1 = appender!string();
-    writer1.formattedWrite("%08b", 42);
+    auto writer = appender!string();
+    auto spec = singleSpec("%08b");
+    writer.formatValue(42, spec);
+    assert(writer.data == "00101010");
 
-    auto writer2 = appender!string();
-    auto f = singleSpec("%08b");
-    writer2.formatValue(42, f);
+    spec = singleSpec("%2s");
+    writer.formatValue('=', spec);
+    assert(writer.data == "00101010 =");
 
-    assert(writer1.data == writer2.data && writer1.data == "00101010");
-}
-
-/**
- * `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
- * `0` with integral-specific format specs.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, true, spec);
-
-    assert(w.data == "true");
-}
-
-/// `null` literal is formatted as `"null"`.
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, null, spec);
-
-    assert(w.data == "null");
-}
-
-/// Integrals are formatted like $(REF printf, core, stdc, stdio).
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%d");
-    formatValue(w, 1337, spec);
-
-    assert(w.data == "1337");
-}
-
-/// Floating-point values are formatted like $(REF printf, core, stdc, stdio)
-@safe unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%.1f");
-    formatValue(w, 1337.7, spec);
-
-    assert(w.data == "1337.7");
-}
-
-/**
- * Individual characters (`char, `wchar`, or `dchar`) are formatted as
- * Unicode characters with `%s` and as integers with integral-specific format
- * specs.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%c");
-    formatValue(w, 'a', spec);
-
-    assert(w.data == "a");
-}
-
-/// Strings are formatted like $(REF printf, core, stdc, stdio)
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, "hello", spec);
-
-    assert(w.data == "hello");
-}
-
-/// Static-size arrays are formatted as dynamic arrays.
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    char[2] two = ['a', 'b'];
-    formatValue(w, two, spec);
-
-    assert(w.data == "ab");
-}
-
-/**
- * Dynamic arrays are formatted as input ranges.
- *
- * Specializations:
- *   $(UL
- *      $(LI `void[]` is formatted like `ubyte[]`.)
- *      $(LI Const array is converted to input range by removing its qualifier.)
- *   )
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto two = [1, 2];
-    formatValue(w, two, spec);
-
-    assert(w.data == "[1, 2]");
-}
-
-/**
- * Associative arrays are formatted by using `':'` and `", "` as
- * separators, and enclosed by `'['` and `']'`.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto aa = ["H":"W"];
-    formatValue(w, aa, spec);
-
-    assert(w.data == "[\"H\":\"W\"]", w.data);
-}
-
-/// `enum`s are formatted like their base value
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    enum A { first, second, third }
-
-    formatValue(w, A.second, spec);
-
-    assert(w.data == "second");
-}
-
-/**
- * Formatting a struct by defining a method `toString`, which takes an output
- * range.
- *
- * It's recommended that any `toString` using $(REF_ALTTEXT output ranges, isOutputRange, std,range,primitives)
- * use $(REF put, std,range,primitives) rather than use the `put` method of the range
- * directly.
- */
-@safe unittest
-{
-    import std.array : appender;
-    import std.format.spec : FormatSpec, singleSpec;
-    import std.range.primitives : isOutputRange, put;
-
-    static struct Point
-    {
-        int x, y;
-
-        void toString(W)(ref W writer, scope const ref FormatSpec!char f)
-        if (isOutputRange!(W, char))
-        {
-            // std.range.primitives.put
-            put(writer, "(");
-            formatValue(writer, x, f);
-            put(writer, ",");
-            formatValue(writer, y, f);
-            put(writer, ")");
-        }
-    }
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto p = Point(16, 11);
-
-    formatValue(w, p, spec);
-    assert(w.data == "(16,11)");
-}
-
-/**
- * Another example of formatting a `struct` with a defined `toString`,
- * this time using the `scope delegate` method.
- *
- * $(RED This method is now discouraged for non-virtual functions).
- * If possible, please use the output range method instead.
- */
-@safe unittest
-{
-   import std.format : format;
-   import std.format.spec : FormatSpec;
-
-   static struct Point
-   {
-       int x, y;
-
-       void toString(scope void delegate(scope const(char)[]) @safe sink,
-                     scope const FormatSpec!char fmt) const
-       {
-           sink("(");
-           sink.formatValue(x, fmt);
-           sink(",");
-           sink.formatValue(y, fmt);
-           sink(")");
-       }
-   }
-
-   auto p = Point(16,11);
-   assert(format("%03d", p) == "(016,011)");
-   assert(format("%02x", p) == "(10,0b)");
-}
-
-/// Pointers are formatted as hex integers.
-@system pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    auto q = cast(void*) 0xFFEECCAA;
-    formatValue(w, q, spec);
-
-    assert(w.data == "FFEECCAA");
-}
-
-/// SIMD vectors are formatted as arrays.
-@safe unittest
-{
-    import core.simd; // cannot be selective, because float4 might not be defined
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    static if (is(float4))
-    {
-        version (X86) {}
-        else
-        {
-            float4 f4;
-            f4.array[0] = 1;
-            f4.array[1] = 2;
-            f4.array[2] = 3;
-            f4.array[3] = 4;
-
-            formatValue(w, f4, spec);
-            assert(w.data == "[1, 2, 3, 4]");
-        }
-    }
-}
-
-/**
- * Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
- *
- * Known Bug: Function attributes are not always correct.
- *            See $(BUGZILLA 18269) for more details.
- */
-@safe unittest
-{
-    import std.conv : to;
-
-    int i;
-
-    int foo(short k) @nogc
-    {
-        return i + k;
-    }
-
-    @system int delegate(short) @nogc bar() nothrow pure
-    {
-        int* p = new int(1);
-        i = *p;
-        return &foo;
-    }
-
-    assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
-    assert(() @trusted { return bar()(3); }() == 4);
+    spec = singleSpec("%+14.6e");
+    writer.formatValue(42.0, spec);
+    assert(writer.data == "00101010 = +4.200000e+01");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15386
