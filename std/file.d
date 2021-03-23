@@ -4968,10 +4968,11 @@ version (StdDdoc)
             .array;
     }
 
-    void main() {
+    void main()
+    {
         import std.stdio;
 
-        string[] files = listdir("");
+        string[] files = listdir(".");
         writeln(files);
     }
 }
@@ -4985,14 +4986,14 @@ version (StdDdoc)
     import std.process;
 
     // Iterate over all *.d files in current directory and all its subdirectories
-    auto dFiles = dirEntries("", "*.d", SpanMode.depth);
+    auto dFiles = dirEntries(".", "*.d", SpanMode.depth);
     foreach (d; dFiles)
         writeln(d.name);
 
-    foreach (d; parallel(dFiles, 1)) // process each entry in a new thread
+    foreach (d; parallel(dFiles, 1)) // process each entry in a separate thread
     {
         // compile source file
-        string cmd = "dmd -c "  ~ d.name;
+        string cmd = "dmd -c " ~ d.name;
         writeln(cmd);
         std.process.executeShell(cmd);
     }
