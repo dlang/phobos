@@ -4953,7 +4953,6 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Duplicate functionality of D1's `std.file.listdir()`:
-version (StdDdoc)
 @safe unittest
 {
     string[] listdir(string pathname)
