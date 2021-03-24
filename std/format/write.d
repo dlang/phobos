@@ -20,76 +20,37 @@ import std.format.internal.write;
 import std.format.spec : FormatSpec;
 import std.traits : isSomeString;
 
-/**********************************************************************
-   Interprets variadic argument list `args`, formats them according
-   to `fmt`, and sends the resulting characters to `w`. The
-   encoding of the output is the same as `Char`. The type `Writer`
-   must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
+/**
+Converts its arguments according to a format string and writes
+the result to an output range.
 
-   The variadic arguments are normally consumed in order. POSIX-style
-   $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
-   positional parameter syntax) is also supported. Each argument is
-   formatted into a sequence of chars according to the format
-   specification, and the characters are passed to `w`. As many
-   arguments as specified in the format string are consumed and
-   formatted. If there are fewer arguments than format specifiers, a
-   `FormatException` is thrown. If there are more remaining arguments
-   than needed by the format specification, they are ignored but only
-   if at least one argument was formatted.
+The second version of `formattedWrite` takes the format string as a
+template argument. In this case, it is checked for consistency at
+compile-time.
 
-   The format string supports the formatting of array and nested array elements
-   via the grouping format specifiers $(B %&#40;) and $(B %&#41;). Each
-   matching pair of $(B %&#40;) and $(B %&#41;) corresponds with a single array
-   argument. The enclosed sub-format string is applied to individual array
-   elements.  The trailing portion of the sub-format string following the
-   conversion specifier for the array element is interpreted as the array
-   delimiter, and is therefore omitted following the last array element. The
-   $(B %|) specifier may be used to explicitly indicate the start of the
-   delimiter, so that the preceding portion of the string will be included
-   following the last array element.  (See below for explicit examples.)
+Params:
+    w = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
+        where the formatted result is written to
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments to be formatted
+    Writer = the type of the writer `w`
+    Char = character type of `fmt`
+    Args = a variadic list of types of the arguments
 
-   Params:
+Returns:
+    The index of the last argument that was formatted. If no positional
+    arguments are used, this is the number of arguments that where formatted.
 
-   w = Output is sent to this writer. Typical output writers include
-   $(REF Appender!string, std,array) and $(REF LockingTextWriter, std,stdio).
+Throws:
+    A $(REF_ALTTEXT FormatException, FormatException, std, format)
+    if formatting did not succeed.
 
-   fmt = Format string.
-
-   args = Variadic argument list.
-
-   Returns: Formatted number of arguments.
-
-   Throws: Mismatched arguments and formats result in a $(D
-   FormatException) being thrown.
-
+Note:
+    In theory this function should be `@nogc`. But with the current
+    implementation there are some cases where allocations occur.
+    See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
  */
-uint formattedWrite(alias fmt, Writer, A...)(auto ref Writer w, A args)
-if (isSomeString!(typeof(fmt)))
-{
-    import std.format : checkFormatException;
-
-    alias e = checkFormatException!(fmt, A);
-    static assert(!e, e.msg);
-    return .formattedWrite(w, fmt, args);
-}
-
-/// The format string can be checked at compile-time (see $(REF_ALTTEXT format, format, std, format) for details):
-@safe pure unittest
-{
-    import std.array : appender;
-
-    auto writer = appender!string();
-    writer.formattedWrite!"%s is the ultimate %s."(42, "answer");
-    assert(writer[] == "42 is the ultimate answer.");
-
-    // Clear the writer
-    writer = appender!string();
-    writer.formattedWrite!"Date: %2$s %1$s"("October", 5);
-    assert(writer[] == "Date: 5 October");
-}
-
-/// ditto
-uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fmt, A args)
+uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[] fmt, Args args)
 {
     import std.conv : text;
     import std.format : enforceFmt, FormatException;
@@ -101,7 +62,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
     uint currentArg = 0;
     while (spec.writeUpToNextSpec(w))
     {
-        if (currentArg == A.length && !spec.indexStart)
+        if (currentArg == Args.length && !spec.indexStart)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
@@ -171,7 +132,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
             ++currentArg;
         }
 
-        if (currentArg == A.length && !spec.indexStart)
+        if (currentArg == Args.length && !spec.indexStart)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
@@ -191,7 +152,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
             ++currentArg;
     SWITCH: switch (index)
         {
-            foreach (i, Tunused; A)
+            foreach (i, Tunused; Args)
             {
             case i:
                 formatValue(w, args[i], spec);
@@ -204,7 +165,7 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
                 if (i + 1 < spec.indexEnd)
                 {
                     // You cannot goto case if the next case is the default
-                    static if (i + 1 < A.length)
+                    static if (i + 1 < Args.length)
                         goto case;
                     else
                         goto default;
@@ -215,26 +176,48 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
         default:
             throw new FormatException(
                 text("Positional specifier %", spec.indexStart, '$', spec.spec,
-                     " index exceeds ", A.length));
+                     " index exceeds ", Args.length));
         }
     }
     return currentArg;
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
-    import std.format : format;
+    import std.array : appender;
 
-    assert(format("%,d", 1000) == "1,000");
-    assert(format("%,f", 1234567.891011) == "1,234,567.891011");
-    assert(format("%,?d", '?', 1000) == "1?000");
-    assert(format("%,1d", 1000) == "1,0,0,0", format("%,1d", 1000));
-    assert(format("%,*d", 4, -12345) == "-1,2345");
-    assert(format("%,*?d", 4, '_', -12345) == "-1_2345");
-    assert(format("%,6?d", '_', -12345678) == "-12_345678");
-    assert(format("%12,3.3f", 1234.5678) == "   1,234.568", "'" ~
-           format("%12,3.3f", 1234.5678) ~ "'");
+    auto writer1 = appender!string();
+    formattedWrite(writer1, "%s is the ultimate %s.", 42, "answer");
+    assert(writer1[] == "42 is the ultimate answer.");
+
+    auto writer2 = appender!string();
+    formattedWrite(writer2, "Increase: %7.2f %%", 17.4285);
+    assert(writer2[] == "Increase:   17.43 %");
+}
+
+/// ditto
+uint formattedWrite(alias fmt, Writer, Args...)(auto ref Writer w, Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .formattedWrite(w, fmt, args);
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    import std.array : appender;
+
+    auto writer = appender!string();
+    writer.formattedWrite!"%d is the ultimate %s."(42, "answer");
+    assert(writer[] == "42 is the ultimate answer.");
+
+    // This line doesn't compile, because 3.14 cannot be formatted with %d:
+    // writer.formattedWrite!"%d is the ultimate %s."(3.14, "answer");
 }
 
 @safe pure unittest
