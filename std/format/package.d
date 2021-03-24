@@ -100,7 +100,8 @@ $(GLINK FormatChar):
 )
 
     $(DL
-    $(DT Position)
+    $(DT $(GNAME Position))
+    $(DD
 
     $(RUNNABLE_EXAMPLE_RUN
     ---
