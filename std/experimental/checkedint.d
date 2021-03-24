@@ -263,7 +263,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
     import std.experimental.allocator.common : stateSize;
-    import std.traits : hasMember;
+    import std.range.primitives : isInputRange, ElementType;
+    import std.traits : hasMember, isSomeChar;
 
     /**
     The type of the integral subject to checking.
@@ -376,6 +377,34 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         Checked!long a, b;
         a = b = 3;
         assert(a == 3 && b == 3);
+    }
+
+    /**
+    Construct from a decimal string. The conversion follows the same rules as
+    $(REF to, std, conv) converting a string to the wrapped `T` type.
+
+    Params:
+        str = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+              of characters
+    */
+    this(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementType!Range))
+    {
+        import std.conv : to;
+
+        this(to!T(str));
+    }
+
+    /**
+    $(REF to, std, conv) can convert a string to a `Checked!T`:
+    */
+    @system unittest
+    {
+        import std.conv : to;
+
+        const a = to!long("1234");
+        const b = to!(Checked!long)("1234");
+        assert(a == b);
     }
 
     // opCast
