@@ -45,10 +45,9 @@ $(TR $(TH Function Name) $(TH Description)
    $(REF_ALTTEXT $(D unformatValue), unformatValue, std, format, read) are
    used for the plumbing.
 
-   Format_String:
+   $(ADEF format-string)$(H2 Format strings)
 
-   <a name="format-string">$(I Format strings)</a>
-   consist of characters interspersed with $(I format
+   Format strings consist of characters interspersed with $(I format
    specifications). Characters are simply copied to the output (such
    as putc) after any necessary conversion to the corresponding UTF-8
    sequence.
@@ -64,21 +63,21 @@ $(I FormatStringItem):
     $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
     $(B '%-$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
     $(I OtherCharacterExceptPercent)
-$(I Position):
+$(GLINK Position):
     $(I empty)
     $(I Integer) $(B '$')
-$(I Flags):
+$(GLINK Flags):
     $(I empty)
     $(B '-') $(I Flags)
     $(B '+') $(I Flags)
     $(B '#') $(I Flags)
     $(B '0') $(I Flags)
     $(B ' ') $(I Flags)
-$(I Width):
+$(GLINK Width):
     $(I empty)
     $(I Integer)
     $(B '*')
-$(I Separator):
+$(GLINK Separator):
     $(I empty)
     $(B ',')
     $(B ',') $(B '?')
@@ -86,7 +85,7 @@ $(I Separator):
     $(B ',') $(I Integer) $(B '?')
     $(B ',') $(B '*')
     $(B ',') $(I Integer)
-$(I Precision):
+$(GLINK Precision):
     $(I empty)
     $(B '.')
     $(B '.') $(I Integer)
@@ -96,10 +95,27 @@ $(I Integer):
     $(I Digit) $(I Integer)
 $(I Digit):
     $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
-$(I FormatChar):
+$(GLINK FormatChar):
     $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B '|')
 )
 
+    $(DL
+    $(DT Position)
+
+    $(RUNNABLE_EXAMPLE_RUN
+    ---
+    assert(format!"second: %2$s, first: %1$d"(5, "hi") == "second: hi, first: 5");
+    ---
+    )
+
+    The positional and non-positional styles can be mixed in the same
+    format string. (POSIX leaves this behavior undefined.) The internal
+    counter for non-positional parameters tracks the next parameter after
+    the largest positional parameter already used.
+    )
+
+    $(DT $(GNAME Flags))
+    $(DD
     $(BOOKTABLE Flags affect formatting depending on the specifier as
     follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
 
@@ -127,10 +143,10 @@ $(I FormatChar):
     Precision).))
 
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.)))
+    numbers in a signed conversion with a space.))
+    ))
 
-    $(DL
-        $(DT $(I Width))
+        $(DT $(GNAME Width))
         $(DD
         Only used for numeric, bool, null, char, string, enum and pointer types.
         Specifies the minimum field width.
@@ -139,13 +155,13 @@ $(I FormatChar):
         If the width is negative, it is as if the $(B -) was given
         as a $(I Flags) character.)
 
-        $(DT $(I Precision))
+        $(DT $(GNAME Precision))
         $(DD Gives the precision for numeric conversions.
         If the precision is a $(B *), an additional argument of type $(B int),
         preceding the actual argument, is taken as the precision.
         If it is negative, it is as if there was no $(I Precision) specifier.)
 
-        $(DT $(I Separator))
+        $(DT $(GNAME Separator))
         $(DD Inserts the separator symbols ',' every $(I X) digits, from right
         to left, into numeric values to increase readability.
         The fractional part of floating point values inserts the separator
@@ -157,7 +173,7 @@ $(I FormatChar):
         the separator character as an additional parameter.
         )
 
-        $(DT $(I FormatChar))
+        $(DT $(GNAME FormatChar))
         $(DD
         $(DL
             $(DT $(B 's'))
@@ -193,6 +209,7 @@ $(I FormatChar):
                 $(DD The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
                 where s<sub>n</sub> is the nth element
                 formatted with the default format.)
+                See_also: $(RELATIVE_LINK2 format-arrays, array formatting).
                 $(DT associative arrays)
                 $(DD The result is the equivalent of what the initializer
                 would look like for the contents of the associative array,
@@ -202,7 +219,7 @@ $(I FormatChar):
             $(DT $(B 'c'))
             $(DD The corresponding argument must be a character type.)
 
-            $(DT $(B 'b','d','o','x','X'))
+            $(DT $(B 'b','d','u','o','x','X'))
             $(DD The corresponding argument must be an integral type
             and is formatted as an integer. If the argument is a signed type
             and the $(I FormatChar) is $(B d) it is converted to
@@ -210,7 +227,7 @@ $(I FormatChar):
             unsigned. An argument of type $(B bool) is formatted as '1'
             or '0'. The base used is binary for $(B b), octal for $(B o),
             decimal
-            for $(B d), and hexadecimal for $(B x) or $(B X).
+            for $(B d) or $(B u), and hexadecimal for $(B x) or $(B X).
             $(B x) formats using lower case letters, $(B X) uppercase.
             If there are fewer resulting digits than the $(I Precision),
             leading zeros are used as necessary.
@@ -261,18 +278,18 @@ $(I FormatChar):
         ))
     )
 
+   $(ADEF format-float)$(H3 Floating-point formatting)
+
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
     Floating point infinities are formatted as $(B inf) or
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
-    The positional and non-positional styles can be mixed in the same
-    format string. (POSIX leaves this behavior undefined.) The internal
-    counter for non-positional parameters tracks the next parameter after
-    the largest positional parameter already used.
+   $(ADEF format-arrays)$(H3 Array formatting)
 
     Example using array and nested array formatting:
+    $(RUNNABLE_EXAMPLE_RUN
     -------------------------
     import std.stdio;
 
@@ -282,6 +299,7 @@ $(I FormatChar):
         writefln("My items are %(%s, %).", [1,2,3]);
     }
     -------------------------
+    )
     The output is:
 $(CONSOLE
 My items are 1 2 3.
@@ -293,6 +311,7 @@ My items are 1, 2, 3.
     following the last array item. The $(B %|) delimiter specifier may be used
     to indicate where the delimiter begins, so that the portion of the format
     string prior to it will be retained in the last array element:
+    $(RUNNABLE_EXAMPLE_RUN
     -------------------------
     import std.stdio;
 
@@ -301,6 +320,7 @@ My items are 1, 2, 3.
         writefln("My items are %(-%s-%|, %).", [1,2,3]);
     }
     -------------------------
+    )
     which gives the output:
 $(CONSOLE
 My items are -1-, -2-, -3-.
@@ -308,6 +328,7 @@ My items are -1-, -2-, -3-.
 
     These compound format specifiers may be nested in the case of a nested
     array argument:
+    $(RUNNABLE_EXAMPLE_RUN
     -------------------------
     import std.stdio;
     void main() {
@@ -325,6 +346,7 @@ My items are -1-, -2-, -3-.
          writeln();
     }
     -------------------------
+    )
     The output is:
 $(CONSOLE
 1 2 3
@@ -343,6 +365,7 @@ $(CONSOLE
     Inside a compound format specifier, strings and characters are escaped
     automatically. To avoid this behavior, add $(B '-') flag to
     `"%$(LPAREN)"`.
+    $(RUNNABLE_EXAMPLE_RUN
     -------------------------
     import std.stdio;
 
@@ -353,6 +376,7 @@ $(CONSOLE
         writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
     }
     -------------------------
+    )
    which gives the output:
 $(CONSOLE
 My friends are ["John", "Nancy"].
