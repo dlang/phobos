@@ -16,8 +16,6 @@ module std.format.internal.floats;
 
 import std.format.spec : FormatSpec;
 
-package(std.format) enum ctfpMessage = "Cannot format reals at compile-time.";
-
 package(std.format) enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
 package(std.format) auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,

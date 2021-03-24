@@ -628,9 +628,6 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     else
     {
-        import std.format.internal.floats : ctfpMessage;
-        enforceFmt(!__ctfe, ctfpMessage);
-
         if (nan || inf)
         {
             const sb = signbit(tval);
@@ -644,6 +641,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             formatValue(w, ns, co);
             return;
         }
+
+        enforceFmt(!__ctfe, "Cannot format reals at compile-time.");
 
         char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
              + 1 /*\0*/] sprintfSpec = void;

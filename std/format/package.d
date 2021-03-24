@@ -1872,7 +1872,6 @@ if (isInputRange!Range)
 package(std) static const checkFormatException(alias fmt, Args...) =
 {
     import std.conv : text;
-    import std.format.internal.floats : ctfpMessage;
 
     try
     {
@@ -1881,7 +1880,7 @@ package(std) static const checkFormatException(alias fmt, Args...) =
         enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
     }
     catch (Exception e)
-        return (e.msg == ctfpMessage) ? null : e;
+        return e;
     return null;
 }();
 
@@ -2010,6 +2009,15 @@ if (isSomeString!(typeof(fmt)))
     static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
     static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
     static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17381
+@safe pure unittest
+{
+    static assert(!__traits(compiles, format!"%s"(1.5, 2)));
+    static assert(!__traits(compiles, format!"%f"(1.5, 2)));
+    static assert(!__traits(compiles, format!"%s"(1.5L, 2)));
+    static assert(!__traits(compiles, format!"%f"(1.5L, 2)));
 }
 
 // called during compilation to guess the length of the
