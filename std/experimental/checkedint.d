@@ -199,7 +199,7 @@ module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 
 ///
-@system unittest
+@safe unittest
 {
     int[] concatAndAdd(int[] a, int[] b, int offset)
     {
@@ -308,7 +308,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         enum Checked!(T, Hook) min = Checked!(T, Hook)(Hook.min!T);
         ///
-        @system unittest
+        @safe unittest
         {
             assert(Checked!short.min == -32768);
             assert(Checked!(short, WithNaN).min == -32767);
@@ -341,7 +341,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             payload = rhs.payload;
     }
     ///
-    @system unittest
+    @safe unittest
     {
         auto a = checked(42L);
         assert(a == 42);
@@ -362,7 +362,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         return this;
     }
     ///
-    @system unittest
+    @safe unittest
     {
         Checked!long a;
         a = 42L;
@@ -372,7 +372,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         Checked!long a, b;
         a = b = 3;
@@ -463,7 +463,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
     ///
-    @system unittest
+    @safe unittest
     {
         assert(cast(uint) checked(42) == 42);
         assert(cast(uint) checked!WithNaN(-42) == uint.max);
@@ -699,7 +699,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 
     // For coverage
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         assert(checked(42) <= checked!void(42));
         assert(checked!void(42) <= checked(42u));
@@ -910,7 +910,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         const a = checked(42);
         assert(a + 1 == 43);
@@ -988,7 +988,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
-    static if (is(T == int) && is(Hook == void)) @system unittest
+    static if (is(T == int) && is(Hook == void)) @safe unittest
     {
         assert(1 + checked(1) == 2);
         static uint tally;
@@ -1128,7 +1128,7 @@ if (is(typeof(Checked!(T, Hook)(value))))
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static assert(is(typeof(checked(42)) == Checked!int));
     assert(checked(42) == Checked!int(42));
@@ -1291,7 +1291,7 @@ static:
     }
 }
 
-@system unittest
+@safe unittest
 {
     void test(T)()
     {
@@ -1500,7 +1500,7 @@ default behavior.
 */
 struct Warn
 {
-    import std.stdio : stderr;
+    import std.stdio : writefln;
 static:
     /**
 
@@ -1517,7 +1517,7 @@ static:
     */
     Dst onBadCast(Dst, Src)(Src src)
     {
-        stderr.writefln("Erroneous cast: cast(%s) %s(%s)",
+        trustedStderr.writefln("Erroneous cast: cast(%s) %s(%s)",
             Dst.stringof, Src.stringof, src);
         return cast(Dst) src;
     }
@@ -1536,14 +1536,14 @@ static:
     */
     Lhs onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
-        stderr.writefln("Lower bound error: %s(%s) < %s(%s)",
+        trustedStderr.writefln("Lower bound error: %s(%s) < %s(%s)",
             Rhs.stringof, rhs, T.stringof, bound);
         return cast(T) rhs;
     }
     /// ditto
     T onUpperBound(Rhs, T)(Rhs rhs, T bound)
     {
-        stderr.writefln("Upper bound error: %s(%s) > %s(%s)",
+        trustedStderr.writefln("Upper bound error: %s(%s) > %s(%s)",
             Rhs.stringof, rhs, T.stringof, bound);
         return cast(T) rhs;
     }
@@ -1570,7 +1570,7 @@ static:
         auto result = opChecked!"=="(lhs, rhs, error);
         if (error)
         {
-            stderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
+            trustedStderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
                 Lhs.stringof, lhs, Rhs.stringof, rhs);
             return lhs == rhs;
         }
@@ -1578,7 +1578,7 @@ static:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = checked!Warn(-42);
         // Passes
@@ -1609,7 +1609,7 @@ static:
         auto result = opChecked!"cmp"(lhs, rhs, error);
         if (error)
         {
-            stderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
+            trustedStderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
                 Lhs.stringof, lhs, Rhs.stringof, rhs);
             return lhs < rhs ? -1 : lhs > rhs;
         }
@@ -1617,7 +1617,7 @@ static:
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
         auto x = checked!Warn(-42);
         // Passes
@@ -1642,24 +1642,34 @@ static:
     */
     typeof(~Lhs()) onOverflow(string x, Lhs)(ref Lhs lhs)
     {
-        stderr.writefln("Overflow on unary operator: %s%s(%s)",
+        trustedStderr.writefln("Overflow on unary operator: %s%s(%s)",
             x, Lhs.stringof, lhs);
         return mixin(x ~ "lhs");
     }
     /// ditto
     typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        stderr.writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
+        trustedStderr.writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
             Lhs.stringof, lhs, x, Rhs.stringof, rhs);
         static if (x == "/")               // Issue 20743: mixin below would cause SIGFPE on POSIX
             return typeof(lhs / rhs).min;  // or EXCEPTION_INT_OVERFLOW on Windows
         else
             return mixin("lhs" ~ x ~ "rhs");
     }
+
+    // This is safe because we do not assign to the reference returned by
+    // `stderr`. The ability for the caller to do that is why `stderr` is not
+    // safe in the general case.
+    private @property auto ref trustedStderr() @trusted
+    {
+        import std.stdio : stderr;
+
+        return stderr;
+    }
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto x = checked!Warn(42);
     short x1 = cast(short) x;
@@ -3243,7 +3253,7 @@ version (StdUnittest) private struct CountOverflows
 }
 
 // toHash
-@system unittest
+@safe unittest
 {
     assert(checked(42).toHash() == checked(42).toHash());
     assert(checked(12).toHash() != checked(19).toHash());
@@ -3331,7 +3341,7 @@ version (StdUnittest) private struct CountOverflows
 }
 
 ///
-@system unittest
+@safe unittest
 {
     struct MyHook
     {
