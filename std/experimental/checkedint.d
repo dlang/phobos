@@ -592,6 +592,45 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
+    /// ditto
+    size_t toHash(this _)() shared const nothrow @safe
+    {
+        import core.atomic : atomicLoad, MemoryOrder;
+        static if (is(typeof(this.payload.atomicLoad!(MemoryOrder.acq)) P))
+        {
+            auto payload = __ctfe ? cast(P) this.payload
+                                  : this.payload.atomicLoad!(MemoryOrder.acq);
+        }
+        else
+        {
+            alias payload = this.payload;
+        }
+
+        static if (hasMember!(Hook, "hookToHash"))
+        {
+            return hook.hookToHash(payload);
+        }
+        else static if (stateSize!Hook > 0)
+        {
+            static if (hasMember!(typeof(payload), "toHash"))
+            {
+                return payload.toHash() ^ hashOf(hook);
+            }
+            else
+            {
+                return hashOf(payload) ^ hashOf(hook);
+            }
+        }
+        else static if (hasMember!(typeof(payload), "toHash"))
+        {
+            return payload.toHash();
+        }
+        else
+        {
+            return .hashOf(payload);
+        }
+    }
+
     /**
     Writes a string representation of this to a `sink`.
 
@@ -3369,6 +3408,18 @@ version (StdUnittest) private struct CountOverflows
     assert(x1.toHash() == x2.toHash());
     assert(x1.toHash() != x3.toHash());
     assert(x2.toHash() != x3.toHash());
+
+    // Check shared.
+    {
+        shared shared0 = checked(12345678);
+        shared shared1 = checked!Hook1(123456789);
+        shared shared2 = checked!Hook2(234567891);
+        shared shared3 = checked!Hook3(345678912);
+        assert(shared0.toHash() == hashOf(shared0));
+        assert(shared1.toHash() == hashOf(shared1));
+        assert(shared2.toHash() == hashOf(shared2));
+        assert(shared3.toHash() == hashOf(shared3));
+    }
 }
 
 ///
