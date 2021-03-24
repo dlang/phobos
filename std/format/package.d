@@ -282,10 +282,33 @@ $(I FormatChar):
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
+    The variadic arguments are normally consumed in order.
+    POSIX-style $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
+    positional parameter syntax) is also supported. Each argument is
+    formatted into a sequence of chars according to the format
+    specification, and the characters are passed to `w`. As many
+    arguments as specified in the format string are consumed and
+    formatted. If there are fewer arguments than format specifiers, a
+    `FormatException` is thrown. If there are more remaining
+    arguments than needed by the format specification, they are
+    ignored but only if at least one argument was formatted.
+
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
     counter for non-positional parameters tracks the next parameter after
     the largest positional parameter already used.
+
+    The format string supports the formatting of array and nested
+    array elements via the grouping format specifiers $(B %&#40;) and
+    $(B %&#41;). Each matching pair of $(B %&#40;) and $(B %&#41;)
+    corresponds with a single array argument. The enclosed sub-format
+    string is applied to individual array elements.  The trailing
+    portion of the sub-format string following the conversion
+    specifier for the array element is interpreted as the array
+    delimiter, and is therefore omitted following the last array
+    element. The $(B %|) specifier may be used to explicitly indicate
+    the start of the delimiter, so that the preceding portion of the
+    string will be included following the last array element.
 
     Example using array and nested array formatting:
     -------------------------
@@ -426,6 +449,19 @@ My friends are John, Nancy.
    Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
+
+@safe unittest
+{
+    assert(format("%,d", 1000) == "1,000");
+    assert(format("%,f", 1234567.891011) == "1,234,567.891011");
+    assert(format("%,?d", '?', 1000) == "1?000");
+    assert(format("%,1d", 1000) == "1,0,0,0", format("%,1d", 1000));
+    assert(format("%,*d", 4, -12345) == "-1,2345");
+    assert(format("%,*?d", 4, '_', -12345) == "-1_2345");
+    assert(format("%,6?d", '_', -12345678) == "-12_345678");
+    assert(format("%12,3.3f", 1234.5678) == "   1,234.568", "'" ~
+           format("%12,3.3f", 1234.5678) ~ "'");
+}
 
 public import std.format.read;
 public import std.format.spec;
