@@ -263,6 +263,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
     import std.experimental.allocator.common : stateSize;
+    import std.format.spec : FormatSpec;
     import std.range.primitives : isInputRange, ElementType;
     import std.traits : hasMember, isSomeChar;
 
@@ -589,6 +590,36 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         {
             return .hashOf(payload);
         }
+    }
+
+    /**
+    Writes a string representation of this to a `sink`.
+
+    Params:
+      sink = A `Char` accepting
+             $(REF_ALTTEXT output range, isOutputRange, std,range,primitives).
+      fmt  = A $(REF FormatSpec, std, format) which controls how this
+             is formatted.
+    */
+    void toString(Writer, Char)(scope ref Writer sink, scope const ref FormatSpec!Char fmt) const
+    {
+        import std.format.write : formatValue;
+        if (fmt.spec == 's')
+            return formatValue(sink, this, fmt);
+        else
+            return formatValue(sink, payload, fmt);
+    }
+
+    /**
+    `toString` is rarely directly invoked; the usual way of using it is via
+    $(REF format, std, format):
+    */
+    @system unittest
+    {
+        import std.format;
+
+        assert(format("%04d", checked(15)) == "0015");
+        assert(format("0x%02x", checked(15)) == "0x0f");
     }
 
     // opCmp
