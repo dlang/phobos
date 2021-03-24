@@ -66,6 +66,7 @@ $(I FormatStringItem):
 $(GLINK Position):
     $(I empty)
     $(I Integer) $(B '$')
+    $(I Integer) $(B ':') $(I Integer) $(B '$')
 $(GLINK Flags):
     $(I empty)
     $(B '-') $(I Flags)
@@ -106,8 +107,10 @@ $(GLINK FormatChar):
     $(RUNNABLE_EXAMPLE_RUN
     ---
     assert(format!"second: %2$s, first: %1$d"(5, "hi") == "second: hi, first: 5");
+    assert(format!"%1:3$s"(7, " and ", 3.14) == "7 and 3.14");
     ---
     )
+    The second line shows formatting of multiple arguments with a single format specifier.
 
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
