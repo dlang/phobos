@@ -1473,15 +1473,15 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     {
         // U+FFFF with UTF-8 (Invalid code point for interchange)
         formatTest([cast(string)[0xEF, 0xBF, 0xBF]],
-                   `[x"EF BF BF"c]`);
+                   `[[cast(char) 0xEF, cast(char) 0xBF, cast(char) 0xBF]]`);
 
         // U+FFFF with UTF-16 (Invalid code point for interchange)
         formatTest([cast(wstring)[0xFFFF]],
-                   `[x"FFFF"w]`);
+                   `[[cast(wchar) 0xFFFF]]`);
 
         // U+FFFF with UTF-32 (Invalid code point for interchange)
         formatTest([cast(dstring)[0xFFFF]],
-                   `[x"FFFF"d]`);
+                   `[[cast(dchar) 0xFFFF]]`);
     }
 }
 
@@ -3007,20 +3007,20 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
     LinvalidSeq:
         static if (is(typeof(str[0]) : const(char)))
         {
-            enum postfix = 'c';
+            enum type = "";
             alias IntArr = const(ubyte)[];
         }
         else static if (is(typeof(str[0]) : const(wchar)))
         {
-            enum postfix = 'w';
+            enum type = "w";
             alias IntArr = const(ushort)[];
         }
         else static if (is(typeof(str[0]) : const(dchar)))
         {
-            enum postfix = 'd';
+            enum type = "d";
             alias IntArr = const(uint)[];
         }
-        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr) str, postfix);
+        formattedWrite(w, "[%(cast(" ~ type ~ "char) 0x%X%|, %)]", cast(IntArr) str);
     }
     else
         formatValue(w, str, f);
@@ -3066,6 +3066,25 @@ if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
     formatElement(w, "H", spec);
 
     assert(w.data == "\"H\"", w.data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15888
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    ushort[] a = [0xFF_FE, 0x42];
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatElement(w, cast(wchar[]) a, spec);
+    assert(w.data == `[cast(wchar) 0xFFFE, cast(wchar) 0x42]`);
+
+    uint[] b = [0x0F_FF_FF_FF, 0x42];
+    w = appender!string();
+    spec = singleSpec("%s");
+    formatElement(w, cast(dchar[]) b, spec);
+    assert(w.data == `[cast(dchar) 0xFFFFFFF, cast(dchar) 0x42]`);
 }
 
 // Character elements are formatted like UTF-8 character literals.
