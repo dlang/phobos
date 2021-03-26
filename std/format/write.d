@@ -162,12 +162,12 @@ uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fm
             ++currentArg;
         }
 
-        if (spec.separatorCharPos == spec.DYNAMIC)
+        if (spec.dynamicSeparatorChar)
         {
             auto separatorChar =
                 getNth!("separator character", isSomeChar, dchar)(currentArg, args);
             spec.separatorChar = separatorChar;
-            spec.separatorCharPos = spec.UNSPECIFIED;
+            spec.dynamicSeparatorChar = false;
             ++currentArg;
         }
 
@@ -288,7 +288,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     import std.format : enforceFmt;
 
     enforceFmt(f.width != f.DYNAMIC && f.precision != f.DYNAMIC
-               && f.separators != f.DYNAMIC && f.separatorCharPos != f.DYNAMIC,
+               && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
                "Dynamic argument not allowed for `formatValue`");
 
     formatValueImpl(w, val, f);

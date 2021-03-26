@@ -65,11 +65,25 @@ if (is(Unqual!Char == Char))
     int separators = UNSPECIFIED;
 
     /**
+       The separator charactar is supplied at runtime.
+
+       _Default: false;
+     */
+    bool dynamicSeparatorChar = false;
+
+    /**
        Set to `DYNAMIC` when the separator character is supplied at runtime.
 
        _Default: `UNSPECIFIED`.
      */
-    int separatorCharPos = UNSPECIFIED;
+    // @@@DEPRECATED_[2.107.0]@@@
+    deprecated("separatorCharPos will be removed in 2.107.0. Please use dynamicSeparatorChar instead.")
+    int separatorCharPos() { return dynamicSeparatorChar ? DYNAMIC : UNSPECIFIED; }
+
+    /// ditto
+    // @@@DEPRECATED_[2.107.0]@@@
+    deprecated("separatorCharPos will be removed in 2.107.0. Please use dynamicSeparatorChar instead.")
+    void separatorCharPos(int value) { dynamicSeparatorChar = value == DYNAMIC; }
 
     /**
        Character to use as separator.
@@ -79,8 +93,7 @@ if (is(Unqual!Char == Char))
     dchar separatorChar = ',';
 
     /**
-       Special value for `width`, `precision`, `separators` and
-       `separatorCharPos`.
+       Special value for `width`, `precision` and `separators`.
 
        It flags that these values will be passed at runtime through
        variadic arguments.
@@ -88,7 +101,7 @@ if (is(Unqual!Char == Char))
     enum int DYNAMIC = int.max;
 
     /**
-       Special value for `precision`, `separators` and `separatorCharPos`.
+       Special value for `precision` and `separators`.
 
        It flags that these values have not been specified.
      */
@@ -420,7 +433,7 @@ if (is(Unqual!Char == Char))
 
                 if (trailing[i] == '?')
                 {
-                    separatorCharPos = DYNAMIC;
+                    dynamicSeparatorChar = true;
                     ++i;
                 }
 
@@ -940,7 +953,7 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
     assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
         == "Missing integer precision argument");
 
-    // separatorCharPos
+    // dynamicSeparatorChar
     assert(collectExceptionMsg!FormatException(format("%,?d", 5))
         == "separator character expected, not int for argument #1");
     assert(collectExceptionMsg!FormatException(format("%,?d", '?'))
