@@ -790,18 +790,6 @@ public:
             return this.match!hashOf;
         }
     }
-
-    /**
-     * Returns the index of the type of the `SumType`'s current value in the
-     * `SumType`'s `Types`.
-     *
-     * If the `SumType` is qualified, returns the index of the type in `Types`
-     * whose qualified version matches the `SumType`'s current value.
-     */
-    size_t typeIndex() const
-    {
-        return tag;
-    }
 }
 
 // Construction
@@ -1476,67 +1464,6 @@ version (D_BetterC) {} else
 
     MySum x = b;
     MySum y; y = b;
-}
-
-// Type index
-@safe unittest
-{
-    alias MySum = SumType!(int, float);
-
-    static bool isIndexOf(Target, Types...)(size_t i)
-    {
-        switch (i)
-        {
-            static foreach (tid, T; Types)
-                case tid: return is(T == Target);
-            default: return false;
-        }
-    }
-
-    assert(isIndexOf!(int, MySum.Types)(MySum(42).typeIndex));
-    assert(isIndexOf!(float, MySum.Types)(MySum(3.14).typeIndex));
-}
-
-// Type index for qualified SumTypes
-// Disabled in BetterC due to use of dynamic arrays
-version (D_BetterC) {} else
-@safe unittest
-{
-    alias MySum = SumType!(const(int[]), int[]);
-
-    static bool isIndexOf(Target, Types...)(size_t i)
-    {
-        switch (i)
-        {
-            static foreach (tid, T; Types)
-                case tid: return is(T == Target);
-            default: return false;
-        }
-    }
-
-    int[] ma = [1, 2, 3];
-    // Construct as mutable and convert to const to get mismatched type + tag
-    auto x = MySum(ma);
-    const y = MySum(ma);
-    auto z = const(MySum)(ma);
-
-    assert(isIndexOf!(int[], MySum.Types)(x.typeIndex));
-    assert(isIndexOf!(const(int[]), Map!(ConstOf, MySum.Types))(y.typeIndex));
-    assert(isIndexOf!(const(int[]), Map!(ConstOf, MySum.Types))(z.typeIndex));
-}
-
-// Type index for differently-qualified versions of the same SumType
-// Disabled in BetterC due to use of dynamic arrays
-version (D_BetterC) {} else
-@safe unittest
-{
-    alias MySum = SumType!(const(int[]), int[]);
-
-    int[] ma = [1, 2, 3];
-    auto x = MySum(ma);
-    const y = x;
-
-    assert(x.typeIndex == y.typeIndex);
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
