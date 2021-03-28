@@ -214,7 +214,17 @@ SRC_STD_FORMAT= \
     std\format\internal\write.d
 
 SRC_STD_MATH= \
-    std\math\package.d
+    std\math\algebraic.d \
+    std\math\constants.d \
+    std\math\exponential.d \
+    std\math\floats.d \
+    std\math\hardware.d \
+    std\math\integral.d \
+    std\math\package.d \
+    std\math\remainder.d \
+    std\math\rounding.d \
+    std\math\traits.d \
+    std\math\trigonometry.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
