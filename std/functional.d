@@ -1309,8 +1309,8 @@ template memoize(alias fun, uint maxSize)
     ReturnType!fun memoize(Parameters!fun args)
     {
         import std.meta : staticMap;
-        import std.traits : hasIndirections, Unqual;
-        import std.typecons : tuple;
+        import std.traits : Unqual;
+        import std.typecons : shouldGCScan, tuple;
         static struct Value { staticMap!(Unqual, Parameters!fun) args; Unqual!(ReturnType!fun) res; }
         static Value[] memo;
         static size_t[] initialized;
@@ -1323,7 +1323,7 @@ template memoize(alias fun, uint maxSize)
             static assert(maxSize < size_t.max / Value.sizeof);
             static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
 
-            enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
+            enum attr = GC.BlkAttr.NO_INTERIOR | (shouldGCScan!Value ? 0 : GC.BlkAttr.NO_SCAN);
             memo = (cast(Value*) GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
             initialized = (cast(size_t*) GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];

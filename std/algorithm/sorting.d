@@ -3098,6 +3098,7 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     import core.lifetime : emplace;
     import std.range : zip, SortedRange;
     import std.string : representation;
+    import std.typecons : shouldGCScan;
 
     static if (is(typeof(unaryFun!transform(r.front))))
     {
@@ -3129,7 +3130,7 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
         const nbytes = mulu(len, T.sizeof, overflow);
         if (overflow) assert(false, "multiplication overflowed");
         T[] result = (cast(T*) malloc(nbytes))[0 .. len];
-        static if (hasIndirections!T)
+        static if (shouldGCScan!T)
         {
             import core.memory : GC;
             GC.addRange(result.ptr, nbytes);
@@ -3148,7 +3149,7 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
         static void trustedFree(T[] p) @trusted
         {
             import core.stdc.stdlib : free;
-            static if (hasIndirections!T)
+            static if (shouldGCScan!T)
             {
                 import core.memory : GC;
                 GC.removeRange(p.ptr);

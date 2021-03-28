@@ -3098,6 +3098,11 @@ private struct RandomCoverChoices
     private immutable size_t _length;
     private immutable bool hasPackedBits;
     private enum BITS_PER_WORD = typeof(buffer[0]).sizeof * 8;
+    // No pointers to GC-allocated memory are reachable from any of this
+    // struct's fields so despite containing a pointer this struct does
+    // not need to be scanned by the GC. This explicit property is for use by
+    // std.typecons.shouldGCScan.
+    private enum bool __GC_NO_SCAN = true;
 
     void opAssign(T)(T) @disable;
 
