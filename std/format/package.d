@@ -42,7 +42,7 @@ $(TR
 $(TR
     $(TD $(MREF_ALTTEXT $(D read), std, format, read))
     $(TD $(REF_ALTTEXT $(D unformatValue), unformatValue, std, format, read))
-    $(TD Reads a value from an input range and converts it according to
+    $(TD Reads a value from the given input range and converts it according to
          a format specifier.)
 )
 $(TR

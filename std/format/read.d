@@ -15,6 +15,117 @@
  */
 module std.format.read;
 
+/// Booleans
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    auto str = "false";
+    auto spec = singleSpec("%s");
+    assert(unformatValue!bool(str, spec) == false);
+
+    str = "1";
+    spec = singleSpec("%d");
+    assert(unformatValue!bool(str, spec));
+}
+
+/// Null values
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    auto str = "null";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(typeof(null))(spec) == null);
+}
+
+/// Integrals
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    auto str = "123";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!int(spec) == 123);
+
+    str = "ABC";
+    spec = singleSpec("%X");
+    assert(str.unformatValue!int(spec) == 2748);
+
+    str = "11610";
+    spec = singleSpec("%o");
+    assert(str.unformatValue!int(spec) == 5000);
+}
+
+/// Floating point numbers
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+    import std.math : isClose;
+
+    auto str = "123.456";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!double(spec).isClose(123.456));
+}
+
+/// Character input ranges
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    auto str = "aaa";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!char(spec) == 'a');
+
+    // Using a numerical format spec reads a Unicode value from a string
+    str = "65";
+    spec = singleSpec("%d");
+    assert(str.unformatValue!char(spec) == 'A');
+
+    str = "41";
+    spec = singleSpec("%x");
+    assert(str.unformatValue!char(spec) == 'A');
+
+    str = "10003";
+    spec = singleSpec("%d");
+    assert(str.unformatValue!dchar(spec) == '✓');
+}
+
+/// Arrays and static arrays
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    string str = "aaa";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(dchar[])(spec) == "aaa"d);
+
+    str = "aaa";
+    spec = singleSpec("%s");
+    dchar[3] ret = ['a', 'a', 'a'];
+    assert(str.unformatValue!(dchar[3])(spec) == ret);
+
+    str = "[1, 2, 3, 4]";
+    spec = singleSpec("%s");
+    assert(str.unformatValue!(int[])(spec) == [1, 2, 3, 4]);
+
+    str = "[1, 2, 3, 4]";
+    spec = singleSpec("%s");
+    int[4] ret2 = [1, 2, 3, 4];
+    assert(str.unformatValue!(int[4])(spec) == ret2);
+}
+
+/// Associative arrays
+@safe pure unittest
+{
+    import std.format.spec : singleSpec;
+
+    auto str = `["one": 1, "two": 2]`;
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(int[string])(spec) == ["one": 1, "two": 2]);
+}
+
+
 import std.format.spec : FormatSpec;
 import std.format.internal.read;
 import std.traits : isSomeString;
@@ -449,133 +560,40 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /**
- * Reads a value from the given _input range according to spec
- * and returns it as type `T`.
- *
- * Params:
- *     T = the type to return
- *     input = the _input range to read from
- *     spec = the `FormatSpec` to use when reading from `input`
- * Returns:
- *     A value from `input` of type `T`
- * Throws:
- *     A `FormatException` if `spec` cannot read a type `T`
- * See_Also:
- *     $(REF parse, std, conv) and $(REF to, std, conv)
+Reads a value from the given _input range and converts it according to a
+format specifier.
+
+Params:
+    input = the $(REF_ALTTEXT input range, isInputRange, std, range, primitives),
+            to read from
+    spec = a $(MREF_ALTTEXT format string, std,format)
+    T = type to return
+    Range = the type of the input range `input`
+    Char = the character type used for `spec`
+
+Returns:
+    A value from `input` of type `T`.
+
+Throws:
+    A $(REF_ALTTEXT FormatException, FormatException, std, format)
+    if reading did not succeed.
+
+See_Also:
+    $(REF parse, std, conv) and $(REF to, std, conv)
  */
 T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 {
     return unformatValueImpl!T(input, spec);
 }
 
-/// Booleans
+///
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
 
-    auto str = "false";
+    string s = "42";
     auto spec = singleSpec("%s");
-    assert(unformatValue!bool(str, spec) == false);
-
-    str = "1";
-    spec = singleSpec("%d");
-    assert(unformatValue!bool(str, spec));
-}
-
-/// Null values
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-
-    auto str = "null";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(typeof(null))(spec) == null);
-}
-
-/// Integrals
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-
-    auto str = "123";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!int(spec) == 123);
-
-    str = "ABC";
-    spec = singleSpec("%X");
-    assert(str.unformatValue!int(spec) == 2748);
-
-    str = "11610";
-    spec = singleSpec("%o");
-    assert(str.unformatValue!int(spec) == 5000);
-}
-
-/// Floating point numbers
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-    import std.math : isClose;
-
-    auto str = "123.456";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!double(spec).isClose(123.456));
-}
-
-/// Character input ranges
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-
-    auto str = "aaa";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!char(spec) == 'a');
-
-    // Using a numerical format spec reads a Unicode value from a string
-    str = "65";
-    spec = singleSpec("%d");
-    assert(str.unformatValue!char(spec) == 'A');
-
-    str = "41";
-    spec = singleSpec("%x");
-    assert(str.unformatValue!char(spec) == 'A');
-
-    str = "10003";
-    spec = singleSpec("%d");
-    assert(str.unformatValue!dchar(spec) == '✓');
-}
-
-/// Arrays and static arrays
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-
-    string str = "aaa";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(dchar[])(spec) == "aaa"d);
-
-    str = "aaa";
-    spec = singleSpec("%s");
-    dchar[3] ret = ['a', 'a', 'a'];
-    assert(str.unformatValue!(dchar[3])(spec) == ret);
-
-    str = "[1, 2, 3, 4]";
-    spec = singleSpec("%s");
-    assert(str.unformatValue!(int[])(spec) == [1, 2, 3, 4]);
-
-    str = "[1, 2, 3, 4]";
-    spec = singleSpec("%s");
-    int[4] ret2 = [1, 2, 3, 4];
-    assert(str.unformatValue!(int[4])(spec) == ret2);
-}
-
-/// Associative arrays
-@safe pure unittest
-{
-    import std.format.spec : singleSpec;
-
-    auto str = `["one": 1, "two": 2]`;
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(int[string])(spec) == ["one": 1, "two": 2]);
+    assert(unformatValue!int(s, spec) == 42);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=7241
