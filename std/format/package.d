@@ -60,60 +60,92 @@ Limitation: This package does not support localization, but
     adheres to the rounding mode of the floating point unit, if
     available.
 
-   Format_String:
+$(SECTION3 Format Strings)
 
-   <a name="format-string">$(I Format strings)</a>
-   consist of characters interspersed with $(I format
-   specifications). Characters are simply copied to the output (such
-   as putc) after any necessary conversion to the corresponding UTF-8
-   sequence.
+The functions contained in this package use $(I format strings). A
+format string describes the layout of another string for reading or
+writing purposes. A format string is composed of normal text
+interspersed with $(I format specifiers). A format specifier starts
+with a percentage sign $(B '%'), optionally followed by one or more
+$(I parameters) and ends with a $(I format indicator). A format
+indicator may be a simple $(I format character) or a $(I compound
+indicator).
 
-   The format string has the following grammar:
+$(I Format strings) are composed according to the following grammar:
 
 $(PRE
 $(I FormatString):
-    $(I FormatStringItem)*
+    $(I FormatStringItem) $(I FormatString)
 $(I FormatStringItem):
-    $(B '%%')
-    $(B '%') $(I Position) $(I Flags) $(I Width) $(I Separator) $(I Precision) $(I FormatChar)
-    $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(B '%-$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(I OtherCharacterExceptPercent)
+    $(I Character)
+    $(I FormatSpecifier)
+$(I FormatSpecifier):
+    $(B '%') $(I Parameters) $(I FormatIndicator)
+
+$(I FormatIndicator):
+    $(I FormatCharacter)
+    $(I CompoundIndicator)
+$(I FormatCharacter):
+    $(I see remark below)
+$(I CompoundIndicator):
+    $(B '$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+    $(B '$(LPAREN)') $(I FormatString) $(B '%|') $(I Delimiter) $(B '%$(RPAREN)')
+$(I Delimiter)
+    $(I empty)
+    $(I Character) $(I Delimiter)
+
+$(I Parameters):
+    $(I Position) $(I Flags) $(I Width) $(I Precision) $(I Separator)
 $(I Position):
     $(I empty)
     $(I Integer) $(B '$')
+    $(I Integer) $(B ':') $(I Integer) $(B '$')
+    $(I Integer) $(B ':') $(B '$')
 $(I Flags):
     $(I empty)
-    $(B '-') $(I Flags)
-    $(B '+') $(I Flags)
-    $(B '#') $(I Flags)
-    $(B '0') $(I Flags)
-    $(B ' ') $(I Flags)
+    $(I Flag) $(I Flags)
+$(I Flag):
+    $(B '-')|$(B '+')|$(B '&nbsp;')|$(B '0')|$(B '#')
 $(I Width):
+    $(I OptionalPositionalInteger)
+$(I Precision):
+    $(I empty)
+    $(B '.') $(I OptionalPositionalInteger)
+$(I Separator):
+    $(I empty)
+    $(B ',') $(I OptionalInteger)
+    $(B ',') $(I OptionalInteger) $(B '?')
+$(I OptionalInteger):
     $(I empty)
     $(I Integer)
     $(B '*')
-$(I Separator):
-    $(I empty)
-    $(B ',')
-    $(B ',') $(B '?')
-    $(B ',') $(B '*') $(B '?')
-    $(B ',') $(I Integer) $(B '?')
-    $(B ',') $(B '*')
-    $(B ',') $(I Integer)
-$(I Precision):
-    $(I empty)
-    $(B '.')
-    $(B '.') $(I Integer)
-    $(B '.*')
+$(I OptionalPositionalInteger):
+    $(I OptionalInteger)
+    $(B '*') $(I Integer) $(B '$')
+
+$(I Character)
+    $(B '%%')
+    $(I AnyCharacterExceptPercent)
 $(I Integer):
-    $(I Digit)
-    $(I Digit) $(I Integer)
+    $(I NonZeroDigit) $(I Digits)
+$(I Digits):
+    $(I empty)
+    $(I Digit) $(I Digits)
+$(I NonZeroDigit):
+    $(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
 $(I Digit):
     $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
-$(I FormatChar):
-    $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B '|')
 )
+
+Note: $(I FormatCharacter) is unspecified. It can be any character
+that has no other purpose in this grammar, but it is
+recommended to assign (lower- and uppercase) letters.
+
+Note: The $(I Parameters) of a $(I CompoundIndicator) are currently
+limited to a $(B '-') flag.
+
+
+
 
     $(BOOKTABLE Flags affect formatting depending on the specifier as
     follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
