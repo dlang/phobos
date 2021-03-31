@@ -1443,6 +1443,36 @@ if (Rs.length >= 2 &&
     assert(m.empty);
 }
 
+// test sortedness with predicate `less` that contradicts `==`
+@nogc @safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static immutable a = [
+        [1, 1],
+        [3, 1],
+        [3, 2],
+        [5, 1],
+    ];
+    static immutable b = [
+        [2, 1],
+        [3, 1],
+        [4, 1],
+        [4, 2],
+    ];
+    static immutable r = [
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [3, 2],
+        [3, 1],
+        [4, 1],
+        [4, 2],
+        [5, 1],
+    ];
+    assert(merge!"a[0] < b[0]"(a, b).equal(r));
+}
+
 private template validPredicates(E, less...)
 {
     static if (less.length == 0)
