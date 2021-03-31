@@ -1512,28 +1512,14 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
     });
 }
 
-// Undocumented
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("unformatElement was accidentally made public and will be removed in 2.107.0")
 T unformatElement(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range)
 {
-    import std.conv : parseElement;
+    import std.format.internal.read : ue = unformatElement;
 
-    static if (isSomeString!T)
-    {
-        if (spec.spec == 's')
-        {
-            return parseElement!T(input);
-        }
-    }
-    else static if (isSomeChar!T)
-    {
-        if (spec.spec == 's')
-        {
-            return parseElement!T(input);
-        }
-    }
-
-    return unformatValue!T(input, spec);
+    return ue(input, spec);
 }
 
 /* ======================== Unit Tests ====================================== */

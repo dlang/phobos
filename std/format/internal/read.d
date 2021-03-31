@@ -302,7 +302,7 @@ private T unformatRange(T, Range, Char)(ref Range input, scope const ref FormatS
 in (spec.spec == '(', "spec.spec must be '(' not " ~ spec.spec)
 {
     import std.range.primitives : empty, front, popFront;
-    import std.format : enforceFmt, format, unformatElement;
+    import std.format : enforceFmt, format;
 
     T result;
     static if (isStaticArray!T)
@@ -383,4 +383,28 @@ in (spec.spec == '(', "spec.spec must be '(' not " ~ spec.spec)
                    "Too few (%d) format specifiers for static array of length %d".format(i, T.length));
     }
     return result;
+}
+
+T unformatElement(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
+if (isInputRange!Range)
+{
+    import std.conv : parseElement;
+    import std.format.read : unformatValue;
+
+    static if (isSomeString!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+    else static if (isSomeChar!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+
+    return unformatValue!T(input, spec);
 }
