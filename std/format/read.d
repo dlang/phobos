@@ -1,17 +1,47 @@
 // Written in the D programming language.
 
 /**
-   This is a submodule of $(MREF std, format).
-   It provides some helpful tools.
+This is a submodule of $(MREF std, format).
 
-   Copyright: Copyright The D Language Foundation 2000-2013.
+It provides two functions for reading formatted input: $(LREF
+unformatValue) and $(LREF formattedRead). The former reads a single
+value. The latter reads several values at once and matches the
+characters found between format specifiers.
 
-   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Parameters are ignored, except for the ones consisting of a single
+$(B '*'). See $(LREF formattedRead) for more information.
 
-   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
-   Andrei Alexandrescu), and Kenji Hara
+A space outside of a format specifier has a special meaning: it
+matches any sequence of whitespace characters, not just a single
+space.
 
-   Source: $(PHOBOSSRC std/format/read.d)
+The following combinations of format characters and types are
+available:
+
+$(BOOKTABLE ,
+$(TR $(TH) $(TH s) $(TH c) $(TH d, u, b, o, x, X) $(TH e, E, f, g, G) $(TH r) $(TH compound))
+$(TR $(TD `bool`) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
+$(TR $(TD `null`) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
+$(TR $(TD $(I integer)) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I floating point)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I character)) $(TD yes) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
+$(TR $(TD $(I string)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes))
+$(TR $(TD $(I array)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes))
+$(TR $(TD $(I associative array)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes))
+)
+
+Below are highlighted examples on how these combinations are used
+with $(LREF unformatValue), however, they apply for $(LREF
+formattedRead) also
+
+Copyright: Copyright The D Language Foundation 2000-2013.
+
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+Andrei Alexandrescu), and Kenji Hara
+
+Source: $(PHOBOSSRC std/format/read.d)
  */
 module std.format.read;
 
@@ -22,11 +52,11 @@ module std.format.read;
 
     auto str = "false";
     auto spec = singleSpec("%s");
-    assert(unformatValue!bool(str, spec) == false);
+    assert(str.unformatValue!bool(spec) == false);
 
     str = "1";
     spec = singleSpec("%d");
-    assert(unformatValue!bool(str, spec));
+    assert(str.unformatValue!bool(spec) == true);
 }
 
 /// Null values
@@ -44,40 +74,62 @@ module std.format.read;
 {
     import std.format.spec : singleSpec;
 
+    // signed decimal values
     auto str = "123";
     auto spec = singleSpec("%s");
     assert(str.unformatValue!int(spec) == 123);
 
+    // hexadecimal values
     str = "ABC";
     spec = singleSpec("%X");
     assert(str.unformatValue!int(spec) == 2748);
 
+    // octal values
     str = "11610";
     spec = singleSpec("%o");
     assert(str.unformatValue!int(spec) == 5000);
+
+    // raw read, depends on endianess
+    str = "\x75\x01";
+    spec = singleSpec("%r");
+    auto result = str.unformatValue!short(spec);
+    assert(result == 373 /* little endian */ || result == 29953 /* big endian */ );
 }
 
-/// Floating point numbers
+// Floating point numbers
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
     import std.math : isClose;
 
+    // natural notation
     auto str = "123.456";
     auto spec = singleSpec("%s");
     assert(str.unformatValue!double(spec).isClose(123.456));
+
+    // scientific notation
+    str = "1e17";
+    spec = singleSpec("%e");
+    assert(str.unformatValue!double(spec).isClose(1e17));
+
+    // raw read, depends on endianess
+    str = "\x40\x00\x00\xBF";
+    spec = singleSpec("%r");
+    auto result = str.unformatValue!float(spec);
+    assert(isClose(result, -0.5) /* little endian */ || isClose(result, 2.0) /* big endian */ );
 }
 
-/// Character input ranges
+/// Characters
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
 
-    auto str = "aaa";
+    // only the first character is read
+    auto str = "abc";
     auto spec = singleSpec("%s");
     assert(str.unformatValue!char(spec) == 'a');
 
-    // Using a numerical format spec reads a Unicode value from a string
+    // using a numerical format character treats the read number as unicode code point
     str = "65";
     spec = singleSpec("%d");
     assert(str.unformatValue!char(spec) == 'A');
@@ -91,28 +143,41 @@ module std.format.read;
     assert(str.unformatValue!dchar(spec) == '✓');
 }
 
-/// Arrays and static arrays
+/// Arrays
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
 
+    // string value
     string str = "aaa";
     auto spec = singleSpec("%s");
     assert(str.unformatValue!(dchar[])(spec) == "aaa"d);
 
+    // fixed size array with characters
     str = "aaa";
     spec = singleSpec("%s");
     dchar[3] ret = ['a', 'a', 'a'];
     assert(str.unformatValue!(dchar[3])(spec) == ret);
 
+    // dynamic array
     str = "[1, 2, 3, 4]";
     spec = singleSpec("%s");
     assert(str.unformatValue!(int[])(spec) == [1, 2, 3, 4]);
 
+    // fixed size array with integers
     str = "[1, 2, 3, 4]";
     spec = singleSpec("%s");
     int[4] ret2 = [1, 2, 3, 4];
     assert(str.unformatValue!(int[4])(spec) == ret2);
+
+    // compound specifiers can be used for more control
+    str = "1,2,3";
+    spec = singleSpec("%(%s,%)");
+    assert(str.unformatValue!(int[])(spec) == [1, 2, 3]);
+
+    str = "cool";
+    spec = singleSpec("%(%c%)");
+    assert(str.unformatValue!(char[])(spec) == ['c', 'o', 'o', 'l']);
 }
 
 /// Associative arrays
@@ -120,11 +185,16 @@ module std.format.read;
 {
     import std.format.spec : singleSpec;
 
+    // as single value
     auto str = `["one": 1, "two": 2]`;
     auto spec = singleSpec("%s");
     assert(str.unformatValue!(int[string])(spec) == ["one": 1, "two": 2]);
-}
 
+    // with compound specifier for more control
+    str = "1/1, 2/4, 3/9";
+    spec = singleSpec("%(%d/%d%|, %)");
+    assert(str.unformatValue!(int[int])(spec) == [1: 1, 2: 4, 3: 9]);
+}
 
 import std.format.spec : FormatSpec;
 import std.format.internal.read;
@@ -133,6 +203,9 @@ import std.traits : isSomeString;
 /**
 Reads an input range according to a format string and stores the read
 values into its arguments.
+
+Format specifiers with format character $(B 'd'), $(B 'u') and $(B
+'c') can take a $(B '*') parameter for skipping values.
 
 The second version of `formattedRead` takes the format string as
 template argument. In this case, it is checked for consistency at
@@ -267,6 +340,25 @@ if (isSomeString!(typeof(fmt)))
     assert(a == "hello");
     assert(b == 124);
     assert(c == 34.5);
+}
+
+/// Skipping values
+@safe pure unittest
+{
+    string item;
+    double amount;
+
+    assert("orange: (12%) 15.25".formattedRead("%s: (%*d%%) %f", item, amount) == 2);
+    assert(item == "orange");
+    assert(amount == 15.25);
+
+    // can also be used with tuples
+    import std.typecons : Tuple;
+
+    Tuple!(int, float) t;
+    char[] line = "1 7643 2.125".dup;
+    formattedRead(line, "%s %*u %s", t);
+    assert(t[0] == 1 && t[1] == 2.125);
 }
 
 @safe unittest
