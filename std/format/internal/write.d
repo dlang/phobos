@@ -2225,7 +2225,6 @@ if (hasToString!(T, Char))
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
-    import std.format : enforceValidFormatSpec;
     import std.range.primitives : put;
 
     enforceValidFormatSpec!(T, Char)(f);
@@ -2440,7 +2439,6 @@ version (StdUnittest)
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
-    import std.format : enforceValidFormatSpec;
     import std.range.primitives : put;
 
     enforceValidFormatSpec!(T, Char)(f);
@@ -2529,7 +2527,6 @@ void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val,
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T))
     && !is(T == enum))
 {
-    import std.format : enforceValidFormatSpec;
     import std.range.primitives : put;
 
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
@@ -2703,6 +2700,24 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
     Bar b;
     assert(format("%b", b) == "Hello");
+}
+
+void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
+{
+    import std.format : enforceFmt;
+    import std.range : isInputRange;
+    import std.format.internal.write : hasToString, HasToStringResult;
+
+    enum overload = hasToString!(T, Char);
+    static if (
+            overload != HasToStringResult.constCharSinkFormatSpec &&
+            overload != HasToStringResult.constCharSinkFormatString &&
+            overload != HasToStringResult.customPutWriterFormatSpec &&
+            !isInputRange!T)
+    {
+        enforceFmt(f.spec == 's',
+            "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
+    }
 }
 
 /*

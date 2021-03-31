@@ -915,22 +915,13 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assertThrown!FormatException(singleSpec("%%"));
 }
 
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("enforceValidFormatSpec was accidentally made public and will be removed in 2.107.0")
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 {
-    import std.format : enforceFmt;
-    import std.range : isInputRange;
-    import std.format.internal.write : hasToString, HasToStringResult;
+    import std.format.internal.write : evfs = enforceValidFormatSpec;
 
-    enum overload = hasToString!(T, Char);
-    static if (
-            overload != HasToStringResult.constCharSinkFormatSpec &&
-            overload != HasToStringResult.constCharSinkFormatString &&
-            overload != HasToStringResult.customPutWriterFormatSpec &&
-            !isInputRange!T)
-    {
-        enforceFmt(f.spec == 's',
-            "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
-    }
+    evfs!T(f);
 }
 
 @safe unittest
