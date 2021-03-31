@@ -130,7 +130,10 @@ if (is(T == float) || is(T == double)
     }
 
     if (T.mant_dig == 64)
-        assert(false); // not yet implemented
+    {
+        if (f.spec != 'f' && f.spec != 'F')
+            assert(false); // not yet implemented
+    }
 
     final switch (f.spec)
     {
@@ -1625,7 +1628,21 @@ if (is(T == float) || is(T == double)
     //   the fractional part by consecutive multiplication by 10. Again only until we have enough
     //   digits. Finally, we decide the rounding type, mainly by looking at the next digit.
 
-    ulong[18] bigbuf;
+    static if (is(T == real) && real.mant_dig == 64)
+    {
+        enum small_bound = 0;
+        enum max_buf = 275;
+    }
+    else
+    {
+        enum small_bound = T.mant_dig - 61;
+        static if (is(T == float))
+            enum max_buf = 4;
+        else
+            enum max_buf = 18;
+    }
+
+    ulong[max_buf] bigbuf;
     if (exp >= T.mant_dig)
     {
         // large number without fractional digits
@@ -1634,11 +1651,20 @@ if (is(T == float) || is(T == double)
         // because this makes it much more easy to implement the division by 10.
         int count = exp / 60 + 1;
 
+        // only the first few ulongs contain the mantiassa. The rest are zeros.
+        int lower = 60 - (exp - T.mant_dig + 1) % 60;
+
+        static if (is(T == real) && real.mant_dig == 64)
+        {
+            // for x87 reals, the lowest ulong may contain more than 60 bits,
+            // because the mantissa is 63 (>60) bits long
+            // therefore we need one ulong less
+            if (lower <= 3) count--;
+        }
+
         // saved in big endian format
         ulong[] mybig = bigbuf[0 .. count];
 
-        // only the first or the first two ulongs contain the mantiassa. The rest are zeros.
-        int lower = 60 - (exp - T.mant_dig + 1) % 60;
         if (lower < T.mant_dig)
         {
             mybig[0] = mnt >> lower;
@@ -1670,7 +1696,7 @@ if (is(T == float) || is(T == double)
 
         next = roundType.ZERO;
     }
-    else if (exp + 61 < T.mant_dig)
+    else if (exp < small_bound)
     {
         // small number without integer digits
         //
@@ -1681,16 +1707,35 @@ if (is(T == float) || is(T == double)
         // saved in little endian format
         ulong[] mybig = bigbuf[0 .. count];
 
-        // only the last or the last two ulongs contain the mantiassa. Because of little endian
-        // format these are the ulongs at index 0 and 1. The rest are zeros.
+        // only the last few ulongs contain the mantiassa. Because of little endian
+        // format these are the ulongs at index 0 and 1 (and 2 in case of x87 reals).
+        // The rest are zeros.
         int upper = 60 - (-exp - 1) % 60;
-        if (upper < T.mant_dig)
+
+        static if (is(T == real) && real.mant_dig == 64)
         {
-            mybig[0] = (mnt & ((1L << (T.mant_dig - upper)) - 1)) << 60 - (T.mant_dig - upper);
-            mybig[1] = mnt >> (T.mant_dig - upper);
+            if (upper < 4)
+            {
+                mybig[0] = (mnt & ((1L << (4 - upper)) - 1)) << 56 + upper;
+                mybig[1] = (mnt >> (4 - upper)) & ((1L << 60) - 1);
+                mybig[2] = mnt >> 64 - upper;
+            }
+            else
+            {
+                mybig[0] = (mnt & ((1L << (T.mant_dig - upper)) - 1)) << 60 - (T.mant_dig - upper);
+                mybig[1] = mnt >> (T.mant_dig - upper);
+            }
         }
         else
-            mybig[0] = mnt << (upper - T.mant_dig);
+        {
+            if (upper < T.mant_dig)
+            {
+                mybig[0] = (mnt & ((1L << (T.mant_dig - upper)) - 1)) << 60 - (T.mant_dig - upper);
+                mybig[1] = mnt >> (T.mant_dig - upper);
+            }
+            else
+                mybig[0] = mnt << (upper - T.mant_dig);
+        }
 
         buffer[--left] = '0'; // 0 left of the dot
 
@@ -1753,6 +1798,21 @@ if (is(T == float) || is(T == double)
         ulong int_part = mnt >> (T.mant_dig - 1 - exp);
         ulong frac_part = mnt & ((1L << (T.mant_dig - 1 - exp)) - 1);
 
+        // for x87 reals the mantiassa might be up to 3 bits too long
+        // we need to save these bits as a tail and handle this separately
+        static if (is(T == real) && real.mant_dig == 64)
+        {
+            ulong tail = 0;
+            ulong tail_length = 0;
+            if (exp < 3)
+            {
+                tail = frac_part & ((1L << (3 - exp)) - 1);
+                tail_length = 3 - exp;
+                frac_part >>= 3 - exp;
+                exp = 3;
+            }
+        }
+
         static if (g) auto found = int_part > 0; // searching first non zero
 
         // creating int part
@@ -1773,6 +1833,19 @@ if (is(T == float) || is(T == double)
         while (frac_part != 0 && right - start - 1 < f.precision)
         {
             frac_part *= 10;
+            static if (is(T == real) && real.mant_dig == 64)
+            {
+                if (tail_length > 0)
+                {
+                    // together this is *= 10;
+                    tail *= 5;
+                    tail_length--;
+
+                    frac_part += tail >> tail_length;
+                    if (tail_length > 0)
+                        tail &= (1L << tail_length) - 1;
+                }
+            }
             buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
 
             static if (g)
@@ -2158,6 +2231,75 @@ printFloat_done:
     assert(printFloat(buf[], -real.nan, f) == "-nan");
     assert(printFloat(buf[], real.infinity, f) == "inf");
     assert(printFloat(buf[], -real.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0L, f) == "0.000000");
+    assert(printFloat(buf[], -0.0L, f) == "-0.000000");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], 1e-4940L, f) == "0.000000");
+        assert(printFloat(buf[], -1e-4940L, f) == "-0.000000");
+        assert(printFloat(buf[], 1e-30L, f) == "0.000000");
+        assert(printFloat(buf[], -1e-30L, f) == "-0.000000");
+        assert(printFloat(buf[], 1e-10L, f) == "0.000000");
+        assert(printFloat(buf[], -1e-10L, f) == "-0.000000");
+        assert(printFloat(buf[], 0.1L, f) == "0.100000");
+        assert(printFloat(buf[], -0.1L, f) == "-0.100000");
+        assert(printFloat(buf[], 10.0L, f) == "10.000000");
+        assert(printFloat(buf[], -10.0L, f) == "-10.000000");
+        version (Windows) {} // issue 20972
+        else
+        {
+            auto result1 = printFloat(buf[], 1e4000L, f);
+            assert(result1.length == 4007 && result1[0 .. 40] == "9999999999999999999965463873099623784932");
+            auto result2 = printFloat(buf[], -1e4000L, f);
+            assert(result2.length == 4008 && result2[0 .. 40] == "-999999999999999999996546387309962378493");
+        }
+
+        import std.math : nextUp, nextDown;
+        assert(printFloat(buf[], nextUp(0.0L), f) == "0.000000");
+        assert(printFloat(buf[], nextDown(-0.0L), f) == "-0.000000");
+    }
+}
+
+@safe unittest
+{
+    import std.exception : assertCTFEable;
+    import std.math : log2, nextDown;
+
+    assertCTFEable!(
+    {
+        // log2 is broken for x87-reals on some computers in CTFE
+        // the following tests excludes these computers from the tests
+        // (issue 21757)
+        enum test = cast(int) log2(3.05e2312L);
+        static if (real.mant_dig == 64 && test == 7681)
+        {
+            char[256] buf;
+            auto f = FormatSpec!dchar("");
+            f.spec = 'f';
+            assert(printFloat(buf[], real.infinity, f) == "inf");
+            assert(printFloat(buf[], 10.0L, f) == "10.000000");
+            assert(printFloat(buf[], 2.6080L, f) == "2.608000");
+            auto result1 = printFloat(buf[], 3.05e2312L, f);
+            assert(result1.length == 2320);
+            assert(result1[0 .. 20] == "30499999999999999999");
+
+            f.precision = 60;
+            assert(printFloat(buf[], 2.65e-54, f) ==
+                   "0.000000000000000000000000000000000000000000000000000002650000");
+
+            f.precision = 5000;
+            auto result2 = printFloat(buf[], 1.2119e-4822L, f);
+            assert(result2.length == 5002);
+            assert(result2[$ - 20 .. $] == "60076763752233836613");
+            auto result3 = printFloat(buf[], real.min_normal, f);
+            assert(result3.length == 5002);
+            assert(result3[$ - 20 .. $] == "47124010882722980874");
+            auto result4 = printFloat(buf[], real.min_normal.nextDown, f);
+            assert(result4.length == 5002);
+            assert(result4[$ - 20 .. $] == "52925846892214823939");
+        }
+    });
 }
 
 @safe unittest
