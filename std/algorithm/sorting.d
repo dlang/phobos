@@ -1171,8 +1171,7 @@ if (Rs.length >= 2 &&
                 {
                     if (!source[i].empty)
                     {
-                        assert(previousFront == source[i].front ||
-                               comp(previousFront, source[i].front),
+                        assert(!comp(source[i].front, previousFront),
                                "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                     }
                 }
@@ -1238,8 +1237,7 @@ if (Rs.length >= 2 &&
                     {
                         if (!source[i].empty)
                         {
-                            assert(previousBack == source[i].back ||
-                                   comp(source[i].back, previousBack),
+                            assert(!comp(previousBack, source[i].back),
                                    "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                         }
                     }
