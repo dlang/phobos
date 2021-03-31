@@ -1447,28 +1447,29 @@ if (Rs.length >= 2 &&
 @nogc @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
 
     static immutable a = [
-        [1, 1],
-        [3, 1],
-        [3, 2],
-        [5, 1],
+        tuple(1, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(5, 1),
     ];
     static immutable b = [
-        [2, 1],
-        [3, 1],
-        [4, 1],
-        [4, 2],
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
     ];
     static immutable r = [
-        [1, 1],
-        [2, 1],
-        [3, 1],
-        [3, 2],
-        [3, 1],
-        [4, 1],
-        [4, 2],
-        [5, 1],
+        tuple(1, 1),
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
+        tuple(5, 1),
     ];
     assert(merge!"a[0] < b[0]"(a, b).equal(r));
 }
