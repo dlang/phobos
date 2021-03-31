@@ -20,35 +20,36 @@ import std.format.internal.read;
 import std.traits : isSomeString;
 
 /**
-Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-`r`, converts them according to `fmt`, and writes them to `args`.
+Reads an input range according to a format string and stores the read
+values into its arguments.
+
+The second version of `formattedRead` takes the format string as
+template argument. In this case, it is checked for consistency at
+compile-time.
 
 Params:
-    r = The range to read from.
-    fmt = The format of the data to read.
-    args = The drain of the data read.
+    r = an $(REF_ALTTEXT input range, isInputRange, std, range, primitives),
+        where the formatted input is read from
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments where the read values are stored
+    Range = the type of the input range `r`
+    Char = the character type used for `fmt`
+    Args = a variadic list of types of the arguments
 
 Returns:
-
-On success, the function returns the number of variables filled. This count
-can match the expected number of readings or fewer, even zero, if a
-matching failure happens.
+    The number of variables filled. If the input range `r` ends early,
+    this number will be less than the number of variables provided.
 
 Throws:
-    A `FormatException` if `S.length == 0` and `fmt` has format specifiers.
+    A $(REF_ALTTEXT FormatException, FormatException, std, format)
+    if reading did not succeed.
+
+Note:
+    For backward compatibility the arguments `args` can be given as pointers
+    to that variable, but it is not recommended to do so, because this
+    option might be removed in the future.
  */
-uint formattedRead(alias fmt, R, S...)(auto ref R r, auto ref S args)
-if (isSomeString!(typeof(fmt)))
-{
-    import std.format : checkFormatException;
-
-    alias e = checkFormatException!(fmt, S);
-    static assert(!e, e.msg);
-    return .formattedRead(r, fmt, args);
-}
-
-/// ditto
-uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S args)
+uint formattedRead(Range, Char, Args...)(auto ref Range r, const(Char)[] fmt, auto ref Args args)
 {
     import std.format : enforceFmt;
     import std.range.primitives : empty;
@@ -56,7 +57,7 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     import std.typecons : isTuple;
 
     auto spec = FormatSpec!Char(fmt);
-    static if (!S.length)
+    static if (!Args.length)
     {
         spec.readUpToNextSpec(r);
         enforceFmt(spec.trailing.empty, "Trailing characters in formattedRead format string");
@@ -113,15 +114,48 @@ uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S ar
     }
 }
 
-/// The format string can be checked at compile-time (see $(REF format, std, format) for details):
+/// ditto
+uint formattedRead(alias fmt, Range, Args...)(auto ref Range r, auto ref Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .formattedRead(r, fmt, args);
+}
+
+///
 @safe pure unittest
 {
-    string s = "hello!124:34.5";
+    string object;
+    char cmp;
+    int value;
+
+    assert(formattedRead("angle < 36", "%s %c %d", object, cmp, value) == 3);
+    assert(object == "angle");
+    assert(cmp == '<');
+    assert(value == 36);
+
+    // reading may end early:
+    assert(formattedRead("length >", "%s %c %d", object, cmp, value) == 2);
+    assert(object == "length");
+    assert(cmp == '>');
+    // value is not changed:
+    assert(value == 36);
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
     string a;
     int b;
     double c;
-    s.formattedRead!"%s!%s:%s"(a, b, c);
-    assert(a == "hello" && b == 124 && c == 34.5);
+
+    assert("hello!124:34.5".formattedRead!"%s!%s:%s"(a, b, c) == 3);
+    assert(a == "hello");
+    assert(b == 124);
+    assert(c == 34.5);
 }
 
 @safe unittest
