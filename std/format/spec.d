@@ -1,17 +1,21 @@
 // Written in the D programming language.
 
 /**
-   This is a submodule of $(MREF std, format).
-   It provides some helpful tools.
+This is a submodule of $(MREF std, format).
 
-   Copyright: Copyright The D Language Foundation 2000-2013.
+It centers around a struct called $(LREF FormatSpec), which takes a
+$(MREF_ALTTEXT format string, std,format) and provides tools for
+parsing this string. Additionally this module contains a function
+$(LREF singleSpec) which helps treating a single format specifier.
 
-   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Copyright: Copyright The D Language Foundation 2000-2013.
 
-   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
-   Andrei Alexandrescu), and Kenji Hara
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-   Source: $(PHOBOSSRC std/format/spec.d)
+Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+Andrei Alexandrescu), and Kenji Hara
+
+Source: $(PHOBOSSRC std/format/spec.d)
  */
 module std.format.spec;
 
@@ -67,7 +71,7 @@ if (is(Unqual!Char == Char))
     /**
        The separator charactar is supplied at runtime.
 
-       _Default: false;
+       _Default: false.
      */
     bool dynamicSeparatorChar = false;
 
@@ -75,6 +79,10 @@ if (is(Unqual!Char == Char))
        Set to `DYNAMIC` when the separator character is supplied at runtime.
 
        _Default: `UNSPECIFIED`.
+
+       $(RED Warning:
+           `separatorCharPos` is deprecated. It will be removed in 2.107.0.
+           Please use `dynamicSeparatorChar` instead.)
      */
     // @@@DEPRECATED_[2.107.0]@@@
     deprecated("separatorCharPos will be removed in 2.107.0. Please use dynamicSeparatorChar instead.")
