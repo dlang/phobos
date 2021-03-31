@@ -1,49 +1,64 @@
 // Written in the D programming language.
 
 /**
-   This module implements the formatting functionality for strings and
-   I/O. It's comparable to C99's `vsprintf()` and uses a similar
-   _format encoding scheme.
-
-   For an introductory look at $(B std._format)'s capabilities and how to use
-   this module see the dedicated
-   $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
-
-   This module centers around two functions:
+This package provides string formatting functionality using
+`printf` style format strings.
 
 $(BOOKTABLE ,
-$(TR $(TH Function Name) $(TH Description)
+$(TR $(TH Submodule) $(TH Function Name) $(TH Description))
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF format))
+    $(TD Converts its arguments according to a format string into a string.)
 )
-    $(TR $(TD $(REF_ALTTEXT $(D formattedRead), formattedRead, std, format, read))
-        $(TD Reads values according to the format string from an InputRange.
-    ))
-    $(TR $(TD $(REF_ALTTEXT $(D formattedWrite), formattedWrite, std, format, write))
-        $(TD Formats its arguments according to the format string and puts them
-        to an OutputRange.
-    ))
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF sformat))
+    $(TD Converts its arguments according to a format string into a buffer.)
 )
-
-   For a description of the format string, see below.
-
-   Two functions have been added for convenience:
-
-$(BOOKTABLE ,
-$(TR $(TH Function Name) $(TH Description)
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF FormatException))
+    $(TD Signals a problem while formatting.)
 )
-    $(TR $(TD $(LREF format))
-        $(TD Returns a GC-allocated string with the formatting result.
-    ))
-    $(TR $(TD $(LREF sformat))
-        $(TD Puts the formatting result into a preallocated array.
-    ))
+$(TR
+    $(TD $(MREF_ALTTEXT $(D write), std, format, write))
+    $(TD $(REF_ALTTEXT $(D formattedWrite), formattedWrite, std, format, write))
+    $(TD Converts its arguments according to a format string and writes
+         the result to an output range.)
 )
+$(TR
+    $(TD $(MREF_ALTTEXT $(D write), std, format, write))
+    $(TD $(REF_ALTTEXT $(D formatValue), formatValue, std, format, write))
+    $(TD Formats a value of any type according to a format specifier and
+         writes the result to an output range.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D read), std, format, read))
+    $(TD $(REF_ALTTEXT $(D formattedRead), formattedRead, std, format, read))
+    $(TD Reads an input range according to a format string and stores the read
+         values into its arguments.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D read), std, format, read))
+    $(TD $(REF_ALTTEXT $(D unformatValue), unformatValue, std, format, read))
+    $(TD Reads a value from an input range and converts it according to
+         a format specifier.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D spec), std, format, spec))
+    $(TD $(REF_ALTTEXT $(D FormatSpec), FormatSpec, std, format, spec))
+    $(TD A general handler for format strings.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D spec), std, format, spec))
+    $(TD $(REF_ALTTEXT $(D singleSpec), singleSpec, std, format, spec))
+    $(TD Helper function that returns a `FormatSpec` for a single format specifier.)
+))
 
-   These two functions are publicly imported by $(MREF std, string)
-   to be easily available.
-
-   The functions $(REF_ALTTEXT $(D formatValue), formatValue, std, format, write) and
-   $(REF_ALTTEXT $(D unformatValue), unformatValue, std, format, read) are
-   used for the plumbing.
+Limitation: This package does not support localization, but
+    adheres to the rounding mode of the floating point unit, if
+    available.
 
    Format_String:
 
