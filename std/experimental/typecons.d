@@ -23,8 +23,7 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons : Tuple, tuple, Bind, DerivedFunctionType,
-       isImplicitlyConvertible, mixinAll, staticIota,
+import std.typecons : Tuple, tuple, Bind, DerivedFunctionType, mixinAll, staticIota,
        GetOverloadedMethods;
 
 private

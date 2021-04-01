@@ -8,7 +8,7 @@ package(std.regex):
 import std.conv, std.exception, std.meta, std.range,
     std.typecons, std.regex;
 
-import std.regex.internal.parser : Escapables; // characters that need escaping
+import std.regex.internal.ir : Escapables; // characters that need escaping
 
 alias Sequence(int B, int E) = staticIota!(B, E);
 
