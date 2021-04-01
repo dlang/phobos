@@ -4204,10 +4204,11 @@ package template OverloadSet(string nam, T...)
 /*
 Used by MemberFunctionGenerator.
  */
-package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
+package template FuncInfo(alias func)
+if (is(typeof(&func)))
 {
-    alias RT = ReturnType!T;
-    alias PT = Parameters!T;
+    alias RT = ReturnType!(typeof(&func));
+    alias PT = Parameters!(typeof(&func));
 }
 package template FuncInfo(Func)
 {
