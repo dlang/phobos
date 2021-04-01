@@ -217,7 +217,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking tests thompson kickstart)
+  backtracking tests tests2 thompson kickstart)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
