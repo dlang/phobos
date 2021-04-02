@@ -4249,6 +4249,7 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     import std.format;
+    alias format = std.format.format;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -5025,7 +5026,7 @@ package template GetOverloadedMethods(T)
                     enum isMethod = false;
             }
             alias follows = AliasSeq!(
-                std.meta.Filter!(isMethod, __traits(getOverloads, T, name)),
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }
