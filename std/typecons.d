@@ -4249,6 +4249,7 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     import std.format;
+    alias format = std.format.format;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
