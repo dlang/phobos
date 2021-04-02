@@ -144,6 +144,60 @@ recommended to assign (lower- and uppercase) letters.
 Note: The $(I Parameters) of a $(I CompoundIndicator) are currently
 limited to a $(B '-') flag.
 
+$(SECTION4 Format Indicator)
+
+The $(I format indicator) can either be a single character or an
+expression surrounded by $(B %\() and $(B %\)). It specifies the
+basic manner in which a value will be formatted and is the minimum
+requirement to format a value.
+
+The following characters can be used as $(I format characters):
+
+$(BOOKTABLE ,
+   $(TR $(TH FormatCharacter) $(TH Semantics))
+   $(TR $(TD $(B 's'))
+        $(TD To be formatted in a human readable format.
+             Can be used with all types.))
+   $(TR $(TD $(B 'c'))
+        $(TD To be formatted as a character.))
+   $(TR $(TD $(B 'd'))
+        $(TD To be formatted as a signed decimal integer.))
+   $(TR $(TD $(B 'u'))
+        $(TD To be formatted as a decimal image of the underlying bit representation.))
+   $(TR $(TD $(B 'b'))
+        $(TD To be formatted as a binary image of the underlying bit representation.))
+   $(TR $(TD $(B 'o'))
+        $(TD To be formatted as an octal image of the underlying bit representation.))
+   $(TR $(TD $(B 'x') / $(B 'X'))
+        $(TD To be formatted as a hexadecimal image of the underlying bit representation.))
+   $(TR $(TD $(B 'e') / $(B 'E'))
+        $(TD To be formatted as a real number in decimal scientific notation.))
+   $(TR $(TD $(B 'f') / $(B 'F'))
+        $(TD To be formatted as a real number in decimal natural notation.))
+   $(TR $(TD $(B 'g') / $(B 'G'))
+        $(TD To be formatted as a real number in decimal short notation.
+             Depending on the number, a scientific notation or
+             a natural notation is used.))
+   $(TR $(TD $(B 'a') / $(B 'A'))
+        $(TD To be formatted as a real number in hexadezimal scientific notation.))
+   $(TR $(TD $(B 'r'))
+        $(TD To be formatted as raw bytes.
+             The output may not be printable and depends on endianess.))
+)
+
+The $(I compound indicator) can be used to describe compound types
+like arrays or structs in more detail. A compound type is enclosed
+within $(B '%\(') and $(B '%\)'). It either contains a $(I format
+string) or a $(I format string) and a $(I delimiter). In the second
+case $(I format string) and $(I delimiter) are separated by $(B '%|').
+If the delimiter is not present a comma, followed by a space, is used
+as delimiter.
+
+The $(I format string) inside of the $(I compound indicator) should
+contain exactly one $(I format specifier), which specifies the way,
+the elements of the compound type will be formatted. This $(I format
+specifier) can be a $(I compound indicator) itself.
+
 
 
 
