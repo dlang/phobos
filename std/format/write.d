@@ -1,19 +1,348 @@
 // Written in the D programming language.
 
 /**
-   This is a submodule of $(MREF std, format).
-   It provides some helpful tools.
+This is a submodule of $(MREF std, format).
 
-   Copyright: Copyright The D Language Foundation 2000-2013.
+It provides two functions for writing formatted output: $(LREF
+formatValue) and $(LREF formattedWrite). The former writes a single
+value. The latter writes several values at once, interspersed with
+unformatted text.
 
-   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+The following combinations of format characters and types are
+available:
 
-   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
-   Andrei Alexandrescu), and Kenji Hara
+$(BOOKTABLE ,
+$(TR $(TH) $(TH s) $(TH c) $(TH d, u, b, o) $(TH x, X) $(TH e, E, f, F, g, G, a, A) $(TH r) $(TH compound))
+$(TR $(TD `bool`) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD `null`) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
+$(TR $(TD $(I integer)) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I floating point)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I character)) $(TD yes) $(TD yes) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I string)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes))
+$(TR $(TD $(I array)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes))
+$(TR $(TD $(I associative array)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes))
+$(TR $(TD $(I pointer)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
+$(TR $(TD $(I SIMD vectors)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes))
+$(TR $(TD $(I delegates)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes))
+)
 
-   Source: $(PHOBOSSRC std/format/write.d)
+Enums can be used with all format characters of the base type.
+
+$(SECTION3 Structs$(COMMA) Unions$(COMMA) Classes$(COMMA) and Interfaces)
+
+Aggregate types can define various `toString` functions. If this
+function takes a $(REF_ALTTEXT FormatSpec, FormatSpec, std, format,
+spec) as argument, the function decides which format characters are
+accepted. If no `toString` is defined and the aggregate is an
+$(REF_ALTTEXT input range, isInputRange, std, range, primitives), it
+is treated like a range, that is $(B 's'), $(B 'r') and a compound
+specifier are accepted. In all other cases aggregate types only
+accept $(B 's').
+
+Copyright: Copyright The D Language Foundation 2000-2013.
+
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+Andrei Alexandrescu), and Kenji Hara
+
+Source: $(PHOBOSSRC std/format/write.d)
  */
 module std.format.write;
+
+/**
+ * `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
+ * `0` with integral-specific format specs.
+ */
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatValue(w, true, spec);
+
+    assert(w.data == "true");
+}
+
+/// `null` literal is formatted as `"null"`.
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatValue(w, null, spec);
+
+    assert(w.data == "null");
+}
+
+/// Integrals are formatted like $(REF printf, core, stdc, stdio).
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%d");
+    formatValue(w, 1337, spec);
+
+    assert(w.data == "1337");
+}
+
+/// Floating-point values are formatted like $(REF printf, core, stdc, stdio)
+@safe unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%.1f");
+    formatValue(w, 1337.7, spec);
+
+    assert(w.data == "1337.7");
+}
+
+/**
+ * Individual characters (`char, `wchar`, or `dchar`) are formatted as
+ * Unicode characters with `%s` and as integers with integral-specific format
+ * specs.
+ */
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%c");
+    formatValue(w, 'a', spec);
+
+    assert(w.data == "a");
+}
+
+/// Strings are formatted like $(REF printf, core, stdc, stdio)
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    formatValue(w, "hello", spec);
+
+    assert(w.data == "hello");
+}
+
+/// Static-size arrays are formatted as dynamic arrays.
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    char[2] two = ['a', 'b'];
+    formatValue(w, two, spec);
+
+    assert(w.data == "ab");
+}
+
+/**
+ * Dynamic arrays are formatted as input ranges.
+ *
+ * Specializations:
+ *   $(UL
+ *      $(LI `void[]` is formatted like `ubyte[]`.)
+ *      $(LI Const array is converted to input range by removing its qualifier.)
+ *   )
+ */
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    auto two = [1, 2];
+    formatValue(w, two, spec);
+
+    assert(w.data == "[1, 2]");
+}
+
+/**
+ * Associative arrays are formatted by using `':'` and `", "` as
+ * separators, and enclosed by `'['` and `']'`.
+ */
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    auto aa = ["H":"W"];
+    formatValue(w, aa, spec);
+
+    assert(w.data == "[\"H\":\"W\"]", w.data);
+}
+
+/// `enum`s are formatted like their base value
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+
+    enum A { first, second, third }
+
+    formatValue(w, A.second, spec);
+
+    assert(w.data == "second");
+}
+
+/**
+ * Formatting a struct by defining a method `toString`, which takes an output
+ * range.
+ *
+ * It's recommended that any `toString` using $(REF_ALTTEXT output ranges, isOutputRange, std,range,primitives)
+ * use $(REF put, std,range,primitives) rather than use the `put` method of the range
+ * directly.
+ */
+@safe unittest
+{
+    import std.array : appender;
+    import std.format.spec : FormatSpec, singleSpec;
+    import std.range.primitives : isOutputRange, put;
+
+    static struct Point
+    {
+        int x, y;
+
+        void toString(W)(ref W writer, scope const ref FormatSpec!char f)
+        if (isOutputRange!(W, char))
+        {
+            // std.range.primitives.put
+            put(writer, "(");
+            formatValue(writer, x, f);
+            put(writer, ",");
+            formatValue(writer, y, f);
+            put(writer, ")");
+        }
+    }
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    auto p = Point(16, 11);
+
+    formatValue(w, p, spec);
+    assert(w.data == "(16,11)");
+}
+
+/**
+ * Another example of formatting a `struct` with a defined `toString`,
+ * this time using the `scope delegate` method.
+ *
+ * $(RED This method is now discouraged for non-virtual functions).
+ * If possible, please use the output range method instead.
+ */
+@safe unittest
+{
+   import std.format : format;
+   import std.format.spec : FormatSpec;
+
+   static struct Point
+   {
+       int x, y;
+
+       void toString(scope void delegate(scope const(char)[]) @safe sink,
+                     scope const FormatSpec!char fmt) const
+       {
+           sink("(");
+           sink.formatValue(x, fmt);
+           sink(",");
+           sink.formatValue(y, fmt);
+           sink(")");
+       }
+   }
+
+   auto p = Point(16,11);
+   assert(format("%03d", p) == "(016,011)");
+   assert(format("%02x", p) == "(10,0b)");
+}
+
+/// Pointers are formatted as hex integers.
+@system pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+
+    auto q = cast(void*) 0xFFEECCAA;
+    formatValue(w, q, spec);
+
+    assert(w.data == "FFEECCAA");
+}
+
+/// SIMD vectors are formatted as arrays.
+@safe unittest
+{
+    import core.simd; // cannot be selective, because float4 might not be defined
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+
+    static if (is(float4))
+    {
+        version (X86) {}
+        else
+        {
+            float4 f4;
+            f4.array[0] = 1;
+            f4.array[1] = 2;
+            f4.array[2] = 3;
+            f4.array[3] = 4;
+
+            formatValue(w, f4, spec);
+            assert(w.data == "[1, 2, 3, 4]");
+        }
+    }
+}
+
+/**
+ * Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
+ *
+ * Known Bug: Function attributes are not always correct.
+ *            See $(BUGZILLA 18269) for more details.
+ */
+@safe unittest
+{
+    import std.conv : to;
+
+    int i;
+
+    int foo(short k) @nogc
+    {
+        return i + k;
+    }
+
+    @system int delegate(short) @nogc bar() nothrow pure
+    {
+        int* p = new int(1);
+        i = *p;
+        return &foo;
+    }
+
+    assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
+    assert(() @trusted { return bar()(3); }() == 4);
+}
 
 import std.format.internal.write;
 
