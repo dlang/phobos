@@ -9109,6 +9109,8 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
                 result ~= ", ";
             if (storageClasses[i] & ParameterStorageClass.scope_)
                 result ~= "scope ";
+            if (storageClasses[i] & ParameterStorageClass.in_)
+                result ~= "in ";
             if (storageClasses[i] & ParameterStorageClass.out_)
                 result ~= "out ";
             if (storageClasses[i] & ParameterStorageClass.ref_)
@@ -9200,6 +9202,10 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
             float function(lazy float, long),
         int, float, int function(out long, ref const int),
             float function(out long, ref const float),
+        int, float, int function(in long, ref const int),
+            float function(in long, ref const float),
+        int, float, int function(long, in int),
+            float function(long, in float),
         int, int, int, int,
         int, float, int, float,
         int, float, const int, const float,
