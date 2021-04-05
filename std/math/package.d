@@ -72,6 +72,9 @@ $(TR $(TDNW Introspection) $(TD
 $(TR $(TDNW Hardware Control) $(TD
     $(MYREF IeeeFlags) $(MYREF FloatingPointControl)
 ))
+$(TR $(TDNW $(SUBMODULE Integral, integral)) $(TD
+    $(SUBREF integral, ilog2)
+))
 )
 )
 
