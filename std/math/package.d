@@ -46,8 +46,11 @@ $(TR $(TDNW Exponentiation & Logarithms) $(TD
     $(MYREF frexp) $(MYREF log) $(MYREF log2) $(MYREF log10) $(MYREF logb)
     $(MYREF ilogb) $(MYREF log1p) $(MYREF scalbn)
 ))
-$(TR $(TDNW Modulus) $(TD
-    $(MYREF fmod) $(MYREF modf) $(MYREF remainder)
+$(TR $(TDNW $(SUBMODULE Remainder, remainder)) $(TD
+    $(SUBREF remainder, fmod)
+    $(SUBREF remainder, modf)
+    $(SUBREF remainder, remainder)
+    $(SUBREF remainder, remquo)
 ))
 $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
@@ -3968,71 +3971,6 @@ real logb(real x) @trusted nothrow @nogc
     assert(logb(-real.infinity) == real.infinity);
 }
 
-/************************************
- * Calculates the remainder from the calculation x/y.
- * Returns:
- * The value of x - i * y, where i is the number of times that y can
- * be completely subtracted from x. The result has the same sign as x.
- *
- * $(TABLE_SV
- *  $(TR $(TH x)              $(TH y)             $(TH fmod(x, y))   $(TH invalid?))
- *  $(TR $(TD $(PLUSMN)0.0)   $(TD not 0.0)       $(TD $(PLUSMN)0.0) $(TD no))
- *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(NAN))       $(TD yes))
- *  $(TR $(TD anything)       $(TD $(PLUSMN)0.0)  $(TD $(NAN))       $(TD yes))
- *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
- * )
- */
-real fmod(real x, real y) @trusted nothrow @nogc
-{
-    version (CRuntime_Microsoft)
-    {
-        return x % y;
-    }
-    else
-        return core.stdc.math.fmodl(x, y);
-}
-
-///
-@safe unittest
-{
-    assert(isIdentical(fmod(0.0, 1.0), 0.0));
-    assert(fmod(5.0, 3.0).feqrel(2.0) > 16);
-    assert(isNaN(fmod(5.0, 0.0)));
-}
-
-/************************************
- * Breaks x into an integral part and a fractional part, each of which has
- * the same sign as x. The integral part is stored in i.
- * Returns:
- * The fractional part of x.
- *
- * $(TABLE_SV
- *  $(TR $(TH x)              $(TH i (on input))  $(TH modf(x, i))   $(TH i (on return)))
- *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
- * )
- */
-real modf(real x, ref real i) @trusted nothrow @nogc
-{
-    version (CRuntime_Microsoft)
-    {
-        i = trunc(x);
-        return copysign(isInfinity(x) ? 0.0 : x - i, x);
-    }
-    else
-        return core.stdc.math.modfl(x,&i);
-}
-
-///
-@safe unittest
-{
-    real frac;
-    real intpart;
-
-    frac = modf(3.14159, intpart);
-    assert(intpart.feqrel(3.0) > 16);
-    assert(frac.feqrel(0.14159) > 16);
-}
-
 /*************************************
  * Efficiently calculates x * 2$(SUPERSCRIPT n).
  *
@@ -5049,59 +4987,6 @@ real trunc(real x) @trusted nothrow @nogc pure
     assert(trunc(0.5) == 0);
     assert(trunc(1.5) == 1);
 }
-
-/****************************************************
- * Calculate the remainder x REM y, following IEC 60559.
- *
- * REM is the value of x - y * n, where n is the integer nearest the exact
- * value of x / y.
- * If |n - x / y| == 0.5, n is even.
- * If the result is zero, it has the same sign as x.
- * Otherwise, the sign of the result is the sign of x / y.
- * Precision mode has no effect on the remainder functions.
- *
- * remquo returns `n` in the parameter `n`.
- *
- * $(TABLE_SV
- *  $(TR $(TH x)               $(TH y)            $(TH remainder(x, y)) $(TH n)   $(TH invalid?))
- *  $(TR $(TD $(PLUSMN)0.0)    $(TD not 0.0)      $(TD $(PLUSMN)0.0)    $(TD 0.0) $(TD no))
- *  $(TR $(TD $(PLUSMNINF))    $(TD anything)     $(TD -$(NAN))         $(TD ?)   $(TD yes))
- *  $(TR $(TD anything)        $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)$(NAN)) $(TD ?)   $(TD yes))
- *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
- * )
- */
-real remainder(real x, real y) @trusted nothrow @nogc
-{
-    return core.stdc.math.remainderl(x, y);
-}
-
-/// ditto
-real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
-{
-    return core.stdc.math.remquol(x, y, &n);
-}
-
-///
-@safe @nogc nothrow unittest
-{
-    assert(remainder(5.1, 3.0).feqrel(-0.9) > 16);
-    assert(remainder(-5.1, 3.0).feqrel(0.9) > 16);
-    assert(remainder(0.0, 3.0) == 0.0);
-
-    assert(isNaN(remainder(1.0, 0.0)));
-    assert(isNaN(remainder(-1.0, 0.0)));
-}
-
-///
-@safe @nogc nothrow unittest
-{
-    int n;
-
-    assert(remquo(5.1, 3.0, n).feqrel(-0.9) > 16 && n == 2);
-    assert(remquo(-5.1, 3.0, n).feqrel(0.9) > 16 && n == -2);
-    assert(remquo(0.0, 3.0, n) == 0.0 && n == 0);
-}
-
 
 version (IeeeFlagsSupport)
 {
