@@ -343,7 +343,8 @@ limited to a $(B '-') flag.
     string will be included following the last array element.
 
     NOTE: Inside a grouping format specifier, strings and characters are
-    escaped automatically. To avoid this behavior, add '-' flag to "%(".
+    escaped automatically. To avoid this behavior, add the $(B '-') flag
+    to `"%$(LPAREN)"`.
 
     Example using array and nested array formatting:
     -------------------------
@@ -415,7 +416,7 @@ $(CONSOLE
 
     As previously stated, strings and characters are escaped
     automatically inside compound format specifiers. To avoid
-    this behavior, add $(B '-') flag to `"%$(LPAREN)"`.
+    this behavior, add the $(B '-') flag to `"%$(LPAREN)"`.
     -------------------------
     import std.stdio;
 
