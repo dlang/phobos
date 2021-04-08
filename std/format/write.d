@@ -51,22 +51,28 @@ Source: $(PHOBOSSRC std/format/write.d)
 module std.format.write;
 
 /**
- * `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
- * `0` with integral-specific format specs.
+`bool`s are formatted as `"true"` or `"false"` with `%s` and like the
+`byte`s 1 and 0 with all other format characters.
  */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, true, spec);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    formatValue(w1, true, spec1);
 
-    assert(w.data == "true");
+    assert(w1.data == "true");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%#x");
+    formatValue(w2, true, spec2);
+
+    assert(w2.data == "0x1");
 }
 
-/// `null` literal is formatted as `"null"`.
+/// The `null` literal is formatted as `"null"`.
 @safe pure unittest
 {
     import std.array : appender;
@@ -79,129 +85,220 @@ module std.format.write;
     assert(w.data == "null");
 }
 
-/// Integrals are formatted like $(REF printf, core, stdc, stdio).
+/**
+Integrals are formatted in (signed) every day notation with `%s` and
+`%d` and as an (unsigned) image of the underlying bit representation
+with `%b` (binary), `%u` (decimal), `%o` (octal), and `%x` (hexadecimal).
+ */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%d");
-    formatValue(w, 1337, spec);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%d");
+    formatValue(w1, -1337, spec1);
 
-    assert(w.data == "1337");
+    assert(w1.data == "-1337");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%x");
+    formatValue(w2, -1337, spec2);
+
+    assert(w2.data == "fffffac7");
 }
 
-/// Floating-point values are formatted like $(REF printf, core, stdc, stdio)
+/**
+Floating-point values are formatted in natural notation with `%f`, in
+scientific notation with `%e`, in short notation with `%g`, and in
+hexadecimal scientific notation with `%a`. If a rounding mode is
+available, they are rounded according to this rounding mode, otherwise
+they are rounded to the nearest value, ties to even.
+ */
 @safe unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%.1f");
-    formatValue(w, 1337.7, spec);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%.3f");
+    formatValue(w1, 1337.7779, spec1);
 
-    assert(w.data == "1337.7");
+    assert(w1.data == "1337.778");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%.3e");
+    formatValue(w2, 1337.7779, spec2);
+
+    assert(w2.data == "1.338e+03");
+
+    auto w3 = appender!string();
+    auto spec3 = singleSpec("%.3g");
+    formatValue(w3, 1337.7779, spec3);
+
+    assert(w3.data == "1.34e+03");
+
+    auto w4 = appender!string();
+    auto spec4 = singleSpec("%.3a");
+    formatValue(w4, 1337.7779, spec4);
+
+    assert(w4.data == "0x1.4e7p+10");
 }
 
 /**
- * Individual characters (`char, `wchar`, or `dchar`) are formatted as
- * Unicode characters with `%s` and as integers with integral-specific format
- * specs.
+Individual characters (`char`, `wchar`, or `dchar`) are formatted as
+Unicode characters with `%s` and `%c` and as integers (`ubyte`,
+`ushort`, `uint`) with all other format characters. With
+$(MREF_ALTTEXT compound specifiers, std,format) characters are
+treated differently.
  */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%c");
-    formatValue(w, 'a', spec);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%c");
+    formatValue(w1, 'ì', spec1);
 
-    assert(w.data == "a");
-}
+    assert(w1.data == "ì");
 
-/// Strings are formatted like $(REF printf, core, stdc, stdio)
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%#x");
+    formatValue(w2, 'ì', spec2);
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, "hello", spec);
-
-    assert(w.data == "hello");
-}
-
-/// Static-size arrays are formatted as dynamic arrays.
-@safe pure unittest
-{
-    import std.array : appender;
-    import std.format.spec : singleSpec;
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    char[2] two = ['a', 'b'];
-    formatValue(w, two, spec);
-
-    assert(w.data == "ab");
+    assert(w2.data == "0xec");
 }
 
 /**
- * Dynamic arrays are formatted as input ranges.
- *
- * Specializations:
- *   $(UL
- *      $(LI `void[]` is formatted like `ubyte[]`.)
- *      $(LI Const array is converted to input range by removing its qualifier.)
- *   )
+Strings are formatted as a sequence of characters with `%s`.
+Non-printable characters are not escaped. With a compound specifier
+the string is treated like a range of characters. With $(MREF_ALTTEXT
+compound specifiers, std,format) strings are treated differently.
  */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    formatValue(w1, "hello", spec1);
+
+    assert(w1.data == "hello");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%(%#x%|/%)");
+    formatValue(w2, "hello", spec2);
+
+    assert(w2.data == "0x68/0x65/0x6c/0x6c/0x6f");
+}
+
+/// Static arrays are formatted as dynamic arrays.
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
     auto w = appender!string();
     auto spec = singleSpec("%s");
-    auto two = [1, 2];
+    int[2] two = [1, 2];
     formatValue(w, two, spec);
 
     assert(w.data == "[1, 2]");
 }
 
 /**
- * Associative arrays are formatted by using `':'` and `", "` as
- * separators, and enclosed by `'['` and `']'`.
+Dynamic arrays are formatted as input ranges.
+ */
+@system pure unittest
+{
+    import std.array : appender;
+    import std.format.spec : singleSpec;
+
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    auto two = [1, 2];
+    formatValue(w1, two, spec1);
+
+    assert(w1.data == "[1, 2]");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%(%g%|, %)");
+    auto consts = [3.1415926, 299792458, 6.67430e-11];
+    formatValue(w2, consts, spec2);
+
+    assert(w2.data == "3.14159, 2.99792e+08, 6.6743e-11");
+
+    // void[] is treated like ubyte[]
+    auto w3 = appender!string();
+    auto spec3 = singleSpec("%s");
+    void[] val = cast(void[]) cast(ubyte[])[1, 2, 3];
+    formatValue(w3, val, spec3);
+
+    assert(w3.data == "[1, 2, 3]");
+}
+
+/**
+Associative arrays are formatted by using `':'` and `", "` as
+separators, enclosed by `'['` and `']'` when used with `%s`. It's
+also possible to use a compound specifier for better control.
+
+Please note, that the order of the elements is not defined, therefore
+the result of this function might differ.
  */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto aa = ["H":"W"];
-    formatValue(w, aa, spec);
+    auto aa = [10:17.5, 20:9.99];
 
-    assert(w.data == "[\"H\":\"W\"]", w.data);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    formatValue(w1, aa, spec1);
+
+    assert(w1.data == "[10:17.5, 20:9.99]" || w1.data == "[20:9.99, 10:17.5]");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%(%x = %.0e%| # %)");
+    formatValue(w2, aa, spec2);
+
+    assert(w2.data == "a = 2e+01 # 14 = 1e+01" || w2.data == "14 = 1e+01 # a = 2e+01");
 }
 
-/// `enum`s are formatted like their base value
+/**
+`enum`s are formatted as their name when used with `%s` and like
+their base value else.
+ */
 @safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
     enum A { first, second, third }
 
-    formatValue(w, A.second, spec);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    formatValue(w1, A.second, spec1);
 
-    assert(w.data == "second");
+    assert(w1.data == "second");
+
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%d");
+    formatValue(w2, A.second, spec2);
+
+    assert(w2.data == "1");
+
+    // values of an enum that have no name are formatted with %s using a cast
+    A a = A.third;
+    a++;
+
+    auto w3 = appender!string();
+    auto spec3 = singleSpec("%s");
+    formatValue(w3, a, spec3);
+
+    assert(w3.data == "cast(A)3");
 }
 
 /**
@@ -274,19 +371,32 @@ module std.format.write;
    assert(format("%02x", p) == "(10,0b)");
 }
 
-/// Pointers are formatted as hex integers.
+/// Pointers are formatted as hexadecimal integers.
 @system pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    auto p1 = cast(void*) 0xFFEECCAA;
+    formatValue(w1, p1, spec1);
 
-    auto q = cast(void*) 0xFFEECCAA;
-    formatValue(w, q, spec);
+    assert(w1.data == "FFEECCAA");
 
-    assert(w.data == "FFEECCAA");
+    // null pointers are printed as `"null"` when used with `%s` and as hexadecimal integer else
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%s");
+    auto p2 = cast(void*) 0x00000000;
+    formatValue(w2, p2, spec2);
+
+    assert(w2.data == "null");
+
+    auto w3 = appender!string();
+    auto spec3 = singleSpec("%x");
+    formatValue(w3, p2, spec3);
+
+    assert(w3.data == "0");
 }
 
 /// SIMD vectors are formatted as arrays.
@@ -314,34 +424,6 @@ module std.format.write;
             assert(w.data == "[1, 2, 3, 4]");
         }
     }
-}
-
-/**
- * Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
- *
- * Known Bug: Function attributes are not always correct.
- *            See $(BUGZILLA 18269) for more details.
- */
-@safe unittest
-{
-    import std.conv : to;
-
-    int i;
-
-    int foo(short k) @nogc
-    {
-        return i + k;
-    }
-
-    @system int delegate(short) @nogc bar() nothrow pure
-    {
-        int* p = new int(1);
-        i = *p;
-        return &foo;
-    }
-
-    assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
-    assert(() @trusted { return bar()(3); }() == 4);
 }
 
 import std.format.internal.write;
