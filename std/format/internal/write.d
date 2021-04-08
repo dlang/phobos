@@ -36,7 +36,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (f.spec == 's')
         writeAligned(w, val ? "true" : "false", f);
     else
-        formatValueImpl(w, cast(int) val, f);
+        formatValueImpl(w, cast(byte) val, f);
 }
 
 @safe pure unittest
@@ -95,6 +95,12 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     string t2 = format("[%3s] [%-2s]", true, false);
     assert(t2 == "[true] [false]");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20534
+@safe pure unittest
+{
+    assert(format("%r",false) == "\0");
 }
 
 /*
