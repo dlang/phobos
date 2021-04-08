@@ -1,0 +1,7 @@
+Deprecate std.typetuple
+
+std.typetuple has been replaced by std.meta in 2015. For legacy
+reasons it has been kept since then. Now it is deprecated and will be
+removed in 2.107.0.
+
+Please use `std.meta : AliasSeq` instead of `std.typetuple : TypeTuple`.
