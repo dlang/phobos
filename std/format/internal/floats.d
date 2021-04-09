@@ -33,22 +33,24 @@ if (is(T == float) || is(T == double)
         {
             import std.math : abs, floor, isInfinity, isNaN, log2;
 
-            if (isNaN(val) || isInfinity(val))
+            auto val2 = val;
+
+            if (isNaN(val2) || isInfinity(val2))
                 exp = 32767;
-            else if (abs(val) < real.min_normal)
+            else if (abs(val2) < real.min_normal)
                 exp = 0;
             else
-                exp = cast(int) (val.abs.log2.floor() + 16383);
+                exp = cast(int) (val2.abs.log2.floor() + 16383);
 
             if (exp == 32767)
             {
                 // NaN or infinity
-                mnt = isNaN(val) ? ((1L << 63) - 1) : 0;
+                mnt = isNaN(val2) ? ((1L << 63) - 1) : 0;
             }
             else if (exp > 16382 + 64) // bias + bits of ulong
             {
-                val /= 2.0L ^^ (exp - (16382 + 64));
-                mnt = (cast(ulong) abs(val)) & ((1L << 63) - 1);
+                val2 /= 2.0L ^^ (exp - (16382 + 64));
+                mnt = (cast(ulong) abs(val2)) & ((1L << 63) - 1);
             }
             else
             {
@@ -56,14 +58,14 @@ if (is(T == float) || is(T == double)
                 if (delta > 16383)
                 {
                     // need two steps to avoid overflow
-                    val *= 2.0L ^^ 16383;
+                    val2 *= 2.0L ^^ 16383;
                     delta -= 16383;
                 }
-                val *= 2.0L ^^ delta;
-                mnt = (cast(ulong) abs(val)) & ((1L << 63) - 1);
+                val2 *= 2.0L ^^ delta;
+                mnt = (cast(ulong) abs(val2)) & ((1L << 63) - 1);
             }
 
-            double d = cast(double) val;
+            double d = cast(double) val2;
             ulong ival = () @trusted { return *cast(ulong*) &d; }();
             if ((ival >> 63) & 1) sgn = "-";
         }
@@ -129,7 +131,7 @@ if (is(T == float) || is(T == double)
 
     if (T.mant_dig == 64)
     {
-        if (f.spec != 'f' && f.spec != 'F' && f.spec != 'e' && f.spec != 'E')
+        if (f.spec != 'f' && f.spec != 'F' && f.spec != 'e' && f.spec != 'E' && f.spec != 'g' && f.spec != 'G')
             assert(false); // not yet implemented
     }
 
@@ -3007,6 +3009,86 @@ if (is(T == float) || is(T == double)
     f.precision = 0;
 
     assert(printFloat(buf[], 0.009999, f) == "0.01");
+}
+
+@safe unittest
+{
+    char[256] buf;
+    auto f = FormatSpec!dchar("");
+    f.spec = 'g';
+    assert(printFloat(buf[], real.nan, f) == "nan");
+    assert(printFloat(buf[], -real.nan, f) == "-nan");
+    assert(printFloat(buf[], real.infinity, f) == "inf");
+    assert(printFloat(buf[], -real.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0L, f) == "0");
+    assert(printFloat(buf[], -0.0L, f) == "-0");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], 1e-4940L, f) == "1e-4940");
+        assert(printFloat(buf[], -1e-4940L, f) == "-1e-4940");
+        assert(printFloat(buf[], 1e-30L, f) == "1e-30");
+        assert(printFloat(buf[], -1e-30L, f) == "-1e-30");
+        assert(printFloat(buf[], 1e-10L, f) == "1e-10");
+        assert(printFloat(buf[], -1e-10L, f) == "-1e-10");
+        assert(printFloat(buf[], 0.1L, f) == "0.1");
+        assert(printFloat(buf[], -0.1L, f) == "-0.1");
+        assert(printFloat(buf[], 10.0L, f) == "10");
+        assert(printFloat(buf[], -10.0L, f) == "-10");
+        version (Windows) {} // issue 20972
+        else
+        {
+            assert(printFloat(buf[], 1e4000L, f) == "1e+4000");
+            assert(printFloat(buf[], -1e4000L, f) == "-1e+4000");
+        }
+
+        import std.math : nextUp, nextDown;
+        assert(printFloat(buf[], nextUp(0.0L), f) == "3.6452e-4951");
+        assert(printFloat(buf[], nextDown(-0.0L), f) == "-3.6452e-4951");
+    }
+}
+
+@safe unittest
+{
+    import std.exception : assertCTFEable;
+    import std.math : log2, nextDown;
+
+    assertCTFEable!(
+    {
+        // log2 is broken for x87-reals on some computers in CTFE
+        // the following tests excludes these computers from the tests
+        // (issue 21757)
+        enum test = cast(int) log2(3.05e2312L);
+        static if (real.mant_dig == 64 && test == 7681)
+        {
+            char[256] buf;
+            auto f = FormatSpec!dchar("");
+            f.spec = 'g';
+            assert(printFloat(buf[], real.infinity, f) == "inf");
+            assert(printFloat(buf[], 10.0L, f) == "10");
+            assert(printFloat(buf[], 2.6080L, f) == "2.608");
+            assert(printFloat(buf[], 3.05e2312L, f) == "3.05e+2312");
+
+            f.precision = 60;
+            assert(printFloat(buf[], 2.65e-54L, f) ==
+                   "2.65000000000000000005900998740054701394102894093529654759941e-54");
+
+            /*
+             commented out, because CTFE is currently too slow for 5000 digits with extreme values
+
+            f.precision = 5000;
+            auto result2 = printFloat(buf[], 1.2119e-4822L, f);
+            assert(result2.length == 5007);
+            assert(result2[$ - 20 .. $] == "26072948659534e-4822");
+            auto result3 = printFloat(buf[], real.min_normal, f);
+            assert(result3.length == 5007);
+            assert(result3[$ - 20 .. $] == "72078141008227e-4932");
+            auto result4 = printFloat(buf[], real.min_normal.nextDown, f);
+            assert(result4.length == 5007);
+            assert(result4[$ - 20 .. $] == "48141326333101e-4932");
+             */
+        }
+    });
 }
 
 private auto printFloat0(bool g, Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
