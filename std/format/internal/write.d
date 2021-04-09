@@ -3176,40 +3176,7 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
 if (isSomeString!T)
 {
-    import std.range.primitives : put;
-
-    size_t width;
-    if (f.width > 0)
-    {
-        // check for non-ascii character
-        import std.algorithm.searching : any;
-        if (s.any!(a => a > 0x7F))
-        {
-            //TODO: optimize this
-            import std.uni : graphemeStride;
-            for (size_t i; i < s.length; i += graphemeStride(s, i))
-                ++width;
-        }
-        else
-            width = s.length;
-    }
-    else
-        width = s.length;
-
-    if (!f.flDash)
-    {
-        // right align
-        if (f.width > width)
-            foreach (i ; 0 .. f.width - width) put(w, ' ');
-        put(w, s);
-    }
-    else
-    {
-        // left align
-        put(w, s);
-        if (f.width > width)
-            foreach (i ; 0 .. f.width - width) put(w, ' ');
-    }
+    writeAligned(w,"","",s,f);
 }
 
 @safe pure unittest
@@ -3243,4 +3210,209 @@ if (isSomeString!T)
     auto spec = singleSpec("%-10s");
     writeAligned(w, "a本Ä", spec);
     assert(w.data == "a本Ä       ", w.data);
+}
+
+private void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
+    T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f)
+if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
+{
+    // writes: left padding, prefix, leading zeros, grouped, suffix, right padding
+
+    import std.range.primitives : put;
+
+    long prefixWidth;
+    long groupedWidth;
+    long suffixWidth;
+
+    // TODO: remove this workaround which hides issue 21815
+    if (f.width > 0)
+    {
+        prefixWidth = getWidth(prefix);
+        groupedWidth = getWidth(grouped);
+        suffixWidth = getWidth(suffix);
+    }
+
+    auto doGrouping = f.flSeparator && groupedWidth > 0
+                      && f.separators > 0 && f.separators != f.UNSPECIFIED;
+    // front = number of symbols left of the leftmost separator
+    long front = doGrouping ? (groupedWidth - 1) % f.separators + 1 : 0;
+    // sepCount = number of separators to be inserted
+    long sepCount = doGrouping ? (groupedWidth - 1) / f.separators : 0;
+
+    long width = prefixWidth + sepCount + groupedWidth + suffixWidth;
+    long delta = f.width - width;
+
+    // left padding
+    if (!f.flZero && !f.flDash && delta > 0)
+        foreach (i ; 0 .. delta)
+            put(w, ' ');
+
+    // prefix
+    put(w, prefix);
+
+    // leading grouped zeros
+    if (f.flZero && !f.flDash && delta > 0)
+    {
+        if (doGrouping)
+        {
+            // front2 and sepCount2 are the same as above for the leading zeros
+            long front2 = (delta + front - 1) % (f.separators + 1) + 1;
+            long sepCount2 = (delta + front - 1) / (f.separators + 1);
+            delta -= sepCount2;
+
+            // according to POSIX: if the first symbol is a separator,
+            // an additional zero is put left of it, even if that means, that
+            // the total width is one more then specified
+            if (front2 > f.separators) { front2 = 1; }
+
+            foreach (i ; 0 .. delta)
+            {
+                if (front2 == 0)
+                {
+                    put(w, f.separatorChar);
+                    front2 = f.separators;
+                }
+                front2--;
+
+                put(w, '0');
+            }
+
+            // separator between zeros and grouped
+            if (front == f.separators)
+                put(w, f.separatorChar);
+        }
+        else
+            foreach (i ; 0 .. delta)
+                put(w, '0');
+    }
+
+    // grouped content
+    if (doGrouping)
+    {
+        // TODO: this does not take graphemes into account
+        foreach (i;0 .. grouped.length)
+        {
+            if (front == 0)
+            {
+                put(w, f.separatorChar);
+                front = f.separators;
+            }
+            front--;
+
+            put(w, grouped[i]);
+        }
+    }
+    else
+        put(w, grouped);
+
+    // suffix
+    put(w, suffix);
+
+    // right padding
+    if (f.flDash && delta > 0)
+        foreach (i ; 0 .. delta)
+            put(w, ' ');
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pregroupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%20s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "      pregroupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%-20s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pregroupingsuf      ", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%020s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre000000groupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%-020s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pregroupingsuf      ", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%20,1s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "preg,r,o,u,p,i,n,gsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%20,2s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "   pregr,ou,pi,ngsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%20,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "    pregr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%20,10s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "      pregroupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%020,1s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "preg,r,o,u,p,i,n,gsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%020,2s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre00,gr,ou,pi,ngsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%020,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre00,0gr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%020,10s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre000,00groupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%021,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre000,0gr,oup,ingsuf", w.data);
+
+    // According to https://github.com/dlang/phobos/pull/7112 this
+    // is defined by POSIX standard:
+    w = appender!string();
+    spec = singleSpec("%022,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre0,000,0gr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%023,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pre0,000,0gr,oup,ingsuf", w.data);
+}
+
+private long getWidth(T)(T s)
+{
+    import std.algorithm.searching : all;
+    import std.uni : graphemeStride;
+
+    // check for non-ascii character
+    if (s.all!(a => a <= 0x7F)) return s.length;
+
+    //TODO: optimize this
+    long width = 0;
+    for (size_t i; i < s.length; i += graphemeStride(s, i))
+        ++width;
+    return width;
 }
