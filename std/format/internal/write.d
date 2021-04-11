@@ -3213,22 +3213,25 @@ if (isSomeString!T)
 }
 
 private void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
-    T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f)
+    T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f,
+    bool integer_precision = false)
 if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
 {
     // writes: left padding, prefix, leading zeros, grouped, suffix, right padding
 
+    if (integer_precision && f.precision == f.UNSPECIFIED)
+        integer_precision = false;
+
     import std.range.primitives : put;
 
     long prefixWidth;
-    long groupedWidth;
+    long groupedWidth = grouped.length; // TODO: does not take graphemes into account
     long suffixWidth;
 
     // TODO: remove this workaround which hides issue 21815
     if (f.width > 0)
     {
         prefixWidth = getWidth(prefix);
-        groupedWidth = getWidth(grouped);
         suffixWidth = getWidth(suffix);
     }
 
@@ -3242,8 +3245,22 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     long width = prefixWidth + sepCount + groupedWidth + suffixWidth;
     long delta = f.width - width;
 
+    // with integers, precision is considered the minimum number of digits;
+    // if digits are missing, we have to recalculate everything
+    long pregrouped = 0;
+    if (integer_precision && groupedWidth < f.precision)
+    {
+        pregrouped = f.precision - groupedWidth;
+        delta -= pregrouped;
+        if (doGrouping)
+        {
+            front = ((front - 1) + pregrouped) % f.separators + 1;
+            delta -= (f.precision - 1) / f.separators - sepCount;
+        }
+    }
+
     // left padding
-    if (!f.flZero && !f.flDash && delta > 0)
+    if ((!f.flZero || integer_precision) && !f.flDash && delta > 0)
         foreach (i ; 0 .. delta)
             put(w, ' ');
 
@@ -3251,7 +3268,7 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     put(w, prefix);
 
     // leading grouped zeros
-    if (f.flZero && !f.flDash && delta > 0)
+    if (f.flZero && !integer_precision && !f.flDash && delta > 0)
     {
         if (doGrouping)
         {
@@ -3290,7 +3307,7 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     if (doGrouping)
     {
         // TODO: this does not take graphemes into account
-        foreach (i;0 .. grouped.length)
+        foreach (i;0 .. pregrouped + grouped.length)
         {
             if (front == 0)
             {
@@ -3299,11 +3316,15 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
             }
             front--;
 
-            put(w, grouped[i]);
+            put(w, i < pregrouped ? '0' : grouped[cast(size_t) (i - pregrouped)]);
         }
     }
     else
+    {
+        foreach (i;0 .. pregrouped)
+            put(w, '0');
         put(w, grouped);
+    }
 
     // suffix
     put(w, suffix);
@@ -3400,6 +3421,43 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     spec = singleSpec("%023,3s");
     writeAligned(w, "pre", "grouping", "suf", spec);
     assert(w.data == "pre0,000,0gr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec);
+    assert(w.data == "pregr,oup,ingsuf", w.data);
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format : singleSpec;
+
+    auto w = appender!string();
+    auto spec = singleSpec("%.10s");
+    writeAligned(w, "pre", "grouping", "suf", spec, true);
+    assert(w.data == "pre00groupingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%.10,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec, true);
+    assert(w.data == "pre0,0gr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%25.10,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec, true);
+    assert(w.data == "      pre0,0gr,oup,ingsuf", w.data);
+
+    // precision has precedence over zero flag
+    w = appender!string();
+    spec = singleSpec("%025.12,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec, true);
+    assert(w.data == "    pre000,0gr,oup,ingsuf", w.data);
+
+    w = appender!string();
+    spec = singleSpec("%025.13,3s");
+    writeAligned(w, "pre", "grouping", "suf", spec, true);
+    assert(w.data == "  pre0,000,0gr,oup,ingsuf", w.data);
 }
 
 private long getWidth(T)(T s)
