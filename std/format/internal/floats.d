@@ -129,12 +129,6 @@ if (is(T == float) || is(T == double)
         return result;
     }
 
-    if (T.mant_dig == 64)
-    {
-        if (f.spec != 'f' && f.spec != 'F' && f.spec != 'e' && f.spec != 'E' && f.spec != 'g' && f.spec != 'G')
-            assert(false); // not yet implemented
-    }
-
     final switch (f.spec)
     {
         case 'a': case 'A':
@@ -172,7 +166,7 @@ if (is(T == float) || is(T == double)
     size_t pos = mant_len;
 
     auto gap = 39 - 32 * is_upper;
-    while (pos >= 4 && (mnt & ((1L << pos) - 1)) != 0)
+    while (pos >= 4 && (mnt & (((1L << (pos - 1)) - 1) << 1) + 1) != 0)
     {
         pos -= 4;
         size_t tmp = (mnt >> pos) & 15;
@@ -196,7 +190,9 @@ if (is(T == float) || is(T == double)
     auto exp_sgn = exp >= 0 ? '+' : '-';
     if (exp < 0) exp = -exp;
 
-    static if (is(T == float))
+    static if (is(T == real) && real.mant_dig == 64)
+        enum max_exp_digits = 7;
+    else static if (is(T == float))
         enum max_exp_digits = 4;
     else
         enum max_exp_digits = 5;
@@ -364,6 +360,8 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], -real.nan, f) == "-nan");
     assert(printFloat(buf[], real.infinity, f) == "inf");
     assert(printFloat(buf[], -real.infinity, f) == "-inf");
+    assert(printFloat(buf[], 0.0L, f) == "0x0p+0");
+    assert(printFloat(buf[], -0.0L, f) == "-0x0p+0");
 
     import std.math : nextUp;
 
@@ -376,6 +374,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], double.epsilon, f) == "0x1p-52");
     assert(printFloat(buf[], double.min_normal, f) == "0x1p-1022");
     assert(printFloat(buf[], double.max, f) == "0x1.fffffffffffffp+1023");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], nextUp(0.0L), f) == "0x0.0000000000000002p-16382");
+        assert(printFloat(buf[], real.epsilon, f) == "0x1p-63");
+        assert(printFloat(buf[], real.min_normal, f) == "0x1p-16382");
+        assert(printFloat(buf[], real.max, f) == "0x1.fffffffffffffffep+16383");
+    }
 
     import std.math : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                       LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
@@ -412,6 +418,24 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], cast(double) SQRT2, f) == "0x1.6a09e667f3bcdp+0");
     assert(printFloat(buf[], cast(double) SQRT1_2, f) == "0x1.6a09e667f3bcdp-1");
 
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], E, f) == "0x1.5bf0a8b145769536p+1");
+        assert(printFloat(buf[], PI, f) == "0x1.921fb54442d1846ap+1");
+        assert(printFloat(buf[], PI_2, f) == "0x1.921fb54442d1846ap+0");
+        assert(printFloat(buf[], PI_4, f) == "0x1.921fb54442d1846ap-1");
+        assert(printFloat(buf[], M_1_PI, f) == "0x1.45f306dc9c882a54p-2");
+        assert(printFloat(buf[], M_2_PI, f) == "0x1.45f306dc9c882a54p-1");
+        assert(printFloat(buf[], M_2_SQRTPI, f) == "0x1.20dd750429b6d11ap+0");
+        assert(printFloat(buf[], LN10, f) == "0x1.26bb1bbb5551582ep+1");
+        assert(printFloat(buf[], LN2, f) == "0x1.62e42fefa39ef358p-1");
+        assert(printFloat(buf[], LOG2, f) == "0x1.34413509f79fef32p-2");
+        assert(printFloat(buf[], LOG2E, f) == "0x1.71547652b82fe178p+0");
+        assert(printFloat(buf[], LOG2T, f) == "0x1.a934f0979a3715fcp+1");
+        assert(printFloat(buf[], LOG10E, f) == "0x1.bcb7b1526e50e32ap-2");
+        assert(printFloat(buf[], SQRT2, f) == "0x1.6a09e667f3bcc908p+0");
+        assert(printFloat(buf[], SQRT1_2, f) == "0x1.6a09e667f3bcc908p-1");
+    }
 }
 
 @safe unittest
@@ -428,6 +452,13 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "0x1.000p+0");
     assert(printFloat(buf[], 3.3, f) == "0x1.a66p+1");
     assert(printFloat(buf[], 2.9, f) == "0x1.733p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], 1.0L, f) == "0x1.000p+0");
+        assert(printFloat(buf[], 3.3L, f) == "0x1.a66p+1");
+        assert(printFloat(buf[], 2.9L, f) == "0x1.733p+1");
+    }
 }
 
 @safe unittest
@@ -444,6 +475,13 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "0x1p+0");
     assert(printFloat(buf[], 3.3, f) == "0x2p+1");
     assert(printFloat(buf[], 2.9, f) == "0x1p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], 1.0L, f) == "0x1p+0");
+        assert(printFloat(buf[], 3.3L, f) == "0x2p+1");
+        assert(printFloat(buf[], 2.9L, f) == "0x1p+1");
+    }
 }
 
 @safe unittest
@@ -461,6 +499,13 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "0x1.p+0");
     assert(printFloat(buf[], 3.3, f) == "0x2.p+1");
     assert(printFloat(buf[], 2.9, f) == "0x1.p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        assert(printFloat(buf[], 1.0L, f) == "0x1.p+0");
+        assert(printFloat(buf[], 3.3L, f) == "0x2.p+1");
+        assert(printFloat(buf[], 2.9L, f) == "0x1.p+1");
+    }
 }
 
 @safe unittest
@@ -477,6 +522,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "                0x1p+0");
     assert(printFloat(buf[], 3.3, f) == "  0x1.a666666666666p+1");
     assert(printFloat(buf[], 2.9, f) == "  0x1.7333333333333p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        f.width = 25;
+        assert(printFloat(buf[], 1.0L, f) == "                   0x1p+0");
+        assert(printFloat(buf[], 3.3L, f) == "  0x1.a666666666666666p+1");
+        assert(printFloat(buf[], 2.9L, f) == "  0x1.7333333333333334p+1");
+    }
 }
 
 @safe unittest
@@ -494,6 +547,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "0x1p+0                ");
     assert(printFloat(buf[], 3.3, f) == "0x1.a666666666666p+1  ");
     assert(printFloat(buf[], 2.9, f) == "0x1.7333333333333p+1  ");
+
+    static if (real.mant_dig == 64)
+    {
+        f.width = 25;
+        assert(printFloat(buf[], 1.0L, f) == "0x1p+0                   ");
+        assert(printFloat(buf[], 3.3L, f) == "0x1.a666666666666666p+1  ");
+        assert(printFloat(buf[], 2.9L, f) == "0x1.7333333333333334p+1  ");
+    }
 }
 
 @safe unittest
@@ -511,6 +572,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "0x00000000000000001p+0");
     assert(printFloat(buf[], 3.3, f) == "0x001.a666666666666p+1");
     assert(printFloat(buf[], 2.9, f) == "0x001.7333333333333p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        f.width = 25;
+        assert(printFloat(buf[], 1.0L, f) == "0x00000000000000000001p+0");
+        assert(printFloat(buf[], 3.3L, f) == "0x001.a666666666666666p+1");
+        assert(printFloat(buf[], 2.9L, f) == "0x001.7333333333333334p+1");
+    }
 }
 
 @safe unittest
@@ -528,6 +597,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == "               +0x1p+0");
     assert(printFloat(buf[], 3.3, f) == " +0x1.a666666666666p+1");
     assert(printFloat(buf[], 2.9, f) == " +0x1.7333333333333p+1");
+
+    static if (real.mant_dig == 64)
+    {
+        f.width = 25;
+        assert(printFloat(buf[], 1.0L, f) == "                  +0x1p+0");
+        assert(printFloat(buf[], 3.3L, f) == " +0x1.a666666666666666p+1");
+        assert(printFloat(buf[], 2.9L, f) == " +0x1.7333333333333334p+1");
+    }
 }
 
 @safe unittest
@@ -546,6 +623,14 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 1.0, f) == " 0x1p+0               ");
     assert(printFloat(buf[], 3.3, f) == " 0x1.a666666666666p+1 ");
     assert(printFloat(buf[], 2.9, f) == " 0x1.7333333333333p+1 ");
+
+    static if (real.mant_dig == 64)
+    {
+        f.width = 25;
+        assert(printFloat(buf[], 1.0L, f) == " 0x1p+0                  ");
+        assert(printFloat(buf[], 3.3L, f) == " 0x1.a666666666666666p+1 ");
+        assert(printFloat(buf[], 2.9L, f) == " 0x1.7333333333333334p+1 ");
+    }
 }
 
 @safe unittest
