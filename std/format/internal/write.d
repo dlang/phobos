@@ -1051,6 +1051,13 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20536
+@safe pure unittest
+{
+    real r = .00000095367431640625L;
+    assert(format("%a", r) == "0x1p-20");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
