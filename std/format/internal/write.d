@@ -893,7 +893,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     real a = 0.16;
     real b = 0.016;
     assert(format("%.1f", a) == "0.2");
-//    assert(format("%.2f", b) == "0.02"); // Windows still fails here...
+    assert(format("%.2f", b) == "0.02");
 
     double a1 = 0.16;
     double b1 = 0.016;
