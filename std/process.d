@@ -2121,7 +2121,6 @@ struct AdvancedConfig
     /**
     A function type that notifies error in forked process.
     */
-    version (Posix)
     alias AbortOnError = void delegate() nothrow @nogc @safe;
 
     /**
