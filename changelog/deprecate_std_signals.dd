@@ -1,0 +1,10 @@
+Deprecate std.signals
+
+`std.signals` is considered out-dated and not up to Phobos' current
+standards. It will be removed from Phobos in 2.107.0.
+
+If you still need it, go to $(LINK https://github.com/DigitalMars/undeaD)
+
+Other alternatives are:
+$(LINK https://code.dlang.org/packages/descore) and
+$(LINK https://code.dlang.org/packages/phobosx)

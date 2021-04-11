@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Warning: This module is considered out-dated and not up to Phobos'
+ * current standards. It will be removed from Phobos in 2.107.0.
+ * If you still need it, go to $(LINK https://github.com/DigitalMars/undeaD))
+ *
  * Signals and Slots are an implementation of the Observer Pattern.
  * Essentially, when a Signal is emitted, a list of connected Observers
  * (called slots) are called.
@@ -60,6 +64,8 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("Will be removed from Phobos in 2.107.0. If you still need it, go to https://github.com/DigitalMars/undeaD")
 module std.signals;
 
 import core.exception : onOutOfMemoryError;
@@ -286,7 +292,6 @@ mixin template Signal(T1...)
     ST status;
 }
 
-///
 @system unittest
 {
     import std.signals;

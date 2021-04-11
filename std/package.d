@@ -64,7 +64,6 @@ public import
  std.random,
  std.range,
  std.regex,
- std.signals,
  std.socket,
  std.stdint,
  std.stdio,
