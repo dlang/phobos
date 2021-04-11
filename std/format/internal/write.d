@@ -1041,6 +1041,15 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     static assert(format("%s", 0.6L) == "0.6");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9297
+@safe pure unittest
+{
+    static if (real.mant_dig == 64) // 80 bit reals
+    {
+        assert(format("%.25f", 1.6180339887_4989484820_4586834365L) == "1.6180339887498948482072100");
+    }
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
