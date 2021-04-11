@@ -808,7 +808,8 @@ Pid spawnProcess(scope const(char[])[] args,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none,
-                 scope const char[] workDir = null)
+                 scope const char[] workDir = null,
+                 AdvancedConfig ac = AdvancedConfig.none)
     @safe
 {
     version (Windows)
@@ -819,7 +820,7 @@ Pid spawnProcess(scope const(char[])[] args,
     }
     else version (Posix)
     {
-        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir, ac);
     }
     else
         static assert(0);
@@ -873,6 +874,7 @@ version (Posix) private enum InternalError : ubyte
     getrlimit,
     doubleFork,
     malloc,
+    preExec,
 }
 
 /*
@@ -888,7 +890,8 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                               File stderr,
                               scope const string[string] env,
                               Config config,
-                              scope const(char)[] workDir)
+                              scope const(char)[] workDir,
+                              AdvancedConfig ac = AdvancedConfig.none)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -975,6 +978,11 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         close(forkPipeOut);
         core.sys.posix.unistd._exit(1);
         assert(0);
+    }
+
+    void abortOnErrorInPreExec() nothrow @trusted
+    {
+        abortOnError(forkPipe[1], InternalError.preExec, .errno);
     }
 
     void closePipeWriteEnds()
@@ -1095,6 +1103,8 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 if (stderrFD > STDERR_FILENO)  close(stderrFD);
             }
 
+            ac.preExecFunction(&abortOnErrorInPreExec);
+
             // Execute program.
             core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
 
@@ -1179,6 +1189,9 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 case InternalError.malloc:
                     errorMsg = "Failed to allocate memory";
                     break;
+                case InternalError.preExec:
+                    errorMsg = "Failed to execute preExecFunction";
+                    break;
                 case InternalError.noerror:
                     assert(false);
             }
@@ -1205,6 +1218,60 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             stderr.close();
         return new Pid(id, owned);
     }
+}
+
+version (Posix)
+@system unittest
+{
+    import std.concurrency : ownerTid, receiveTimeout, send, spawn;
+    import std.datetime : seconds;
+
+    sigset_t ss;
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &ss, null);
+
+    AdvancedConfig ac = {
+        preExecFunction: (AdvancedConfig.AbortOnError aoe) @trusted @nogc nothrow {
+            // Reset signal handlers
+            sigset_t ss;
+            if (sigfillset(&ss) != 0)
+            {
+                aoe();
+            }
+            if (sigprocmask(SIG_UNBLOCK, &ss, null) != 0)
+            {
+                aoe();
+            }
+        },
+    };
+
+    auto pid = spawnProcess(["sleep", "10000"],
+                            std.stdio.stdin,
+                            std.stdio.stdout,
+                            std.stdio.stderr,
+                            null,
+                            Config.none,
+                            null,
+                            ac);
+    scope(failure)
+    {
+        kill(pid, SIGKILL);
+        wait(pid);
+    }
+
+    // kill the spawned process with SIGINT
+    // and send its return code
+    spawn((shared Pid pid) {
+        auto p = cast() pid;
+        kill(p, SIGINT);
+        auto code = wait(p);
+        assert(code < 0);
+        send(ownerTid, code);
+    }, cast(shared) pid);
+
+    auto received = receiveTimeout(3.seconds, (int) {});
+    assert(received);
 }
 
 /*
@@ -2046,6 +2113,32 @@ enum Config
     stderrPassThrough = 128,
 }
 
+/**
+A sturct that controls the behavior of process creation functions in this module.
+*/
+struct AdvancedConfig
+{
+    /**
+    A function type that notifies error in forked process.
+    */
+    version (Posix)
+    alias AbortOnError = void delegate() nothrow @nogc @safe;
+
+    /**
+    A function that is called before `exec` in $(LREF spawnProcess).
+    $(LREF AbortOnError) can be called to notify errors in `preExecFunction` and
+    to abort forked process.  On Windows, this member has no effect.
+    */
+    void function(AbortOnError) nothrow @nogc @safe preExecFunction;
+
+    static AdvancedConfig none() @nogc nothrow pure @safe
+    {
+        typeof(return) ac = {
+            preExecFunction: (_) {},
+        };
+        return ac;
+    }
+}
 
 /// A handle that corresponds to a spawned process.
 final class Pid
