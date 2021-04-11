@@ -597,7 +597,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     char[512] buf2 = void;
     size_t len;
     char[] buf;
-    static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+    static if (is(T == float) || is(T == double)
+               || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
     {
         import std.format.internal.floats : RoundingMode, printFloat;
         import std.math; // cannot be selective, because FloatingPointControl might not be defined
@@ -648,7 +649,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             return;
         }
 
-        enforceFmt(!__ctfe, "Cannot format reals at compile-time.");
+        enforceFmt(!__ctfe, mixin("\"Unsupported `real` type: real.sizeof = ", real.sizeof,
+                                  " | real.mant_dig = ", real.mant_dig, "\""));
 
         char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
              + 1 /*\0*/] sprintfSpec = void;
