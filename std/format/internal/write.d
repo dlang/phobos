@@ -964,6 +964,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     assert(format!"%.1000a"(1.0).length == 1007);
     assert(format!"%.600f"(0.1).length == 602);
+    assert(format!"%.600e"(0.1L).length == 606);
 }
 
 @safe unittest
