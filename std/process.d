@@ -2134,13 +2134,21 @@ struct Config
         return Config(flags | other.flags);
     } /// ditto
 
-    /**
-    A function that is called before `exec` in $(LREF spawnProcess).
-    $(LREF AbortOnError) can be called to notify errors in `preExecFunction` and
-    to abort forked process.  On Windows, this member has no effect.
-    */
-    alias AbortOnError = void delegate() nothrow @nogc @safe;
-    void function(AbortOnError) nothrow @nogc @safe preExecFunction; /// ditto
+    version (StdDdoc)
+    {
+        /**
+        A function that is called before `exec` in $(LREF spawnProcess).
+        $(LREF AbortOnError) can be called to notify errors in `preExecFunction` and
+        to abort forked process.  On Windows, this member has no effect.
+        */
+        alias AbortOnError = void delegate() nothrow @nogc @safe;
+        void function(AbortOnError) nothrow @nogc @safe preExecFunction; /// ditto
+    }
+    else version (Posix)
+    {
+        alias AbortOnError = void delegate() nothrow @nogc @safe;
+        void function(AbortOnError) nothrow @nogc @safe preExecFunction;
+    }
 }
 
 /// A handle that corresponds to a spawned process.
