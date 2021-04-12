@@ -808,8 +808,7 @@ Pid spawnProcess(scope const(char[])[] args,
                  File stderr = std.stdio.stderr,
                  const string[string] env = null,
                  Config config = Config.none,
-                 scope const char[] workDir = null,
-                 AdvancedConfig ac = AdvancedConfig.none)
+                 scope const char[] workDir = null)
     @safe
 {
     version (Windows)
@@ -820,7 +819,7 @@ Pid spawnProcess(scope const(char[])[] args,
     }
     else version (Posix)
     {
-        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir, ac);
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
     else
         static assert(0);
@@ -890,8 +889,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                               File stderr,
                               scope const string[string] env,
                               Config config,
-                              scope const(char)[] workDir,
-                              AdvancedConfig ac = AdvancedConfig.none)
+                              scope const(char)[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -916,7 +914,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
     argz[$-1] = null;
 
     // Prepare environment.
-    auto envz = createEnv(env, !(config & Config.newEnv));
+    auto envz = createEnv(env, !(config.flags & Config.Flags.newEnv));
 
     // Open the working directory.
     // We use open in the parent and fchdir in the child
@@ -963,13 +961,13 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
     since the first and the second forks will run in parallel.
     */
     int[2] pidPipe;
-    if (config & Config.detached)
+    if (config.flags & Config.Flags.detached)
     {
         if (core.sys.posix.unistd.pipe(pidPipe) != 0)
             throw ProcessException.newFromErrno("Could not create pipe to get process pid");
         setCLOEXEC(pidPipe[1], true);
     }
-    scope(exit) if (config & Config.detached) close(pidPipe[0]);
+    scope(exit) if (config.flags & Config.Flags.detached) close(pidPipe[0]);
 
     static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
     {
@@ -988,7 +986,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
     void closePipeWriteEnds()
     {
         close(forkPipe[1]);
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             close(pidPipe[1]);
     }
 
@@ -1006,7 +1004,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         // Child process
 
         // no need for the read end of pipe on child side
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             close(pidPipe[0]);
         close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
@@ -1041,7 +1039,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             setCLOEXEC(STDOUT_FILENO, false);
             setCLOEXEC(STDERR_FILENO, false);
 
-            if (!(config & Config.inheritFDs))
+            if (!(config.flags & Config.Flags.inheritFDs))
             {
                 // NOTE: malloc() and getrlimit() are not on the POSIX async
                 // signal safe functions list, but practically this should
@@ -1103,7 +1101,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 if (stderrFD > STDERR_FILENO)  close(stderrFD);
             }
 
-            ac.preExecFunction(&abortOnErrorInPreExec);
+            config.preExecFunction(&abortOnErrorInPreExec);
 
             // Execute program.
             core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
@@ -1112,7 +1110,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             abortOnError(forkPipeOut, InternalError.exec, .errno);
         }
 
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
         {
             auto secondFork = core.sys.posix.unistd.fork();
             if (secondFork == 0)
@@ -1153,7 +1151,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         // Save error number just in case if subsequent "waitpid" fails and overrides errno
         immutable lastError = .errno;
 
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
         {
             // Forked child exits right after creating second fork. So it should be safe to wait here.
             import core.sys.posix.sys.wait : waitpid;
@@ -1183,7 +1181,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     break;
                 case InternalError.doubleFork:
                     // Can happen only when starting detached process
-                    assert(config & Config.detached);
+                    assert(config.flags & Config.Flags.detached);
                     errorMsg = "Failed to fork twice";
                     break;
                 case InternalError.malloc:
@@ -1199,7 +1197,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 throw ProcessException.newFromErrno(error, errorMsg);
             throw new ProcessException(errorMsg);
         }
-        else if (config & Config.detached)
+        else if (config.flags & Config.Flags.detached)
         {
             owned = false;
             if (read(pidPipe[0], &id, id.sizeof) != id.sizeof)
@@ -1207,13 +1205,13 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         }
 
         // Parent process:  Close streams and return.
-        if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStdin ) && stdinFD  > STDERR_FILENO
                                             && stdinFD  != getFD(std.stdio.stdin ))
             stdin.close();
-        if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStdout) && stdoutFD > STDERR_FILENO
                                             && stdoutFD != getFD(std.stdio.stdout))
             stdout.close();
-        if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStderr) && stderrFD > STDERR_FILENO
                                             && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
         return new Pid(id, owned);
@@ -1231,8 +1229,8 @@ version (Posix)
     sigaddset(&ss, SIGINT);
     pthread_sigmask(SIG_BLOCK, &ss, null);
 
-    AdvancedConfig ac = {
-        preExecFunction: (AdvancedConfig.AbortOnError aoe) @trusted @nogc nothrow {
+    Config config = {
+        preExecFunction: (Config.AbortOnError aoe) @trusted @nogc nothrow {
             // Reset signal handlers
             sigset_t ss;
             if (sigfillset(&ss) != 0)
@@ -1251,9 +1249,8 @@ version (Posix)
                             std.stdio.stdout,
                             std.stdio.stderr,
                             null,
-                            Config.none,
-                            null,
-                            ac);
+                            config,
+                            null);
     scope(failure)
     {
         kill(pid, SIGKILL);
@@ -1300,7 +1297,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
     if (commandLine.empty) throw new RangeError("Command line is empty");
 
     // Prepare environment.
-    auto envz = createEnv(env, !(config & Config.newEnv));
+    auto envz = createEnv(env, !(config.flags & Config.Flags.newEnv));
 
     // Startup info for CreateProcessW().
     STARTUPINFO_W startinfo;
@@ -1352,7 +1349,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
     PROCESS_INFORMATION pi;
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
-        ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
+        ((config.flags & Config.Flags.suppressConsole) ? CREATE_NO_WINDOW : 0);
     // workaround until https://issues.dlang.org/show_bug.cgi?id=14696 is fixed
     auto pworkDir = workDir.tempCStringW();
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
@@ -1364,16 +1361,16 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
                                         && stdinFD  != getFD(std.stdio.stdin ))
         stdin.close();
-    if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStdout) && stdoutFD > STDERR_FILENO
                                         && stdoutFD != getFD(std.stdio.stdout))
         stdout.close();
-    if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStderr) && stderrFD > STDERR_FILENO
                                         && stderrFD != getFD(std.stdio.stderr))
         stderr.close();
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
-    if (config & Config.detached)
+    if (config.flags & Config.Flags.detached)
     {
         CloseHandle(pi.hProcess);
         return new Pid(pi.dwProcessId);
@@ -1727,7 +1724,7 @@ version (Posix) @system unittest
         pipei.writeEnd.flush();
         assert(pipeo.readEnd.readln().chomp() == "input output foo");
         assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             while (!done.exists) Thread.sleep(10.msecs);
         else
             wait(pid);
@@ -1747,7 +1744,7 @@ version (Posix) @system unittest
         auto filee = File(pathe, "w");
         auto done = buildPath(tempDir(), randomUUID().toString());
         auto pid = spawnProcess([prog.path, "bar", "baz", done], filei, fileo, filee, null, config);
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             while (!done.exists) Thread.sleep(10.msecs);
         else
             wait(pid);
@@ -2020,11 +2017,9 @@ version (Windows)
 
 
 /**
-Flags that control the behaviour of process creation functions in this
-module. Most flags only apply to $(LREF spawnProcess) and
+Options that control the behaviour of process creation functions in this
+module. Most options only apply to $(LREF spawnProcess) and
 $(LREF spawnShell).
-
-Use bitwise OR to combine flags.
 
 Example:
 ---
@@ -2043,100 +2038,109 @@ scope(exit)
 }
 ---
 */
-enum Config
-{
-    none = 0,
-
-    /**
-    By default, the child process inherits the parent's environment,
-    and any environment variables passed to $(LREF spawnProcess) will
-    be added to it.  If this flag is set, the only variables in the
-    child process' environment will be those given to spawnProcess.
-    */
-    newEnv = 1,
-
-    /**
-    Unless the child process inherits the standard input/output/error
-    streams of its parent, one almost always wants the streams closed
-    in the parent when $(LREF spawnProcess) returns.  Therefore, by
-    default, this is done.  If this is not desirable, pass any of these
-    options to spawnProcess.
-    */
-    retainStdin  = 2,
-    retainStdout = 4,                                  /// ditto
-    retainStderr = 8,                                  /// ditto
-
-    /**
-    On Windows, if the child process is a console application, this
-    flag will prevent the creation of a console window.  Otherwise,
-    it will be ignored. On POSIX, `suppressConsole` has no effect.
-    */
-    suppressConsole = 16,
-
-    /**
-    On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
-    are by default inherited by the child process.  As this may lead
-    to subtle bugs when pipes or multiple threads are involved,
-    $(LREF spawnProcess) ensures that all file descriptors except the
-    ones that correspond to standard input/output/error are closed
-    in the child process when it starts.  Use `inheritFDs` to prevent
-    this.
-
-    On Windows, this option has no effect, and any handles which have been
-    explicitly marked as inheritable will always be inherited by the child
-    process.
-    */
-    inheritFDs = 32,
-
-    /**
-    Spawn process in detached state. This removes the need in calling
-    $(LREF wait) to clean up the process resources.
-
-    Note:
-    Calling $(LREF wait) or $(LREF kill) with the resulting `Pid` is invalid.
-    */
-    detached = 64,
-
-    /**
-    By default, the $(LREF execute) and $(LREF executeShell) functions
-    will capture child processes' both stdout and stderr. This can be
-    undesirable if the standard output is to be processed or otherwise
-    used by the invoking program, as `execute`'s result would then
-    contain a mix of output and warning/error messages.
-
-    Specify this flag when calling `execute` or `executeShell` to
-    cause invoked processes' stderr stream to be sent to $(REF stderr,
-    std,stdio), and only capture and return standard output.
-
-    This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
-    */
-    stderrPassThrough = 128,
-}
-
-/**
-A struct that controls the behavior of process creation functions in this module.
-*/
-struct AdvancedConfig
+struct Config
 {
     /**
-    A function type that notifies error in forked process.
+       Flag options.
+       Use bitwise OR to combine flags.
+    **/
+    enum Flags
+    {
+        none = 0,
+
+        /**
+        By default, the child process inherits the parent's environment,
+        and any environment variables passed to $(LREF spawnProcess) will
+        be added to it.  If this flag is set, the only variables in the
+        child process' environment will be those given to spawnProcess.
+        */
+        newEnv = 1,
+
+        /**
+        Unless the child process inherits the standard input/output/error
+        streams of its parent, one almost always wants the streams closed
+        in the parent when $(LREF spawnProcess) returns.  Therefore, by
+        default, this is done.  If this is not desirable, pass any of these
+        options to spawnProcess.
+        */
+        retainStdin  = 2,
+        retainStdout = 4,                                  /// ditto
+        retainStderr = 8,                                  /// ditto
+
+        /**
+        On Windows, if the child process is a console application, this
+        flag will prevent the creation of a console window.  Otherwise,
+        it will be ignored. On POSIX, `suppressConsole` has no effect.
+        */
+        suppressConsole = 16,
+
+        /**
+        On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
+        are by default inherited by the child process.  As this may lead
+        to subtle bugs when pipes or multiple threads are involved,
+        $(LREF spawnProcess) ensures that all file descriptors except the
+        ones that correspond to standard input/output/error are closed
+        in the child process when it starts.  Use `inheritFDs` to prevent
+        this.
+
+        On Windows, this option has no effect, and any handles which have been
+        explicitly marked as inheritable will always be inherited by the child
+        process.
+        */
+        inheritFDs = 32,
+
+        /**
+        Spawn process in detached state. This removes the need in calling
+        $(LREF wait) to clean up the process resources.
+
+        Note:
+        Calling $(LREF wait) or $(LREF kill) with the resulting `Pid` is invalid.
+        */
+        detached = 64,
+
+        /**
+        By default, the $(LREF execute) and $(LREF executeShell) functions
+        will capture child processes' both stdout and stderr. This can be
+        undesirable if the standard output is to be processed or otherwise
+        used by the invoking program, as `execute`'s result would then
+        contain a mix of output and warning/error messages.
+
+        Specify this flag when calling `execute` or `executeShell` to
+        cause invoked processes' stderr stream to be sent to $(REF stderr,
+        std,stdio), and only capture and return standard output.
+
+        This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
+        */
+        stderrPassThrough = 128,
+    }
+    Flags flags; /// ditto
+
+    /**
+       For backwards compatibility, and cases when only flags need to
+       be specified in the `Config`, these allow building `Config`
+       instances using flag names only.
     */
-    alias AbortOnError = void delegate() nothrow @nogc @safe;
+    enum Config none = Config.init;
+    enum Config newEnv = Config(Flags.newEnv); /// ditto
+    enum Config retainStdin = Config(Flags.retainStdin); /// ditto
+    enum Config retainStdout = Config(Flags.retainStdout); /// ditto
+    enum Config retainStderr = Config(Flags.retainStderr); /// ditto
+    enum Config suppressConsole = Config(Flags.suppressConsole); /// ditto
+    enum Config inheritFDs = Config(Flags.inheritFDs); /// ditto
+    enum Config detached = Config(Flags.detached); /// ditto
+    enum Config stderrPassThrough = Config(Flags.stderrPassThrough); /// ditto
+    Config opBinary(string op : "|")(Config other)
+    {
+        return Config(flags | other.flags);
+    } /// ditto
 
     /**
     A function that is called before `exec` in $(LREF spawnProcess).
     $(LREF AbortOnError) can be called to notify errors in `preExecFunction` and
     to abort forked process.  On Windows, this member has no effect.
     */
-    void function(AbortOnError) nothrow @nogc @safe preExecFunction;
-
-    static AdvancedConfig none() @nogc nothrow pure @safe
-    {
-        typeof(return) ac = {
-            preExecFunction: (_) {},
-        };
-        return ac;
-    }
+    alias AbortOnError = void delegate() nothrow @nogc @safe;
+    void function(AbortOnError) nothrow @nogc @safe preExecFunction; /// ditto
 }
 
 /// A handle that corresponds to a spawned process.
@@ -2900,7 +2904,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...
         childStderr = childStdout;
     }
 
-    config &= ~(Config.retainStdin | Config.retainStdout | Config.retainStderr);
+    config.flags &= ~(Config.Flags.retainStdin | Config.Flags.retainStdout | Config.Flags.retainStderr);
     pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr,
                            env, config, workDir, extraArgs);
     return pipes;
@@ -3191,7 +3195,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     import std.array : appender;
     import std.typecons : Tuple;
 
-    auto redirect = (config & Config.stderrPassThrough)
+    auto redirect = (config.flags & Config.Flags.stderrPassThrough)
         ? Redirect.stdout
         : Redirect.stdout | Redirect.stderrToStdout;
 
