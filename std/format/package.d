@@ -198,66 +198,81 @@ contain exactly one $(I format specifier), which specifies the way,
 the elements of the compound type will be formatted. This $(I format
 specifier) can be a $(I compound indicator) itself.
 
+$(SECTION4 Flags)
+
+There are several flags that affect the outcome of the formatting.
+
+$(BOOKTABLE ,
+   $(TR $(TH Flag) $(TH Semantics))
+   $(TR $(TD $(B '-'))
+        $(TD When the formatted result is shorter then the value
+             given by the width parameter, the output is right
+             justified. With the $(B '-') flag this is changed
+             to left justification.
+
+             There are two exceptions where the $(B '-') flag has a
+             different meaning: (1) with $(B 'r') it denotes to use little
+             endian and (2) in case of a compound indicator it means that
+             no special handling of the members is applied.))
+   $(TR $(TD $(B '+')&nbsp;/&nbsp;$(B '&nbsp;'))
+        $(TD Applies to numerical values. By default, positive numbers are not
+             formatted to include the `+` sign. With one of these two flags present,
+             positive numbers are preceded by a plus sign or a space.
+             When both flags are present, a plus sign is used.
+
+             In case of $(B 'r'), a big endian format is used.))
+   $(TR $(TD $(B '0'))
+        $(TD Is applied to numerical values that are printed right justified.
+             If the zero flag is present, the space left to the number is
+             filled with zeros instead of spaces.))
+   $(TR $(TD $(B '#'))
+        $(TD Denotes that an alternative output must be used. This depends on the type
+             to be formatted and the $(I format character) used. See the
+             sections below for more information.))
+)
+
+$(SECTION4 Width\, Precision and Separator)
+
+The $(I width) parameter specifies the minimum width of the result.
+
+The meaning of $(I precision) depends on the format indicator. For
+integers it denotes the minimum number of digits printed, for
+real numbers it denotes the number of fractional digits and for
+strings and compound types it denotes the maximum number of elements
+that are included in the output.
+
+A $(I separator) is used for formatting numbers. If it is specified,
+the output is divided into chunks of three digits, separated by a $(B
+','). The number of digits in a chunk can be given explicitly by
+providing a number or a $(B '*') after the $(B ',').
+
+In all three cases the number of digits can be replaced by a $(B
+'*'). In this scenario, the next argument is used as the number of
+digits. If the argument is a negative number, the $(I precision) and
+$(I separator) parameters are considered unspecified. For ($I width),
+the absolute value is used and the $(B '-') flag is set.
+
+The $(I separator) can also be followed by a $(B '?'). In that case,
+an additional argument is used to specify the symbol that should be
+used to separate the chunks.
+
+$(SECTION4 Position)
+
+By default, the arguments are processed in the provided order. With
+the $(I position) parameter it is possible to address arguments
+directly. It is also possible to denote a series of arguments with
+two numbers separated by $(B ':'), that are all processed in the same
+way. The second number can be omitted. In that case the series ends
+with the last argument.
+
+It's also possible to use positional arguments for $(I width), $(I
+precision) and $(I separator) by adding a number and a $(B
+'$(DOLLAR)') after the $(B '*').
 
 
 
-    $(BOOKTABLE Flags affect formatting depending on the specifier as
-    follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
-
-    $(TR $(TD $(B '-')) $(TD numeric, bool, null, char, string, enum, pointer) $(TD Left justify the result in
-        the field.  It overrides any $(B 0) flag.))
-
-    $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
-    a signed conversion with a $(B +).  It overrides any $(I space)
-    flag.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
-    precision as necessary so that the first digit of the octal
-    formatting is a '0', even if both the argument and the $(I
-    Precision) are zero.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
-       non-zero, prefix result with $(B 0x) ($(B 0X)).))
-
-    $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
-       point and print trailing zeros.))
-
-    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
-    zeros to pad rather than spaces (except for the floating point
-    values `nan` and `infinity`).  Ignore if there's a $(I
-    Precision).))
-
-    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.)))
 
     $(DL
-        $(DT $(I Width))
-        $(DD
-        Only used for numeric, bool, null, char, string, enum and pointer types.
-        Specifies the minimum field width.
-        If the width is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the width.
-        If the width is negative, it is as if the $(B -) was given
-        as a $(I Flags) character.)
-
-        $(DT $(I Precision))
-        $(DD Gives the precision for numeric conversions.
-        If the precision is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the precision.
-        If it is negative, it is as if there was no $(I Precision) specifier.)
-
-        $(DT $(I Separator))
-        $(DD Inserts the separator symbols ',' every $(I X) digits, from right
-        to left, into numeric values to increase readability.
-        The fractional part of floating point values inserts the separator
-        from left to right.
-        Entering an integer after the ',' allows to specify $(I X).
-        If a '*' is placed after the ',' then $(I X) is specified by an
-        additional parameter to the format function.
-        Adding a '?' after the ',' or $(I X) specifier allows to specify
-        the separator character as an additional parameter.
-        )
-
         $(DT $(I FormatChar))
         $(DD
         $(DL
@@ -367,22 +382,6 @@ specifier) can be a $(I compound indicator) itself.
     Floating point infinities are formatted as $(B inf) or
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
-
-    The variadic arguments are normally consumed in order.
-    POSIX-style $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
-    positional parameter syntax) is also supported. Each argument is
-    formatted into a sequence of chars according to the format
-    specification, and the characters are passed to `w`. As many
-    arguments as specified in the format string are consumed and
-    formatted. If there are fewer arguments than format specifiers, a
-    `FormatException` is thrown. If there are more remaining
-    arguments than needed by the format specification, they are
-    ignored but only if at least one argument was formatted.
-
-    The positional and non-positional styles can be mixed in the same
-    format string. (POSIX leaves this behavior undefined.) The internal
-    counter for non-positional parameters tracks the next parameter after
-    the largest positional parameter already used.
 
     The format string supports the formatting of array and nested
     array elements via the grouping format specifiers $(B %&#40;) and
