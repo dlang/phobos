@@ -978,11 +978,6 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         assert(0);
     }
 
-    void abortOnErrorInPreExec() nothrow @trusted
-    {
-        abortOnError(forkPipe[1], InternalError.preExec, .errno);
-    }
-
     void closePipeWriteEnds()
     {
         close(forkPipe[1]);
@@ -1103,7 +1098,10 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
             if (config.preExecFunction !is null)
             {
-                config.preExecFunction(&abortOnErrorInPreExec);
+                if (config.preExecFunction() != true)
+                {
+                    abortOnError(forkPipeOut, InternalError.preExec, .errno);
+                }
             }
 
             // Execute program.
@@ -1233,17 +1231,18 @@ version (Posix)
     pthread_sigmask(SIG_BLOCK, &ss, null);
 
     Config config = {
-        preExecFunction: (Config.AbortOnError aoe) @trusted @nogc nothrow {
+        preExecFunction: () @trusted @nogc nothrow {
             // Reset signal handlers
             sigset_t ss;
             if (sigfillset(&ss) != 0)
             {
-                aoe();
+                return false;
             }
             if (sigprocmask(SIG_UNBLOCK, &ss, null) != 0)
             {
-                aoe();
+                return false;
             }
+            return true;
         },
     };
 
@@ -2141,16 +2140,14 @@ struct Config
     {
         /**
         A function that is called before `exec` in $(LREF spawnProcess).
-        $(LREF AbortOnError) can be called to notify errors in `preExecFunction` and
-        to abort forked process.  On Windows, this member has no effect.
+        It returns `true` if succeeded and otherwise returns `false`.
+        On Windows, this member is not available.
         */
-        alias AbortOnError = void delegate() nothrow @nogc @safe;
-        void function(AbortOnError) nothrow @nogc @safe preExecFunction; /// ditto
+        bool function() nothrow @nogc @safe preExecFunction;
     }
     else version (Posix)
     {
-        alias AbortOnError = void delegate() nothrow @nogc @safe;
-        void function(AbortOnError) nothrow @nogc @safe preExecFunction;
+        bool function() nothrow @nogc @safe preExecFunction;
     }
 }
 
