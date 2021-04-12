@@ -314,7 +314,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
-    return '0' <= c && c <= '9';
+    return (cast(ubyte)(c - '0')) < 10;
 }
 
 ///
