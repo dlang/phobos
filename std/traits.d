@@ -5140,6 +5140,10 @@ template AllImplicitConversionTargets(T)
 Params:
     T = The type to check
 
+Warning:
+    This template is considered out-dated. It will be removed from
+    Phobos in 2.107.0. Please use $(LREF AllImplicitConversionTargets) instead.
+
 Returns:
     An $(REF AliasSeq,std,meta) with all possible target types of an implicit
     conversion `T`.
@@ -5158,6 +5162,9 @@ Note:
 See_Also:
     $(LREF isImplicitlyConvertible)
  */
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("ImplicitConversionTargets has been deprecated in favour of AllImplicitConversionTargets "
+   ~ "and will be removed in 2.107.0")
 template ImplicitConversionTargets(T)
 {
     static if (is(T == bool))
@@ -5226,8 +5233,7 @@ template ImplicitConversionTargets(T)
         alias ImplicitConversionTargets = AliasSeq!();
 }
 
-///
-@safe unittest
+deprecated @safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5260,7 +5266,7 @@ template ImplicitConversionTargets(T)
     )));
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     static assert(is(ImplicitConversionTargets!(double)[0] == real));
     static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
