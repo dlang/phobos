@@ -1101,7 +1101,10 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 if (stderrFD > STDERR_FILENO)  close(stderrFD);
             }
 
-            config.preExecFunction(&abortOnErrorInPreExec);
+            if (config.preExecFunction !is null)
+            {
+                config.preExecFunction(&abortOnErrorInPreExec);
+            }
 
             // Execute program.
             core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
