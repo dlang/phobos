@@ -1,6 +1,7 @@
-New function: `AllImplicitConversionTargets`
+`AllImplicitConversionTargets` replaces `ImplicitConversionTargets`
 
 The function `ImplicitConversionTargets` in module `std.traits` has a
 design flaw: The list of conversion targets contains some, but not all
-unsafe conversion targets. To overcome this, a new functions has been
-added.
+unsafe conversion targets. To overcome this, a new function
+`AllImplicitConversionTargets` has been added and
+`ImplicitConversionTargets` has been deprecated.
