@@ -2114,7 +2114,7 @@ enum Config
 }
 
 /**
-A sturct that controls the behavior of process creation functions in this module.
+A struct that controls the behavior of process creation functions in this module.
 */
 struct AdvancedConfig
 {
