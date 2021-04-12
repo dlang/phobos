@@ -597,7 +597,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     char[512] buf2 = void;
     size_t len;
     char[] buf;
-    static if (is(T == float) || is(T == double) || (is(T == real) && T.mant_dig == double.mant_dig))
+    static if (is(T == float) || is(T == double)
+               || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
     {
         import std.format.internal.floats : RoundingMode, printFloat;
         import std.math; // cannot be selective, because FloatingPointControl might not be defined
@@ -648,7 +649,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             return;
         }
 
-        enforceFmt(!__ctfe, "Cannot format reals at compile-time.");
+        enforceFmt(!__ctfe, mixin("\"Unsupported `real` type: real.sizeof = ", real.sizeof,
+                                  " | real.mant_dig = ", real.mant_dig, "\""));
 
         char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
              + 1 /*\0*/] sprintfSpec = void;
@@ -891,7 +893,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     real a = 0.16;
     real b = 0.016;
     assert(format("%.1f", a) == "0.2");
-//    assert(format("%.2f", b) == "0.02"); // Windows still fails here...
+    assert(format("%.2f", b) == "0.02");
 
     double a1 = 0.16;
     double b1 = 0.016;
@@ -962,6 +964,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     assert(format!"%.1000a"(1.0).length == 1007);
     assert(format!"%.600f"(0.1).length == 602);
+    assert(format!"%.600e"(0.1L).length == 606);
 }
 
 @safe unittest
@@ -1029,6 +1032,30 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     float a = -999999.8125;
     assert(format("%#.5g",a) == "-1.0000e+06");
     assert(format("%#.6g",a) == "-1.00000e+06");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8424
+@safe pure unittest
+{
+    static assert(format("%s", 0.6f) == "0.6");
+    static assert(format("%s", 0.6) == "0.6");
+    static assert(format("%s", 0.6L) == "0.6");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=9297
+@safe pure unittest
+{
+    static if (real.mant_dig == 64) // 80 bit reals
+    {
+        assert(format("%.25f", 1.6180339887_4989484820_4586834365L) == "1.6180339887498948482072100");
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20536
+@safe pure unittest
+{
+    real r = .00000095367431640625L;
+    assert(format("%a", r) == "0x1p-20");
 }
 
 /*
