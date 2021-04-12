@@ -1,8 +1,9 @@
 // Written in the D programming language.
 
 /**
-This package is currently in a nascent state and may be subject to
-change. Please do not use it yet, but stick to $(MREF std, math).
+This is a submodule of $(MREF std, math).
+
+It contains several functions for rounding floating point numbers.
 
 Copyright: Copyright The D Language Foundation 2000 - 2011.
            D implementations of floor, ceil, and lrint functions are based on the
@@ -32,6 +33,294 @@ version (InlineAsm_X87)
 {
     static assert(real.mant_dig == 64);
     version (CRuntime_Microsoft) version = InlineAsm_X87_MSVC;
+}
+
+/**************************************
+ * Returns the value of x rounded upward to the next integer
+ * (toward positive infinity).
+ */
+real ceil(real x) @trusted pure nothrow @nogc
+{
+    version (InlineAsm_X87_MSVC)
+    {
+        version (X86_64)
+        {
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fstcw   8[RSP]              ;
+                mov     AL,9[RSP]           ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x08             ; // round to +infinity
+                mov     9[RSP],AL           ;
+                fldcw   8[RSP]              ;
+                frndint                     ;
+                mov     9[RSP],DL           ;
+                fldcw   8[RSP]              ;
+                ret                         ;
+            }
+        }
+        else
+        {
+            short cw;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fstcw   cw                  ;
+                mov     AL,byte ptr cw+1    ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x08             ; // round to +infinity
+                mov     byte ptr cw+1,AL    ;
+                fldcw   cw                  ;
+                frndint                     ;
+                mov     byte ptr cw+1,DL    ;
+                fldcw   cw                  ;
+            }
+        }
+    }
+    else
+    {
+        import std.math : isInfinity, isNaN;
+
+        // Special cases.
+        if (isNaN(x) || isInfinity(x))
+            return x;
+
+        real y = floorImpl(x);
+        if (y < x)
+            y += 1.0;
+
+        return y;
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(ceil(+123.456L) == +124);
+    assert(ceil(-123.456L) == -123);
+    assert(ceil(-1.234L) == -1);
+    assert(ceil(-0.123L) == 0);
+    assert(ceil(0.0L) == 0);
+    assert(ceil(+0.123L) == 1);
+    assert(ceil(+1.234L) == 2);
+    assert(ceil(real.infinity) == real.infinity);
+    assert(isNaN(ceil(real.nan)));
+    assert(isNaN(ceil(real.init)));
+}
+
+/// ditto
+double ceil(double x) @trusted pure nothrow @nogc
+{
+    import std.math : isInfinity, isNaN;
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    double y = floorImpl(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(ceil(+123.456) == +124);
+    assert(ceil(-123.456) == -123);
+    assert(ceil(-1.234) == -1);
+    assert(ceil(-0.123) == 0);
+    assert(ceil(0.0) == 0);
+    assert(ceil(+0.123) == 1);
+    assert(ceil(+1.234) == 2);
+    assert(ceil(double.infinity) == double.infinity);
+    assert(isNaN(ceil(double.nan)));
+    assert(isNaN(ceil(double.init)));
+}
+
+/// ditto
+float ceil(float x) @trusted pure nothrow @nogc
+{
+    import std.math : isInfinity, isNaN;
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    float y = floorImpl(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(ceil(+123.456f) == +124);
+    assert(ceil(-123.456f) == -123);
+    assert(ceil(-1.234f) == -1);
+    assert(ceil(-0.123f) == 0);
+    assert(ceil(0.0f) == 0);
+    assert(ceil(+0.123f) == 1);
+    assert(ceil(+1.234f) == 2);
+    assert(ceil(float.infinity) == float.infinity);
+    assert(isNaN(ceil(float.nan)));
+    assert(isNaN(ceil(float.init)));
+}
+
+/**************************************
+ * Returns the value of x rounded downward to the next integer
+ * (toward negative infinity).
+ */
+real floor(real x) @trusted pure nothrow @nogc
+{
+    version (InlineAsm_X87_MSVC)
+    {
+        version (X86_64)
+        {
+            asm pure nothrow @nogc
+            {
+                naked                       ;
+                fld     real ptr [RCX]      ;
+                fstcw   8[RSP]              ;
+                mov     AL,9[RSP]           ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x04             ; // round to -infinity
+                mov     9[RSP],AL           ;
+                fldcw   8[RSP]              ;
+                frndint                     ;
+                mov     9[RSP],DL           ;
+                fldcw   8[RSP]              ;
+                ret                         ;
+            }
+        }
+        else
+        {
+            short cw;
+            asm pure nothrow @nogc
+            {
+                fld     x                   ;
+                fstcw   cw                  ;
+                mov     AL,byte ptr cw+1    ;
+                mov     DL,AL               ;
+                and     AL,0xC3             ;
+                or      AL,0x04             ; // round to -infinity
+                mov     byte ptr cw+1,AL    ;
+                fldcw   cw                  ;
+                frndint                     ;
+                mov     byte ptr cw+1,DL    ;
+                fldcw   cw                  ;
+            }
+        }
+    }
+    else
+    {
+        import std.math : isInfinity, isNaN;
+
+        // Special cases.
+        if (isNaN(x) || isInfinity(x) || x == 0.0)
+            return x;
+
+        return floorImpl(x);
+    }
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(floor(+123.456L) == +123);
+    assert(floor(-123.456L) == -124);
+    assert(floor(+123.0L) == +123);
+    assert(floor(-124.0L) == -124);
+    assert(floor(-1.234L) == -2);
+    assert(floor(-0.123L) == -1);
+    assert(floor(0.0L) == 0);
+    assert(floor(+0.123L) == 0);
+    assert(floor(+1.234L) == 1);
+    assert(floor(real.infinity) == real.infinity);
+    assert(isNaN(floor(real.nan)));
+    assert(isNaN(floor(real.init)));
+}
+
+/// ditto
+double floor(double x) @trusted pure nothrow @nogc
+{
+    import std.math : isInfinity, isNaN;
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    return floorImpl(x);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(floor(+123.456) == +123);
+    assert(floor(-123.456) == -124);
+    assert(floor(+123.0) == +123);
+    assert(floor(-124.0) == -124);
+    assert(floor(-1.234) == -2);
+    assert(floor(-0.123) == -1);
+    assert(floor(0.0) == 0);
+    assert(floor(+0.123) == 0);
+    assert(floor(+1.234) == 1);
+    assert(floor(double.infinity) == double.infinity);
+    assert(isNaN(floor(double.nan)));
+    assert(isNaN(floor(double.init)));
+}
+
+/// ditto
+float floor(float x) @trusted pure nothrow @nogc
+{
+    import std.math : isInfinity, isNaN;
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    return floorImpl(x);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : isNaN;
+
+    assert(floor(+123.456f) == +123);
+    assert(floor(-123.456f) == -124);
+    assert(floor(+123.0f) == +123);
+    assert(floor(-124.0f) == -124);
+    assert(floor(-1.234f) == -2);
+    assert(floor(-0.123f) == -1);
+    assert(floor(0.0f) == 0);
+    assert(floor(+0.123f) == 0);
+    assert(floor(+1.234f) == 1);
+    assert(floor(float.infinity) == float.infinity);
+    assert(isNaN(floor(float.nan)));
+    assert(isNaN(floor(float.init)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6381
+// floor/ceil should be usable in pure function.
+@safe pure nothrow unittest
+{
+    auto x = floor(1.2);
+    auto y = ceil(1.2);
 }
 
 /**
@@ -596,4 +885,114 @@ long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real) x); }
 {
     long function(real) prndtol = &rndtol;
     assert(prndtol != null);
+}
+
+// Helper for floor/ceil
+T floorImpl(T)(const T x) @trusted pure nothrow @nogc
+{
+    import std.math : floatTraits, RealFormat;
+
+    alias F = floatTraits!(T);
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        T rv;
+        ushort[T.sizeof/2] vu;
+
+        // Other kinds of extractors for real formats.
+        static if (F.realFormat == RealFormat.ieeeSingle)
+            int vi;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    // Do this by shifting the raw value so that the exponent lies in the low bits,
+    // then mask out the sign bit, and subtract the bias.
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        int exp = ((y.vi >> (T.mant_dig - 1)) & 0xff) - 0x7f;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble)
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeExtended53)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+    }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (exp < (T.mant_dig - 1))
+        {
+            // Clear all bits representing the fraction part.
+            const uint fraction_mask = F.MANTISSAMASK_INT >> exp;
+
+            if ((y.vi & fraction_mask) != 0)
+            {
+                // If 'x' is negative, then first substract 1.0 from the value.
+                if (y.vi < 0)
+                    y.vi += 0x00800000 >> exp;
+                y.vi &= ~fraction_mask;
+            }
+        }
+    }
+    else
+    {
+        static if (F.realFormat == RealFormat.ieeeExtended53)
+            exp = (T.mant_dig + 11 - 1) - exp; // mant_dig is really 64
+        else
+            exp = (T.mant_dig - 1) - exp;
+
+        // Zero 16 bits at a time.
+        while (exp >= 16)
+        {
+            version (LittleEndian)
+                y.vu[pos++] = 0;
+            else
+                y.vu[pos--] = 0;
+            exp -= 16;
+        }
+
+        // Clear the remaining bits.
+        if (exp > 0)
+            y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
+    }
+
+    return y.rv;
 }
