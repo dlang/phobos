@@ -396,6 +396,10 @@ specifier) can be a $(I compound indicator) itself.
     the start of the delimiter, so that the preceding portion of the
     string will be included following the last array element.
 
+    NOTE: Inside a grouping format specifier, strings and characters are
+    escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
+    instead of `"%$(LPAREN)"`.
+
     Example using array and nested array formatting:
     -------------------------
     import std.stdio;
@@ -464,9 +468,9 @@ $(CONSOLE
  [7 8 9]]
 )
 
-    Inside a compound format specifier, strings and characters are escaped
-    automatically. To avoid this behavior, add $(B '-') flag to
-    `"%$(LPAREN)"`.
+    As previously stated, strings and characters are escaped
+    automatically inside compound format specifiers. To avoid
+    this behavior, use `"%-$(LPAREN)"` instead of `"%$(LPAREN)"`.
     -------------------------
     import std.stdio;
 
