@@ -422,6 +422,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%,0d",1000) == "1000");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21817
+@safe pure unittest
+{
+    assert(format!"%u"(-5) == "4294967291");
+}
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
