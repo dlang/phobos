@@ -394,6 +394,28 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest(long.min, "-9223372036854775808");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21777
+@safe pure unittest
+{
+    assert(format!"%20.5,d"(cast(short) 120) == "              00,120");
+    assert(format!"%20.5,o"(cast(short) 120) == "              00,170");
+    assert(format!"%20.5,x"(cast(short) 120) == "              00,078");
+    assert(format!"%20.5,2d"(cast(short) 120) == "             0,01,20");
+    assert(format!"%20.5,2o"(cast(short) 120) == "             0,01,70");
+    assert(format!"%20.5,4d"(cast(short) 120) == "              0,0120");
+    assert(format!"%20.5,4o"(cast(short) 120) == "              0,0170");
+    assert(format!"%20.5,4x"(cast(short) 120) == "              0,0078");
+    assert(format!"%20.5,2x"(3000) == "             0,0b,b8");
+    assert(format!"%20.5,4d"(3000) == "              0,3000");
+    assert(format!"%20.5,4o"(3000) == "              0,5670");
+    assert(format!"%20.5,4x"(3000) == "              0,0bb8");
+    assert(format!"%20.5,d"(-400) == "             -00,400");
+    assert(format!"%20.30d"(-400) == "-000000000000000000000000000400");
+    assert(format!"%20.5,4d"(0) == "              0,0000");
+    assert(format!"%0#.8,2s"(12345) == "00,01,23,45");
+    assert(format!"%0#.9,3x"(55) == "0x000,000,037");
+}
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
