@@ -30,7 +30,7 @@ $(TR $(TD Validation) $(TD
         $(LREF isWhite)
 ))
 $(TR $(TD Conversions) $(TD
-        $(LREF toLower) 
+        $(LREF toLower)
         $(LREF toUpper)
 ))
 $(TR $(TD Constants) $(TD
