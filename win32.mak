@@ -219,7 +219,6 @@ SRC_STD_MATH= \
     std\math\exponential.d \
     std\math\floats.d \
     std\math\hardware.d \
-    std\math\integral.d \
     std\math\package.d \
     std\math\remainder.d \
     std\math\rounding.d \
