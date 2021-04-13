@@ -300,11 +300,11 @@ private:
             alias UA = Unqual!A;
             static if (isStaticArray!A && is(typeof(UA.init[0])))
             {
-                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], AllImplicitConversionTargets!UA);
             }
             else
             {
-                alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, AllImplicitConversionTargets!UA);
             }
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
@@ -789,7 +789,7 @@ public:
      * Returns `true` if and only if the `VariantN`
      * object holds an object implicitly convertible to type `T`.
      * Implicit convertibility is defined as per
-     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
+     * $(REF_ALTTEXT AllImplicitConversionTargets, AllImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const
@@ -1937,7 +1937,7 @@ static class VariantException : Exception
     assert( v.peek!(double) );
     assert( v.convertsTo!(real) );
     //@@@ BUG IN COMPILER: DOUBLE SHOULD NOT IMPLICITLY CONVERT TO FLOAT
-    assert( !v.convertsTo!(float) );
+    assert( v.convertsTo!(float) );
     assert( *v.peek!(double) == 3.1413 );
 
     auto u = Variant(v);
@@ -2291,6 +2291,15 @@ static class VariantException : Exception
 
     testPeekWith!(TestStruct!false)();
     testPeekWith!(TestStruct!true)();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18780
+@system unittest
+{
+    int x = 7;
+    Variant a = x;
+    assert(a.convertsTo!ulong);
+    assert(a.convertsTo!uint);
 }
 
 /**
