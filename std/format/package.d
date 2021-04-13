@@ -858,7 +858,7 @@ package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
     stream.clear();
 
     formattedWrite(stream, "%.0d", 0);
-    assert(stream.data == "");
+    assert(stream.data == "0");
     stream.clear();
 
     formattedWrite(stream, "%.g", .34);
@@ -1434,7 +1434,7 @@ if (isInputRange!Range)
     assert(s == "10| 10|010|10|10.0000");
 
     s = format("%.0d", 0);
-    assert(s == "");
+    assert(s == "0");
 
     s = format("%.g", .34);
     assert(s == "0.3");
