@@ -30,7 +30,7 @@ $(TR $(TD Validation) $(TD
         $(LREF isWhite)
 ))
 $(TR $(TD Conversions) $(TD
-        $(LREF toLower)
+        $(LREF toLower) 
         $(LREF toUpper)
 ))
 $(TR $(TD Constants) $(TD
@@ -314,7 +314,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
-    return (cast(ubyte)(c - '0')) < 10;
+    return (cast(uint)(c - '0')) < 10;
 }
 
 ///
