@@ -167,7 +167,6 @@ public import std.math.constants;
 public import std.math.exponential;
 public import std.math.floats;
 public import std.math.hardware;
-public import std.math.integral;
 public import std.math.remainder;
 public import std.math.rounding;
 public import std.math.traits;
