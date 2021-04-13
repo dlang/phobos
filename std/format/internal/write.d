@@ -416,6 +416,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format!"%0#.9,3x"(55) == "0x000,000,037");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21814
+@safe pure unittest
+{
+    assert(format("%,0d",1000) == "1000");
+}
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
