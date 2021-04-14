@@ -231,7 +231,7 @@ $(BOOKTABLE ,
              sections below for more information.))
 )
 
-$(SECTION4 Width\, Precision and Separator)
+$(SECTION4 Width$(COMMA) Precision and Separator)
 
 The $(I width) parameter specifies the minimum width of the result.
 
@@ -249,7 +249,7 @@ providing a number or a $(B '*') after the $(B ',').
 In all three cases the number of digits can be replaced by a $(B
 '*'). In this scenario, the next argument is used as the number of
 digits. If the argument is a negative number, the $(I precision) and
-$(I separator) parameters are considered unspecified. For ($I width),
+$(I separator) parameters are considered unspecified. For $(I width),
 the absolute value is used and the $(B '-') flag is set.
 
 The $(I separator) can also be followed by a $(B '?'). In that case,
@@ -269,119 +269,249 @@ It's also possible to use positional arguments for $(I width), $(I
 precision) and $(I separator) by adding a number and a $(B
 '$(DOLLAR)') after the $(B '*').
 
+$(SECTION4 Types)
+
+This section describes the result of combining types with format
+characters. It is organized in 2 subsections: a list of general
+information regarding the formatting of types in the presence of
+format characters and a table that contains details for every
+available combination of type and format character.
+
+When formatting types, the following rules apply:
+
+$(UL
+  $(LI If the format character is upper case, the resulting string will
+       be formatted using upper case letters.)
+  $(LI The default precision for floating point numbers is 6 digits.)
+  $(LI Rounding of floating point numbers adheres to the rounding mode
+       of the floating point unit, if available.)
+  $(LI The floating point values `NaN` and `Infinity` are formatted as
+       `nan` and `inf`, possibly preceded by $(B '+') or $(B '-') sign.)
+  $(LI Characters and strings formatted with the $(B 's') format character
+       inside of compound types are surrounded by single and double quotes
+       and unprintable characters are escaped. To avoid this, a $(B '-')
+       flag can be specified for the compound specifier
+       $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"` instead of `"%$(LPAREN)%s%$(RPAREN)"` $(RPAREN).)
+  $(LI Structs, unions, classes and interfaces are formatted by calling a
+       `toString` method if available.
+       See $(MREF_ALTTEXT $(D module std.format.write), std, format, write) for more
+       details.)
+  $(LI Only part of these combinations can be used for reading. See
+       $(MREF_ALTTEXT $(D module std.format.read), std, format, read) for more
+       detailed information.)
+)
+
+This table contains descriptions for every possible combination of
+type and format character:
+
+$(BOOKTABLE ,
+   $(TR $(THMINWIDTH Type) $(THMINWIDTH Format Character) $(TH Formatted as...))
+   $(TR $(MULTIROW_CELL 1, `null`)
+        $(TD $(B 's'))
+            $(TD `null`)
+   )
+   $(TR $(MULTIROW_CELL 3, `bool`)
+        $(TD $(B 's'))
+            $(TD `false` or `true`)
+   )
+   $(TR $(TD $(B 'b'), $(B 'd'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD As the integrals 0 or 1 with the same format character.
+
+            $(I Please note, that $(B 'o') and $(B 'x') with $(B '#') flag
+            might produce unexpected results due to special handling of
+            the value 0.))
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD `\0` or `\1`)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Integral))
+        $(TD $(B 's'), $(B 'd'))
+            $(TD A signed decimal number. The $(B '#') flag is ignored.)
+   )
+   $(TR $(TD $(B 'b'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD An unsigned binary, decimal, octal or hexadecimal number.
+
+                 In case of $(B 'o') and $(B 'x'), the $(B '#') flag
+                 denotes that the number must be preceded by `0` and `0x`, with
+                 the exception of the value 0, where this does not apply. For
+                 $(B 'b') and $(B 'u') the $(B '#') flag has no effect.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 5, $(I Floating Point))
+        $(TD $(B 'e'), $(B 'E'))
+            $(TD Scientific notation: Exactly one integral digit followed by a dot
+                 and fractional digits, followed by the exponent.
+                 The exponent is formatted as $(B 'e') followed by
+                 a $(B '+') or $(B '-') sign, followed by at least
+                 two digits.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.)
+   )
+   $(TR $(TD $(B 'f'), $(B 'F'))
+            $(TD Natural notation: Integral digits followed by a dot and
+                 fractional digits.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.
+
+                 $(I Please note: the difference between $(B 'f') and $(B 'F')
+                 is only visible for `NaN` and `Infinity`.))
+   )
+   $(TR $(TD $(B 's'), $(B 'g'), $(B 'G'))
+            $(TD Short notation: If the absolute value is larger than `10 ^^ precision`
+                 or smaller than `0.0001`, the scientific notation is used.
+                 If not, the natural notation is applied.
+
+                 In both cases $(I precision) denotes the count of all digits, including
+                 the integral digits. Trailing zeros (including a trailing dot) are removed.
+
+                 If $(B '#') flag is present, trailing zeros are not removed.)
+   )
+   $(TR $(TD $(B 'a'), $(B 'A'))
+            $(TD Hexadecimal scientific notation: `0x` followed by `1`
+                 (or `0` in case of value zero or denormalized number)
+                 followed by a dot, fractional digits in hexadecimal
+                 notation and an exponent. The exponent is build by `p`,
+                 followed by a sign and the exponent in $(I decimal) notation.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Character))
+        $(TD $(B 's'), $(B 'c'))
+            $(TD As the character.
+
+                 Inside of a compound indicator $(B 's') is treated differently: The
+                 character is surrounded by single quotes and non printable
+                 characters are escaped. This can be avoided by preceding
+                 the compound indicator with a $(B '-') flag
+                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+   )
+   $(TR $(TD $(B 'b'), $(B 'd'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD As the integral that represents the character.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I String))
+        $(TD $(B 's'))
+            $(TD The sequence of characters that form the string.
+
+                 Inside of a compound indicator the string is surrounded by double quotes
+                 and non printable characters are escaped. This can be avoided
+                 by preceding the compound indicator with a $(B '-') flag
+                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of characters, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD As an array of characters.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Array))
+        $(TD $(B 's'))
+            $(TD When the elements are characters, the array is formatted as
+                 a string. In all other cases the array is surrounded by square brackets
+                 and the elements are separated by a comma and a space. If the elements
+                 are strings, they are surrounded by double quotes and non
+                 printable characters are escaped.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Associative Array))
+        $(TD $(B 's'))
+            $(TD As a sequence of the elements in unpredictable order. The output is
+                 surrounded by square brackets. The elements are separated by a
+                 comma and a space. The elements are formatted as `key:value`.)
+   )
+   $(TR $(TD compound)
+            $(TD As a sequence of the elements in unpredictable order. Each element
+                 is formatted according to the specifications given inside of the
+                 compound specifier. The first specifier is used for formatting
+                 the key and the second specifier is used for formatting the value.
+                 If only one specifier is provided, it is used for key and value.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Enum))
+        $(TD $(B 's'))
+            $(TD The name of the value. If the name is not available, the base value
+                 is used, preceeded by a cast.)
+   )
+   $(TR $(TD All, but $(B 's'))
+            $(TD Enums can be formatted with all format characters that can be used
+                 with the base value. In that case they are formatted like the base value.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Input Range))
+        $(TD $(B 's'))
+            $(TD When the elements of the range are characters, they are written like a string.
+                 In all other cases, the elements are enclosed by square brackets and separated
+                 by a comma and a space.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Struct))
+        $(TD $(B 's'))
+            $(TD When the struct has neither an applicable `toString`
+                 nor is an input range, it is formatted as follows:
+                 `StructType(field1, field2, ...)`.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Class))
+        $(TD $(B 's'))
+            $(TD When the class has neither an applicable `toString`
+                 nor is an input range, it is formatted as the
+                 fully qualified name of the class.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Union))
+        $(TD $(B 's'))
+            $(TD When the union has neither an applicable `toString`
+                 nor is an input range, it is formatted as its base name.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Pointer))
+        $(TD $(B 's'))
+            $(TD A null pointer is formatted as 'null'. All other pointers are
+                 formatted as hexadecimal numbers with the format character $(B 'X').)
+   )
+   $(TR $(TD $(B 'x'), $(B 'X'))
+            $(TD Formatted as a hexadecimal number.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I SIMD vector))
+        $(TD $(B 's'))
+            $(TD The array is surrounded by square brackets
+                 and the elements are separated by a comma and a space.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Delegate))
+        $(TD $(B 's'), $(B 'r'), compound)
+            $(TD As the `.stringof` of this delegate treated as a string.
+
+                 $(I Please note: The implementation is currently buggy
+                 and its use is discouraged.))
+   )
+)
 
 
 
-    $(DL
-        $(DT $(I FormatChar))
-        $(DD
-        $(DL
-            $(DT $(B 's'))
-            $(DD The corresponding argument is formatted in a manner consistent
-            with its type:
-            $(DL
-                $(DT $(B bool))
-                $(DD The result is `"true"` or `"false"`.)
-                $(DT integral types)
-                $(DD The $(B %d) format is used.)
-                $(DT floating point types)
-                $(DD The $(B %g) format is used.)
-                $(DT string types)
-                $(DD The result is the string converted to UTF-8.
-                A $(I Precision) specifies the maximum number of characters
-                to use in the result.)
-                $(DT structs)
-                $(DD If the struct defines a $(B toString()) method the result is
-                the string returned from this function. Otherwise the result is
-                StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where
-                field<sub>n</sub> is the nth element formatted with the default
-                format.)
-                $(DT classes derived from $(B Object))
-                $(DD The result is the string returned from the class instance's
-                $(B .toString()) method.
-                A $(I Precision) specifies the maximum number of characters
-                to use in the result.)
-                $(DT unions)
-                $(DD If the union defines a $(B toString()) method the result is
-                the string returned from this function. Otherwise the result is
-                the name of the union, without its contents.)
-                $(DT non-string static and dynamic arrays)
-                $(DD The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
-                where s<sub>n</sub> is the nth element
-                formatted with the default format.)
-                $(DT associative arrays)
-                $(DD The result is the equivalent of what the initializer
-                would look like for the contents of the associative array,
-                e.g.: ["red" : 10, "blue" : 20].)
-            ))
-
-            $(DT $(B 'c'))
-            $(DD The corresponding argument must be a character type.)
-
-            $(DT $(B 'b','d','o','x','X'))
-            $(DD The corresponding argument must be an integral type
-            and is formatted as an integer. If the argument is a signed type
-            and the $(I FormatChar) is $(B d) it is converted to
-            a signed string of characters, otherwise it is treated as
-            unsigned. An argument of type $(B bool) is formatted as '1'
-            or '0'. The base used is binary for $(B b), octal for $(B o),
-            decimal
-            for $(B d), and hexadecimal for $(B x) or $(B X).
-            $(B x) formats using lower case letters, $(B X) uppercase.
-            If there are fewer resulting digits than the $(I Precision),
-            leading zeros are used as necessary.
-            If the $(I Precision) is 0 and the number is 0, no digits
-            result.)
-
-            $(DT $(B 'e','E'))
-            $(DD A floating point number is formatted as one digit before
-            the decimal point, $(I Precision) digits after, the $(I FormatChar),
-            &plusmn;, followed by at least a two digit exponent:
-            $(I d.dddddd)e$(I &plusmn;dd).
-            If there is no $(I Precision), six
-            digits are generated after the decimal point.
-            If the $(I Precision) is 0, no decimal point is generated.)
-
-            $(DT $(B 'f','F'))
-            $(DD A floating point number is formatted in decimal notation.
-            The $(I Precision) specifies the number of digits generated
-            after the decimal point. It defaults to six. At least one digit
-            is generated before the decimal point. If the $(I Precision)
-            is zero, no decimal point is generated.)
-
-            $(DT $(B 'g','G'))
-            $(DD A floating point number is formatted in either $(B e) or
-            $(B f) format for $(B g); $(B E) or $(B F) format for
-            $(B G).
-            The $(B f) format is used if the exponent for an $(B e) format
-            is greater than -5 and less than the $(I Precision).
-            The $(I Precision) specifies the number of significant
-            digits, and defaults to six.
-            Trailing zeros are elided after the decimal point, if the fractional
-            part is zero then no decimal point is generated.)
-
-            $(DT $(B 'a','A'))
-            $(DD A floating point number is formatted in hexadecimal
-            exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
-            There is one hexadecimal digit before the decimal point, and as
-            many after as specified by the $(I Precision).
-            If the $(I Precision) is zero, no decimal point is generated.
-            If there is no $(I Precision), as many hexadecimal digits as
-            necessary to exactly represent the mantissa are generated.
-            The exponent is written in as few digits as possible,
-            but at least one, is in decimal, and represents a power of 2 as in
-            $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
-            The exponent for zero is zero.
-            The hexadecimal digits, x and p are in upper case if the
-            $(I FormatChar) is upper case.)
-        ))
-    )
-
-    Floating point NaN's are formatted as $(B nan) if the
-    $(I FormatChar) is lower case, or $(B NAN) if upper.
-    Floating point infinities are formatted as $(B inf) or
-    $(B infinity) if the
-    $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
     The format string supports the formatting of array and nested
     array elements via the grouping format specifiers $(B %&#40;) and
@@ -491,6 +621,8 @@ My friends are John, Nancy.
 
    Macros:
    SUBREF = $(REF_ALTTEXT $2, $2, std, format, $1)$(NBSP)
+   MULTIROW_CELL = <td rowspan="$1">$+</td>
+   THMINWIDTH = <th scope="col" width="20%">$0</th>
 
    License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
