@@ -2644,6 +2644,31 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 
     Bar b;
     assert(format("%b", b) == "Hello");
+
+    static if (hasPreviewIn)
+    {
+        struct Foo
+        {
+            void toString(scope void delegate(in char[]) sink, in FormatSpec!char fmt)
+            {
+                sink("Hello");
+            }
+        }
+
+        Foo f;
+        assert(format("%b", f) == "Hello");
+
+        struct Foo2
+        {
+            void toString(scope void delegate(in char[]) sink, string fmt)
+            {
+                sink("Hello");
+            }
+        }
+
+        Foo2 f2;
+        assert(format("%b", f2) == "Hello");
+    }
 }
 
 void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
@@ -2656,6 +2681,8 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
     static if (
             overload != HasToStringResult.constCharSinkFormatSpec &&
             overload != HasToStringResult.constCharSinkFormatString &&
+            overload != HasToStringResult.inCharSinkFormatSpec &&
+            overload != HasToStringResult.inCharSinkFormatString &&
             overload != HasToStringResult.customPutWriterFormatSpec &&
             !isInputRange!T)
     {
