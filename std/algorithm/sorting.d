@@ -1171,8 +1171,7 @@ if (Rs.length >= 2 &&
                 {
                     if (!source[i].empty)
                     {
-                        assert(previousFront == source[i].front ||
-                               comp(previousFront, source[i].front),
+                        assert(!comp(source[i].front, previousFront),
                                "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                     }
                 }
@@ -1238,8 +1237,7 @@ if (Rs.length >= 2 &&
                     {
                         if (!source[i].empty)
                         {
-                            assert(previousBack == source[i].back ||
-                                   comp(source[i].back, previousBack),
+                            assert(!comp(previousBack, source[i].back),
                                    "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                         }
                     }
@@ -1443,6 +1441,37 @@ if (Rs.length >= 2 &&
     assert(equal(m, [20]));
     m.popFront();
     assert(m.empty);
+}
+
+// Issue 21810: Check for sortedness must not use `==`
+@nogc @safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    static immutable a = [
+        tuple(1, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(5, 1),
+    ];
+    static immutable b = [
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
+    ];
+    static immutable r = [
+        tuple(1, 1),
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
+        tuple(5, 1),
+    ];
+    assert(merge!"a[0] < b[0]"(a, b).equal(r));
 }
 
 private template validPredicates(E, less...)
