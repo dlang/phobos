@@ -262,60 +262,6 @@ version (D_HardFloat)
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
 
-package(std.math)
-{
-    static if (real.sizeof > double.sizeof)
-        enum uint useDigits = 16;
-    else
-        enum uint useDigits = 15;
-
-    /******************************************
-     * Compare floating point numbers to n decimal digits of precision.
-     * Returns:
-     *  1       match
-     *  0       nomatch
-     */
-
-    package(std.math) bool equalsDigit(real x, real y, uint ndigits) @safe nothrow @nogc
-    {
-        import core.stdc.stdio : sprintf;
-
-        if (signbit(x) != signbit(y))
-            return 0;
-
-        if (isInfinity(x) && isInfinity(y))
-            return 1;
-        if (isInfinity(x) || isInfinity(y))
-            return 0;
-
-        if (isNaN(x) && isNaN(y))
-            return 1;
-        if (isNaN(x) || isNaN(y))
-            return 0;
-
-        char[30] bufx;
-        char[30] bufy;
-        assert(ndigits < bufx.length);
-
-        int ix;
-        int iy;
-        version (CRuntime_Microsoft)
-            alias real_t = double;
-        else
-            alias real_t = real;
-
-        () @trusted {
-            ix = sprintf(bufx.ptr, is(real_t == real) ? "%.*Lg" : "%.*g", ndigits, cast(real_t) x);
-            iy = sprintf(bufy.ptr, is(real_t == real) ? "%.*Lg" : "%.*g", ndigits, cast(real_t) y);
-        } ();
-
-        assert(ix < bufx.length && ix > 0);
-        assert(ix < bufy.length && ix > 0);
-
-        return bufx[0 .. ix] == bufy[0 .. iy];
-    }
-}
-
 version (IeeeFlagsSupport)
 {
 

@@ -473,8 +473,8 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testTan!T();
 
-    import std.math : equalsDigit, PI, sqrt, useDigits;
-    assert(equalsDigit(tan(PI / 3), sqrt(3.0L), useDigits));
+    import std.math : isClose, PI, sqrt;
+    assert(isClose(tan(PI / 3), sqrt(3.0L), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***************
@@ -513,9 +513,9 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit, PI, useDigits;
+    import std.math : isClose, PI;
 
-    assert(equalsDigit(acos(0.5), PI / 3, useDigits));
+    assert(isClose(acos(0.5), PI / 3, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***************
@@ -554,9 +554,9 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit, PI, useDigits;
+    import std.math : isClose, PI;
 
-    assert(equalsDigit(asin(0.5), PI / 6, useDigits));
+    assert(isClose(asin(0.5), PI / 6, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***************
@@ -804,8 +804,8 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan!T();
 
-    import std.math : equalsDigit, sqrt, PI, useDigits;
-    assert(equalsDigit(atan(sqrt(3.0L)), PI / 3, useDigits));
+    import std.math : isClose, sqrt, PI;
+    assert(isClose(atan(sqrt(3.0L)), PI / 3, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***************
@@ -1012,8 +1012,8 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan2!T();
 
-    import std.math : equalsDigit, sqrt, PI, useDigits;
-    assert(equalsDigit(atan2(1.0L, sqrt(3.0L)), PI / 6, useDigits));
+    import std.math : isClose, sqrt, PI;
+    assert(isClose(atan2(1.0L, sqrt(3.0L)), PI / 6, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***********************************
@@ -1051,9 +1051,9 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit, E, useDigits;
+    import std.math : isClose, E;
 
-    assert(equalsDigit(cosh(1.0), (E + 1.0 / E) / 2, useDigits));
+    assert(isClose(cosh(1.0), (E + 1.0 / E) / 2, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***********************************
@@ -1106,9 +1106,9 @@ private F _sinh(F)(F x)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit, E, useDigits;
+    import std.math : isClose, E;
 
-    assert(equalsDigit(sinh(1.0L), real((E - 1.0 / E) / 2), useDigits));
+    assert(isClose(sinh(1.0L), real((E - 1.0 / E) / 2), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 /***********************************
  * Calculates the hyperbolic tangent of x.
@@ -1152,9 +1152,9 @@ private F _tanh(F)(F x)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
-    assert(equalsDigit(tanh(1.0L), sinh(1.0L) / cosh(1.0L), 15));
+    assert(isClose(tanh(1.0L), sinh(1.0L) / cosh(1.0L), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***********************************
@@ -1207,9 +1207,9 @@ private F _acosh(F)(F x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit, useDigits;
+    import std.math : isClose;
 
-    assert(equalsDigit(acosh(cosh(3.0L)), 3.0L, useDigits));
+    assert(isClose(acosh(cosh(3.0L)), 3.0L, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***********************************
@@ -1261,9 +1261,9 @@ private F _asinh(F)(F x)
 
 @safe unittest
 {
-    import std.math : equalsDigit, useDigits;
+    import std.math : isClose;
 
-    assert(equalsDigit(asinh(sinh(3.0L)), 3.0L, useDigits));
+    assert(isClose(asinh(sinh(3.0L)), 3.0L, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /***********************************
@@ -1312,7 +1312,7 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
 @safe unittest
 {
-    import std.math : equalsDigit, useDigits;
+    import std.math : isClose;
 
-    assert(equalsDigit(atanh(tanh(0.5L)), 0.5, useDigits));
+    assert(isClose(atanh(tanh(0.5L)), 0.5, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }

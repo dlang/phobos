@@ -218,9 +218,9 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
-    assert(equalsDigit(pow(2.0L, 10L), 1024, 19));
+    assert(isClose(pow(2.0L, 10L), 1024, 1e-18));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21601
@@ -775,9 +775,9 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
-    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+    assert(isClose(pow(2.0L, 10.0L), 1024, 1e-18));
 }
 
 @safe pure nothrow @nogc unittest
@@ -1045,8 +1045,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : floatTraits, RealFormat, NaN, E, feqrel, isIdentical, abs,
-        equalsDigit, useDigits;
+    import std.math : floatTraits, RealFormat, NaN, E, feqrel, isIdentical, abs, isClose;
 
     version (IeeeFlagsSupport) import std.math : IeeeFlags, resetIeeeFlags, ieeeFlags;
     version (FloatingPointControlSupport)
@@ -1191,7 +1190,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     // High resolution test (verified against GNU MPFR/Mathematica).
     assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6_DF34p+0L);
 
-    assert(equalsDigit(exp(3.0L), E * E * E, useDigits));
+    assert(isClose(exp(3.0L), E * E * E, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
 /**
@@ -2229,13 +2228,13 @@ if (isFloatingPoint!T)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
     int exp;
     real mantissa = frexp(123.456L, exp);
 
     // check if values are equal to 19 decimal digits of precision
-    assert(equalsDigit(mantissa * pow(2.0L, cast(real) exp), 123.456L, 19));
+    assert(isClose(mantissa * pow(2.0L, cast(real) exp), 123.456L, 1e-18));
 }
 
 @safe unittest
@@ -2721,7 +2720,7 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
     static real[3][] vals =    // value,exp,ldexp
     [
@@ -2743,7 +2742,7 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
         real z = vals[i][2];
         real l = ldexp(x, exp);
 
-        assert(equalsDigit(z, l, 7));
+        assert(isClose(z, l, 1e-6));
     }
 
     real function(real, int) pldexp = &ldexp;
@@ -3198,10 +3197,10 @@ real log2(real x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : equalsDigit;
+    import std.math : isClose;
 
     // check if values are equal to 19 decimal digits of precision
-    assert(equalsDigit(log2(1024.0L), 10, 19));
+    assert(isClose(log2(1024.0L), 10, 1e-18));
 }
 
 /*****************************************
