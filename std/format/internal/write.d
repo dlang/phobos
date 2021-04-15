@@ -148,8 +148,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
-    const spec = f.spec;
-    if (spec == 'r')
+    if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto raw = (ref val) @trusted {
@@ -170,202 +169,67 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 
     immutable uint base =
-        spec == 'x' || spec == 'X' ? 16 :
-        spec == 'o' ? 8 :
-        spec == 'b' ? 2 :
-        spec == 's' || spec == 'd' || spec == 'u' ? 10 :
+        f.spec == 'x' || f.spec == 'X' ? 16 :
+        f.spec == 'o' ? 8 :
+        f.spec == 'b' ? 2 :
+        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
         0;
 
     import std.format : enforceFmt;
     enforceFmt(base > 0,
-        "incompatible format character for integral argument: %" ~ spec);
+        "incompatible format character for integral argument: %" ~ f.spec);
 
-    // Forward on to formatIntegral to handle both U and const(U)
-    // Saves duplication of code for both versions.
-    static if (is(ucent) && (is(U == cent) || is(U == ucent)))
-        alias C = U;
-    else static if (isSigned!U)
-        alias C = long;
-    else
-        alias C = ulong;
-    formatIntegral(w, cast(C) val, f, base, Unsigned!U.max);
-}
+    import std.math : abs;
 
-private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val,
-    scope const ref FormatSpec!Char fs, uint base, ulong mask)
-{
-    T arg = val;
+    bool negative = false;
+    ulong arg = val;
+    static if (isSigned!U)
+    {
+        if (f.spec == 's' || f.spec == 'd')
+        {
+            if (val < 0)
+            {
+                negative = true;
+                arg = cast(ulong) abs(val);
+            }
+        }
+    }
 
-    immutable negative = (base == 10 && arg < 0);
+    arg &= Unsigned!U.max;
+
+    char[64] digits = void;
+    size_t pos = digits.length - 1;
+    do
+    {
+        digits[pos--] = '0' + arg % base;
+        if (base > 10 && digits[pos + 1] > '9')
+            digits[pos + 1] += (f.spec == 'x' ? 'a' : 'A') - '0' - 10;
+        arg /= base;
+    } while (arg > 0);
+
+    char[3] prefix = void;
+    size_t left = 2;
+    size_t right = 2;
+
     if (negative)
+        prefix[right++] = '-';
+    else if (f.spec == 's' || f.spec == 'd')
     {
-        arg = -arg;
+        if (f.flPlus)
+            prefix[right++] = '+';
+        else if (f.flSpace)
+            prefix[right++] = ' ';
     }
-
-    // All unsigned integral types should fit in ulong.
-    static if (is(ucent) && is(typeof(arg) == ucent))
-        formatUnsigned(w, (cast(ucent) arg) & mask, fs, base, negative);
-    else
-        formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
-}
-
-private void formatUnsigned(Writer, T, Char)(ref Writer w, T arg,
-    scope const ref FormatSpec!Char fs, uint base, bool negative)
-{
-    import std.range.primitives : put;
-
-    /* Write string:
-     *    leftpad prefix1 prefix2 zerofill digits rightpad
-     */
-
-    /* Convert arg to digits[].
-     * Note that 0 becomes an empty digits[]
-     */
-    char[64] buffer = void; // 64 bits in base 2 at most
-    char[] digits;
-    if (arg < base && base <= 10 && arg)
+    if (f.flHash && (base == 16) && obj != 0)
     {
-        // Most numbers are a single digit - avoid expensive divide
-        buffer[0] = cast(char)(arg + '0');
-        digits = buffer[0 .. 1];
+        prefix[--left] = f.spec;
+        prefix[--left] = '0';
     }
-    else
-    {
-        size_t i = buffer.length;
-        while (arg)
-        {
-            --i;
-            char c = cast(char) (arg % base);
-            arg /= base;
-            if (c < 10)
-                buffer[i] = cast(char)(c + '0');
-            else
-                buffer[i] = cast(char)(c + (fs.spec == 'x' ? 'a' - 10 : 'A' - 10));
-        }
-        digits = buffer[i .. $]; // got the digits without the sign
-    }
+    if (f.flHash && (base == 8) && obj != 0
+        && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
+        prefix[--left] = '0';
 
-
-    immutable precision = (fs.precision == fs.UNSPECIFIED) ? 1 : fs.precision;
-
-    char padChar = 0;
-    if (!fs.flDash)
-    {
-        padChar = (fs.flZero && fs.precision == fs.UNSPECIFIED) ? '0' : ' ';
-    }
-
-    // Compute prefix1 and prefix2
-    char prefix1 = 0;
-    char prefix2 = 0;
-    if (base == 10)
-    {
-        if (negative)
-            prefix1 = '-';
-        else if (fs.flPlus)
-            prefix1 = '+';
-        else if (fs.flSpace)
-            prefix1 = ' ';
-    }
-    else if (base == 16 && fs.flHash && digits.length)
-    {
-        prefix1 = '0';
-        prefix2 = fs.spec == 'x' ? 'x' : 'X';
-    }
-    // adjust precision to print a '0' for octal if alternate format is on
-    else if (base == 8 && fs.flHash &&
-             (precision <= 1 || precision <= digits.length) && // too low precision
-             digits.length > 0)
-        prefix1 = '0';
-
-    size_t zerofill = precision > digits.length ? precision - digits.length : 0;
-    size_t leftpad = 0;
-    size_t rightpad = 0;
-
-    immutable prefixWidth = (prefix1 != 0) + (prefix2 != 0);
-    size_t finalWidth, separatorsCount;
-    if (fs.flSeparator != 0)
-    {
-        finalWidth = prefixWidth + digits.length + ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
-        if (finalWidth < fs.width)
-            finalWidth = fs.width + (padChar == '0') * (((fs.width - prefixWidth) % (fs.separators + 1) == 0) ? 1 : 0);
-
-        separatorsCount = (padChar == '0')
-            ? (finalWidth - prefixWidth - 1) / (fs.separators + 1)
-            : ((digits.length > 0) ? (digits.length - 1) / fs.separators : 0);
-    }
-    else
-    {
-        import std.algorithm.comparison : max;
-        finalWidth = max(fs.width, prefixWidth + digits.length);
-    }
-
-    immutable ptrdiff_t spacesToPrint =
-        finalWidth - (
-            + prefixWidth
-            + zerofill
-            + digits.length
-            + separatorsCount
-        );
-    if (spacesToPrint > 0) // need to do some padding
-    {
-        if (padChar == '0')
-            zerofill += spacesToPrint;
-        else if (padChar)
-            leftpad = spacesToPrint;
-        else
-            rightpad = spacesToPrint;
-    }
-
-    // Print
-    foreach (i ; 0 .. leftpad)
-        put(w, ' ');
-
-    if (prefix1) put(w, prefix1);
-    if (prefix2) put(w, prefix2);
-
-    if (fs.flSeparator)
-    {
-        if (zerofill > 0)
-        {
-            put(w, '0');
-            --zerofill;
-        }
-
-        int j = cast(int) (finalWidth - prefixWidth - separatorsCount - 1);
-        for (size_t i = 0; i < zerofill; ++i, --j)
-        {
-            if (j % fs.separators == 0)
-            {
-                put(w, fs.separatorChar);
-            }
-            put(w, '0');
-        }
-    }
-    else
-    {
-        foreach (i ; 0 .. zerofill)
-            put(w, '0');
-    }
-
-    if (fs.flSeparator)
-    {
-        for (size_t j = 0; j < digits.length; ++j)
-        {
-            if (((j != 0) || ((spacesToPrint > 0) && (padChar == '0')))
-                && (digits.length - j) % fs.separators == 0)
-            {
-                put(w, fs.separatorChar);
-            }
-            put(w, digits[j]);
-        }
-    }
-    else
-    {
-        put(w, digits);
-    }
-
-    foreach (i ; 0 .. rightpad)
-        put(w, ' ');
+    writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], "", f, true);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
@@ -520,6 +384,54 @@ private void formatUnsigned(Writer, T, Char)(ref Writer w, T arg,
 
     string t2 = format("[%6s] [%-6s]", -123, -123);
     assert(t2 == "[  -123] [-123  ]");
+}
+
+@safe pure unittest
+{
+    formatTest(byte.min, "-128");
+    formatTest(short.min, "-32768");
+    formatTest(int.min, "-2147483648");
+    formatTest(long.min, "-9223372036854775808");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21777
+@safe pure unittest
+{
+    assert(format!"%20.5,d"(cast(short) 120) == "              00,120");
+    assert(format!"%20.5,o"(cast(short) 120) == "              00,170");
+    assert(format!"%20.5,x"(cast(short) 120) == "              00,078");
+    assert(format!"%20.5,2d"(cast(short) 120) == "             0,01,20");
+    assert(format!"%20.5,2o"(cast(short) 120) == "             0,01,70");
+    assert(format!"%20.5,4d"(cast(short) 120) == "              0,0120");
+    assert(format!"%20.5,4o"(cast(short) 120) == "              0,0170");
+    assert(format!"%20.5,4x"(cast(short) 120) == "              0,0078");
+    assert(format!"%20.5,2x"(3000) == "             0,0b,b8");
+    assert(format!"%20.5,4d"(3000) == "              0,3000");
+    assert(format!"%20.5,4o"(3000) == "              0,5670");
+    assert(format!"%20.5,4x"(3000) == "              0,0bb8");
+    assert(format!"%20.5,d"(-400) == "             -00,400");
+    assert(format!"%20.30d"(-400) == "-000000000000000000000000000400");
+    assert(format!"%20.5,4d"(0) == "              0,0000");
+    assert(format!"%0#.8,2s"(12345) == "00,01,23,45");
+    assert(format!"%0#.9,3x"(55) == "0x000,000,037");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21814
+@safe pure unittest
+{
+    assert(format("%,0d",1000) == "1000");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21817
+@safe pure unittest
+{
+    assert(format!"%u"(-5) == "4294967291");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21820
+@safe pure unittest
+{
+    assert(format!"%#.0o"(0) == "0");
 }
 
 /*
@@ -2813,7 +2725,7 @@ if (is(T == enum))
     formatTest("%s",    Foo.A, "A");
     formatTest(">%4s<", Foo.A, ">   A<");
     formatTest("%04d",  Foo.A, "0010");
-    formatTest("%+2u",  Foo.A, "+10");
+    formatTest("%+2u",  Foo.A, "10");
     formatTest("%02x",  Foo.A, "0a");
     formatTest("%3o",   Foo.A, " 12");
     formatTest("%b",    Foo.A, "1010");
