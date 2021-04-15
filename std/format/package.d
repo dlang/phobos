@@ -487,44 +487,6 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 )
 
-   Aggregates:
-   `struct`, `union`, `class`, and `interface` are formatted by calling `toString`.
-
-   `toString` should have one of the following signatures:
-
-   ---
-   void toString(Writer, Char)(ref Writer w, scope const ref FormatSpec!Char fmt)
-   void toString(Writer)(ref Writer w)
-   string toString();
-   ---
-
-   Where `Writer` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
-   which accepts characters. The template type does not have to be called `Writer`.
-
-   The following overloads are also accepted for legacy reasons or for use in virtual
-   functions. It's recommended that any new code forgo these overloads if possible for
-   speed and attribute acceptance reasons.
-
-   ---
-   void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt);
-   void toString(scope void delegate(const(char)[]) sink, string fmt);
-   void toString(scope void delegate(const(char)[]) sink);
-   ---
-
-   For the class objects which have input range interface,
-   $(UL
-       $(LI If the instance `toString` has overridden `Object.toString`, it is used.)
-       $(LI Otherwise, the objects are formatted as input range.)
-   )
-
-   For the `struct` and `union` objects which does not have `toString`,
-   $(UL
-       $(LI If they have range interface, formatted as input range.)
-       $(LI Otherwise, they are formatted like `Type(field1, filed2, ...)`.)
-   )
-
-   Otherwise, are formatted just as their type name.
-
    Copyright: Copyright The D Language Foundation 2000-2013.
 
    Macros:

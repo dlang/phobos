@@ -32,12 +32,53 @@ $(SECTION3 Structs$(COMMA) Unions$(COMMA) Classes$(COMMA) and Interfaces)
 
 Aggregate types can define various `toString` functions. If this
 function takes a $(REF_ALTTEXT FormatSpec, FormatSpec, std, format,
-spec) as argument, the function decides which format characters are
-accepted. If no `toString` is defined and the aggregate is an
-$(REF_ALTTEXT input range, isInputRange, std, range, primitives), it
-is treated like a range, that is $(B 's'), $(B 'r') and a compound
-specifier are accepted. In all other cases aggregate types only
-accept $(B 's').
+spec) or a $(I format string) as argument, the function decides
+which format characters are accepted. If no `toString` is defined and
+the aggregate is an $(REF_ALTTEXT input range, isInputRange, std,
+range, primitives), it is treated like a range, that is $(B 's'), $(B
+'r') and a compound specifier are accepted. In all other cases
+aggregate types only accept $(B 's').
+
+`toString` should have one of the following signatures:
+
+---
+void toString(Writer, Char)(ref Writer w, const ref FormatSpec!Char fmt)
+void toString(Writer)(ref Writer w)
+string toString();
+---
+
+Where `Writer` is an $(REF_ALTTEXT output range, isOutputRange,
+std,range,primitives) which accepts characters $(LPAREN)of type
+`Char` in the first version$(RPAREN). The template type does not have
+to be called `Writer`.
+
+Sometimes it's not possible to use a template, for example when
+`toString` overrides `Object.toString`. In this case, the following
+$(LPAREN)slower and less flexible$(RPAREN) functions can be used:
+
+---
+void toString(void delegate(const(char)[]) sink, const ref FormatSpec!char fmt);
+void toString(void delegate(const(char)[]) sink, string fmt);
+void toString(void delegate(const(char)[]) sink);
+---
+
+When several of the above `toString` versions are available, the
+versions with `Writer` take precedence over the versions with a
+`sink`. `string toString()` has the lowest priority.
+
+If none of the above mentioned `toString` versions are available, the
+aggregates will be formatted by other means, in the following
+order:
+
+If an aggregate is an $(REF_ALTTEXT input range, isInputRange, std,
+range, primitives), it is formatted like an input range.
+
+If an aggregate is a builtin type (using `alias this`), it is formatted
+like the builtin type.
+
+If all else fails, structs are formatted like `Type(field1, field2, ...)`,
+classes and interfaces are formatted with their fully qualified name
+and unions with their base name.
 
 Copyright: Copyright The D Language Foundation 2000-2013.
 
@@ -302,27 +343,25 @@ their base value else.
 }
 
 /**
- * Formatting a struct by defining a method `toString`, which takes an output
- * range.
- *
- * It's recommended that any `toString` using $(REF_ALTTEXT output ranges, isOutputRange, std,range,primitives)
- * use $(REF put, std,range,primitives) rather than use the `put` method of the range
- * directly.
+`structs`, `unions`, `classes` and `interfaces` can be formatted in
+several different ways. The following example highlights `struct`
+formatting, however, it applies to other aggregates as well.
  */
 @safe unittest
 {
     import std.array : appender;
     import std.format.spec : FormatSpec, singleSpec;
-    import std.range.primitives : isOutputRange, put;
 
-    static struct Point
+    // Using a `toString` with a writer
+    static struct Point1
     {
+        import std.range.primitives : isOutputRange, put;
+
         int x, y;
 
         void toString(W)(ref W writer, scope const ref FormatSpec!char f)
         if (isOutputRange!(W, char))
         {
-            // std.range.primitives.put
             put(writer, "(");
             formatValue(writer, x, f);
             put(writer, ",");
@@ -331,44 +370,68 @@ their base value else.
         }
     }
 
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto p = Point(16, 11);
+    auto w1 = appender!string();
+    auto spec1 = singleSpec("%s");
+    auto p1 = Point1(16, 11);
 
-    formatValue(w, p, spec);
-    assert(w.data == "(16,11)");
-}
+    formatValue(w1, p1, spec1);
+    assert(w1.data == "(16,11)");
 
-/**
- * Another example of formatting a `struct` with a defined `toString`,
- * this time using the `scope delegate` method.
- *
- * $(RED This method is now discouraged for non-virtual functions).
- * If possible, please use the output range method instead.
- */
-@safe unittest
-{
-   import std.format : format;
-   import std.format.spec : FormatSpec;
+    // Using a `toString` with a sink
+    static struct Point2
+    {
+        int x, y;
 
-   static struct Point
-   {
-       int x, y;
+        void toString(scope void delegate(scope const(char)[]) @safe sink,
+                      scope const FormatSpec!char fmt) const
+        {
+            sink("(");
+            sink.formatValue(x, fmt);
+            sink(",");
+            sink.formatValue(y, fmt);
+            sink(")");
+        }
+    }
 
-       void toString(scope void delegate(scope const(char)[]) @safe sink,
-                     scope const FormatSpec!char fmt) const
-       {
-           sink("(");
-           sink.formatValue(x, fmt);
-           sink(",");
-           sink.formatValue(y, fmt);
-           sink(")");
-       }
-   }
+    auto w2 = appender!string();
+    auto spec2 = singleSpec("%03d");
+    auto p2 = Point2(16,11);
 
-   auto p = Point(16,11);
-   assert(format("%03d", p) == "(016,011)");
-   assert(format("%02x", p) == "(10,0b)");
+    formatValue(w2, p2, spec2);
+    assert(w2.data == "(016,011)");
+
+    // Using `string toString()`
+    static struct Point3
+    {
+        int x, y;
+
+        string toString()
+        {
+            import std.conv : to;
+
+            return "(" ~ to!string(x) ~ "," ~ to!string(y) ~ ")";
+        }
+    }
+
+    auto w3 = appender!string();
+    auto spec3 = singleSpec("%s"); // has to be %s
+    auto p3 = Point3(16,11);
+
+    formatValue(w3, p3, spec3);
+    assert(w3.data == "(16,11)");
+
+    // without `toString`
+    static struct Point4
+    {
+        int x, y;
+    }
+
+    auto w4 = appender!string();
+    auto spec4 = singleSpec("%s"); // has to be %s
+    auto p4 = Point4(16,11);
+
+    formatValue(w4, p4, spec3);
+    assert(w4.data == "Point4(16, 11)");
 }
 
 /// Pointers are formatted as hexadecimal integers.
