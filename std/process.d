@@ -1360,7 +1360,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
         throw ProcessException.newFromLastError("Failed to spawn process \"" ~ cast(string) program ~ '"');
 
     // figure out if we should close any of the streams
-    if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStdin ) && stdinFD  > STDERR_FILENO
                                         && stdinFD  != getFD(std.stdio.stdin ))
         stdin.close();
     if (!(config.flags & Config.Flags.retainStdout) && stdoutFD > STDERR_FILENO
