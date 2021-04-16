@@ -369,6 +369,86 @@ real hypot(real x, real y) @safe pure nothrow @nogc
         }
 }
 
+/***********************************************************************
+ * Calculates the distance of the point (x, y, z) from the origin (0, 0, 0)
+ * in three-dimensional space.
+ * The distance is the value of the square root of the sums of the squares
+ * of x, y, and z:
+ *
+ *      sqrt($(POWER x, 2) + $(POWER y, 2) + $(POWER z, 2))
+ *
+ * Note that the distance between two points (x1, y1, z1) and (x2, y2, z2)
+ * in three-dimensional space can be calculated as hypot(x2-x1, y2-y1, z2-z1).
+ *
+ * Params:
+ *     x = floating point value
+ *     y = floating point value
+ *     z = floating point value
+ *
+ * Returns:
+ *     The square root of the sum of the squares of the given arguments.
+ */
+T hypot(T)(const T x, const T y, const T z) @safe pure nothrow @nogc
+if (isFloatingPoint!T)
+{
+    import std.math : fmax;
+    const absx = fabs(x);
+    const absy = fabs(y);
+    const absz = fabs(z);
+
+    // Scale all parameters to avoid overflow.
+    const ratio = fmax(absx, fmax(absy, absz));
+    if (ratio == 0.0)
+        return ratio;
+
+    return ratio * sqrt((absx / ratio) * (absx / ratio)
+                        + (absy / ratio) * (absy / ratio)
+                        + (absz / ratio) * (absz / ratio));
+}
+
+///
+@safe unittest
+{
+    import std.math : isClose;
+
+    assert(isClose(hypot(1.0, 2.0, 2.0), 3.0));
+    assert(isClose(hypot(2.0, 3.0, 6.0), 7.0));
+    assert(isClose(hypot(1.0, 4.0, 8.0), 9.0));
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    import std.math : isIdentical, isClose;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        static T[4][] vals = [
+            [ 0.0L, 0.0L, 0.0L, 0.0L ],
+            [ 0.0L, 1.0L, 1.0L, sqrt(2.0L) ],
+            [ 1.0L, 1.0L, 1.0L, sqrt(3.0L) ],
+            [ 1.0L, 2.0L, 2.0L, 3.0L ],
+            [ 2.0L, 3.0L, 6.0L, 7.0L ],
+            [ 1.0L, 4.0L, 8.0L, 9.0L ],
+            [ 4.0L, 4.0L, 7.0L, 9.0L ],
+            [ 12.0L, 16.0L, 21.0L, 29.0L ],
+            [ 1e+8L, 1.0L, 1e-8L, 1e+8L ],
+            [ 1.0L, 1e+8L, 1e-8L, 1e+8L ],
+            [ 1e-8L, 1.0L, 1e+8L, 1e+8L ],
+            [ 1e-2L, 1e-4L, 1e-4L, 0.010000999950004999375L ],
+            [ 2147483647.0L, 2147483647.0L, 2147483647.0L, 3719550785.027307813987L ]
+        ];
+        for (int i = 0; i < vals.length; i++)
+        {
+            T x = vals[i][0];
+            T y = vals[i][1];
+            T z = vals[i][2];
+            T r = vals[i][3];
+            T a = hypot(x, y, z);
+            assert(isIdentical(r, a) || isClose(r, a));
+        }
+    }}
+}
+
 /***********************************
  * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2) +
  *                          $(SUB a,3)$(POWER x,3); ...
