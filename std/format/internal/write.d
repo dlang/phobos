@@ -103,6 +103,11 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%r",false) == "\0");
 }
 
+@safe pure unittest
+{
+    assert(format("%07s",true) == "   true");
+}
+
 /*
     `null` literal is formatted as `"null"`
  */
@@ -3115,7 +3120,9 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
 private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
 if (isSomeString!T)
 {
-    writeAligned(w,"","",s,f);
+    FormatSpec!Char fs = f;
+    fs.flZero = false;
+    writeAligned(w, "", "", s, fs);
 }
 
 @safe pure unittest
