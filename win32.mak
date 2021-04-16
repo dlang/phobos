@@ -217,7 +217,7 @@ SRC_STD_MATH= \
     std\math\algebraic.d \
     std\math\constants.d \
     std\math\exponential.d \
-    std\math\floats.d \
+    std\math\operations.d \
     std\math\hardware.d \
     std\math\package.d \
     std\math\remainder.d \
