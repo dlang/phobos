@@ -18,8 +18,21 @@ import std.format.spec : FormatSpec;
 
 package(std.format) enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
-package(std.format) auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,
-                                             RoundingMode rm = RoundingMode.toNearestTiesToEven)
+// wrapper for unittests
+private auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,
+                                 RoundingMode rm = RoundingMode.toNearestTiesToEven)
+if (is(T == float) || is(T == double)
+    || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
+{
+    import std.array : appender;
+    auto w = appender!string();
+
+    auto result = printFloat(buf, w, val, f, rm);
+    return result ~ w.data;
+}
+
+package(std.format) auto printFloat(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+    FormatSpec!Char f, RoundingMode rm = RoundingMode.toNearestTiesToEven)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
@@ -110,23 +123,11 @@ if (is(T == float) || is(T == double)
     // special treatment for nan and inf
     if (exp == maxexp)
     {
-        import std.algorithm.comparison : max;
+        import std.format.internal.write : writeAligned;
 
-        size_t length = max(f.width, sgn.length + 3);
-        char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
-        result[] = ' ';
-
-        auto offset = f.flDash ? 0 : (result.length - 3);
-
-        if (sgn != "")
-        {
-            if (f.flDash) ++offset;
-            result[offset-1] = sgn[0];
-        }
-
-        result[offset .. offset + 3] = (mnt == 0) ? ( is_upper ? "INF" : "inf" ) : ( is_upper ? "NAN" : "nan" );
-
-        return result;
+        f.flZero = false;
+        writeAligned(w, sgn, "", (mnt == 0) ? ( is_upper ? "INF" : "inf" ) : ( is_upper ? "NAN" : "nan" ), f);
+        return buf[0 .. 0];
     }
 
     final switch (f.spec)
@@ -3282,62 +3283,68 @@ private auto printFloat0(bool g, Char)(return char[] buf, FormatSpec!Char f, str
 // check no allocations
 @system unittest
 {
+    import std.format : NoOpSink;
+    auto w = NoOpSink();
+
     import core.memory;
     auto stats = GC.stats;
 
     char[512] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0x0p+0");
+    assert(printFloat(buf[], w, float.nan, f) == "");
+    assert(printFloat(buf[], w, -float.infinity, f) == "");
+    assert(printFloat(buf[], w, 0.0f, f) == "0x0p+0");
 
-    assert(printFloat(buf[], -double.nan, f) == "-nan");
-    assert(printFloat(buf[], double.infinity, f) == "inf");
-    assert(printFloat(buf[], -0.0, f) == "-0x0p+0");
+    assert(printFloat(buf[], w, -double.nan, f) == "");
+    assert(printFloat(buf[], w, double.infinity, f) == "");
+    assert(printFloat(buf[], w, -0.0, f) == "-0x0p+0");
 
     import std.math : nextUp, E;
 
-    assert(printFloat(buf[], nextUp(0.0f), f) == "0x0.000002p-126");
-    assert(printFloat(buf[], cast(float) E, f) == "0x1.5bf0a8p+1");
+    assert(printFloat(buf[], w, nextUp(0.0f), f) == "0x0.000002p-126");
+    assert(printFloat(buf[], w, cast(float) E, f) == "0x1.5bf0a8p+1");
+
+    f.precision = 1000;
+    assert(printFloat(buf[], w, float.nan, f) == "");
 
     f.spec = 'E';
     f.precision = 80;
-    assert(printFloat(buf[], 5.62776e+12f, f) ==
+    assert(printFloat(buf[], w, 5.62776e+12f, f) ==
            "5.62775982080000000000000000000000000000000000000000000000000000000000000000000000E+12");
 
     f.precision = 6;
-    assert(printFloat(buf[], -1.1418613e+07f, f) == "-1.141861E+07");
+    assert(printFloat(buf[], w, -1.1418613e+07f, f) == "-1.141861E+07");
 
     f.precision = 20;
-    assert(printFloat(buf[], double.max, f) == "1.79769313486231570815E+308");
-    assert(printFloat(buf[], nextUp(0.0), f) == "4.94065645841246544177E-324");
+    assert(printFloat(buf[], w, double.max, f) == "1.79769313486231570815E+308");
+    assert(printFloat(buf[], w, nextUp(0.0), f) == "4.94065645841246544177E-324");
 
     f.precision = 494;
-    assert(printFloat(buf[], 1.0, f).length == 500);
+    assert(printFloat(buf[], w, 1.0, f).length == 500);
 
     f.spec = 'f';
     f.precision = 15;
-    assert(printFloat(buf[], cast(double) E, f) == "2.718281828459045");
+    assert(printFloat(buf[], w, cast(double) E, f) == "2.718281828459045");
 
     f.precision = 20;
-    assert(printFloat(buf[], double.max, f).length == 330);
-    assert(printFloat(buf[], nextUp(0.0), f) == "0.00000000000000000000");
+    assert(printFloat(buf[], w, double.max, f).length == 330);
+    assert(printFloat(buf[], w, nextUp(0.0), f) == "0.00000000000000000000");
 
     f.precision = 498;
-    assert(printFloat(buf[], 1.0, f).length == 500);
+    assert(printFloat(buf[], w, 1.0, f).length == 500);
 
     f.spec = 'g';
     f.precision = 15;
-    assert(printFloat(buf[], cast(double) E, f) == "2.71828182845905");
+    assert(printFloat(buf[], w, cast(double) E, f) == "2.71828182845905");
 
     f.precision = 20;
-    assert(printFloat(buf[], double.max, f) == "1.7976931348623157081e+308");
-    assert(printFloat(buf[], nextUp(0.0), f) == "4.9406564584124654418e-324");
+    assert(printFloat(buf[], w, double.max, f) == "1.7976931348623157081e+308");
+    assert(printFloat(buf[], w, nextUp(0.0), f) == "4.9406564584124654418e-324");
 
     f.flHash = true;
     f.precision = 499;
-    assert(printFloat(buf[], 1.0, f).length == 500);
+    assert(printFloat(buf[], w, 1.0, f).length == 500);
 
     assert(GC.stats.usedSize == stats.usedSize);
 }
