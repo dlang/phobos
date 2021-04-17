@@ -2939,20 +2939,28 @@ Returns:
 typeof(Unqual!(T).init % Unqual!(U).init) gcd(T, U)(T a, U b)
 if (isIntegral!T && isIntegral!U)
 {
-    if (a == 0)
-        return b;
-    if (b == 0)
-        return a;
+    // Operate on a common type between the two arguments.
+    alias UCT = Unsigned!(CommonType!(Unqual!T, Unqual!U));
+
+    // `std.math.abs` doesn't support unsigned integers, and `T.min` is undefined.
+    static if (is(T : immutable short) || is(T : immutable byte))
+        UCT ax = (isUnsigned!T || a >= 0) ? a : cast(UCT) -int(a);
+    else
+        UCT ax = (isUnsigned!T || a >= 0) ? a : -UCT(a);
+
+    static if (is(U : immutable short) || is(U : immutable byte))
+        UCT bx = (isUnsigned!U || b >= 0) ? b : cast(UCT) -int(b);
+    else
+        UCT bx = (isUnsigned!U || b >= 0) ? b : -UCT(b);
+
+    // Special cases.
+    if (ax == 0)
+        return bx;
+    if (bx == 0)
+        return ax;
 
     import core.bitop : bsf;
     import std.algorithm.mutation : swap;
-
-    // Operate on a common type between the two arguments.
-    CommonType!(Unqual!T, Unqual!U) ax = a;
-    CommonType!(Unqual!T, Unqual!U) bx = b;
-
-    // TODO: Issue 21834
-    assert(ax > 0 && bx > 0);
 
     immutable uint shift = bsf(ax | bx);
     ax >>= ax.bsf;
@@ -2987,14 +2995,15 @@ if (isIntegral!T && isIntegral!U)
                                      const ubyte, const ushort, const uint, const ulong,
                                      immutable byte, immutable short, immutable int, immutable long))
         {
-            static if (T.max > 128 && U.max > 128)
+            // Signed and unsigned tests.
+            static if (T.max > byte.max && U.max > byte.max)
                 assert(gcd(T(200), U(200)) == 200);
-            static if (T.max > 256)
+            static if (T.max > ubyte.max)
             {
                 assert(gcd(T(2000), U(20))  == 20);
                 assert(gcd(T(2011), U(17))  == 1);
             }
-            static if (T.max > 256 && U.max > 265)
+            static if (T.max > ubyte.max && U.max > ubyte.max)
                 assert(gcd(T(1071), U(462)) == 21);
 
             assert(gcd(T(0),   U(13))  == 13);
@@ -3006,8 +3015,48 @@ if (isIntegral!T && isIntegral!U)
             assert(gcd(T(32),  U(24))  == 8);
             assert(gcd(T(5),   U(6))   == 1);
             assert(gcd(T(54),  U(36))  == 18);
+
+            // Int and Long tests.
+            static if (T.max > short.max && U.max > short.max)
+                assert(gcd(T(46391), U(62527)) == 2017);
+            static if (T.max > ushort.max && U.max > ushort.max)
+                assert(gcd(T(63245986), U(39088169)) == 1);
+            static if (T.max > uint.max && U.max > uint.max)
+            {
+                assert(gcd(T(77160074263), U(47687519812)) == 1);
+                assert(gcd(T(77160074264), U(47687519812)) == 4);
+            }
+
+            // Negative tests.
+            static if (T.min < 0)
+            {
+                assert(gcd(T(-21), U(28)) == 7);
+                assert(gcd(T(-3),  U(4))  == 1);
+            }
+            static if (U.min < 0)
+            {
+                assert(gcd(T(1),  U(-2))  == 1);
+                assert(gcd(T(33), U(-44)) == 11);
+            }
+            static if (T.min < 0 && U.min < 0)
+            {
+                assert(gcd(T(-5),  U(-6))  == 1);
+                assert(gcd(T(-50), U(-60)) == 10);
+            }
         }
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21834
+@safe unittest
+{
+    assert(gcd(-120, 10U) == 10);
+    assert(gcd(120U, -10) == 10);
+    assert(gcd(int.min, 0L) == 1L + int.max);
+    assert(gcd(0L, int.min) == 1L + int.max);
+    assert(gcd(int.min, 0L + int.min) == 1L + int.max);
+    assert(gcd(int.min, 1L + int.max) == 1L + int.max);
+    assert(gcd(short.min, 1U + short.max) == 1U + short.max);
 }
 
 // This overload is for non-builtin numerical types like BigInt or
@@ -3034,7 +3083,9 @@ if (!isIntegral!T &&
             swap(t, u);
         }));
 
-        assert(a >= 0 && b >= 0);
+        // Ensure arguments are unsigned.
+        a = a >= 0 ? a : -a;
+        b = b >= 0 ? b : -b;
 
         // Special cases.
         if (a == 0)
@@ -3103,11 +3154,17 @@ if (!isIntegral!T &&
         {
             return CrippledInt(impl % i.impl);
         }
+        CrippledInt opUnary(string op : "-")()
+        {
+            return CrippledInt(-impl);
+        }
         int opEquals(CrippledInt i) { return impl == i.impl; }
         int opEquals(int i) { return impl == i; }
         int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
     }
     assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+    assert(gcd(CrippledInt(-120), CrippledInt(10U)) == CrippledInt(10));
+    assert(gcd(CrippledInt(120U), CrippledInt(-10)) == CrippledInt(10));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19514
@@ -3124,6 +3181,19 @@ if (!isIntegral!T &&
     const a = BigInt("123143238472389492934020");
     const b = BigInt("902380489324729338420924");
     assert(__traits(compiles, gcd(a, b)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21834
+@safe unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt(-120), BigInt(10U)) == BigInt(10));
+    assert(gcd(BigInt(120U), BigInt(-10)) == BigInt(10));
+    assert(gcd(BigInt(int.min), BigInt(0L)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(0L), BigInt(int.min)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(int.min), BigInt(0L + int.min)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(int.min), BigInt(1L + int.max)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(short.min), BigInt(1U + short.max)) == BigInt(1U + short.max));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
