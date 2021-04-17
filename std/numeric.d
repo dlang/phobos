@@ -2928,43 +2928,44 @@ an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
 
 Params:
-    T = Any numerical type that supports the modulo operator `%`. If
-        bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
+    a = Integer value of any numerical type that supports the modulo operator `%`.
+        If bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
         be used; otherwise, Euclid's algorithm is used as _a fallback.
+    b = Integer value of any equivalent numerical type.
 
 Returns:
     The greatest common divisor of the given arguments.
  */
-T gcd(T)(T a, T b)
-if (isIntegral!T)
+typeof(Unqual!(T).init % Unqual!(U).init) gcd(T, U)(T a, U b)
+if (isIntegral!T && isIntegral!U)
 {
-    static if (is(T == const) || is(T == immutable))
+    if (a == 0)
+        return b;
+    if (b == 0)
+        return a;
+
+    import core.bitop : bsf;
+    import std.algorithm.mutation : swap;
+
+    // Operate on a common type between the two arguments.
+    CommonType!(Unqual!T, Unqual!U) ax = a;
+    CommonType!(Unqual!T, Unqual!U) bx = b;
+
+    // TODO: Issue 21834
+    assert(ax > 0 && bx > 0);
+
+    immutable uint shift = bsf(ax | bx);
+    ax >>= ax.bsf;
+
+    do
     {
-        return gcd!(Unqual!T)(a, b);
-    }
-    else
-    {
-        if (a == 0)
-            return b;
-        if (b == 0)
-            return a;
+        bx >>= bx.bsf;
+        if (ax > bx)
+            swap(ax, bx);
+        bx -= ax;
+    } while (bx);
 
-        import core.bitop : bsf;
-        import std.algorithm.mutation : swap;
-
-        immutable uint shift = bsf(a | b);
-        a >>= a.bsf;
-
-        do
-        {
-            b >>= b.bsf;
-            if (a > b)
-                swap(a, b);
-            b -= a;
-        } while (b);
-
-        return a << shift;
-    }
+    return ax << shift;
 }
 
 ///
@@ -2973,6 +2974,40 @@ if (isIntegral!T)
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
     assert(gcd(a, b) == 13);
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                 const byte, const short, const int, const long,
+                                 immutable ubyte, immutable ushort, immutable uint, immutable ulong))
+    {
+        static foreach (U; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                     const ubyte, const ushort, const uint, const ulong,
+                                     immutable byte, immutable short, immutable int, immutable long))
+        {
+            static if (T.max > 128 && U.max > 128)
+                assert(gcd(T(200), U(200)) == 200);
+            static if (T.max > 256)
+            {
+                assert(gcd(T(2000), U(20))  == 20);
+                assert(gcd(T(2011), U(17))  == 1);
+            }
+            static if (T.max > 256 && U.max > 265)
+                assert(gcd(T(1071), U(462)) == 21);
+
+            assert(gcd(T(0),   U(13))  == 13);
+            assert(gcd(T(29),  U(0))   == 29);
+            assert(gcd(T(0),   U(0))   == 0);
+            assert(gcd(T(1),   U(2))   == 1);
+            assert(gcd(T(9),   U(6))   == 3);
+            assert(gcd(T(3),   U(4))   == 1);
+            assert(gcd(T(32),  U(24))  == 8);
+            assert(gcd(T(5),   U(6))   == 1);
+            assert(gcd(T(54),  U(36))  == 18);
+        }
+    }
 }
 
 // This overload is for non-builtin numerical types like BigInt or
