@@ -164,6 +164,7 @@ if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
     import std.algorithm.comparison : max;
+    import std.format.internal.write : writeAligned, PrecisionType;
 
     enum int bias = T.max_exp - 1;
 
@@ -177,8 +178,8 @@ if (is(T == float) || is(T == double)
     static assert(mant_len % 4 == 0, "mantissa with wrong length");
 
     // print full mantissa
-    char[(mant_len - 1) / 4 + 1] hex_mant;
-    size_t hex_mant_pos = 0;
+    char[(mant_len - 1) / 4 + 2] hex_mant;
+    size_t hex_mant_pos = 1;
     size_t pos = mant_len;
 
     auto gap = 39 - 32 * is_upper;
@@ -191,14 +192,28 @@ if (is(T == float) || is(T == double)
         // has been replaced with an expression without branches, doing the same
         hex_mant[hex_mant_pos++] = cast(char) (tmp + gap * ((tmp + 6) >> 4) + '0');
     }
+    hex_mant[0] = '.';
 
-    // save integer part
-    auto first = exp == 0 ? '0' : '1';
+    if (f.precision == f.UNSPECIFIED)
+        f.precision = cast(int) hex_mant_pos - 1;
+
+    char[3] prefix;
+    if (sgn != "") prefix[0] = sgn[0];
+    prefix[1] = '0';
+    prefix[2] = is_upper ? 'X' : 'x';
 
     // print exponent
     if (exp == 0 && mnt == 0)
-        exp = 0; // special treatment for 0.0
-    else if (exp == 0)
+    {
+        writeAligned(w, prefix[1 - sgn.length .. $], "0", ".", is_upper ? "P+0" : "p+0",
+                     f, PrecisionType.fractionalDigits);
+        return buf[0 .. 0];
+    }
+
+    // save integer part
+    char[1] first = [exp == 0 ? '0' : '1'];
+
+    if (exp == 0)
         exp = 1 - bias; // denormalized number
     else
         exp -= bias;
@@ -207,11 +222,11 @@ if (is(T == float) || is(T == double)
     if (exp < 0) exp = -exp;
 
     static if (is(T == real) && real.mant_dig == 64)
-        enum max_exp_digits = 7;
+        enum max_exp_digits = 8;
     else static if (is(T == float))
-        enum max_exp_digits = 4;
-    else
         enum max_exp_digits = 5;
+    else
+        enum max_exp_digits = 6;
 
     char[max_exp_digits] exp_str;
     size_t exp_pos = max_exp_digits;
@@ -223,58 +238,25 @@ if (is(T == float) || is(T == double)
     } while (exp > 0);
 
     exp_str[--exp_pos] = exp_sgn;
+    exp_str[--exp_pos] = is_upper ? 'P' : 'p';
 
-    // calculate needed buffer width
-    auto precision = f.precision == f.UNSPECIFIED ? hex_mant_pos : f.precision;
-    bool dot = precision > 0 || f.flHash;
-
-    size_t width = sgn.length + 3 + (dot ? 1 : 0) + precision + 1 + (max_exp_digits - exp_pos);
-
-    size_t length = max(width,f.width);
-    char[] buffer = length <= buf.length ? buf[0 .. length] : new char[length];
-    size_t b_pos = 0;
-
-    size_t delta = f.width - width; // only used, when f.width > width
-
-    // fill buffer
-    if (!f.flDash && !f.flZero && f.width > width)
+    if (f.precision < hex_mant_pos - 1)
     {
-        buffer[b_pos .. b_pos + delta] = ' ';
-        b_pos += delta;
-    }
-
-    if (sgn != "") buffer[b_pos++] = sgn[0];
-    buffer[b_pos++] = '0';
-    buffer[b_pos++] = is_upper ? 'X' : 'x';
-
-    if (!f.flDash && f.flZero && f.width > width)
-    {
-        buffer[b_pos .. b_pos + delta] = '0';
-        b_pos += delta;
-    }
-
-    buffer[b_pos++] = first;
-    if (dot) buffer[b_pos++] = '.';
-    if (precision < hex_mant_pos)
-    {
-        buffer[b_pos .. b_pos + precision] = hex_mant[0 .. precision];
-        b_pos += precision;
-
         enum roundType { ZERO, LOWER, FIVE, UPPER }
         roundType next;
 
-        if (hex_mant[precision] == '0')
+        if (hex_mant[f.precision + 1] == '0')
             next = roundType.ZERO;
-        else if (hex_mant[precision] < '8')
+        else if (hex_mant[f.precision + 1] < '8')
             next = roundType.LOWER;
-        else if (hex_mant[precision] > '8')
+        else if (hex_mant[f.precision + 1] > '8')
             next = roundType.UPPER;
         else
             next = roundType.FIVE;
 
         if (next == roundType.ZERO || next == roundType.FIVE)
         {
-            foreach (i;precision + 1 .. hex_mant_pos)
+            foreach (i;f.precision + 2 .. hex_mant_pos)
             {
                 if (hex_mant[i] > '0')
                 {
@@ -308,49 +290,40 @@ if (is(T == float) || is(T == double)
                 else
                 {
                     // Round to nearest, ties to even
-                    auto last = buffer[b_pos-1];
-                    if (last == '.') last = buffer[b_pos-2];
+                    auto last = f.precision == 0 ? first[0] : hex_mant[f.precision];
                     roundUp = (last <= '9' && last % 2 != 0) || (last >= '9' && last % 2 == 0);
                 }
             }
         }
 
+        hex_mant_pos = f.precision + 1;
+
         if (roundUp)
         {
-            foreach_reverse (i;b_pos - precision - 2 .. b_pos)
+            foreach_reverse (i;0 .. hex_mant_pos)
             {
-                if (buffer[i] == '.') continue;
-                if (buffer[i] == 'f' || buffer[i] == 'F')
-                    buffer[i] = '0';
+                if (hex_mant[i] == '.')
+                {
+                    first[0]++;
+                    break;
+                }
+                if (hex_mant[i] == 'f' || hex_mant[i] == 'F')
+                    hex_mant[i] = '0';
                 else
                 {
-                    if (buffer[i] == '9')
-                        buffer[i] = is_upper ? 'A' : 'a';
+                    if (hex_mant[i] == '9')
+                        hex_mant[i] = is_upper ? 'A' : 'a';
                     else
-                        buffer[i]++;
+                        hex_mant[i]++;
                     break;
                 }
             }
         }
     }
-    else
-    {
-        buffer[b_pos .. b_pos + hex_mant_pos] = hex_mant[0 .. hex_mant_pos];
-        buffer[b_pos + hex_mant_pos .. b_pos + precision] = '0';
-        b_pos += precision;
-    }
 
-    buffer[b_pos++] = is_upper ? 'P' : 'p';
-    buffer[b_pos .. b_pos + (max_exp_digits - exp_pos)] = exp_str[exp_pos .. $];
-    b_pos += max_exp_digits - exp_pos;
-
-    if (f.flDash && f.width > width)
-    {
-        buffer[b_pos .. b_pos + delta] = ' ';
-        b_pos += delta;
-    }
-
-    return buffer[0 .. b_pos];
+    writeAligned(w, prefix[1 - sgn.length .. $], first[], hex_mant[0 .. hex_mant_pos],
+                 exp_str[exp_pos .. $], f, PrecisionType.fractionalDigits);
+    return buf[0 .. 0];
 }
 
 @safe unittest
@@ -3224,20 +3197,22 @@ if (is(T == float) || is(T == double)
     f.spec = 'a';
     assert(printFloat(buf[], w, float.nan, f) == "");
     assert(printFloat(buf[], w, -float.infinity, f) == "");
-    assert(printFloat(buf[], w, 0.0f, f) == "0x0p+0");
+    assert(printFloat(buf[], w, 0.0f, f) == "");
 
     assert(printFloat(buf[], w, -double.nan, f) == "");
     assert(printFloat(buf[], w, double.infinity, f) == "");
-    assert(printFloat(buf[], w, -0.0, f) == "-0x0p+0");
+    assert(printFloat(buf[], w, -0.0, f) == "");
 
     import std.math.operations : nextUp;
     import std.math.constants : E;
 
-    assert(printFloat(buf[], w, nextUp(0.0f), f) == "0x0.000002p-126");
-    assert(printFloat(buf[], w, cast(float) E, f) == "0x1.5bf0a8p+1");
+    assert(printFloat(buf[], w, nextUp(0.0f), f) == "");
+    assert(printFloat(buf[], w, cast(float) E, f) == "");
 
     f.precision = 1000;
     assert(printFloat(buf[], w, float.nan, f) == "");
+    assert(printFloat(buf[], w, 0.0, f) == "");
+    assert(printFloat(buf[], w, 1.23456789e+100, f) == "");
 
     f.spec = 'E';
     f.precision = 80;
