@@ -2959,21 +2959,27 @@ if (isIntegral!T && isIntegral!U)
     if (bx == 0)
         return ax;
 
+    return gcdImpl(ax, bx);
+}
+
+private typeof(T.init % T.init) gcdImpl(T)(T a, T b)
+if (isIntegral!T)
+{
+    pragma(inline, true);
     import core.bitop : bsf;
     import std.algorithm.mutation : swap;
 
-    immutable uint shift = bsf(ax | bx);
-    ax >>= ax.bsf;
-
+    immutable uint shift = bsf(a | b);
+    a >>= a.bsf;
     do
     {
-        bx >>= bx.bsf;
-        if (ax > bx)
-            swap(ax, bx);
-        bx -= ax;
-    } while (bx);
+        b >>= b.bsf;
+        if (a > b)
+            swap(a, b);
+        b -= a;
+    } while (b);
 
-    return ax << shift;
+    return a << shift;
 }
 
 ///
@@ -3073,16 +3079,6 @@ if (!isIntegral!T &&
     }
     else
     {
-        import std.algorithm.mutation : swap;
-        enum canUseBinaryGcd = is(typeof(() {
-            T t, u;
-            t <<= 1;
-            t >>= 1;
-            t -= u;
-            bool b = (t & 1) == 0;
-            swap(t, u);
-        }));
-
         // Ensure arguments are unsigned.
         a = a >= 0 ? a : -a;
         b = b >= 0 ? b : -b;
@@ -3093,41 +3089,58 @@ if (!isIntegral!T &&
         if (b == 0)
             return a;
 
-        static if (canUseBinaryGcd)
+        return gcdImpl(a, b);
+    }
+}
+
+private auto gcdImpl(T)(T a, T b)
+if (!isIntegral!T)
+{
+    pragma(inline, true);
+    import std.algorithm.mutation : swap;
+    enum canUseBinaryGcd = is(typeof(() {
+        T t, u;
+        t <<= 1;
+        t >>= 1;
+        t -= u;
+        bool b = (t & 1) == 0;
+        swap(t, u);
+    }));
+
+    static if (canUseBinaryGcd)
+    {
+        uint shift = 0;
+        while ((a & 1) == 0 && (b & 1) == 0)
         {
-            uint shift = 0;
-            while ((a & 1) == 0 && (b & 1) == 0)
-            {
-                a >>= 1;
+            a >>= 1;
+            b >>= 1;
+            shift++;
+        }
+
+        if ((a & 1) == 0) swap(a, b);
+
+        do
+        {
+            assert((a & 1) != 0);
+            while ((b & 1) == 0)
                 b >>= 1;
-                shift++;
-            }
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
 
-            if ((a & 1) == 0) swap(a, b);
-
-            do
-            {
-                assert((a & 1) != 0);
-                while ((b & 1) == 0)
-                    b >>= 1;
-                if (a > b)
-                    swap(a, b);
-                b -= a;
-            } while (b);
-
-            return a << shift;
-        }
-        else
+        return a << shift;
+    }
+    else
+    {
+        // The only thing we have is %; fallback to Euclidean algorithm.
+        while (b != 0)
         {
-            // The only thing we have is %; fallback to Euclidean algorithm.
-            while (b != 0)
-            {
-                auto t = b;
-                b = a % b;
-                a = t;
-            }
-            return a;
+            auto t = b;
+            b = a % b;
+            a = t;
         }
+        return a;
     }
 }
 
@@ -3194,6 +3207,104 @@ if (!isIntegral!T &&
     assert(gcd(BigInt(int.min), BigInt(0L + int.min)) == BigInt(1L + int.max));
     assert(gcd(BigInt(int.min), BigInt(1L + int.max)) == BigInt(1L + int.max));
     assert(gcd(BigInt(short.min), BigInt(1U + short.max)) == BigInt(1U + short.max));
+}
+
+
+/**
+Computes the least common multiple of `a` and `b`.
+Arguments are the same as $(MYREF gcd).
+
+Returns:
+    The least common multiple of the given arguments.
+ */
+typeof(Unqual!(T).init % Unqual!(U).init) lcm(T, U)(T a, U b)
+if (isIntegral!T && isIntegral!U)
+{
+    // Operate on a common type between the two arguments.
+    alias UCT = Unsigned!(CommonType!(Unqual!T, Unqual!U));
+
+    // `std.math.abs` doesn't support unsigned integers, and `T.min` is undefined.
+    static if (is(T : immutable short) || is(T : immutable byte))
+        UCT ax = (isUnsigned!T || a >= 0) ? a : cast(UCT) -int(a);
+    else
+        UCT ax = (isUnsigned!T || a >= 0) ? a : -UCT(a);
+
+    static if (is(U : immutable short) || is(U : immutable byte))
+        UCT bx = (isUnsigned!U || b >= 0) ? b : cast(UCT) -int(b);
+    else
+        UCT bx = (isUnsigned!U || b >= 0) ? b : -UCT(b);
+
+    // Special cases.
+    if (ax == 0)
+        return ax;
+    if (bx == 0)
+        return bx;
+
+    return (ax / gcdImpl(ax, bx)) * bx;
+}
+
+///
+@safe unittest
+{
+    assert(lcm(1, 2) == 2);
+    assert(lcm(3, 4) == 12);
+    assert(lcm(5, 6) == 30);
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                 const byte, const short, const int, const long,
+                                 immutable ubyte, immutable ushort, immutable uint, immutable ulong))
+    {
+        static foreach (U; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                     const ubyte, const ushort, const uint, const ulong,
+                                     immutable byte, immutable short, immutable int, immutable long))
+        {
+            assert(lcm(T(21), U(6))  == 42);
+            assert(lcm(T(41), U(0))  == 0);
+            assert(lcm(T(0),  U(7))  == 0);
+            assert(lcm(T(0),  U(0))  == 0);
+            assert(lcm(T(1U), U(2))  == 2);
+            assert(lcm(T(3),  U(4U)) == 12);
+            assert(lcm(T(5U), U(6U)) == 30);
+            static if (T.min < 0)
+                assert(lcm(T(-42), U(21U)) == 42);
+        }
+    }
+}
+
+/// ditto
+auto lcm(T)(T a, T b)
+if (!isIntegral!T &&
+        is(typeof(T.init % T.init)) &&
+        is(typeof(T.init == 0 || T.init > 0)))
+{
+    // Ensure arguments are unsigned.
+    a = a >= 0 ? a : -a;
+    b = b >= 0 ? b : -b;
+
+    // Special cases.
+    if (a == 0)
+        return a;
+    if (b == 0)
+        return b;
+
+    return (a / gcdImpl(a, b)) * b;
+}
+
+@safe unittest
+{
+    import std.bigint : BigInt;
+    assert(lcm(BigInt(21),  BigInt(6))   == BigInt(42));
+    assert(lcm(BigInt(41),  BigInt(0))   == BigInt(0));
+    assert(lcm(BigInt(0),   BigInt(7))   == BigInt(0));
+    assert(lcm(BigInt(0),   BigInt(0))   == BigInt(0));
+    assert(lcm(BigInt(1U),  BigInt(2))   == BigInt(2));
+    assert(lcm(BigInt(3),   BigInt(4U))  == BigInt(12));
+    assert(lcm(BigInt(5U),  BigInt(6U))  == BigInt(30));
+    assert(lcm(BigInt(-42), BigInt(21U)) == BigInt(42));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
