@@ -43,11 +43,11 @@ import std.traits : CommonType, isFloatingPoint, isIntegral, isSigned, Unqual;
  *     the return type will be the same as the input.
  *
  * Limitations:
- *     Does not work correctly for signed intergal types and value `Num`.min.
+ *     Does not work correctly for unsigned integral types and value `Num`.min.
  */
 auto abs(Num)(Num x) @nogc pure nothrow
 if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)) ||
-    (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
+    (is(typeof(Num.init >= 0)) && is(typeof(0 - Num.init))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
@@ -55,6 +55,8 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
     {
         static if (is(immutable Num == immutable short) || is(immutable Num == immutable byte))
             return x >= 0 ? x : cast(Num) -int(x);
+        else static if (is(immutable Num == immutable ushort) || is(immutable Num == immutable ubyte))
+            return x;
         else
             return x >= 0 ? x : -x;
     }
@@ -80,6 +82,13 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
     assert(abs(b) == 8);
     immutable(byte) c = -8;
     assert(abs(c) == 8);
+
+    ushort us = 8;
+    ubyte ub = 8;
+    assert(abs(us) == 8);
+    assert(abs(ub) == 8);
+    immutable(ubyte) uc = 8;
+    assert(abs(uc) == 8);
 }
 
 @safe pure nothrow @nogc unittest
