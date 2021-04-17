@@ -136,18 +136,18 @@ if (is(T == float) || is(T == double)
     final switch (f.spec)
     {
         case 'a': case 'A':
-            return printFloatA(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatA(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
         case 'e': case 'E':
-            return printFloatE!false(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatE!false(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
         case 'f': case 'F':
-            return printFloatF!false(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatF!false(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
         case 'g': case 'G':
-            return printFloatG(buf, val, f, rm, sgn, exp, mnt, is_upper);
+            return printFloatG(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
     }
 }
 
-private auto printFloatA(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                  string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatA(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+    FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
@@ -723,8 +723,8 @@ if (is(T == float) || is(T == double)
     assert(printFloat(buf[], 0x1.19f01p0, f) == "0X1.19FP+0");
 }
 
-private auto printFloatE(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                          string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatE(bool g, Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+    FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
@@ -741,7 +741,16 @@ if (is(T == float) || is(T == double)
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
-        return printFloat0!g(buf, f, sgn, is_upper);
+    {
+        import std.format.internal.write : writeAligned, PrecisionType;
+
+        static if (g)
+            writeAligned(w, sgn, "0", ".", "", f, PrecisionType.allDigits);
+        else
+            writeAligned(w, sgn, "0", ".", is_upper ? "E+00" : "e+00", f, PrecisionType.fractionalDigits);
+
+        return buf[0 .. 0];
+    }
 
     // add leading 1 for normalized values or correct exponent for denormalied values
     if (exp != 0)
@@ -1760,8 +1769,8 @@ printFloat_done:
     });
 }
 
-private auto printFloatF(bool g, T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                          string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatF(bool g, Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+    FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
@@ -1779,7 +1788,13 @@ if (is(T == float) || is(T == double)
 
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
-        return printFloat0!g(buf, f, sgn, is_upper);
+    {
+        import std.format.internal.write : writeAligned, PrecisionType;
+
+        writeAligned(w, sgn, "0", ".", "", f, PrecisionType.fractionalDigits);
+
+        return buf[0 .. 0];
+    }
 
     // add leading 1 for normalized values or correct exponent for denormalied values
     if (exp != 0)
@@ -2653,8 +2668,8 @@ printFloat_done:
            ~"7175706828388979108268586060148663818836212158203125");
 }
 
-private auto printFloatG(T, Char)(return char[] buf, T val, FormatSpec!Char f, RoundingMode rm,
-                                  string sgn, int exp, ulong mnt, bool is_upper)
+private auto printFloatG(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+    FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
@@ -2690,9 +2705,9 @@ if (is(T == float) || is(T == double)
     }
 
     if (useE)
-        return printFloatE!true(buf, val, f, rm, sgn, exp, mnt, is_upper);
+        return printFloatE!true(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
     else
-        return printFloatF!true(buf, val, f, rm, sgn, exp, mnt, is_upper);
+        return printFloatF!true(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
 }
 
 @safe unittest
@@ -3181,109 +3196,6 @@ if (is(T == float) || is(T == double)
              */
         }
     });
-}
-
-private auto printFloat0(bool g, Char)(return char[] buf, FormatSpec!Char f, string sgn, bool is_upper)
-{
-    import std.algorithm.comparison : max;
-
-    static if (g)
-    {
-        if (!f.flHash)
-        {
-            auto length = max(f.width, 1 + sgn.length);
-            char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
-            result[] = '0';
-
-            if (f.flDash)
-            {
-                if (sgn != "")
-                    result[0] = sgn[0];
-                result[1 + sgn.length .. $] = ' ';
-            }
-            else
-            {
-                if (f.flZero)
-                {
-                    if (sgn != "")
-                        result[0] = sgn[0];
-                }
-                else
-                {
-                    if (sgn != "")
-                        result[$ - 2] = sgn[0];
-                    result[0 .. $ - 1 - sgn.length] = ' ';
-                }
-            }
-            return result;
-        }
-    }
-
-    // with e or E qualifier, we need 4 more bytes for E+00 at the end
-    auto E = (f.spec == 'e' || f.spec == 'E') ? 4 : 0;
-
-    auto length = f.precision + ((f.precision == 0 && !f.flHash) ? 1 : 2) + sgn.length + E;
-    static if (g) length--;
-    length = max(f.width, length);
-
-    char[] result = length <= buf.length ? buf[0 .. length] : new char[length];
-    result[] = '0';
-
-    if (f.flDash)
-    {
-        if (sgn != "")
-            result[0] = sgn[0];
-
-        int dot_pos = cast(int) (sgn.length + 1);
-        if (f.precision > 0 || f.flHash)
-            result[dot_pos] = '.';
-
-        auto exp_start = dot_pos + ((f.precision > 0 || f.flHash) ? 1 : 0) + f.precision;
-        static if (g) exp_start--;
-        if (exp_start + E < result.length)
-            result[exp_start + E .. $] = ' ';
-
-        if (E)
-        {
-            result[exp_start] = is_upper ? 'E' : 'e';
-            result[exp_start + 1] = '+';
-        }
-    }
-    else
-    {
-        int sign_pos = cast(int) (result.length - (E + 2));
-        if (f.precision > 0 || f.flHash)
-        {
-            int dot_pos = cast(int) (result.length - f.precision);
-            static if (!g) dot_pos -= E + 1;
-            result[dot_pos] = '.';
-            sign_pos = dot_pos - 2;
-        }
-
-        if (f.flZero)
-            sign_pos = 0;
-        else
-        {
-            static if (g)
-                auto leading_spaces = sign_pos > 0 || sgn.length == 0;
-            else
-                auto leading_spaces = sign_pos > 0;
-
-            if (leading_spaces)
-                result[0 .. sign_pos + (sgn.length == 0 ? 1 : 0)] = ' ';
-        }
-
-        if (sgn != "")
-            result[sign_pos] = sgn[0];
-
-        if (E)
-        {
-            result[$ - 3] = '+';
-            result[$ - 4] = is_upper ? 'E' : 'e';
-        }
-    }
-
-    return result;
 }
 
 // check no allocations

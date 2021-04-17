@@ -3181,20 +3181,38 @@ if (isSomeString!T)
     assert(w.data == "a本Ä       ", w.data);
 }
 
+enum PrecisionType
+{
+    none,
+    integer,
+    fractionalDigits,
+    allDigits,
+}
+
 void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
     T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f,
     bool integer_precision = false)
 if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
 {
-    // writes: left padding, prefix, leading zeros, grouped, suffix, right padding
+    writeAligned(w, prefix, grouped, "", suffix, f,
+                 integer_precision ? PrecisionType.integer : PrecisionType.none);
+}
 
-    if (integer_precision && f.precision == f.UNSPECIFIED)
-        integer_precision = false;
+void writeAligned(Writer, T1, T2, T3, T4, Char)(auto ref Writer w,
+    T1 prefix, T2 grouped, T3 fracts, T4 suffix, scope const ref FormatSpec!Char f,
+    PrecisionType p = PrecisionType.none)
+if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3 && isSomeString!T4)
+{
+    // writes: left padding, prefix, leading zeros, grouped, fracts, suffix, right padding
+
+    if (p == PrecisionType.integer && f.precision == f.UNSPECIFIED)
+        p = PrecisionType.none;
 
     import std.range.primitives : put;
 
     long prefixWidth;
     long groupedWidth = grouped.length; // TODO: does not take graphemes into account
+    long fractsWidth = fracts.length; // TODO: does not take graphemes into account
     long suffixWidth;
 
     // TODO: remove this workaround which hides issue 21815
@@ -3211,13 +3229,36 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     // sepCount = number of separators to be inserted
     long sepCount = doGrouping ? (groupedWidth - 1) / f.separators : 0;
 
-    long width = prefixWidth + sepCount + groupedWidth + suffixWidth;
+    long trailingZeros = 0;
+    if (p == PrecisionType.fractionalDigits)
+        trailingZeros = f.precision - (fractsWidth - 1);
+    if (p == PrecisionType.allDigits && f.flHash)
+    {
+        if (grouped != "0")
+            trailingZeros = f.precision - (fractsWidth - 1) - groupedWidth;
+        else
+        {
+            trailingZeros = f.precision - fractsWidth;
+            foreach (i;0 .. fracts.length)
+                if (fracts[i] != '0' && fracts[i] != '.')
+                {
+                    trailingZeros = f.precision - (fracts.length - i);
+                    break;
+                }
+        }
+    }
+
+    auto nodot = fracts == "." && trailingZeros == 0 && !f.flHash;
+
+    if (nodot) fractsWidth = 0;
+
+    long width = prefixWidth + sepCount + groupedWidth + fractsWidth + trailingZeros + suffixWidth;
     long delta = f.width - width;
 
     // with integers, precision is considered the minimum number of digits;
     // if digits are missing, we have to recalculate everything
     long pregrouped = 0;
-    if (integer_precision && groupedWidth < f.precision)
+    if (p == PrecisionType.integer && groupedWidth < f.precision)
     {
         pregrouped = f.precision - groupedWidth;
         delta -= pregrouped;
@@ -3229,7 +3270,7 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     }
 
     // left padding
-    if ((!f.flZero || integer_precision) && !f.flDash && delta > 0)
+    if ((!f.flZero || p == PrecisionType.integer) && !f.flDash && delta > 0)
         foreach (i ; 0 .. delta)
             put(w, ' ');
 
@@ -3237,7 +3278,7 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     put(w, prefix);
 
     // leading grouped zeros
-    if (f.flZero && !integer_precision && !f.flDash && delta > 0)
+    if (f.flZero && p != PrecisionType.integer && !f.flDash && delta > 0)
     {
         if (doGrouping)
         {
@@ -3294,6 +3335,14 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
             put(w, '0');
         put(w, grouped);
     }
+
+    // fracts
+    if (!nodot)
+        put(w, fracts);
+
+    // trailing zeros
+    foreach (i ; 0 .. trailingZeros)
+        put(w, '0');
 
     // suffix
     put(w, suffix);
