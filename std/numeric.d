@@ -2931,6 +2931,7 @@ Params:
     T = Any numerical type that supports the modulo operator `%`. If
         bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
         be used; otherwise, Euclid's algorithm is used as _a fallback.
+
 Returns:
     The greatest common divisor of the given arguments.
  */
@@ -2940,20 +2941,6 @@ if (isIntegral!T)
     static if (is(T == const) || is(T == immutable))
     {
         return gcd!(Unqual!T)(a, b);
-    }
-    else version (DigitalMars)
-    {
-        static if (T.min < 0)
-        {
-            assert(a >= 0 && b >= 0);
-        }
-        while (b)
-        {
-            immutable t = b;
-            b = a % b;
-            a = t;
-        }
-        return a;
     }
     else
     {
