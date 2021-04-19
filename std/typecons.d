@@ -1615,6 +1615,22 @@ if (distinctFieldNames!(Specs))
     assert(!(t == t));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=8015
+@safe unittest
+{
+    struct MyStruct
+    {
+        string str;
+        @property string toStr()
+        {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
+}
+
 /**
     Creates a copy of a $(LREF Tuple) with its fields in _reverse order.
 

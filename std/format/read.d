@@ -96,7 +96,7 @@ module std.format.read;
     assert(result == 373 /* little endian */ || result == 29953 /* big endian */ );
 }
 
-// Floating point numbers
+/// Floating point numbers
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
