@@ -356,7 +356,7 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
     import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.conv : to;
-    import std.experimental.checkedint : checked;
+    import std.checkedint : checked;
 
     // A few internal configuration parameters {
     enum size_t

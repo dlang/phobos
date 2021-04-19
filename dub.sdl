@@ -15,9 +15,9 @@ subPackage {
 	auto pkgDir = environment.get("DUB_PACKAGE_DIR");
 	auto destDir = pkgDir.buildPath("source", "stdx");
 	mkdirRecurse(destDir);
-	pkgDir.buildPath("std", "experimental", "checkedint.d")
+	pkgDir.buildPath("std", "checkedint.d")
 		  .readText
-		  .replace("std.experimental.checkedint", "stdx.checkedint")
+		  .replace("std.checkedint", "stdx.checkedint")
 		  .toFile(destDir.buildPath("checkedint.d"));'`
   sourceFiles "source/stdx/checkedint.d"
   importPaths "source"
