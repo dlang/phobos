@@ -869,6 +869,160 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(pow(-real.infinity, 0.0) == 1.0);
 }
 
+/** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
+ *
+ *  Params:
+ *      x = base
+ *      n = exponent
+ *      m = modulus
+ *
+ *  Returns:
+ *      `x` to the power `n`, modulo `m`.
+ *      The return type is the largest of `x`'s and `m`'s type.
+ *
+ * The function requires that all values have unsigned types.
+ */
+Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
+if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
+{
+    import std.meta : AliasSeq;
+
+    alias T = Unqual!(Largest!(F, H));
+    static if (T.sizeof <= 4)
+    {
+        alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
+    }
+
+    static T mulmod(T a, T b, T c)
+    {
+        static if (T.sizeof == 8)
+        {
+            static T addmod(T a, T b, T c)
+            {
+                b = c - b;
+                if (a >= b)
+                    return a - b;
+                else
+                    return c - b + a;
+            }
+
+            T result = 0, tmp;
+
+            b %= c;
+            while (a > 0)
+            {
+                if (a & 1)
+                    result = addmod(result, b, c);
+
+                a >>= 1;
+                b = addmod(b, b, c);
+            }
+
+            return result;
+        }
+        else
+        {
+            DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+            return result % c;
+        }
+    }
+
+    T base = x, result = 1, modulus = m;
+    Unqual!G exponent = n;
+
+    while (exponent > 0)
+    {
+        if (exponent & 1)
+            result = mulmod(result, base, modulus);
+
+        base = mulmod(base, base, modulus);
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(powmod(1U, 10U, 3U) == 1);
+    assert(powmod(3U, 2U, 6U) == 3);
+    assert(powmod(5U, 5U, 15U) == 5);
+    assert(powmod(2U, 3U, 5U) == 3);
+    assert(powmod(2U, 4U, 5U) == 1);
+    assert(powmod(2U, 5U, 5U) == 2);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    ulong a = 18446744073709551615u, b = 20u, c = 18446744073709551610u;
+    assert(powmod(a, b, c) == 95367431640625u);
+    a = 100; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 18223853583554725198u);
+    a = 117; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 11493139548346411394u);
+    a = 134; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 10979163786734356774u);
+    a = 151; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 7023018419737782840u);
+    a = 168; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 58082701842386811u);
+    a = 185; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 17423478386299876798u);
+    a = 202; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5522733478579799075u);
+    a = 219; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 15230218982491623487u);
+    a = 236; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5198328724976436000u);
+
+    a = 0; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 0);
+    a = 123; b = 0; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 1);
+
+    immutable ulong a1 = 253, b1 = 7919, c1 = 18446744073709551557u;
+    assert(powmod(a1, b1, c1) == 3883707345459248860u);
+
+    uint x = 100 ,y = 7919, z = 1844674407u;
+    assert(powmod(x, y, z) == 1613100340u);
+    x = 134; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 734956622u);
+    x = 151; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1738696945u);
+    x = 168; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1247580927u);
+    x = 185; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1293855176u);
+    x = 202; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1566963682u);
+    x = 219; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 181227807u);
+    x = 236; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 217988321u);
+    x = 253; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1588843243u);
+
+    x = 0; y = 7919; z = 184467u;
+    assert(powmod(x, y, z) == 0);
+    x = 123; y = 0; z = 1844674u;
+    assert(powmod(x, y, z) == 1);
+
+    immutable ubyte x1 = 117;
+    immutable uint y1 = 7919;
+    immutable uint z1 = 1844674407u;
+    auto res = powmod(x1, y1, z1);
+    assert(is(typeof(res) == uint));
+    assert(res == 9479781u);
+
+    immutable ushort x2 = 123;
+    immutable uint y2 = 203;
+    immutable ubyte z2 = 113;
+    auto res2 = powmod(x2, y2, z2);
+    assert(is(typeof(res2) == ushort));
+    assert(res2 == 42u);
+}
+
 /**
  * Calculates e$(SUPERSCRIPT x).
  *
