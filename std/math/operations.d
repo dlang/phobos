@@ -127,7 +127,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     real a = NaN(1_000_000);
     assert(isNaN(a));
@@ -212,7 +212,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     real a = NaN(1_000_000);
     assert(isNaN(a));
@@ -221,7 +221,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isIdentical, isNaN;
+    import std.math.traits : isIdentical, isNaN;
 
     enum real a = NaN(1_000_000);
     static assert(isNaN(a));
@@ -522,7 +522,8 @@ float nextDown(float x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : floatTraits, RealFormat, isIdentical;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : isIdentical;
 
     static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended ||
                floatTraits!(real).realFormat == RealFormat.ieeeDouble ||
@@ -662,7 +663,7 @@ float nextDown(float x) @safe pure nothrow @nogc
  */
 T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     if (x == y || isNaN(y))
     {
@@ -680,7 +681,7 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     float a = 1;
     assert(is(typeof(nextafter(a, a)) == float));
@@ -703,7 +704,7 @@ T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN, signbit;
+    import std.math.traits : isNaN, signbit;
 
     // CTFE
     enum float a = 1;
@@ -753,7 +754,7 @@ real fdim(real x, real y) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(fdim(2.0, 0.0) == 2.0);
     assert(fdim(-2.0, 0.0) == 0.0);
@@ -773,7 +774,7 @@ real fdim(real x, real y) @safe pure nothrow @nogc
 F fmax(F)(const F x, const F y) @safe pure nothrow @nogc
 if (__traits(isFloating, F))
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
@@ -805,7 +806,7 @@ if (__traits(isFloating, F))
 F fmin(F)(const F x, const F y) @safe pure nothrow @nogc
 if (__traits(isFloating, F))
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // Do the more predictable test first. Generates 0 branches with ldc and 1 branch with gdc.
     // See https://godbolt.org/z/erxrW9
@@ -864,7 +865,8 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
 int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
 if (isFloatingPoint!(X))
 {
-    import std.math : floatTraits, RealFormat, fabs;
+    import std.math : floatTraits, RealFormat;
+    import std.math.algebraic : fabs;
 
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
@@ -1033,7 +1035,7 @@ if (isFloatingPoint!(X))
 deprecated("approxEqual will be removed in 2.106.0. Please use isClose instead.")
 bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5)
 {
-    import std.math : fabs;
+    import std.math.algebraic : fabs;
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
     {
@@ -1287,7 +1289,7 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
                 lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
         }
 
-        import std.math : abs;
+        import std.math.algebraic : abs;
 
         auto diff = abs(lhs - rhs);
 
@@ -1594,7 +1596,7 @@ if (isFloatingPoint!T)
         // IBM Extended doubledouble does not follow the general
         // sign-exponent-significand layout, so has to be handled generically
 
-        import std.math : signbit, isNaN, getNaNPayload;
+        import std.math.traits : signbit, isNaN;
 
         const int xSign = signbit(x),
             ySign = signbit(y);
