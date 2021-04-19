@@ -168,6 +168,18 @@ float fabs(float f) @trusted pure nothrow @nogc
     assert(pfabs != null);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    float f = fabs(-2.0f);
+    assert(f == 2);
+
+    double d = fabs(-2.0);
+    assert(d == 2);
+
+    real r = fabs(-2.0L);
+    assert(r == 2);
+}
+
 /***************************************
  * Compute square root of x.
  *
@@ -215,6 +227,18 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
     enum ZX80 = sqrt(7.0f);
     enum ZX81 = sqrt(7.0);
     enum ZX82 = sqrt(7.0L);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    float f = sqrt(2.0f);
+    assert(fabs(f * f - 2.0f) < .00001);
+
+    double d = sqrt(2.0);
+    assert(fabs(d * d - 2.0) < .00001);
+
+    real r = sqrt(2.0L);
+    assert(fabs(r * r - 2.0) < .00001);
 }
 
 /***************
