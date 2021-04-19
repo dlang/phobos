@@ -2490,7 +2490,7 @@ public:
     {
         import std.exception : assertThrown;
         import std.format : format, FormatException;
-        assertThrown!FormatException(format("%a", unicode.ASCII));
+        assertThrown!FormatException(format("%z", unicode.ASCII));
     }
 
 

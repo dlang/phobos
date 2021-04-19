@@ -174,10 +174,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 
     immutable uint base =
-        f.spec == 'x' || f.spec == 'X' ? 16 :
+        f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
         f.spec == 'o' ? 8 :
         f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
+        f.spec == 's' || f.spec == 'd' || f.spec == 'u'
+        || f.spec == 'e' || f.spec == 'E' || f.spec == 'f' || f.spec == 'F'
+        || f.spec == 'g' || f.spec == 'G' ? 10 :
         0;
 
     import std.format : enforceFmt;
@@ -190,7 +192,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     ulong arg = val;
     static if (isSigned!U)
     {
-        if (f.spec == 's' || f.spec == 'd')
+        if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
         {
             if (val < 0)
             {
@@ -208,7 +210,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         digits[pos--] = '0' + arg % base;
         if (base > 10 && digits[pos + 1] > '9')
-            digits[pos + 1] += (f.spec == 'x' ? 'a' : 'A') - '0' - 10;
+            digits[pos + 1] += ((f.spec == 'x' || f.spec == 'a') ? 'a' : 'A') - '0' - 10;
         arg /= base;
     } while (arg > 0);
 
@@ -216,25 +218,132 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     size_t left = 2;
     size_t right = 2;
 
-    if (negative)
-        prefix[right++] = '-';
-    else if (f.spec == 's' || f.spec == 'd')
+    // add sign
+    if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
     {
-        if (f.flPlus)
+        if (negative)
+            prefix[right++] = '-';
+        else if (f.flPlus)
             prefix[right++] = '+';
         else if (f.flSpace)
             prefix[right++] = ' ';
     }
-    if (f.flHash && (base == 16) && obj != 0)
-    {
-        prefix[--left] = f.spec;
-        prefix[--left] = '0';
-    }
-    if (f.flHash && (base == 8) && obj != 0
-        && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
-        prefix[--left] = '0';
 
-    writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], "", f, true);
+    // not a floating point like spec
+    if (f.spec == 'x' || f.spec == 'X' || f.spec == 'b' || f.spec == 'o' || f.spec == 'u'
+        || f.spec == 'd' || f.spec == 's')
+    {
+        if (f.flHash && (base == 16) && obj != 0)
+        {
+            prefix[--left] = f.spec;
+            prefix[--left] = '0';
+        }
+        if (f.flHash && (base == 8) && obj != 0
+            && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
+            prefix[--left] = '0';
+
+        writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], "", f, true);
+        return;
+    }
+
+    FormatSpec!Char fs = f;
+    if (f.precision == f.UNSPECIFIED)
+        fs.precision = cast(typeof(fs.precision)) (digits.length - pos - 2);
+
+    // %f like output
+    if (f.spec == 'f' || f.spec == 'F'
+        || ((f.spec == 'g' || f.spec == 'G') && (fs.precision >= digits.length - pos - 2)))
+    {
+        if (f.precision == f.UNSPECIFIED)
+            fs.precision = 0;
+
+        writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], ".", "", fs,
+                     (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
+
+        return;
+    }
+
+    import std.algorithm.searching : all;
+
+    // at least one digit for %g
+    if ((f.spec == 'g' || f.spec == 'G') && fs.precision == 0)
+        fs.precision = 1;
+
+    // rounding
+    size_t digit_end = pos + fs.precision + ((f.spec == 'g' || f.spec == 'G') ? 1 : 2);
+    if (digit_end <= digits.length)
+    {
+        RoundingClass rt = RoundingClass.ZERO;
+        if (digit_end < digits.length)
+        {
+            auto tie = (f.spec == 'a' || f.spec == 'A') ? '8' : '5';
+            if (digits[digit_end] >= tie)
+            {
+                rt = RoundingClass.UPPER;
+                if (digits[digit_end] == tie && digits[digit_end + 1 .. $].all!(a => a == '0'))
+                    rt = RoundingClass.FIVE;
+            }
+            else
+            {
+                rt = RoundingClass.LOWER;
+                if (digits[digit_end .. $].all!(a => a == '0'))
+                    rt = RoundingClass.ZERO;
+            }
+        }
+
+        if (round(digits, pos + 1, digit_end, rt, negative,
+                  f.spec == 'a' ? 'f' : (f.spec == 'A' ? 'F' : '9')))
+        {
+            pos--;
+            digit_end--;
+        }
+    }
+
+    // convert to scientific notation
+    char[1] int_digit = void;
+    int_digit[0] = digits[pos + 1];
+    digits[pos + 1] = '.';
+
+    char[4] suffix = void;
+
+    if (f.spec == 'e' || f.spec == 'E' || f.spec == 'g' || f.spec == 'G')
+    {
+        suffix[0] = (f.spec == 'e' || f.spec == 'g') ? 'e' : 'E';
+        suffix[1] = '+';
+        suffix[2] = cast(char) ('0' + (digits.length - pos - 2) / 10);
+        suffix[3] = cast(char) ('0' + (digits.length - pos - 2) % 10);
+    }
+    else
+    {
+        if (right == 3)
+            prefix[0] = prefix[2];
+        prefix[1] = '0';
+        prefix[2] = f.spec == 'a' ? 'x' : 'X';
+
+        left = right == 3 ? 0 : 1;
+        right = 3;
+
+        suffix[0] = f.spec == 'a' ? 'p' : 'P';
+        suffix[1] = '+';
+        suffix[2] = cast(char) ('0' + ((digits.length - pos - 2) * 4) / 10);
+        suffix[3] = cast(char) ('0' + ((digits.length - pos - 2) * 4) % 10);
+    }
+
+    import std.algorithm.comparison : min;
+
+    // remove trailing zeros
+    if ((f.spec == 'g' || f.spec == 'G') && !f.flHash)
+    {
+        digit_end = min(digit_end, digits.length);
+        while (digit_end > pos + 1 &&
+               (digits[digit_end - 1] == '0' || digits[digit_end - 1] == '.'))
+            digit_end--;
+    }
+
+    writeAligned(w, prefix[left .. right], int_digit[0 .. $],
+                 digits[pos + 1 .. min(digit_end, $)],
+                 suffix[0 .. $], fs,
+                 (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
