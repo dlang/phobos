@@ -245,7 +245,7 @@ public:
 ///
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static void func() {
         int a = 10 * 10;
@@ -350,7 +350,7 @@ void resetIeeeFlags() @trusted nothrow @nogc
 ///
 @safe nothrow unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     pragma(inline, false) static void blockopt(ref real x) {}
     resetIeeeFlags();
@@ -854,7 +854,7 @@ private:
 ///
 @safe unittest
 {
-    import std.math : lrint;
+    import std.math.rounding : lrint;
 
     FloatingPointControl fpctrl;
 
