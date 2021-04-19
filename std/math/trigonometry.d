@@ -88,6 +88,20 @@ float cos(float x) @safe pure nothrow @nogc { return core.math.cos(x); }
     assert(pcos != null);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    import std.math : fabs;
+
+    float f = cos(-2.0f);
+    assert(fabs(f - -0.416147f) < .00001);
+
+    double d = cos(-2.0);
+    assert(fabs(d - -0.416147f) < .00001);
+
+    real r = cos(-2.0L);
+    assert(fabs(r - -0.416147f) < .00001);
+}
+
 /***********************************
  * Returns $(HTTP en.wikipedia.org/wiki/Sine, sine) of x. x is in $(HTTP en.wikipedia.org/wiki/Radian, radians).
  *
@@ -134,6 +148,20 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
 {
     real function(real) psin = &sin;
     assert(psin != null);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : fabs;
+
+    float f = sin(-2.0f);
+    assert(fabs(f - -0.909297f) < .00001);
+
+    double d = sin(-2.0);
+    assert(fabs(d - -0.909297f) < .00001);
+
+    real r = sin(-2.0L);
+    assert(fabs(r - -0.909297f) < .00001);
 }
 
 /****************************************************************************
@@ -475,6 +503,29 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
 
     import std.math : isClose, PI, sqrt;
     assert(isClose(tan(PI / 3), sqrt(3.0L), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math : fabs, isNaN;
+
+    float f = tan(-2.0f);
+    assert(fabs(f - 2.18504f) < .00001);
+
+    double d = tan(-2.0);
+    assert(fabs(d - 2.18504f) < .00001);
+
+    real r = tan(-2.0L);
+    assert(fabs(r - 2.18504f) < .00001);
+
+    // Verify correct behavior for large inputs
+    assert(!isNaN(tan(0x1p63)));
+    assert(!isNaN(tan(-0x1p63)));
+    static if (real.mant_dig >= 64)
+    {
+        assert(!isNaN(tan(0x1p300L)));
+        assert(!isNaN(tan(-0x1p300L)));
+    }
 }
 
 /***************
