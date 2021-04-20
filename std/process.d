@@ -4194,7 +4194,8 @@ else version (Posix)
             //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
             args[0] = "xdg-open".ptr;
 
-        args[1] = url.tempCString();
+        const buffer = url.tempCString(); // Retain buffer until end of scope
+        args[1] = buffer;
         args[2] = null;
 
         auto childpid = core.sys.posix.unistd.fork();
@@ -4206,7 +4207,29 @@ else version (Posix)
         }
         if (browser)
             free(cast(void*) browser);
+
+        version (StdUnittest)
+        {
+            // Verify that the test script actually suceeds
+            int status;
+            const check = waitpid(childpid, &status, 0);
+            assert(check != -1);
+            assert(status == 0);
+        }
     }
 }
 else
     static assert(0, "os not supported");
+
+version (Windows) { /* Doesn't use BROWSER */ }
+else
+@system unittest
+{
+    import std.conv : text;
+    import std.range : repeat;
+    immutable string url = text("http://", repeat('x', 249));
+
+    TestScript prog = `if [ "$1" != "` ~ url ~ `" ]; then exit 1; fi`;
+    environment["BROWSER"] = prog.path;
+    browse(url);
+}
