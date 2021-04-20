@@ -187,16 +187,23 @@ $(BOOKTABLE ,
 
 The $(I compound indicator) can be used to describe compound types
 like arrays or structs in more detail. A compound type is enclosed
-within $(B '%\(') and $(B '%\)'). It either contains a $(I format
-string) or a $(I format string) and a $(I delimiter). In the second
-case $(I format string) and $(I delimiter) are separated by $(B '%|').
-If the delimiter is not present a comma, followed by a space, is used
-as delimiter.
+within $(B '%\(') and $(B '%\)'). The enclosed sub-format string is
+applied to individual elements. The trailing portion of the
+sub-format string following the specifier for the element is
+interpreted as the delimiter, and is therefore omitted following the
+last element. The $(B '%|') specifier may be used to explicitly
+indicate the start of the delimiter, so that the preceding portion of
+the string will be included following the last element.
 
 The $(I format string) inside of the $(I compound indicator) should
-contain exactly one $(I format specifier), which specifies the way,
-the elements of the compound type will be formatted. This $(I format
-specifier) can be a $(I compound indicator) itself.
+contain exactly one $(I format specifier) (two in case of associative
+arrays), which specifies the formatting mode of the elements of the
+compound type. This $(I format specifier) can be a $(I compound
+indicator) itself.
+
+Note: Inside a $(I compound indicator), strings and characters are
+escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
+instead of `"%$(LPAREN)"`.
 
 $(SECTION4 Flags)
 
@@ -510,128 +517,105 @@ $(BOOKTABLE ,
    )
 )
 
+Copyright: Copyright The D Language Foundation 2000-2021.
 
+Macros:
+SUBREF = $(REF_ALTTEXT $2, $2, std, format, $1)$(NBSP)
+MULTIROW_CELL = <td rowspan="$1">$+</td>
+THMINWIDTH = <th scope="col" width="20%">$0</th>
 
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    The format string supports the formatting of array and nested
-    array elements via the grouping format specifiers $(B %&#40;) and
-    $(B %&#41;). Each matching pair of $(B %&#40;) and $(B %&#41;)
-    corresponds with a single array argument. The enclosed sub-format
-    string is applied to individual array elements.  The trailing
-    portion of the sub-format string following the conversion
-    specifier for the array element is interpreted as the array
-    delimiter, and is therefore omitted following the last array
-    element. The $(B %|) specifier may be used to explicitly indicate
-    the start of the delimiter, so that the preceding portion of the
-    string will be included following the last array element.
+Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+Andrei Alexandrescu), and Kenji Hara
 
-    NOTE: Inside a grouping format specifier, strings and characters are
-    escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
-    instead of `"%$(LPAREN)"`.
-
-    Example using array and nested array formatting:
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My items are %(%s %).", [1,2,3]);
-        writefln("My items are %(%s, %).", [1,2,3]);
-    }
-    -------------------------
-    The output is:
-$(CONSOLE
-My items are 1 2 3.
-My items are 1, 2, 3.
-)
-
-    The trailing end of the sub-format string following the specifier for each
-    item is interpreted as the array delimiter, and is therefore omitted
-    following the last array item. The $(B %|) delimiter specifier may be used
-    to indicate where the delimiter begins, so that the portion of the format
-    string prior to it will be retained in the last array element:
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My items are %(-%s-%|, %).", [1,2,3]);
-    }
-    -------------------------
-    which gives the output:
-$(CONSOLE
-My items are -1-, -2-, -3-.
-)
-
-    These compound format specifiers may be nested in the case of a nested
-    array argument:
-    -------------------------
-    import std.stdio;
-    void main() {
-         auto mat = [[1, 2, 3],
-                     [4, 5, 6],
-                     [7, 8, 9]];
-
-         writefln("%(%(%d %)\n%)", mat);
-         writeln();
-
-         writefln("[%(%(%d %)\n %)]", mat);
-         writeln();
-
-         writefln("[%([%(%d %)]%|\n %)]", mat);
-         writeln();
-    }
-    -------------------------
-    The output is:
-$(CONSOLE
-1 2 3
-4 5 6
-7 8 9
-
-[1 2 3
- 4 5 6
- 7 8 9]
-
-[[1 2 3]
- [4 5 6]
- [7 8 9]]
-)
-
-    As previously stated, strings and characters are escaped
-    automatically inside compound format specifiers. To avoid
-    this behavior, use `"%-$(LPAREN)"` instead of `"%$(LPAREN)"`.
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My friends are %s.", ["John", "Nancy"]);
-        writefln("My friends are %(%s, %).", ["John", "Nancy"]);
-        writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
-    }
-    -------------------------
-   which gives the output:
-$(CONSOLE
-My friends are ["John", "Nancy"].
-My friends are "John", "Nancy".
-My friends are John, Nancy.
-)
-
-   Copyright: Copyright The D Language Foundation 2000-2013.
-
-   Macros:
-   SUBREF = $(REF_ALTTEXT $2, $2, std, format, $1)$(NBSP)
-   MULTIROW_CELL = <td rowspan="$1">$+</td>
-   THMINWIDTH = <th scope="col" width="20%">$0</th>
-
-   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
-
-   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
-   Andrei Alexandrescu), and Kenji Hara
-
-   Source: $(PHOBOSSRC std/format.d)
+Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
+
+/// Simple use:
+@safe unittest
+{
+    // Easiest way is to use `%s` everywhere:
+    assert(format("I got %s %s for %s euros.", 30, "eggs", 5.27) == "I got 30 eggs for 5.27 euros.");
+
+    // Other format characters provide more control:
+    assert(format("I got %b %(%X%) for %f euros.", 30, "eggs", 5.27) == "I got 11110 65676773 for 5.270000 euros.");
+}
+
+/// Compound specifiers allow formatting arrays and other compound types:
+@safe unittest
+{
+/*
+The trailing end of the sub-format string following the specifier for
+each item is interpreted as the array delimiter, and is therefore
+omitted following the last array item:
+ */
+    assert(format("My items are %(%s %).", [1,2,3]) == "My items are 1 2 3.");
+    assert(format("My items are %(%s, %).", [1,2,3]) == "My items are 1, 2, 3.");
+
+/*
+The "%|" delimiter specifier may be used to indicate where the
+delimiter begins, so that the portion of the format string prior to
+it will be retained in the last array element:
+ */
+    assert(format("My items are %(-%s-%|, %).", [1,2,3]) == "My items are -1-, -2-, -3-.");
+
+/*
+These compound format specifiers may be nested in the case of a
+nested array argument:
+ */
+    auto mat = [[1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]];
+
+    assert(format("%(%(%d %) - %)", mat), "1 2 3 - 4 5 6 - 7 8 9");
+    assert(format("[%(%(%d %) - %)]", mat), "[1 2 3 - 4 5 6 - 7 8 9]");
+    assert(format("[%([%(%d %)]%| - %)]", mat), "[1 2 3] - [4 5 6] - [7 8 9]");
+
+/*
+Strings and characters are escaped automatically inside compound
+format specifiers. To avoid this behavior, use "%-(" instead of "%(":
+ */
+    assert(format("My friends are %s.", ["John", "Nancy"]) == `My friends are ["John", "Nancy"].`);
+    assert(format("My friends are %(%s, %).", ["John", "Nancy"]) == `My friends are "John", "Nancy".`);
+    assert(format("My friends are %-(%s, %).", ["John", "Nancy"]) == `My friends are John, Nancy.`);
+}
+
+/// Using parameters:
+@safe unittest
+{
+    // Flags can be used to influence to outcome:
+    assert(format("%g != %+#g", 3.14, 3.14) == "3.14 != +3.14000");
+
+    // Width and precision help to arrange the formatted result:
+    assert(format(">%10.2f<", 1234.56789) == ">   1234.57<");
+
+    // Numbers can be grouped:
+    assert(format("%,4d", int.max) == "21,4748,3647");
+
+    // It's possible to specify the position of an argument:
+    assert(format("%3$s %1$s", 3, 17, 5) == "5 3");
+}
+
+/// Providing parameters as arguments:
+@safe unittest
+{
+    // Width as argument
+    assert(format(">%*s<", 10, "abc") == ">       abc<");
+
+    // Precision as argument
+    assert(format(">%.*f<", 5, 123.2) == ">123.20000<");
+
+    // Grouping as argument
+    assert(format("%,*d", 1, int.max) == "2,1,4,7,4,8,3,6,4,7");
+
+    // Grouping separator as argument
+    assert(format("%,3?d", '_', int.max) == "2_147_483_647");
+
+    // All at once
+    assert(format("%*.*,*?d", 20, 15, 6, '/', int.max) == "   000/002147/483647");
+}
 
 @safe unittest
 {
