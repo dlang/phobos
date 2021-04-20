@@ -140,39 +140,6 @@ $(TR $(TDNW $(SUBMODULE Hardware Control, hardware)) $(TD
  * these functions are pure nothrow.
  *
  * Macros:
- *      TABLE_SV = <table border="1" cellpadding="4" cellspacing="0">
- *              <caption>Special Values</caption>
- *              $0</table>
- *      SVH = $(TR $(TH $1) $(TH $2))
- *      SV  = $(TR $(TD $1) $(TD $2))
- *      TH3 = $(TR $(TH $1) $(TH $2) $(TH $3))
- *      TD3 = $(TR $(TD $1) $(TD $2) $(TD $3))
- *      TABLE_DOMRG = <table border="1" cellpadding="4" cellspacing="0">
- *              $(SVH Domain X, Range Y)
-                $(SV $1, $2)
- *              </table>
- *      DOMAIN=$1
- *      RANGE=$1
-
- *      NAN = $(RED NAN)
- *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
- *      GAMMA = &#915;
- *      THETA = &theta;
- *      INTEGRAL = &#8747;
- *      INTEGRATE = $(BIG &#8747;<sub>$(SMALL $1)</sub><sup>$2</sup>)
- *      POWER = $1<sup>$2</sup>
- *      SUB = $1<sub>$2</sub>
- *      BIGSUM = $(BIG &Sigma; <sup>$2</sup><sub>$(SMALL $1)</sub>)
- *      CHOOSE = $(BIG &#40;) <sup>$(SMALL $1)</sup><sub>$(SMALL $2)</sub> $(BIG &#41;)
- *      PLUSMN = &plusmn;
- *      INFIN = &infin;
- *      PLUSMNINF = &plusmn;&infin;
- *      PI = &pi;
- *      LT = &lt;
- *      GT = &gt;
- *      SQRT = &radic;
- *      HALF = &frac12;
- *
  *      SUBMODULE = $(MREF_ALTTEXT $1, std, math, $2)
  *      SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, math, $1)$(NBSP)
  *
@@ -201,60 +168,11 @@ public import std.math.rounding;
 public import std.math.traits;
 public import std.math.trigonometry;
 
-static import core.math;
-static import core.stdc.math;
-static import core.stdc.fenv;
-import std.traits :  CommonType, isFloatingPoint, isIntegral, isNumeric,
-    isSigned, isUnsigned, Largest, Unqual;
-
 // @@@DEPRECATED_2.102@@@
 // Note: Exposed accidentally, should be deprecated / removed
 deprecated("std.meta.AliasSeq was unintentionally available from std.math "
            ~ "and will be removed after 2.102. Please import std.meta instead")
 public import std.meta : AliasSeq;
-
-version (DigitalMars)
-{
-    version = INLINE_YL2X;        // x87 has opcodes for these
-}
-
-version (X86)       version = X86_Any;
-version (X86_64)    version = X86_Any;
-version (PPC)       version = PPC_Any;
-version (PPC64)     version = PPC_Any;
-version (MIPS32)    version = MIPS_Any;
-version (MIPS64)    version = MIPS_Any;
-version (AArch64)   version = ARM_Any;
-version (ARM)       version = ARM_Any;
-version (S390)      version = IBMZ_Any;
-version (SPARC)     version = SPARC_Any;
-version (SPARC64)   version = SPARC_Any;
-version (SystemZ)   version = IBMZ_Any;
-version (RISCV32)   version = RISCV_Any;
-version (RISCV64)   version = RISCV_Any;
-
-version (D_InlineAsm_X86)    version = InlineAsm_X86_Any;
-version (D_InlineAsm_X86_64) version = InlineAsm_X86_Any;
-
-version (InlineAsm_X86_Any) version = InlineAsm_X87;
-version (InlineAsm_X87)
-{
-    static assert(real.mant_dig == 64);
-    version (CRuntime_Microsoft) version = InlineAsm_X87_MSVC;
-}
-
-version (X86_64) version = StaticallyHaveSSE;
-version (X86) version (OSX) version = StaticallyHaveSSE;
-
-version (StaticallyHaveSSE)
-{
-    private enum bool haveSSE = true;
-}
-else version (X86)
-{
-    static import core.cpuid;
-    private alias haveSSE = core.cpuid.sse;
-}
 
 package(std): // Not public yet
 /* Return the value that lies halfway between x and y on the IEEE number line.
@@ -426,6 +344,8 @@ enum RealFormat
 // They supplement the built-in floating point properties.
 template floatTraits(T)
 {
+    import std.traits : Unqual;
+
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
     // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
     // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
