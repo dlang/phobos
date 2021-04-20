@@ -125,7 +125,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 ///
 @safe unittest
 {
-    import std.math : sin, cos;
+    import std.math.trigonometry : sin, cos;
 
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -863,7 +863,7 @@ public:
 
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     alias cf = CustomFloat!(5, 2);
 
@@ -988,7 +988,7 @@ if (isFloatingPoint!F)
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // Average numbers in an array
     double avg(in double[] a)
@@ -1033,7 +1033,8 @@ template secantMethod(alias fun)
 ///
 @safe unittest
 {
-    import std.math : isClose, cos;
+    import std.math.operations : isClose;
+    import std.math.trigonometry : cos;
 
     float f(float x)
     {
@@ -1876,7 +1877,7 @@ do
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.isClose(4.0));
@@ -2241,7 +2242,7 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 ///
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
@@ -2340,7 +2341,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
@@ -2424,7 +2425,7 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
@@ -2614,7 +2615,8 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 ///
 @system unittest
 {
-    import std.math : isClose, sqrt;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
 
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];

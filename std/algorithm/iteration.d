@@ -1343,7 +1343,7 @@ if (is(typeof(unaryFun!predicate)))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range;
 
     int[] arr = [ 1, 2, 3, 4, 5 ];
@@ -2819,7 +2819,7 @@ nothrow pure @system unittest
 nothrow @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     struct SomeRange
     {
@@ -2866,7 +2866,7 @@ nothrow @system unittest
 nothrow pure @system unittest
 {
     // Grouping by maximum adjacent difference:
-    import std.math : abs;
+    import std.math.algebraic : abs;
     import std.algorithm.comparison : equal;
     auto r3 = [1, 3, 2, 5, 4, 9, 10].splitWhen!((a, b) => abs(a-b) >= 3);
     assert(r3.equal!equal([
@@ -4020,7 +4020,7 @@ remarkable power and flexibility.
 @safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range;
 
     int[] arr = [ 1, 2, 3, 4, 5 ];
@@ -4075,7 +4075,8 @@ The number of seeds must be correspondingly increased.
 @safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.math : isClose, sqrt;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
     import std.typecons : tuple, Tuple;
 
     double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
@@ -4585,7 +4586,7 @@ if (fun.length >= 1)
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range : chain;
 
     int[] arr = [1, 2, 3, 4, 5];
@@ -4641,7 +4642,7 @@ The number of seeds must be correspondingly increased.
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : map;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     double[] a = [3.0, 4, 7, 11, 3, 2, 5];
@@ -4696,7 +4697,7 @@ The number of seeds must be correspondingly increased.
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     const float a = 0.0;
@@ -4718,7 +4719,7 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     enum foo = "a + 0.5 * b";
@@ -6717,7 +6718,7 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     assert(sum([1F, 2, 3, 4]) == 10);
 
     //Force pair-wise floating point sumation on large integers
-    import std.math : isClose;
+    import std.math.operations : isClose;
     assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
                .isClose((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
@@ -6810,7 +6811,7 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
-    import std.math : isPowerOf2;
+    import std.math.traits : isPowerOf2;
     static assert(isPowerOf2(N), "N must be a power of 2");
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
@@ -6997,7 +6998,8 @@ if (isInputRange!R &&
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isClose, isNaN;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
 
     static immutable arr1 = [1, 2, 3];
     static immutable arr2 = [1.5, 2.5, 12.5];
@@ -7011,7 +7013,7 @@ if (isInputRange!R &&
 @safe pure nothrow unittest
 {
     import std.internal.test.dummyrange : ReferenceInputRange;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto r1 = new ReferenceInputRange!int([1, 2, 3]);
     assert(r1.mean.isClose(2));
@@ -7025,7 +7027,7 @@ if (isInputRange!R &&
 {
     import std.bigint : BigInt;
     import std.internal.test.dummyrange : ReferenceInputRange;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")];
     auto bigint_arr2 = new ReferenceInputRange!BigInt([

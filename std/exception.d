@@ -956,7 +956,7 @@ T assumeWontThrow(T)(lazy T expr,
 ///
 @safe unittest
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     // This function may throw.
     int squareRoot(int x)

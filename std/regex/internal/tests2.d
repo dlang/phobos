@@ -555,7 +555,7 @@ version (none) // TODO: revist once we have proper benchmark framework
 @safe unittest
 {
     import std.datetime.stopwatch : StopWatch, AutoStart;
-    import std.math : abs;
+    import std.math.algebraic : abs;
     import std.conv : to;
     enum re1 = ctRegex!`[0-9][0-9]`;
     immutable static re2 = ctRegex!`[0-9][0-9]`;

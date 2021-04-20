@@ -53,7 +53,7 @@ else version (WatchOS)
 @system unittest
 {
     import std.algorithm.iteration : map;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.parallelism : taskPool;
     import std.range : iota;
 
@@ -4150,7 +4150,9 @@ version (StdUnittest)
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
-    import std.math : isClose, sqrt, log, abs;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt, abs;
+    import std.math.exponential : log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
     import std.stdio;
@@ -4648,7 +4650,9 @@ version (parallelismStressTest)
         import std.stdio : stderr;
         import std.range : iota;
         import std.algorithm.iteration : filter, reduce;
-        import std.math : sqrt, isClose, isNaN;
+        import std.math.algebraic : sqrt;
+        import std.math.operations : isClose;
+        import std.math.traits : isNaN;
         import std.conv : text;
 
         foreach (attempt; 0 .. 10)

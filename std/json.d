@@ -1650,7 +1650,7 @@ if (isOutputRange!(Out,char))
                 break;
 
             case JSONType.float_:
-                import std.math : isNaN, isInfinity;
+                import std.math.traits : isNaN, isInfinity;
 
                 auto val = value.store.floating;
 
@@ -1744,7 +1744,7 @@ if (isOutputRange!(Out,char))
     // Floating points numbers are rounded to the nearest integer and thus get
     // incorrectly parsed
 
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     string s = "{\"rating\": 3.0 }";
     JSONValue j = parseJSON(s);
@@ -1775,7 +1775,7 @@ if (isOutputRange!(Out,char))
     // Result from toString is not checked here, because this
     // might differ (%e-like or %f-like output) depending
     // on OS and compiler optimization.
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // test positive extreme values
     JSONValue j;
@@ -2113,7 +2113,7 @@ EOF";
 @safe unittest
 {
     import std.exception : assertThrown;
-    import std.math : isNaN, isInfinity;
+    import std.math.traits : isNaN, isInfinity;
 
     // expected representations of NaN and Inf
     enum {
@@ -2187,7 +2187,7 @@ pure nothrow @safe unittest
 
     static bool test(const double num0)
     {
-        import std.math : feqrel;
+        import std.math.operations : feqrel;
         const json0 = JSONValue(num0);
         const num1 = to!double(toJSON(json0));
         static if (realInDoublePrecision)

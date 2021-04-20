@@ -20,7 +20,7 @@ module std.sumtype;
 version (D_BetterC) {} else
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     struct Fahrenheit { double degrees; }
     struct Celsius { double degrees; }
@@ -87,7 +87,10 @@ version (D_BetterC) {} else
 version (D_BetterC) {} else
 @safe unittest
 {
-    import std.math : isClose, cos, PI, sqrt;
+    import std.math.operations : isClose;
+    import std.math.trigonometry : cos;
+    import std.math.constants : PI;
+    import std.math.algebraic : sqrt;
 
     struct Rectangular { double x, y; }
     struct Polar { double r, theta; }
@@ -2096,7 +2099,7 @@ version (unittest)
     }
     else
     {
-        import std.math : isClose;
+        import std.math.operations : isClose;
     }
 }
 

@@ -737,7 +737,7 @@ public:
 
     @safe unittest
     {
-        import std.math : nextDown, nextUp;
+        import std.math.operations : nextDown, nextUp;
 
         const x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
         BigInt x1 = x + 1;
@@ -1077,7 +1077,8 @@ public:
     int opCmp(T)(const T y) nothrow @nogc @safe const if (isFloatingPoint!T)
     {
         import core.bitop : bsr;
-        import std.math : cmp, isFinite;
+        import std.math.operations : cmp;
+        import std.math.traits : isFinite;
 
         const asFloat = toFloat!(T, "truncate");
         if (asFloat != y)
@@ -1926,7 +1927,7 @@ unittest
 
 @safe unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
     auto r = abs(BigInt(-1000)); // https://issues.dlang.org/show_bug.cgi?id=6486
     assert(r == 1000);
 
