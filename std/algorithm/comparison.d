@@ -985,7 +985,7 @@ template equal(alias pred = "a == b")
 @safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     int[4] a = [ 1, 2, 4, 3 ];
     assert(!equal(a[], a[1..$]));
@@ -1023,7 +1023,7 @@ range of range (of range...) comparisons.
     import std.algorithm.iteration : map;
     import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8

@@ -818,7 +818,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -850,7 +850,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -4451,7 +4451,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 ///
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static abstract class C
     {
@@ -4474,7 +4474,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // return default
     {
@@ -7142,7 +7142,7 @@ mixin template Proxy(alias a)
  */
 @safe unittest
 {
-    import std.math;
+    import std.math.traits : isInfinity;
 
     float f = 1.0;
     assert(!f.isInfinity);

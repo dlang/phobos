@@ -1916,7 +1916,7 @@ struct ProperCompare
     assert(opCmpProper(42, 42.0) == 0);
     assert(opCmpProper(41, 42.0) < 0);
     assert(opCmpProper(42, 41.0) > 0);
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
     assert(isNaN(opCmpProper(41, double.init)));
     assert(opCmpProper(42u, 42) == 0);
     assert(opCmpProper(42, 42u) == 0);

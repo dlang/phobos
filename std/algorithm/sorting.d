@@ -1990,7 +1990,8 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
 
     import std.algorithm.comparison : equal;
-    import std.math : cmp, isIdentical;
+    import std.math.operations : cmp;
+    import std.math.traits : isIdentical;
 
     sort!((a, b) => cmp(a, b) < 0)(numbers);
 
@@ -4779,7 +4780,7 @@ shapes. Here's a non-trivial example:
 */
 @safe unittest
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio

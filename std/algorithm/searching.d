@@ -1424,7 +1424,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert([[0, 4], [1, 2]].extremum!("a[1]", "a > b") == [0, 4]);
 
     // use a custom comparator
-    import std.math : cmp;
+    import std.math.operations : cmp;
     assert([-2., 0, 5].extremum!cmp == 5.0);
     assert([-2., 0, 2].extremum!`cmp(a, b) < 0` == -2.0);
 

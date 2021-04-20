@@ -6068,7 +6068,9 @@ pure @safe nothrow @nogc unittest
 /// Fibonacci numbers, using function in explicit form:
 @safe nothrow @nogc unittest
 {
-    import std.math : pow, round, sqrt;
+    import std.math.exponential : pow;
+    import std.math.rounding : round;
+    import std.math.algebraic : sqrt;
     static ulong computeFib(S)(S state, size_t n)
     {
         // Binet's formula
@@ -6500,7 +6502,7 @@ do
 pure @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
@@ -6562,7 +6564,7 @@ pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
-    import std.math : isClose, nextUp, nextDown;
+    import std.math.operations : isClose, nextUp, nextDown;
     import std.meta : AliasSeq;
 
     static assert(is(ElementType!(typeof(iota(0f))) == float));

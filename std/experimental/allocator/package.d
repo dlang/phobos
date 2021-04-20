@@ -1276,7 +1276,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         A* b = alloc.make!A(42);
         assert(b.x == 42);
         assert(b.y is null);
-        import std.math : isNaN;
+        import std.math.traits : isNaN;
         assert(b.z.isNaN);
 
         b = alloc.make!A(43, "44", 45);

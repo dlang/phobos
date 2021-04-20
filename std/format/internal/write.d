@@ -184,7 +184,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(base > 0,
         "incompatible format character for integral argument: %" ~ f.spec);
 
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     bool negative = false;
     ulong arg = val;
@@ -398,7 +398,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     import std.algorithm.searching : find;
     import std.ascii : isUpper;
     import std.format : enforceFmt;
-    import std.math : isInfinity, isNaN, signbit;
+    import std.math.traits : isInfinity, isNaN, signbit;
     import std.range.primitives : put;
     import std.string : indexOf, indexOfAny;
 
@@ -467,7 +467,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
     {
         import std.format.internal.floats : RoundingMode, printFloat;
-        import std.math; // cannot be selective, because FloatingPointControl might not be defined
+        import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
         auto mode = RoundingMode.toNearestTiesToEven;
 
@@ -747,7 +747,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
-    import std.math; // cannot be selective, because FloatingPointControl might not be defined
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
     // std.math's FloatingPointControl isn't available on all target platforms
     static if (is(FloatingPointControl))
@@ -819,7 +819,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 // https://issues.dlang.org/show_bug.cgi?id=20396
 @safe unittest
 {
-    import std.math : nextUp;
+    import std.math.operations : nextUp;
 
     assert(format!"%a"(nextUp(0.0f)) == "0x0.000002p-126");
     assert(format!"%a"(nextUp(0.0)) == "0x0.0000000000001p-1022");
@@ -835,7 +835,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
-    import std.math; // cannot be selective, because FloatingPointControl might not be defined
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
     // std.math's FloatingPointControl isn't available on all target platforms
     static if (is(FloatingPointControl))

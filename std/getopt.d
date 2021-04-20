@@ -1185,7 +1185,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 @safe unittest
 {
     import std.conv;
-    import std.math;
+    import std.math.operations : isClose;
 
     uint paranoid = 2;
     string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
