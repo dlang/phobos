@@ -1628,7 +1628,8 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
 {
     import core.exception : AssertError;
     import std.array : appender;
-    import std.traits : isAssociativeArray;
+    import std.math.operations : isClose;
+    import std.traits : isAssociativeArray, FloatingPointTypeOf;
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -1662,7 +1663,10 @@ private void formatReflectTest(T)(ref T val, string fmt, string formatted, strin
             return;
         }
 
-    enforce!AssertError(val == val2, input, fn, ln);
+    static if (is(FloatingPointTypeOf!T))
+        enforce!AssertError(isClose(val, val2), input, fn, ln);
+    else
+        enforce!AssertError(val == val2, input, fn, ln);
 }
 
 version (StdUnittest)
@@ -1670,7 +1674,8 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
 {
     import core.exception : AssertError;
     import std.array : appender;
-    import std.traits : isAssociativeArray;
+    import std.math.operations : isClose;
+    import std.traits : isAssociativeArray, FloatingPointTypeOf;
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -1709,7 +1714,10 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
             return;
         }
 
-    enforce!AssertError(val == val2, input, fn, ln);
+    static if (is(FloatingPointTypeOf!T))
+        enforce!AssertError(isClose(val, val2), input, fn, ln);
+    else
+        enforce!AssertError(val == val2, input, fn, ln);
 }
 
 @system unittest
@@ -1796,7 +1804,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
     {
         booleanTest();
         integerTest();
-        if (!__ctfe) floatingTest();    // snprintf
+        floatingTest();
         charTest();
         strTest();
         daTest();
@@ -1805,4 +1813,3 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
         return true;
     });
 }
-
