@@ -1623,16 +1623,6 @@ if (isSomeString!(typeof(fmt)))
     assert(u == GC.stats().usedSize);
 }
 
-/*
- * The .ptr is unsafe because it could be dereferenced and the length of the array may be 0.
- * Returns:
- *      the difference between the starts of the arrays
- */
-package ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2) @trusted pure nothrow @nogc
-{
-    return array1.ptr - array2.ptr;
-}
-
 version (StdUnittest)
 private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
