@@ -596,34 +596,6 @@ if (is(Unqual!Char == Char))
         return w.data;
     }
 
-    private const(Char)[] headUpToNextSpec()
-    {
-        import std.array : appender;
-
-        auto w = appender!(typeof(return))();
-        auto tr = trailing;
-
-        while (tr.length)
-        {
-            if (tr[0] == '%')
-            {
-                if (tr.length > 1 && tr[1] == '%')
-                {
-                    tr = tr[2 .. $];
-                    w.put('%');
-                }
-                else
-                    break;
-            }
-            else
-            {
-                w.put(tr.front);
-                tr.popFront();
-            }
-        }
-        return w.data;
-    }
-
     /**
        Provides a string representation.
 
