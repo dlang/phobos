@@ -1626,93 +1626,26 @@ if (isSomeString!(typeof(fmt)))
 version (StdUnittest)
 private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.math.operations : isClose;
-    import std.traits : isAssociativeArray, FloatingPointTypeOf;
-
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-
-    auto input = w.data;
-    enforce!AssertError(input == formatted, input, fn, ln);
-
-    T val2;
-    formattedRead(input, fmt, &val2);
-
-    static if (isAssociativeArray!T)
-        if (__ctfe)
-        {
-            alias aa1 = val;
-            alias aa2 = val2;
-            assert(aa1 == aa2);
-
-            assert(aa1.length == aa2.length);
-
-            assert(aa1.keys == aa2.keys);
-
-            assert(aa1.values == aa2.values);
-            assert(aa1.values.length == aa2.values.length);
-            foreach (i; 0 .. aa1.values.length)
-                assert(aa1.values[i] == aa2.values[i]);
-
-            foreach (i, key; aa1.keys)
-                assert(aa1.values[i] == aa1[key]);
-            foreach (i, key; aa2.keys)
-                assert(aa2.values[i] == aa2[key]);
-            return;
-        }
-
-    static if (is(FloatingPointTypeOf!T))
-        enforce!AssertError(isClose(val, val2), input, fn, ln);
-    else
-        enforce!AssertError(val == val2, input, fn, ln);
+    formatReflectTest(val, fmt, [formatted], fn, ln);
 }
 
 version (StdUnittest)
 private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
     import core.exception : AssertError;
+    import std.algorithm.searching : canFind;
     import std.array : appender;
     import std.math.operations : isClose;
-    import std.traits : isAssociativeArray, FloatingPointTypeOf;
+    import std.traits : FloatingPointTypeOf;
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
     auto input = w.data;
-
-    foreach (cur; formatted)
-    {
-        if (input == cur) return;
-    }
-    enforce!AssertError(false, input, fn, ln);
+    enforce!AssertError(formatted.canFind(input), input, fn, ln);
 
     T val2;
-    formattedRead(input, fmt, &val2);
-
-    static if (isAssociativeArray!T)
-        if (__ctfe)
-        {
-            alias aa1 = val;
-            alias aa2 = val2;
-            assert(aa1 == aa2);
-
-            assert(aa1.length == aa2.length);
-
-            assert(aa1.keys == aa2.keys);
-
-            assert(aa1.values == aa2.values);
-            assert(aa1.values.length == aa2.values.length);
-            foreach (i; 0 .. aa1.values.length)
-                assert(aa1.values[i] == aa2.values[i]);
-
-            foreach (i, key; aa1.keys)
-                assert(aa1.values[i] == aa1[key]);
-            foreach (i, key; aa2.keys)
-                assert(aa2.values[i] == aa2[key]);
-            return;
-        }
+    formattedRead(input, fmt, val2);
 
     static if (is(FloatingPointTypeOf!T))
         enforce!AssertError(isClose(val, val2), input, fn, ln);
@@ -1810,6 +1743,5 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
         daTest();
         saTest();
         aaTest();
-        return true;
     });
 }
