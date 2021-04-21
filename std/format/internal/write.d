@@ -3459,38 +3459,20 @@ private long getWidth(T)(T s)
 version (StdUnittest)
 private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    import std.exception : enforce;
-    import std.format.write : formatValue;
-
-    FormatSpec!char f;
-    auto w = appender!string();
-    formatValue(w, val, f);
-    enforce!AssertError(w.data == expected,
-        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+    formatTest(val, [expected], ln, fn);
 }
 
 version (StdUnittest)
 private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    import std.exception : enforce;
-    import std.format.write : formattedWrite;
-
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-    enforce!AssertError(w.data == expected,
-        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+    formatTest(fmt, val, [expected], ln, fn);
 }
 
 version (StdUnittest)
 private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
+    import std.algorithm.searching : canFind;
     import std.array : appender;
     import std.conv : text;
     import std.exception : enforce;
@@ -3499,11 +3481,7 @@ private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, strin
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
-    foreach (cur; expected)
-    {
-        if (w.data == cur) return;
-    }
-    enforce!AssertError(false,
+    enforce!AssertError(expected.canFind(w.data),
         text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
@@ -3511,6 +3489,7 @@ version (StdUnittest)
 private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
+    import std.algorithm.searching : canFind;
     import std.array : appender;
     import std.conv : text;
     import std.exception : enforce;
@@ -3518,11 +3497,6 @@ private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __L
 
     auto w = appender!string();
     formattedWrite(w, fmt, val);
-    foreach (cur; expected)
-    {
-        if (w.data == cur) return;
-    }
-    enforce!AssertError(false,
+    enforce!AssertError(expected.canFind(w.data),
         text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
-
