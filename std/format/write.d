@@ -696,6 +696,15 @@ if (isSomeString!(typeof(fmt)))
 
 @safe pure unittest
 {
+    import std.array : appender;
+
+    auto stream = appender!string();
+    formattedWrite(stream, "%s", 1.1);
+    assert(stream.data == "1.1", stream.data);
+}
+
+@safe pure unittest
+{
     import std.array;
 
     auto w = appender!string();
@@ -709,6 +718,485 @@ if (isSomeString!(typeof(fmt)))
     auto w = buf[];
     formattedWrite(w, "%s %d", "@safe/pure", 42);
     assert(buf[0 .. $ - w.length] == "@safe/pure 42");
+}
+
+@safe pure unittest
+{
+    import std.algorithm.iteration : map;
+    import std.array : appender;
+
+    auto stream = appender!string();
+    formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
+    assert(stream.data == "[4, 9, 25]", stream.data);
+
+    // Test shared data.
+    stream = appender!string();
+    shared int s = 6;
+    formattedWrite(stream, "%s", s);
+    assert(stream.data == "6");
+}
+
+@safe pure unittest
+{
+    // testing positional parameters
+    import std.array : appender;
+    import std.exception : collectExceptionMsg;
+    import std.format : FormatException;
+
+    auto w = appender!(char[])();
+    formattedWrite(w,
+            "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
+            42, 0);
+    assert(w.data == "Numbers 0 and 42 are reversed and 420 repeated",
+            w.data);
+    assert(collectExceptionMsg!FormatException(formattedWrite(w, "%1$s, %3$s", 1, 2))
+        == "Positional specifier %3$s index exceeds 2");
+
+    w.clear();
+    formattedWrite(w, "asd%s", 23);
+    assert(w.data == "asd23", w.data);
+    w.clear();
+    formattedWrite(w, "%s%s", 23, 45);
+    assert(w.data == "2345", w.data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=3479
+@safe unittest
+{
+    import std.array : appender;
+
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%2$.*1$d", 12, 10);
+    assert(stream.data == "000000000010", stream.data);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6893
+@safe unittest
+{
+    import std.array : appender;
+
+    enum E : ulong { A, B, C }
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%s", E.C);
+    assert(stream.data == "C");
+}
+
+@safe pure unittest
+{
+    import std.array : appender;
+
+    auto stream = appender!string();
+    formattedWrite(stream, "%u", 42);
+    assert(stream.data == "42", stream.data);
+}
+
+@safe pure unittest
+{
+    // testing raw writes
+    import std.array : appender;
+
+    auto w = appender!(char[])();
+    uint a = 0x02030405;
+    formattedWrite(w, "%+r", a);
+    assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
+        && w.data[2] == 4 && w.data[3] == 5);
+
+    w.clear();
+    formattedWrite(w, "%-r", a);
+    assert(w.data.length == 4 && w.data[0] == 5 && w.data[1] == 4
+        && w.data[2] == 3 && w.data[3] == 2);
+}
+
+@safe unittest
+{
+    import std.array : appender;
+    import std.conv : text, octal;
+
+    auto stream = appender!(char[])();
+
+    formattedWrite(stream, "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
+    assert(stream.data == "hello world! true 57 ", stream.data);
+    stream.clear();
+
+    formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
+    assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", stream.data);
+    stream.clear();
+
+    formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
+    assert(stream.data == "1234af AFAFAFAF");
+    stream.clear();
+
+    formattedWrite(stream, "%b %o", 0x1234AF, 0xAFAFAFAF);
+    assert(stream.data == "100100011010010101111 25753727657");
+    stream.clear();
+
+    formattedWrite(stream, "%d %s", 0x1234AF, 0xAFAFAFAF);
+    assert(stream.data == "1193135 2947526575");
+    stream.clear();
+
+    formattedWrite(stream, "%a %A", 1.32, 6.78f);
+    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    stream.clear();
+
+    formattedWrite(stream, "%#06.*f", 2, 12.345);
+    assert(stream.data == "012.35");
+    stream.clear();
+
+    formattedWrite(stream, "%#0*.*f", 6, 2, 12.345);
+    assert(stream.data == "012.35");
+    stream.clear();
+
+    const real constreal = 1;
+    formattedWrite(stream, "%g",constreal);
+    assert(stream.data == "1");
+    stream.clear();
+
+    formattedWrite(stream, "%7.4g:", 12.678);
+    assert(stream.data == "  12.68:");
+    stream.clear();
+
+    formattedWrite(stream, "%7.4g:", 12.678L);
+    assert(stream.data == "  12.68:");
+    stream.clear();
+
+    formattedWrite(stream, "%04f|%05d|%#05x|%#5x", -4.0, -10, 1, 1);
+    assert(stream.data == "-4.000000|-0010|0x001|  0x1", stream.data);
+    stream.clear();
+
+    int i;
+    string s;
+
+    i = -10;
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
+    assert(stream.data == "-10|-10|-10|-10|-10.0000");
+    stream.clear();
+
+    i = -5;
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
+    assert(stream.data == "-5| -5|-05|-5|-5.0000");
+    stream.clear();
+
+    i = 0;
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
+    assert(stream.data == "0|  0|000|0|0.0000");
+    stream.clear();
+
+    i = 5;
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
+    assert(stream.data == "5|  5|005|5|5.0000");
+    stream.clear();
+
+    i = 10;
+    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
+    assert(stream.data == "10| 10|010|10|10.0000");
+    stream.clear();
+
+    formattedWrite(stream, "%.0d", 0);
+    assert(stream.data == "0");
+    stream.clear();
+
+    formattedWrite(stream, "%.g", .34);
+    assert(stream.data == "0.3");
+    stream.clear();
+
+    stream.clear();
+    formattedWrite(stream, "%.0g", .34);
+    assert(stream.data == "0.3");
+
+    stream.clear();
+    formattedWrite(stream, "%.2g", .34);
+    assert(stream.data == "0.34");
+
+    stream.clear();
+    formattedWrite(stream, "%0.0008f", 1e-08);
+    assert(stream.data == "0.00000001");
+
+    stream.clear();
+    formattedWrite(stream, "%0.0008f", 1e-05);
+    assert(stream.data == "0.00001000");
+
+    s = "helloworld";
+    string r;
+    stream.clear();
+    formattedWrite(stream, "%.2s", s[0 .. 5]);
+    assert(stream.data == "he");
+    stream.clear();
+    formattedWrite(stream, "%.20s", s[0 .. 5]);
+    assert(stream.data == "hello");
+    stream.clear();
+    formattedWrite(stream, "%8s", s[0 .. 5]);
+    assert(stream.data == "   hello");
+
+    byte[] arrbyte = new byte[4];
+    arrbyte[0] = 100;
+    arrbyte[1] = -99;
+    arrbyte[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrbyte);
+    assert(stream.data == "[100, -99, 0, 0]", stream.data);
+
+    ubyte[] arrubyte = new ubyte[4];
+    arrubyte[0] = 100;
+    arrubyte[1] = 200;
+    arrubyte[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrubyte);
+    assert(stream.data == "[100, 200, 0, 0]", stream.data);
+
+    short[] arrshort = new short[4];
+    arrshort[0] = 100;
+    arrshort[1] = -999;
+    arrshort[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrshort);
+    assert(stream.data == "[100, -999, 0, 0]");
+    stream.clear();
+    formattedWrite(stream, "%s", arrshort);
+    assert(stream.data == "[100, -999, 0, 0]");
+
+    ushort[] arrushort = new ushort[4];
+    arrushort[0] = 100;
+    arrushort[1] = 20_000;
+    arrushort[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrushort);
+    assert(stream.data == "[100, 20000, 0, 0]");
+
+    int[] arrint = new int[4];
+    arrint[0] = 100;
+    arrint[1] = -999;
+    arrint[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrint);
+    assert(stream.data == "[100, -999, 0, 0]");
+    stream.clear();
+    formattedWrite(stream, "%s", arrint);
+    assert(stream.data == "[100, -999, 0, 0]");
+
+    long[] arrlong = new long[4];
+    arrlong[0] = 100;
+    arrlong[1] = -999;
+    arrlong[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrlong);
+    assert(stream.data == "[100, -999, 0, 0]");
+    stream.clear();
+    formattedWrite(stream, "%s",arrlong);
+    assert(stream.data == "[100, -999, 0, 0]");
+
+    ulong[] arrulong = new ulong[4];
+    arrulong[0] = 100;
+    arrulong[1] = 999;
+    arrulong[3] = 0;
+    stream.clear();
+    formattedWrite(stream, "%s", arrulong);
+    assert(stream.data == "[100, 999, 0, 0]");
+
+    string[] arr2 = new string[4];
+    arr2[0] = "hello";
+    arr2[1] = "world";
+    arr2[3] = "foo";
+    stream.clear();
+    formattedWrite(stream, "%s", arr2);
+    assert(stream.data == `["hello", "world", "", "foo"]`, stream.data);
+
+    stream.clear();
+    formattedWrite(stream, "%.8d", 7);
+    assert(stream.data == "00000007");
+
+    stream.clear();
+    formattedWrite(stream, "%.8x", 10);
+    assert(stream.data == "0000000a");
+
+    stream.clear();
+    formattedWrite(stream, "%-3d", 7);
+    assert(stream.data == "7  ");
+
+    stream.clear();
+    formattedWrite(stream, "%*d", -3, 7);
+    assert(stream.data == "7  ");
+
+    stream.clear();
+    formattedWrite(stream, "%.*d", -3, 7);
+    assert(stream.data == "7");
+
+    stream.clear();
+    formattedWrite(stream, "%s", "abc"c);
+    assert(stream.data == "abc");
+    stream.clear();
+    formattedWrite(stream, "%s", "def"w);
+    assert(stream.data == "def", text(stream.data.length));
+    stream.clear();
+    formattedWrite(stream, "%s", "ghi"d);
+    assert(stream.data == "ghi");
+
+    @trusted void* deadBeef() { return cast(void*) 0xDEADBEEF; }
+    stream.clear();
+    formattedWrite(stream, "%s", deadBeef());
+    assert(stream.data == "DEADBEEF", stream.data);
+
+    stream.clear();
+    formattedWrite(stream, "%#x", 0xabcd);
+    assert(stream.data == "0xabcd");
+    stream.clear();
+    formattedWrite(stream, "%#X", 0xABCD);
+    assert(stream.data == "0XABCD");
+
+    stream.clear();
+    formattedWrite(stream, "%#o", octal!12345);
+    assert(stream.data == "012345");
+    stream.clear();
+    formattedWrite(stream, "%o", 9);
+    assert(stream.data == "11");
+
+    stream.clear();
+    formattedWrite(stream, "%+d", 123);
+    assert(stream.data == "+123");
+    stream.clear();
+    formattedWrite(stream, "%+d", -123);
+    assert(stream.data == "-123");
+    stream.clear();
+    formattedWrite(stream, "% d", 123);
+    assert(stream.data == " 123");
+    stream.clear();
+    formattedWrite(stream, "% d", -123);
+    assert(stream.data == "-123");
+
+    stream.clear();
+    formattedWrite(stream, "%%");
+    assert(stream.data == "%");
+
+    stream.clear();
+    formattedWrite(stream, "%d", true);
+    assert(stream.data == "1");
+    stream.clear();
+    formattedWrite(stream, "%d", false);
+    assert(stream.data == "0");
+
+    stream.clear();
+    formattedWrite(stream, "%d", 'a');
+    assert(stream.data == "97", stream.data);
+    wchar wc = 'a';
+    stream.clear();
+    formattedWrite(stream, "%d", wc);
+    assert(stream.data == "97");
+    dchar dc = 'a';
+    stream.clear();
+    formattedWrite(stream, "%d", dc);
+    assert(stream.data == "97");
+
+    byte b = byte.max;
+    stream.clear();
+    formattedWrite(stream, "%x", b);
+    assert(stream.data == "7f");
+    stream.clear();
+    formattedWrite(stream, "%x", ++b);
+    assert(stream.data == "80");
+    stream.clear();
+    formattedWrite(stream, "%x", ++b);
+    assert(stream.data == "81");
+
+    short sh = short.max;
+    stream.clear();
+    formattedWrite(stream, "%x", sh);
+    assert(stream.data == "7fff");
+    stream.clear();
+    formattedWrite(stream, "%x", ++sh);
+    assert(stream.data == "8000");
+    stream.clear();
+    formattedWrite(stream, "%x", ++sh);
+    assert(stream.data == "8001");
+
+    i = int.max;
+    stream.clear();
+    formattedWrite(stream, "%x", i);
+    assert(stream.data == "7fffffff");
+    stream.clear();
+    formattedWrite(stream, "%x", ++i);
+    assert(stream.data == "80000000");
+    stream.clear();
+    formattedWrite(stream, "%x", ++i);
+    assert(stream.data == "80000001");
+
+    stream.clear();
+    formattedWrite(stream, "%x", 10);
+    assert(stream.data == "a");
+    stream.clear();
+    formattedWrite(stream, "%X", 10);
+    assert(stream.data == "A");
+    stream.clear();
+    formattedWrite(stream, "%x", 15);
+    assert(stream.data == "f");
+    stream.clear();
+    formattedWrite(stream, "%X", 15);
+    assert(stream.data == "F");
+
+    @trusted void ObjectTest()
+    {
+        Object c = null;
+        stream.clear();
+        formattedWrite(stream, "%s", c);
+        assert(stream.data == "null");
+    }
+    ObjectTest();
+
+    enum TestEnum
+    {
+        Value1, Value2
+    }
+    stream.clear();
+    formattedWrite(stream, "%s", TestEnum.Value2);
+    assert(stream.data == "Value2", stream.data);
+    stream.clear();
+    formattedWrite(stream, "%s", cast(TestEnum) 5);
+    assert(stream.data == "cast(TestEnum)5", stream.data);
+
+    //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+    //stream.clear();
+    //formattedWrite(stream, "%s", aa.values);
+    //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
+    //stream.clear();
+    //formattedWrite(stream, "%s", aa);
+    //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+
+    static const dchar[] ds = ['a','b'];
+    for (int j = 0; j < ds.length; ++j)
+    {
+        stream.clear(); formattedWrite(stream, " %d", ds[j]);
+        if (j == 0)
+            assert(stream.data == " 97");
+        else
+            assert(stream.data == " 98");
+    }
+
+    stream.clear();
+    formattedWrite(stream, "%.-3d", 7);
+    assert(stream.data == "7", ">" ~ stream.data ~ "<");
+}
+
+@safe unittest
+{
+    import std.array : appender;
+    import std.meta : AliasSeq;
+
+    immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+    assert(aa[3] == "hello");
+    assert(aa[4] == "betty");
+
+    auto stream = appender!(char[])();
+    alias AllNumerics =
+        AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                  float, double, real);
+    foreach (T; AllNumerics)
+    {
+        T value = 1;
+        stream.clear();
+        formattedWrite(stream, "%s", value);
+        assert(stream.data == "1");
+    }
+
+    stream.clear();
+    formattedWrite(stream, "%s", aa);
 }
 
 /**
