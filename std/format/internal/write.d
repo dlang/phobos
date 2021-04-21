@@ -19,7 +19,7 @@ import std.traits;
 version (StdUnittest)
 {
     import std.exception : assertCTFEable;
-    import std.format : formatTest, format;
+    import std.format : format;
 }
 
 package(std.format):
@@ -1264,6 +1264,19 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     char[2] getTwo() { return two; }
     formatValue(w, getTwo(), f);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18205
+@safe pure unittest
+{
+    assert("|%8s|".format("abc")       == "|     abc|");
+    assert("|%8s|".format("αβγ")       == "|     αβγ|");
+    assert("|%8s|".format("   ")       == "|        |");
+    assert("|%8s|".format("été"d)      == "|     été|");
+    assert("|%8s|".format("été 2018"w) == "|été 2018|");
+
+    assert("%2s".format("e\u0301"w) == " e\u0301");
+    assert("%2s".format("a\u0310\u0337"d) == " a\u0310\u0337");
 }
 
 /*
@@ -3415,6 +3428,19 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     assert(w.data == "  pre0,000,0gr,oup,ingsuf", w.data);
 }
 
+@safe unittest
+{
+    assert(format("%,d", 1000) == "1,000");
+    assert(format("%,f", 1234567.891011) == "1,234,567.891011");
+    assert(format("%,?d", '?', 1000) == "1?000");
+    assert(format("%,1d", 1000) == "1,0,0,0", format("%,1d", 1000));
+    assert(format("%,*d", 4, -12345) == "-1,2345");
+    assert(format("%,*?d", 4, '_', -12345) == "-1_2345");
+    assert(format("%,6?d", '_', -12345678) == "-12_345678");
+    assert(format("%12,3.3f", 1234.5678) == "   1,234.568", "'" ~
+           format("%12,3.3f", 1234.5678) ~ "'");
+}
+
 private long getWidth(T)(T s)
 {
     import std.algorithm.searching : all;
@@ -3429,3 +3455,74 @@ private long getWidth(T)(T s)
         ++width;
     return width;
 }
+
+version (StdUnittest)
+package void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    import std.conv : text;
+    import std.exception : enforce;
+    import std.format.write : formatValue;
+
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, val, f);
+    enforce!AssertError(w.data == expected,
+        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version (StdUnittest)
+package void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    import std.conv : text;
+    import std.exception : enforce;
+    import std.format.write : formattedWrite;
+
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+    enforce!AssertError(w.data == expected,
+        text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version (StdUnittest)
+package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    import std.conv : text;
+    import std.exception : enforce;
+    import std.format.write : formatValue;
+
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, val, f);
+    foreach (cur; expected)
+    {
+        if (w.data == cur) return;
+    }
+    enforce!AssertError(false,
+        text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version (StdUnittest)
+package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+{
+    import core.exception : AssertError;
+    import std.array : appender;
+    import std.conv : text;
+    import std.exception : enforce;
+    import std.format.write : formattedWrite;
+
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+    foreach (cur; expected)
+    {
+        if (w.data == cur) return;
+    }
+    enforce!AssertError(false,
+        text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+

@@ -416,6 +416,16 @@ if (isSomeString!(typeof(fmt)))
     assert(isNaN(z));
 }
 
+@system unittest
+{
+    string s = "hello!124:34.5";
+    string a;
+    int b;
+    double c;
+    formattedRead(s, "%s!%s:%s", &a, &b, &c);
+    assert(a == "hello" && b == 124 && c == 34.5);
+}
+
 @system pure unittest
 {
     string line;
