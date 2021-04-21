@@ -3457,7 +3457,7 @@ private long getWidth(T)(T s)
 }
 
 version (StdUnittest)
-package void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+private void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -3473,7 +3473,7 @@ package void formatTest(T)(T val, string expected, size_t ln = __LINE__, string 
 }
 
 version (StdUnittest)
-package void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+private void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -3488,7 +3488,7 @@ package void formatTest(T)(string fmt, T val, string expected, size_t ln = __LIN
 }
 
 version (StdUnittest)
-package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
+private void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
     import std.array : appender;
@@ -3508,7 +3508,7 @@ package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, strin
 }
 
 version (StdUnittest)
-package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
+private void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
     import std.array : appender;
