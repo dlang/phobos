@@ -584,7 +584,6 @@ if (is(Unqual!Char == Char))
         if (flSpace) put(w, ' ');
         if (flPlus) put(w, '+');
         if (flHash) put(w, '#');
-        if (flSeparator) put(w, ',');
         if (width != 0)
             formatValue(w, width, f);
         if (precision != FormatSpec!Char.UNSPECIFIED)
@@ -592,6 +591,9 @@ if (is(Unqual!Char == Char))
             put(w, '.');
             formatValue(w, precision, f);
         }
+        if (flSeparator) put(w, ',');
+        if (separators != FormatSpec!Char.UNSPECIFIED)
+            formatValue(w, separators, f);
         put(w, spec);
         return w.data;
     }

@@ -1317,6 +1317,23 @@ if (isSomeChar!Char)
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
 
+@system unittest
+{
+    struct S
+    {
+        int a;
+
+        void toString(void delegate(const(char)[]) sink, string fmt)
+        {
+            auto spec = singleSpec(fmt);
+            sink.formatValue(a, spec);
+        }
+    }
+
+    S s = S(1);
+    assert(format!"%5,3d"(s) == "    1");
+}
+
 /// ditto
 typeof(fmt) format(alias fmt, Args...)(Args args)
 if (isSomeString!(typeof(fmt)))
