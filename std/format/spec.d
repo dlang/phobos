@@ -273,7 +273,7 @@ if (is(Unqual!Char == Char))
 
     private void fillUp() scope
     {
-        import std.format : arrayPtrDiff, enforceFmt, FormatException;
+        import std.format : enforceFmt, FormatException;
 
         // Reset content
         if (__ctfe)
@@ -386,7 +386,7 @@ if (is(Unqual!Char == Char))
                 const widthOrArgIndex = parse!uint(tmp);
                 enforceFmt(tmp.length,
                     text("Incorrect format specifier %", trailing[i .. $]));
-                i = arrayPtrDiff(tmp, trailing);
+                i = trailing.length - tmp.length;
                 if (tmp.startsWith('$'))
                 {
                     // index of the form %n$
@@ -406,7 +406,7 @@ if (is(Unqual!Char == Char))
                     {
                         indexEnd = parse!(typeof(indexEnd))(tmp);
                     }
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                     enforceFmt(trailing[i++] == '$',
                         "$ expected");
                 }
@@ -431,7 +431,7 @@ if (is(Unqual!Char == Char))
                 {
                     auto tmp = trailing[i .. $];
                     separators = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else
                 {
@@ -472,13 +472,13 @@ if (is(Unqual!Char == Char))
                     precision = 0;
                     auto tmp = trailing[i .. $];
                     parse!int(tmp); // skip digits
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else if (isDigit(trailing[i]))
                 {
                     auto tmp = trailing[i .. $];
                     precision = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else
                 {
