@@ -973,6 +973,16 @@ are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with `save` and using it later.
 
+`save` behaves in many ways like a copy constructor, and its
+implementation typically is done using copy construction.
+
+The existence of a copy constructor, however, does not imply
+the range is a forward range. For example, a range that reads
+from a TTY consumes its input and cannot save its place and
+read it again, and so cannot be a forward range and cannot
+have a `save` function.
+
+
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
  */
