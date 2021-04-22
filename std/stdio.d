@@ -154,29 +154,11 @@ version (Windows)
 
 version (Posix)
 {
-    static import core.sys.posix.stdio; // getdelim
+    static import core.sys.posix.stdio; // getdelim, flockfile
 }
 
 version (DIGITAL_MARS_STDIO)
 {
-    extern (C)
-    {
-        /* **
-         * Digital Mars under-the-hood C I/O functions.
-         * Use _iobuf* for the unshared version of FILE*,
-         * usable when the FILE is locked.
-         */
-      nothrow:
-      @nogc:
-        int _fputc_nlock(int, _iobuf*);
-        int _fputwc_nlock(int, _iobuf*);
-        int _fgetc_nlock(_iobuf*);
-        int _fgetwc_nlock(_iobuf*);
-        int __fp_lock(FILE*);
-        void __fp_unlock(FILE*);
-
-        int setmode(int, int);
-    }
     alias FPUTC = _fputc_nlock;
     alias FPUTWC = _fputwc_nlock;
     alias FGETC = _fgetc_nlock;
@@ -185,31 +167,12 @@ version (DIGITAL_MARS_STDIO)
     alias FLOCK = __fp_lock;
     alias FUNLOCK = __fp_unlock;
 
+    // Alias for MICROSOFT_STDIO compatibility.
     alias _setmode = setmode;
     int _fileno(FILE* f) { return f._file; }
-    alias fileno = _fileno;
 }
 else version (MICROSOFT_STDIO)
 {
-    extern (C)
-    {
-        /* **
-         * Microsoft under-the-hood C I/O functions
-         */
-      nothrow:
-      @nogc:
-        int _fputc_nolock(int, _iobuf*);
-        int _fputwc_nolock(int, _iobuf*);
-        int _fgetc_nolock(_iobuf*);
-        int _fgetwc_nolock(_iobuf*);
-        void _lock_file(FILE*);
-        void _unlock_file(FILE*);
-        int _setmode(int, int);
-        int _fileno(FILE*);
-        FILE* _fdopen(int, const (char)*);
-        int _fseeki64(FILE*, long, int);
-        long _ftelli64(FILE*);
-    }
     alias FPUTC = _fputc_nolock;
     alias FPUTWC = _fputwc_nolock;
     alias FGETC = _fgetc_nolock;
@@ -217,55 +180,21 @@ else version (MICROSOFT_STDIO)
 
     alias FLOCK = _lock_file;
     alias FUNLOCK = _unlock_file;
-
-    alias setmode = _setmode;
-    alias fileno = _fileno;
-    enum
-    {
-        _O_WTEXT = 0x10000,
-        _O_U16TEXT = 0x20000,
-        _O_U8TEXT = 0x40000,
-    }
 }
 else version (GCC_IO)
 {
-    /* **
-     * Gnu under-the-hood C I/O functions; see
-     * http://gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html
-     */
-    extern (C)
-    {
-      nothrow:
-      @nogc:
-        int fputc_unlocked(int, _iobuf*);
-        int fputwc_unlocked(wchar_t, _iobuf*);
-        int fgetc_unlocked(_iobuf*);
-        int fgetwc_unlocked(_iobuf*);
-        void flockfile(FILE*);
-        void funlockfile(FILE*);
-
-        private size_t fwrite_unlocked(const(void)* ptr,
-                size_t size, size_t n, _iobuf *stream);
-    }
-
     alias FPUTC = fputc_unlocked;
     alias FPUTWC = fputwc_unlocked;
     alias FGETC = fgetc_unlocked;
     alias FGETWC = fgetwc_unlocked;
 
-    alias FLOCK = flockfile;
-    alias FUNLOCK = funlockfile;
+    alias FLOCK = core.sys.posix.stdio.flockfile;
+    alias FUNLOCK = core.sys.posix.stdio.funlockfile;
 }
 else version (GENERIC_IO)
 {
     nothrow:
     @nogc:
-
-    extern (C)
-    {
-        void flockfile(FILE*);
-        void funlockfile(FILE*);
-    }
 
     int fputc_unlocked(int c, _iobuf* fp) { return fputc(c, cast(shared) fp); }
     int fputwc_unlocked(wchar_t c, _iobuf* fp)
@@ -285,8 +214,15 @@ else version (GENERIC_IO)
     alias FGETC = fgetc_unlocked;
     alias FGETWC = fgetwc_unlocked;
 
-    alias FLOCK = flockfile;
-    alias FUNLOCK = funlockfile;
+    version (Posix)
+    {
+        alias FLOCK = core.sys.posix.stdio.flockfile;
+        alias FUNLOCK = core.sys.posix.stdio.funlockfile;
+    }
+    else
+    {
+        static assert(0, "don't know how to lock files on GENERIC_IO");
+    }
 }
 else
 {
@@ -1074,7 +1010,7 @@ Throws: `Exception` if `buffer` is empty.
             throw new Exception("rawRead must take a non-empty buffer");
         version (Windows)
         {
-            immutable fd = ._fileno(_p.handle);
+            immutable fd = .fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
             scope(exit) ._setmode(fd, mode);
             version (DIGITAL_MARS_STDIO)
@@ -1129,7 +1065,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
         version (Windows)
         {
-            immutable fd = ._fileno(_p.handle);
+            immutable fd = .fileno(_p.handle);
             immutable oldMode = ._setmode(fd, _O_BINARY);
 
             if (oldMode != _O_BINARY)
@@ -1137,7 +1073,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 // need to flush the data that was written with the original mode
                 ._setmode(fd, oldMode);
                 flush(); // before changing translation mode ._setmode(fd, _O_BINARY);
-                .setmode(fd, _O_BINARY);
+                ._setmode(fd, _O_BINARY);
             }
 
             version (DIGITAL_MARS_STDIO)
@@ -3192,21 +3128,21 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(c, handle_);
+                            trustedFPUTWC(cast(wchar_t) c, handle_);
                         }
                         else
                         {
-                            trustedFPUTWC(cast(wchar)
+                            trustedFPUTWC(cast(wchar_t)
                                     ((((c - 0x10000) >> 10) & 0x3FF)
                                             + 0xD800), handle_);
-                            trustedFPUTWC(cast(wchar)
+                            trustedFPUTWC(cast(wchar_t)
                                     (((c - 0x10000) & 0x3FF) + 0xDC00),
                                     handle_);
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(c, handle_);
+                        trustedFPUTWC(cast(wchar_t) c, handle_);
                     }
                     else
                     {
@@ -3275,7 +3211,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             version (Windows)
             {
                 .fflush(fps); // before changing translation mode
-                fd = ._fileno(fps);
+                fd = .fileno(fps);
                 oldMode = ._setmode(fd, _O_BINARY);
                 version (DIGITAL_MARS_STDIO)
                 {
@@ -3769,7 +3705,7 @@ void main()
         auto f = File(deleteme, "w");
         version (MICROSOFT_STDIO)
         {
-            () @trusted { setmode(fileno(f.getFP()), _O_U8TEXT); } ();
+            () @trusted { _setmode(fileno(f.getFP()), _O_U8TEXT); } ();
         }
         else
         {
