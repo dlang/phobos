@@ -4139,42 +4139,6 @@ version (Windows)
         ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
 }
-else version (OSX)
-{
-    import core.stdc.stdio;
-    import core.stdc.string;
-    import core.sys.posix.unistd;
-
-    void browse(scope const(char)[] url) nothrow @nogc
-    {
-        const(char)*[5] args;
-
-        auto curl = url.tempCString();
-        const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
-        if (browser)
-        {   browser = strdup(browser);
-            args[0] = browser;
-            args[1] = curl;
-            args[2] = null;
-        }
-        else
-        {
-            args[0] = "open".ptr;
-            args[1] = curl;
-            args[2] = null;
-        }
-
-        auto childpid = core.sys.posix.unistd.fork();
-        if (childpid == 0)
-        {
-            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
-            perror(args[0]);                // failed to execute
-            return;
-        }
-        if (browser)
-            free(cast(void*) browser);
-    }
-}
 else version (Posix)
 {
     import core.stdc.stdio;
@@ -4191,10 +4155,20 @@ else version (Posix)
             args[0] = browser;
         }
         else
-            //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
-            args[0] = "xdg-open".ptr;
+        {
+            version (OSX)
+            {
+                args[0] = "open".ptr;
+            }
+            else
+            {
+                //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
+                args[0] = "xdg-open".ptr;
+            }
+        }
 
-        args[1] = url.tempCString();
+        const buffer = url.tempCString(); // Retain buffer until end of scope
+        args[1] = buffer;
         args[2] = null;
 
         auto childpid = core.sys.posix.unistd.fork();
@@ -4206,7 +4180,29 @@ else version (Posix)
         }
         if (browser)
             free(cast(void*) browser);
+
+        version (StdUnittest)
+        {
+            // Verify that the test script actually suceeds
+            int status;
+            const check = waitpid(childpid, &status, 0);
+            assert(check != -1);
+            assert(status == 0);
+        }
     }
 }
 else
     static assert(0, "os not supported");
+
+version (Windows) { /* Doesn't use BROWSER */ }
+else
+@system unittest
+{
+    import std.conv : text;
+    import std.range : repeat;
+    immutable string url = text("http://", repeat('x', 249));
+
+    TestScript prog = `if [ "$1" != "` ~ url ~ `" ]; then exit 1; fi`;
+    environment["BROWSER"] = prog.path;
+    browse(url);
+}
