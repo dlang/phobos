@@ -1693,3 +1693,306 @@ if (isFloatingPoint!T)
         }
     }}
 }
+
+package(std): // not yet public
+
+struct FloatingPointBitpattern(T)
+if (isFloatingPoint!T)
+{
+    static if (T.mant_dig <= 64)
+    {
+        ulong mantissa;
+    }
+    else
+    {
+        ulong mantissa_lsb;
+        ulong mantissa_msb;
+    }
+
+    int exponent;
+    bool negative;
+}
+
+FloatingPointBitpattern!T extractBitpattern(T)(T val)
+if (isFloatingPoint!T)
+{
+    import std.math : floatTraits, RealFormat;
+
+    FloatingPointBitpattern!T ret;
+
+    alias F = floatTraits!T;
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        if (__ctfe)
+        {
+            import std.math.algebraic : abs, fabs;
+            import std.math.rounding : floor;
+            import std.math.traits : isInfinity, isNaN;
+            import std.math.exponential : log2;
+
+            if (isNaN(val) || isInfinity(val))
+                ret.exponent = 32767;
+            else if (fabs(val) < real.min_normal)
+                ret.exponent = 0;
+            else if (fabs(val) >= nextUp(real.max / 2))
+                ret.exponent = 32766;
+            else
+                ret.exponent = cast(int) (val.abs.log2.floor() + 16383);
+
+            if (ret.exponent == 32767)
+            {
+                // NaN or infinity
+                ret.mantissa = isNaN(val) ? ((1L << 63) - 1) : 0;
+            }
+            else
+            {
+                if (ret.exponent > 16382 + 64) // bias + bits of ulong
+                    val /= 2.0L ^^ (ret.exponent - (16382 + 64));
+                else
+                {
+                    auto delta = 16382 + 64 - (ret.exponent == 0 ? 1 : ret.exponent); // -1 in case of subnormals
+                    if (delta > 16383)
+                    {
+                        // need two steps to avoid overflow
+                        val *= 2.0L ^^ 16383;
+                        delta -= 16383;
+                    }
+                    val *= 2.0L ^^ delta;
+                }
+
+                ulong tmp = cast(ulong) abs(val);
+                if (ret.exponent != 32767 && ret.exponent > 0 && tmp <= ulong.max / 2)
+                {
+                    // correction, due to log2(val) being rounded up:
+                    ret.exponent--;
+                    val *= 2;
+                    tmp = cast(ulong) abs(val);
+                }
+
+                ret.mantissa = tmp & ((1L << 63) - 1);
+            }
+
+            double d = cast(double) val;
+            ulong ival = () @trusted { return *cast(ulong*) &d; }();
+            if ((ival >> 63) & 1) ret.negative = true;
+        }
+        else
+        {
+            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &val; }();
+            ret.mantissa = ival[0] & ((1L << 63) - 1);
+            ret.exponent = ival[1] & 32767;
+            if ((ival[1] >> 15) & 1) ret.negative = true;
+        }
+    }
+    else
+    {
+        static if (F.realFormat == RealFormat.ieeeSingle)
+        {
+            ulong ival = () @trusted { return *cast(uint*) &val; }();
+        }
+        else static if (F.realFormat == RealFormat.ieeeDouble)
+        {
+            ulong ival = () @trusted { return *cast(ulong*) &val; }();
+        }
+        else
+        {
+            static assert(false, "Floating point type `" ~ F.realFormat ~ "` not supported.");
+        }
+
+        import std.math.exponential : log2;
+        enum log2_max_exp = cast(int) log2(T.max_exp);
+
+        ret.mantissa = ival & ((1L << (T.mant_dig - 1)) - 1);
+        ret.exponent = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
+        ret.negative = (ival >> (T.mant_dig + log2_max_exp)) & 1;
+    }
+
+    return ret;
+}
+
+@safe pure unittest
+{
+    float f = 1.0f;
+    auto bp = extractBitpattern(f);
+    assert(bp.mantissa == 0);
+    assert(bp.exponent == 127);
+    assert(bp.negative == false);
+
+    f = float.max;
+    bp = extractBitpattern(f);
+    assert(bp.mantissa == 0x7f_ffff);
+    assert(bp.exponent == 254);
+    assert(bp.negative == false);
+
+    f = -1.5432e-17f;
+    bp = extractBitpattern(f);
+    assert(bp.mantissa == 0x0e_55c8);
+    assert(bp.exponent == 71);
+    assert(bp.negative == true);
+
+    // using double literal due to https://issues.dlang.org/show_bug.cgi?id=20361
+    f = 2.3822073893521890206e-44;
+    bp = extractBitpattern(f);
+    assert(bp.mantissa == 0x00_0011);
+    assert(bp.exponent == 0);
+    assert(bp.negative == false);
+
+    f = -float.infinity;
+    bp = extractBitpattern(f);
+    assert(bp.mantissa == 0);
+    assert(bp.exponent == 255);
+    assert(bp.negative == true);
+
+    f = float.nan;
+    bp = extractBitpattern(f);
+    assert(bp.mantissa != 0); // we don't guarantee payloads
+    assert(bp.exponent == 255);
+    assert(bp.negative == false);
+}
+
+@safe pure unittest
+{
+    double d = 1.0;
+    auto bp = extractBitpattern(d);
+    assert(bp.mantissa == 0);
+    assert(bp.exponent == 1023);
+    assert(bp.negative == false);
+
+    d = double.max;
+    bp = extractBitpattern(d);
+    assert(bp.mantissa == 0xf_ffff_ffff_ffffL);
+    assert(bp.exponent == 2046);
+    assert(bp.negative == false);
+
+    d = -1.5432e-222;
+    bp = extractBitpattern(d);
+    assert(bp.mantissa == 0x1_d9b6_a401_3b04L);
+    assert(bp.exponent == 286);
+    assert(bp.negative == true);
+
+    d = 0.0.nextUp;
+    bp = extractBitpattern(d);
+    assert(bp.mantissa == 0x0_0000_0000_0001L);
+    assert(bp.exponent == 0);
+    assert(bp.negative == false);
+
+    d = -double.infinity;
+    bp = extractBitpattern(d);
+    assert(bp.mantissa == 0);
+    assert(bp.exponent == 2047);
+    assert(bp.negative == true);
+
+    d = double.nan;
+    bp = extractBitpattern(d);
+    assert(bp.mantissa != 0); // we don't guarantee payloads
+    assert(bp.exponent == 2047);
+    assert(bp.negative == false);
+}
+
+@safe pure unittest
+{
+    import std.math : floatTraits, RealFormat;
+
+    alias F = floatTraits!real;
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
+        real r = 1.0L;
+        auto bp = extractBitpattern(r);
+        assert(bp.mantissa == 0);
+        assert(bp.exponent == 16383);
+        assert(bp.negative == false);
+
+        r = real.max;
+        bp = extractBitpattern(r);
+        assert(bp.mantissa == 0x7fff_ffff_ffff_ffffL);
+        assert(bp.exponent == 32766);
+        assert(bp.negative == false);
+
+        r = -1.5432e-3333L;
+        bp = extractBitpattern(r);
+        assert(bp.mantissa == 0x4768_a2c7_a616_cc22L);
+        assert(bp.exponent == 5311);
+        assert(bp.negative == true);
+
+        r = 0.0L.nextUp;
+        bp = extractBitpattern(r);
+        assert(bp.mantissa == 0x0000_0000_0000_0001L);
+        assert(bp.exponent == 0);
+        assert(bp.negative == false);
+
+        r = -float.infinity;
+        bp = extractBitpattern(r);
+        assert(bp.mantissa == 0);
+        assert(bp.exponent == 32767);
+        assert(bp.negative == true);
+
+        r = float.nan;
+        bp = extractBitpattern(r);
+        assert(bp.mantissa != 0); // we don't guarantee payloads
+        assert(bp.exponent == 32767);
+        assert(bp.negative == false);
+
+        r = nextDown(0x1p+16383L);
+        bp = extractBitpattern(r);
+        assert(bp.mantissa == 0x7fff_ffff_ffff_ffffL);
+        assert(bp.exponent == 32765);
+        assert(bp.negative == false);
+    }
+}
+
+@safe pure unittest
+{
+    import std.math : floatTraits, RealFormat;
+    import std.math.exponential : log2;
+
+    alias F = floatTraits!real;
+
+    // log2 is broken for x87-reals on some computers in CTFE
+    // the following test excludes these computers from the test
+    // (issue 21757)
+    enum test = cast(int) log2(3.05e2312L);
+    static if (F.realFormat == RealFormat.ieeeExtended && test == 7681)
+    {
+        enum r1 = 1.0L;
+        enum bp1 = extractBitpattern(r1);
+        static assert(bp1.mantissa == 0);
+        static assert(bp1.exponent == 16383);
+        static assert(bp1.negative == false);
+
+        enum r2 = real.max;
+        enum bp2 = extractBitpattern(r2);
+        static assert(bp2.mantissa == 0x7fff_ffff_ffff_ffffL);
+        static assert(bp2.exponent == 32766);
+        static assert(bp2.negative == false);
+
+        enum r3 = -1.5432e-3333L;
+        enum bp3 = extractBitpattern(r3);
+        static assert(bp3.mantissa == 0x4768_a2c7_a616_cc22L);
+        static assert(bp3.exponent == 5311);
+        static assert(bp3.negative == true);
+
+        enum r4 = 0.0L.nextUp;
+        enum bp4 = extractBitpattern(r4);
+        static assert(bp4.mantissa == 0x0000_0000_0000_0001L);
+        static assert(bp4.exponent == 0);
+        static assert(bp4.negative == false);
+
+        enum r5 = -real.infinity;
+        enum bp5 = extractBitpattern(r5);
+        static assert(bp5.mantissa == 0);
+        static assert(bp5.exponent == 32767);
+        static assert(bp5.negative == true);
+
+        enum r6 = real.nan;
+        enum bp6 = extractBitpattern(r6);
+        static assert(bp6.mantissa != 0); // we don't guarantee payloads
+        static assert(bp6.exponent == 32767);
+        static assert(bp6.negative == false);
+
+        enum r7 = nextDown(0x1p+16383L);
+        enum bp7 = extractBitpattern(r7);
+        static assert(bp2.mantissa == 0x7fff_ffff_ffff_ffffL);
+        static assert(bp2.exponent == 32766);
+        static assert(bp2.negative == false);
+    }
+}
