@@ -940,6 +940,12 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%a", r) == "0x1p-20");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21836
+@safe pure unittest
+{
+    assert(format!"%-5,1g"(0.0) == "0    ");
+}
+
 /*
     Formatting a `creal` is deprecated but still kept around for a while.
  */
