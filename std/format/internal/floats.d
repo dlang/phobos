@@ -36,93 +36,13 @@ package(std.format) void printFloat(Writer, T, Char)(auto ref Writer w, T val,
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
-    static if (is(T == real) && T.mant_dig == 64)
-    {
-        ulong mnt = void;
-        int exp = void;
-        string sgn = "";
+    import std.math.operations : extractBitpattern, FloatingPointBitpattern;
 
-        if (__ctfe)
-        {
-            import std.math.algebraic : abs;
-            import std.math.rounding : floor;
-            import std.math.traits : isInfinity, isNaN;
-            import std.math.exponential : log2;
-            import std.math.operations : nextUp;
+    auto bp = extractBitpattern(val);
 
-            auto val2 = val;
-
-            if (isNaN(val2) || isInfinity(val2))
-                exp = 32767;
-            else if (abs(val2) < real.min_normal)
-                exp = 0;
-            else if (abs(val2) >= nextUp(real.max / 2))
-                exp = 32766;
-            else
-                exp = cast(int) (val2.abs.log2.floor() + 16383);
-
-            if (exp == 32767)
-            {
-                // NaN or infinity
-                mnt = isNaN(val2) ? ((1L << 63) - 1) : 0;
-            }
-            else
-            {
-                if (exp > 16382 + 64) // bias + bits of ulong
-                    val2 /= 2.0L ^^ (exp - (16382 + 64));
-                else
-                {
-                    auto delta = 16382 + 64 - (exp == 0 ? 1 : exp); // -1 in case of subnormals
-                    if (delta > 16383)
-                    {
-                        // need two steps to avoid overflow
-                        val2 *= 2.0L ^^ 16383;
-                        delta -= 16383;
-                    }
-                    val2 *= 2.0L ^^ delta;
-                }
-
-                ulong tmp = cast(ulong) abs(val2);
-                if (exp != 32767 && exp > 0 && tmp <= ulong.max / 2)
-                {
-                    // correction, due to log2(val2) being rounded up:
-                    exp--;
-                    val2 *= 2.0L;
-                    tmp = cast(ulong) abs(val2);
-                }
-                mnt = tmp & ((1L << 63) - 1);
-            }
-
-            double d = cast(double) val2;
-            ulong ival = () @trusted { return *cast(ulong*) &d; }();
-            if ((ival >> 63) & 1) sgn = "-";
-        }
-        else
-        {
-            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &val; }();
-            mnt = ival[0] & ((1L << 63) - 1);
-            exp = ival[1] & 32767;
-            if ((ival[1] >> 15) & 1) sgn = "-";
-        }
-    }
-    else
-    {
-        static if (is(T == float))
-        {
-            ulong ival = () @trusted { return *cast(uint*) &val; }();
-        }
-        else
-        {
-            ulong ival = () @trusted { return *cast(ulong*) &val; }();
-        }
-
-        import std.math.exponential : log2;
-        enum log2_max_exp = cast(int) log2(T.max_exp);
-
-        ulong mnt = ival & ((1L << (T.mant_dig - 1)) - 1);
-        int exp = (ival >> (T.mant_dig - 1)) & ((1L << (log2_max_exp + 1)) - 1);
-        string sgn = (ival >> (T.mant_dig + log2_max_exp)) & 1 ? "-" : "";
-    }
+    ulong mnt = bp.mantissa;
+    int exp = bp.exponent;
+    string sgn = bp.negative ? "-" : "";
 
     enum maxexp = 2 * T.max_exp - 1;
 
