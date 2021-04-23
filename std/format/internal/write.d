@@ -918,6 +918,15 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21853
+@safe pure unittest
+{
+    static if (real.mant_dig == 64) // 80 bit reals
+    {
+        static assert(format!"%e"(real.max) == "1.189731e+4932");
+    }
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=20536
 @safe pure unittest
 {

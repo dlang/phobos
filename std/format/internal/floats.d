@@ -55,6 +55,8 @@ if (is(T == float) || is(T == double)
                 exp = 32767;
             else if (abs(val2) < real.min_normal)
                 exp = 0;
+            else if (abs(val2) >= 0x1p+16383L)
+                exp = 32766;
             else
                 exp = cast(int) (val2.abs.log2.floor() + 16383);
 
@@ -63,22 +65,31 @@ if (is(T == float) || is(T == double)
                 // NaN or infinity
                 mnt = isNaN(val2) ? ((1L << 63) - 1) : 0;
             }
-            else if (exp > 16382 + 64) // bias + bits of ulong
-            {
-                val2 /= 2.0L ^^ (exp - (16382 + 64));
-                mnt = (cast(ulong) abs(val2)) & ((1L << 63) - 1);
-            }
             else
             {
-                auto delta = 16382 + 64 - (exp == 0 ? 1 : exp); // -1 in case of subnormals
-                if (delta > 16383)
+                if (exp > 16382 + 64) // bias + bits of ulong
+                    val2 /= 2.0L ^^ (exp - (16382 + 64));
+                else
                 {
-                    // need two steps to avoid overflow
-                    val2 *= 2.0L ^^ 16383;
-                    delta -= 16383;
+                    auto delta = 16382 + 64 - (exp == 0 ? 1 : exp); // -1 in case of subnormals
+                    if (delta > 16383)
+                    {
+                        // need two steps to avoid overflow
+                        val2 *= 2.0L ^^ 16383;
+                        delta -= 16383;
+                    }
+                    val2 *= 2.0L ^^ delta;
                 }
-                val2 *= 2.0L ^^ delta;
-                mnt = (cast(ulong) abs(val2)) & ((1L << 63) - 1);
+
+                ulong tmp = cast(ulong) abs(val2);
+                if (exp != 32767 && exp > 0 && tmp <= ulong.max / 2)
+                {
+                    // correction, due to log2(val2) being rounded up:
+                    exp--;
+                    val2 *= 2.0L;
+                    tmp = cast(ulong) abs(val2);
+                }
+                mnt = tmp & ((1L << 63) - 1);
             }
 
             double d = cast(double) val2;
