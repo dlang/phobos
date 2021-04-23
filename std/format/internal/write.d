@@ -496,8 +496,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
 
         fs.spec = spec2;
-        buf = printFloat(buf2[], val, fs, mode);
+        buf = printFloat(buf2[], w, val, fs, mode);
         len = buf.length;
+        if (len == 0) return;
     }
     else
     {
@@ -3139,7 +3140,7 @@ private bool needToSwapEndianess(Char)(scope const ref FormatSpec!Char f)
         || endian == Endian.bigEndian && f.flDash;
 }
 
-private void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
+void writeAligned(Writer, T, Char)(auto ref Writer w, T s, scope const ref FormatSpec!Char f)
 if (isSomeString!T)
 {
     FormatSpec!Char fs = f;
@@ -3180,7 +3181,7 @@ if (isSomeString!T)
     assert(w.data == "a本Ä       ", w.data);
 }
 
-private void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
+void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
     T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f,
     bool integer_precision = false)
 if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
