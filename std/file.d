@@ -4940,6 +4940,19 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
     writeln(e.name, "\t", e.size);
 }
 
+// Iterate over all *.d files in current directory and all its subdirectories
+auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
+foreach (d; dFiles)
+    writeln(d.name);
+
+// Hook it up with std.parallelism to compile them all in parallel:
+foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
+{
+    string cmd = "dmd -c "  ~ d.name;
+    writeln(cmd);
+    std.process.executeShell(cmd);
+}
+
 // Iterate over all D source files in current directory and all its
 // subdirectories
 auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
@@ -4957,45 +4970,24 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
     string[] listdir(string pathname)
     {
-        import std.algorithm.iteration : filter, map;
-        import std.array : array;
-        import std.path : baseName;
+        import std.algorithm;
+        import std.array;
+        import std.file;
+        import std.path;
 
-        return dirEntries(pathname, SpanMode.shallow)
+        return std.file.dirEntries(pathname, SpanMode.shallow)
             .filter!(a => a.isFile)
-            .map!(a => baseName(a.name))
+            .map!(a => std.path.baseName(a.name))
             .array;
     }
 
-    void main()
+    void main(string[] args)
     {
         import std.stdio;
 
-        string[] files = listdir(".");
-        writeln(files);
-    }
-}
-
-/// Compile D files in parallel:
-version (StdDdoc)
-@system unittest
-{
-    import std.stdio;
-    import std.parallelism;
-    import std.process;
-
-    // Iterate over all *.d files in current directory and all its subdirectories
-    auto dFiles = dirEntries(".", "*.d", SpanMode.depth);
-    foreach (d; dFiles)
-        writeln(d.name);
-
-    foreach (d; parallel(dFiles, 1)) // process each entry in a separate thread
-    {
-        // compile source file
-        string cmd = "dmd -c " ~ d.name;
-        writeln(cmd);
-        std.process.executeShell(cmd);
-    }
+        string[] files = listdir(args[1]);
+        writefln("%s", files);
+     }
 }
 
 @system unittest
