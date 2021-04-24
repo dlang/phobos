@@ -19,7 +19,7 @@ import std.format.spec : FormatSpec;
 package(std.format) enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
 // wrapper for unittests
-private auto printFloat(T, Char)(return char[] buf, T val, FormatSpec!Char f,
+private auto printFloat(T, Char)(T val, FormatSpec!Char f,
                                  RoundingMode rm = RoundingMode.toNearestTiesToEven)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -27,11 +27,11 @@ if (is(T == float) || is(T == double)
     import std.array : appender;
     auto w = appender!string();
 
-    auto result = printFloat(buf, w, val, f, rm);
-    return result ~ w.data;
+    printFloat(w, val, f, rm);
+    return w.data;
 }
 
-package(std.format) auto printFloat(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+package(std.format) void printFloat(Writer, T, Char)(auto ref Writer w, T val,
     FormatSpec!Char f, RoundingMode rm = RoundingMode.toNearestTiesToEven)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -142,23 +142,27 @@ if (is(T == float) || is(T == double)
 
         f.flZero = false;
         writeAligned(w, sgn, "", (mnt == 0) ? ( is_upper ? "INF" : "inf" ) : ( is_upper ? "NAN" : "nan" ), f);
-        return buf[0 .. 0];
+        return;
     }
 
     final switch (f.spec)
     {
         case 'a': case 'A':
-            return printFloatA(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+            printFloatA(w, val, f, rm, sgn, exp, mnt, is_upper);
+            break;
         case 'e': case 'E':
-            return printFloatE!false(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+            printFloatE!false(w, val, f, rm, sgn, exp, mnt, is_upper);
+            break;
         case 'f': case 'F':
-            return printFloatF!false(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+            printFloatF!false(w, val, f, rm, sgn, exp, mnt, is_upper);
+            break;
         case 'g': case 'G':
-            return printFloatG(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+            printFloatG(w, val, f, rm, sgn, exp, mnt, is_upper);
+            break;
     }
 }
 
-private auto printFloatA(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+private void printFloatA(Writer, T, Char)(auto ref Writer w, T val,
     FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -207,7 +211,7 @@ if (is(T == float) || is(T == double)
     {
         writeAligned(w, prefix[1 - sgn.length .. $], "0", ".", is_upper ? "P+0" : "p+0",
                      f, PrecisionType.fractionalDigits);
-        return buf[0 .. 0];
+        return;
     }
 
     // save integer part
@@ -323,107 +327,105 @@ if (is(T == float) || is(T == double)
 
     writeAligned(w, prefix[1 - sgn.length .. $], first[], hex_mant[0 .. hex_mant_pos],
                  exp_str[exp_pos .. $], f, PrecisionType.fractionalDigits);
-    return buf[0 .. 0];
 }
 
 @safe unittest
 {
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
-    char[256] buf;
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.nan, f) == "-nan");
-    assert(printFloat(buf[], float.infinity, f) == "inf");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0x0p+0");
-    assert(printFloat(buf[], -0.0f, f) == "-0x0p+0");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0x0p+0");
+    assert(printFloat(-0.0f, f) == "-0x0p+0");
 
-    assert(printFloat(buf[], double.nan, f) == "nan");
-    assert(printFloat(buf[], -double.nan, f) == "-nan");
-    assert(printFloat(buf[], double.infinity, f) == "inf");
-    assert(printFloat(buf[], -double.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0, f) == "0x0p+0");
-    assert(printFloat(buf[], -0.0, f) == "-0x0p+0");
+    assert(printFloat(double.nan, f) == "nan");
+    assert(printFloat(-double.nan, f) == "-nan");
+    assert(printFloat(double.infinity, f) == "inf");
+    assert(printFloat(-double.infinity, f) == "-inf");
+    assert(printFloat(0.0, f) == "0x0p+0");
+    assert(printFloat(-0.0, f) == "-0x0p+0");
 
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0L, f) == "0x0p+0");
-    assert(printFloat(buf[], -0.0L, f) == "-0x0p+0");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
+    assert(printFloat(0.0L, f) == "0x0p+0");
+    assert(printFloat(-0.0L, f) == "-0x0p+0");
 
     import std.math.operations : nextUp;
 
-    assert(printFloat(buf[], nextUp(0.0f), f) == "0x0.000002p-126");
-    assert(printFloat(buf[], float.epsilon, f) == "0x1p-23");
-    assert(printFloat(buf[], float.min_normal, f) == "0x1p-126");
-    assert(printFloat(buf[], float.max, f) == "0x1.fffffep+127");
+    assert(printFloat(nextUp(0.0f), f) == "0x0.000002p-126");
+    assert(printFloat(float.epsilon, f) == "0x1p-23");
+    assert(printFloat(float.min_normal, f) == "0x1p-126");
+    assert(printFloat(float.max, f) == "0x1.fffffep+127");
 
-    assert(printFloat(buf[], nextUp(0.0), f) == "0x0.0000000000001p-1022");
-    assert(printFloat(buf[], double.epsilon, f) == "0x1p-52");
-    assert(printFloat(buf[], double.min_normal, f) == "0x1p-1022");
-    assert(printFloat(buf[], double.max, f) == "0x1.fffffffffffffp+1023");
+    assert(printFloat(nextUp(0.0), f) == "0x0.0000000000001p-1022");
+    assert(printFloat(double.epsilon, f) == "0x1p-52");
+    assert(printFloat(double.min_normal, f) == "0x1p-1022");
+    assert(printFloat(double.max, f) == "0x1.fffffffffffffp+1023");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], nextUp(0.0L), f) == "0x0.0000000000000002p-16382");
-        assert(printFloat(buf[], real.epsilon, f) == "0x1p-63");
-        assert(printFloat(buf[], real.min_normal, f) == "0x1p-16382");
-        assert(printFloat(buf[], real.max, f) == "0x1.fffffffffffffffep+16383");
+        assert(printFloat(nextUp(0.0L), f) == "0x0.0000000000000002p-16382");
+        assert(printFloat(real.epsilon, f) == "0x1p-63");
+        assert(printFloat(real.min_normal, f) == "0x1p-16382");
+        assert(printFloat(real.max, f) == "0x1.fffffffffffffffep+16383");
     }
 
     import std.math.constants : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                                 LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
 
-    assert(printFloat(buf[], cast(float) E, f) == "0x1.5bf0a8p+1");
-    assert(printFloat(buf[], cast(float) PI, f) == "0x1.921fb6p+1");
-    assert(printFloat(buf[], cast(float) PI_2, f) == "0x1.921fb6p+0");
-    assert(printFloat(buf[], cast(float) PI_4, f) == "0x1.921fb6p-1");
-    assert(printFloat(buf[], cast(float) M_1_PI, f) == "0x1.45f306p-2");
-    assert(printFloat(buf[], cast(float) M_2_PI, f) == "0x1.45f306p-1");
-    assert(printFloat(buf[], cast(float) M_2_SQRTPI, f) == "0x1.20dd76p+0");
-    assert(printFloat(buf[], cast(float) LN10, f) == "0x1.26bb1cp+1");
-    assert(printFloat(buf[], cast(float) LN2, f) == "0x1.62e43p-1");
-    assert(printFloat(buf[], cast(float) LOG2, f) == "0x1.344136p-2");
-    assert(printFloat(buf[], cast(float) LOG2E, f) == "0x1.715476p+0");
-    assert(printFloat(buf[], cast(float) LOG2T, f) == "0x1.a934fp+1");
-    assert(printFloat(buf[], cast(float) LOG10E, f) == "0x1.bcb7b2p-2");
-    assert(printFloat(buf[], cast(float) SQRT2, f) == "0x1.6a09e6p+0");
-    assert(printFloat(buf[], cast(float) SQRT1_2, f) == "0x1.6a09e6p-1");
+    assert(printFloat(cast(float) E, f) == "0x1.5bf0a8p+1");
+    assert(printFloat(cast(float) PI, f) == "0x1.921fb6p+1");
+    assert(printFloat(cast(float) PI_2, f) == "0x1.921fb6p+0");
+    assert(printFloat(cast(float) PI_4, f) == "0x1.921fb6p-1");
+    assert(printFloat(cast(float) M_1_PI, f) == "0x1.45f306p-2");
+    assert(printFloat(cast(float) M_2_PI, f) == "0x1.45f306p-1");
+    assert(printFloat(cast(float) M_2_SQRTPI, f) == "0x1.20dd76p+0");
+    assert(printFloat(cast(float) LN10, f) == "0x1.26bb1cp+1");
+    assert(printFloat(cast(float) LN2, f) == "0x1.62e43p-1");
+    assert(printFloat(cast(float) LOG2, f) == "0x1.344136p-2");
+    assert(printFloat(cast(float) LOG2E, f) == "0x1.715476p+0");
+    assert(printFloat(cast(float) LOG2T, f) == "0x1.a934fp+1");
+    assert(printFloat(cast(float) LOG10E, f) == "0x1.bcb7b2p-2");
+    assert(printFloat(cast(float) SQRT2, f) == "0x1.6a09e6p+0");
+    assert(printFloat(cast(float) SQRT1_2, f) == "0x1.6a09e6p-1");
 
-    assert(printFloat(buf[], cast(double) E, f) == "0x1.5bf0a8b145769p+1");
-    assert(printFloat(buf[], cast(double) PI, f) == "0x1.921fb54442d18p+1");
-    assert(printFloat(buf[], cast(double) PI_2, f) == "0x1.921fb54442d18p+0");
-    assert(printFloat(buf[], cast(double) PI_4, f) == "0x1.921fb54442d18p-1");
-    assert(printFloat(buf[], cast(double) M_1_PI, f) == "0x1.45f306dc9c883p-2");
-    assert(printFloat(buf[], cast(double) M_2_PI, f) == "0x1.45f306dc9c883p-1");
-    assert(printFloat(buf[], cast(double) M_2_SQRTPI, f) == "0x1.20dd750429b6dp+0");
-    assert(printFloat(buf[], cast(double) LN10, f) == "0x1.26bb1bbb55516p+1");
-    assert(printFloat(buf[], cast(double) LN2, f) == "0x1.62e42fefa39efp-1");
-    assert(printFloat(buf[], cast(double) LOG2, f) == "0x1.34413509f79ffp-2");
-    assert(printFloat(buf[], cast(double) LOG2E, f) == "0x1.71547652b82fep+0");
-    assert(printFloat(buf[], cast(double) LOG2T, f) == "0x1.a934f0979a371p+1");
-    assert(printFloat(buf[], cast(double) LOG10E, f) == "0x1.bcb7b1526e50ep-2");
-    assert(printFloat(buf[], cast(double) SQRT2, f) == "0x1.6a09e667f3bcdp+0");
-    assert(printFloat(buf[], cast(double) SQRT1_2, f) == "0x1.6a09e667f3bcdp-1");
+    assert(printFloat(cast(double) E, f) == "0x1.5bf0a8b145769p+1");
+    assert(printFloat(cast(double) PI, f) == "0x1.921fb54442d18p+1");
+    assert(printFloat(cast(double) PI_2, f) == "0x1.921fb54442d18p+0");
+    assert(printFloat(cast(double) PI_4, f) == "0x1.921fb54442d18p-1");
+    assert(printFloat(cast(double) M_1_PI, f) == "0x1.45f306dc9c883p-2");
+    assert(printFloat(cast(double) M_2_PI, f) == "0x1.45f306dc9c883p-1");
+    assert(printFloat(cast(double) M_2_SQRTPI, f) == "0x1.20dd750429b6dp+0");
+    assert(printFloat(cast(double) LN10, f) == "0x1.26bb1bbb55516p+1");
+    assert(printFloat(cast(double) LN2, f) == "0x1.62e42fefa39efp-1");
+    assert(printFloat(cast(double) LOG2, f) == "0x1.34413509f79ffp-2");
+    assert(printFloat(cast(double) LOG2E, f) == "0x1.71547652b82fep+0");
+    assert(printFloat(cast(double) LOG2T, f) == "0x1.a934f0979a371p+1");
+    assert(printFloat(cast(double) LOG10E, f) == "0x1.bcb7b1526e50ep-2");
+    assert(printFloat(cast(double) SQRT2, f) == "0x1.6a09e667f3bcdp+0");
+    assert(printFloat(cast(double) SQRT1_2, f) == "0x1.6a09e667f3bcdp-1");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], E, f) == "0x1.5bf0a8b145769536p+1");
-        assert(printFloat(buf[], PI, f) == "0x1.921fb54442d1846ap+1");
-        assert(printFloat(buf[], PI_2, f) == "0x1.921fb54442d1846ap+0");
-        assert(printFloat(buf[], PI_4, f) == "0x1.921fb54442d1846ap-1");
-        assert(printFloat(buf[], M_1_PI, f) == "0x1.45f306dc9c882a54p-2");
-        assert(printFloat(buf[], M_2_PI, f) == "0x1.45f306dc9c882a54p-1");
-        assert(printFloat(buf[], M_2_SQRTPI, f) == "0x1.20dd750429b6d11ap+0");
-        assert(printFloat(buf[], LN10, f) == "0x1.26bb1bbb5551582ep+1");
-        assert(printFloat(buf[], LN2, f) == "0x1.62e42fefa39ef358p-1");
-        assert(printFloat(buf[], LOG2, f) == "0x1.34413509f79fef32p-2");
-        assert(printFloat(buf[], LOG2E, f) == "0x1.71547652b82fe178p+0");
-        assert(printFloat(buf[], LOG2T, f) == "0x1.a934f0979a3715fcp+1");
-        assert(printFloat(buf[], LOG10E, f) == "0x1.bcb7b1526e50e32ap-2");
-        assert(printFloat(buf[], SQRT2, f) == "0x1.6a09e667f3bcc908p+0");
-        assert(printFloat(buf[], SQRT1_2, f) == "0x1.6a09e667f3bcc908p-1");
+        assert(printFloat(E, f) == "0x1.5bf0a8b145769536p+1");
+        assert(printFloat(PI, f) == "0x1.921fb54442d1846ap+1");
+        assert(printFloat(PI_2, f) == "0x1.921fb54442d1846ap+0");
+        assert(printFloat(PI_4, f) == "0x1.921fb54442d1846ap-1");
+        assert(printFloat(M_1_PI, f) == "0x1.45f306dc9c882a54p-2");
+        assert(printFloat(M_2_PI, f) == "0x1.45f306dc9c882a54p-1");
+        assert(printFloat(M_2_SQRTPI, f) == "0x1.20dd750429b6d11ap+0");
+        assert(printFloat(LN10, f) == "0x1.26bb1bbb5551582ep+1");
+        assert(printFloat(LN2, f) == "0x1.62e42fefa39ef358p-1");
+        assert(printFloat(LOG2, f) == "0x1.34413509f79fef32p-2");
+        assert(printFloat(LOG2E, f) == "0x1.71547652b82fe178p+0");
+        assert(printFloat(LOG2T, f) == "0x1.a934f0979a3715fcp+1");
+        assert(printFloat(LOG10E, f) == "0x1.bcb7b1526e50e32ap-2");
+        assert(printFloat(SQRT2, f) == "0x1.6a09e667f3bcc908p+0");
+        assert(printFloat(SQRT1_2, f) == "0x1.6a09e667f3bcc908p-1");
     }
 }
 
@@ -432,21 +434,20 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     f.precision = 3;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "0x1.000p+0");
-    assert(printFloat(buf[], 3.3f, f) == "0x1.a66p+1");
-    assert(printFloat(buf[], 2.9f, f) == "0x1.733p+1");
+    assert(printFloat(1.0f, f) == "0x1.000p+0");
+    assert(printFloat(3.3f, f) == "0x1.a66p+1");
+    assert(printFloat(2.9f, f) == "0x1.733p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "0x1.000p+0");
-    assert(printFloat(buf[], 3.3, f) == "0x1.a66p+1");
-    assert(printFloat(buf[], 2.9, f) == "0x1.733p+1");
+    assert(printFloat(1.0, f) == "0x1.000p+0");
+    assert(printFloat(3.3, f) == "0x1.a66p+1");
+    assert(printFloat(2.9, f) == "0x1.733p+1");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1.0L, f) == "0x1.000p+0");
-        assert(printFloat(buf[], 3.3L, f) == "0x1.a66p+1");
-        assert(printFloat(buf[], 2.9L, f) == "0x1.733p+1");
+        assert(printFloat(1.0L, f) == "0x1.000p+0");
+        assert(printFloat(3.3L, f) == "0x1.a66p+1");
+        assert(printFloat(2.9L, f) == "0x1.733p+1");
     }
 }
 
@@ -455,21 +456,20 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     f.precision = 0;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "0x1p+0");
-    assert(printFloat(buf[], 3.3f, f) == "0x2p+1");
-    assert(printFloat(buf[], 2.9f, f) == "0x1p+1");
+    assert(printFloat(1.0f, f) == "0x1p+0");
+    assert(printFloat(3.3f, f) == "0x2p+1");
+    assert(printFloat(2.9f, f) == "0x1p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "0x1p+0");
-    assert(printFloat(buf[], 3.3, f) == "0x2p+1");
-    assert(printFloat(buf[], 2.9, f) == "0x1p+1");
+    assert(printFloat(1.0, f) == "0x1p+0");
+    assert(printFloat(3.3, f) == "0x2p+1");
+    assert(printFloat(2.9, f) == "0x1p+1");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1.0L, f) == "0x1p+0");
-        assert(printFloat(buf[], 3.3L, f) == "0x2p+1");
-        assert(printFloat(buf[], 2.9L, f) == "0x1p+1");
+        assert(printFloat(1.0L, f) == "0x1p+0");
+        assert(printFloat(3.3L, f) == "0x2p+1");
+        assert(printFloat(2.9L, f) == "0x1p+1");
     }
 }
 
@@ -479,21 +479,20 @@ if (is(T == float) || is(T == double)
     f.spec = 'a';
     f.precision = 0;
     f.flHash = true;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "0x1.p+0");
-    assert(printFloat(buf[], 3.3f, f) == "0x2.p+1");
-    assert(printFloat(buf[], 2.9f, f) == "0x1.p+1");
+    assert(printFloat(1.0f, f) == "0x1.p+0");
+    assert(printFloat(3.3f, f) == "0x2.p+1");
+    assert(printFloat(2.9f, f) == "0x1.p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "0x1.p+0");
-    assert(printFloat(buf[], 3.3, f) == "0x2.p+1");
-    assert(printFloat(buf[], 2.9, f) == "0x1.p+1");
+    assert(printFloat(1.0, f) == "0x1.p+0");
+    assert(printFloat(3.3, f) == "0x2.p+1");
+    assert(printFloat(2.9, f) == "0x1.p+1");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1.0L, f) == "0x1.p+0");
-        assert(printFloat(buf[], 3.3L, f) == "0x2.p+1");
-        assert(printFloat(buf[], 2.9L, f) == "0x1.p+1");
+        assert(printFloat(1.0L, f) == "0x1.p+0");
+        assert(printFloat(3.3L, f) == "0x2.p+1");
+        assert(printFloat(2.9L, f) == "0x1.p+1");
     }
 }
 
@@ -502,22 +501,21 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     f.width = 22;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "                0x1p+0");
-    assert(printFloat(buf[], 3.3f, f) == "         0x1.a66666p+1");
-    assert(printFloat(buf[], 2.9f, f) == "         0x1.733334p+1");
+    assert(printFloat(1.0f, f) == "                0x1p+0");
+    assert(printFloat(3.3f, f) == "         0x1.a66666p+1");
+    assert(printFloat(2.9f, f) == "         0x1.733334p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "                0x1p+0");
-    assert(printFloat(buf[], 3.3, f) == "  0x1.a666666666666p+1");
-    assert(printFloat(buf[], 2.9, f) == "  0x1.7333333333333p+1");
+    assert(printFloat(1.0, f) == "                0x1p+0");
+    assert(printFloat(3.3, f) == "  0x1.a666666666666p+1");
+    assert(printFloat(2.9, f) == "  0x1.7333333333333p+1");
 
     static if (real.mant_dig == 64)
     {
         f.width = 25;
-        assert(printFloat(buf[], 1.0L, f) == "                   0x1p+0");
-        assert(printFloat(buf[], 3.3L, f) == "  0x1.a666666666666666p+1");
-        assert(printFloat(buf[], 2.9L, f) == "  0x1.7333333333333334p+1");
+        assert(printFloat(1.0L, f) == "                   0x1p+0");
+        assert(printFloat(3.3L, f) == "  0x1.a666666666666666p+1");
+        assert(printFloat(2.9L, f) == "  0x1.7333333333333334p+1");
     }
 }
 
@@ -527,22 +525,21 @@ if (is(T == float) || is(T == double)
     f.spec = 'a';
     f.width = 22;
     f.flDash = true;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "0x1p+0                ");
-    assert(printFloat(buf[], 3.3f, f) == "0x1.a66666p+1         ");
-    assert(printFloat(buf[], 2.9f, f) == "0x1.733334p+1         ");
+    assert(printFloat(1.0f, f) == "0x1p+0                ");
+    assert(printFloat(3.3f, f) == "0x1.a66666p+1         ");
+    assert(printFloat(2.9f, f) == "0x1.733334p+1         ");
 
-    assert(printFloat(buf[], 1.0, f) == "0x1p+0                ");
-    assert(printFloat(buf[], 3.3, f) == "0x1.a666666666666p+1  ");
-    assert(printFloat(buf[], 2.9, f) == "0x1.7333333333333p+1  ");
+    assert(printFloat(1.0, f) == "0x1p+0                ");
+    assert(printFloat(3.3, f) == "0x1.a666666666666p+1  ");
+    assert(printFloat(2.9, f) == "0x1.7333333333333p+1  ");
 
     static if (real.mant_dig == 64)
     {
         f.width = 25;
-        assert(printFloat(buf[], 1.0L, f) == "0x1p+0                   ");
-        assert(printFloat(buf[], 3.3L, f) == "0x1.a666666666666666p+1  ");
-        assert(printFloat(buf[], 2.9L, f) == "0x1.7333333333333334p+1  ");
+        assert(printFloat(1.0L, f) == "0x1p+0                   ");
+        assert(printFloat(3.3L, f) == "0x1.a666666666666666p+1  ");
+        assert(printFloat(2.9L, f) == "0x1.7333333333333334p+1  ");
     }
 }
 
@@ -552,22 +549,21 @@ if (is(T == float) || is(T == double)
     f.spec = 'a';
     f.width = 22;
     f.flZero = true;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "0x00000000000000001p+0");
-    assert(printFloat(buf[], 3.3f, f) == "0x0000000001.a66666p+1");
-    assert(printFloat(buf[], 2.9f, f) == "0x0000000001.733334p+1");
+    assert(printFloat(1.0f, f) == "0x00000000000000001p+0");
+    assert(printFloat(3.3f, f) == "0x0000000001.a66666p+1");
+    assert(printFloat(2.9f, f) == "0x0000000001.733334p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "0x00000000000000001p+0");
-    assert(printFloat(buf[], 3.3, f) == "0x001.a666666666666p+1");
-    assert(printFloat(buf[], 2.9, f) == "0x001.7333333333333p+1");
+    assert(printFloat(1.0, f) == "0x00000000000000001p+0");
+    assert(printFloat(3.3, f) == "0x001.a666666666666p+1");
+    assert(printFloat(2.9, f) == "0x001.7333333333333p+1");
 
     static if (real.mant_dig == 64)
     {
         f.width = 25;
-        assert(printFloat(buf[], 1.0L, f) == "0x00000000000000000001p+0");
-        assert(printFloat(buf[], 3.3L, f) == "0x001.a666666666666666p+1");
-        assert(printFloat(buf[], 2.9L, f) == "0x001.7333333333333334p+1");
+        assert(printFloat(1.0L, f) == "0x00000000000000000001p+0");
+        assert(printFloat(3.3L, f) == "0x001.a666666666666666p+1");
+        assert(printFloat(2.9L, f) == "0x001.7333333333333334p+1");
     }
 }
 
@@ -577,22 +573,21 @@ if (is(T == float) || is(T == double)
     f.spec = 'a';
     f.width = 22;
     f.flPlus = true;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == "               +0x1p+0");
-    assert(printFloat(buf[], 3.3f, f) == "        +0x1.a66666p+1");
-    assert(printFloat(buf[], 2.9f, f) == "        +0x1.733334p+1");
+    assert(printFloat(1.0f, f) == "               +0x1p+0");
+    assert(printFloat(3.3f, f) == "        +0x1.a66666p+1");
+    assert(printFloat(2.9f, f) == "        +0x1.733334p+1");
 
-    assert(printFloat(buf[], 1.0, f) == "               +0x1p+0");
-    assert(printFloat(buf[], 3.3, f) == " +0x1.a666666666666p+1");
-    assert(printFloat(buf[], 2.9, f) == " +0x1.7333333333333p+1");
+    assert(printFloat(1.0, f) == "               +0x1p+0");
+    assert(printFloat(3.3, f) == " +0x1.a666666666666p+1");
+    assert(printFloat(2.9, f) == " +0x1.7333333333333p+1");
 
     static if (real.mant_dig == 64)
     {
         f.width = 25;
-        assert(printFloat(buf[], 1.0L, f) == "                  +0x1p+0");
-        assert(printFloat(buf[], 3.3L, f) == " +0x1.a666666666666666p+1");
-        assert(printFloat(buf[], 2.9L, f) == " +0x1.7333333333333334p+1");
+        assert(printFloat(1.0L, f) == "                  +0x1p+0");
+        assert(printFloat(3.3L, f) == " +0x1.a666666666666666p+1");
+        assert(printFloat(2.9L, f) == " +0x1.7333333333333334p+1");
     }
 }
 
@@ -603,22 +598,21 @@ if (is(T == float) || is(T == double)
     f.width = 22;
     f.flDash = true;
     f.flSpace = true;
-    char[32] buf;
 
-    assert(printFloat(buf[], 1.0f, f) == " 0x1p+0               ");
-    assert(printFloat(buf[], 3.3f, f) == " 0x1.a66666p+1        ");
-    assert(printFloat(buf[], 2.9f, f) == " 0x1.733334p+1        ");
+    assert(printFloat(1.0f, f) == " 0x1p+0               ");
+    assert(printFloat(3.3f, f) == " 0x1.a66666p+1        ");
+    assert(printFloat(2.9f, f) == " 0x1.733334p+1        ");
 
-    assert(printFloat(buf[], 1.0, f) == " 0x1p+0               ");
-    assert(printFloat(buf[], 3.3, f) == " 0x1.a666666666666p+1 ");
-    assert(printFloat(buf[], 2.9, f) == " 0x1.7333333333333p+1 ");
+    assert(printFloat(1.0, f) == " 0x1p+0               ");
+    assert(printFloat(3.3, f) == " 0x1.a666666666666p+1 ");
+    assert(printFloat(2.9, f) == " 0x1.7333333333333p+1 ");
 
     static if (real.mant_dig == 64)
     {
         f.width = 25;
-        assert(printFloat(buf[], 1.0L, f) == " 0x1p+0                  ");
-        assert(printFloat(buf[], 3.3L, f) == " 0x1.a666666666666666p+1 ");
-        assert(printFloat(buf[], 2.9L, f) == " 0x1.7333333333333334p+1 ");
+        assert(printFloat(1.0L, f) == " 0x1p+0                  ");
+        assert(printFloat(3.3L, f) == " 0x1.a666666666666666p+1 ");
+        assert(printFloat(2.9L, f) == " 0x1.7333333333333334p+1 ");
     }
 }
 
@@ -627,62 +621,61 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     f.precision = 1;
-    char[32] buf;
 
-    assert(printFloat(buf[], 0x1.18p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.28p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.3p+0");
-    assert(printFloat(buf[], 0x1.1ap0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.16p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.10p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
-    assert(printFloat(buf[], -0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.3p+0");
-    assert(printFloat(buf[], -0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
 
-    assert(printFloat(buf[], 0x1.18p0,  f) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.28p0,  f) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.1ap0,  f) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.16p0,  f) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.10p0,  f) == "0x1.1p+0");
-    assert(printFloat(buf[], -0x1.18p0, f) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.28p0, f) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.1ap0, f) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.16p0, f) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.10p0, f) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0,  f) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0,  f) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0,  f) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0,  f) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0,  f) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f) == "-0x1.1p+0");
 
-    assert(printFloat(buf[], 0x1.18p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.28p0,  f, RoundingMode.toZero) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.1ap0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.16p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.10p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(buf[], -0x1.18p0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.28p0, f, RoundingMode.toZero) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.1ap0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.16p0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.10p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0,  f, RoundingMode.toZero) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0,  f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.toZero) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.toZero) == "-0x1.1p+0");
 
-    assert(printFloat(buf[], 0x1.18p0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.28p0,  f, RoundingMode.up) == "0x1.3p+0");
-    assert(printFloat(buf[], 0x1.1ap0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.16p0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.10p0,  f, RoundingMode.up) == "0x1.1p+0");
-    assert(printFloat(buf[], -0x1.18p0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.28p0, f, RoundingMode.up) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.1ap0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.16p0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(buf[], -0x1.10p0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0,  f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.28p0,  f, RoundingMode.up) == "0x1.3p+0");
+    assert(printFloat(0x1.1ap0,  f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.16p0,  f, RoundingMode.up) == "0x1.2p+0");
+    assert(printFloat(0x1.10p0,  f, RoundingMode.up) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.up) == "-0x1.2p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.up) == "-0x1.1p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.up) == "-0x1.1p+0");
 
-    assert(printFloat(buf[], 0x1.18p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.28p0,  f, RoundingMode.down) == "0x1.2p+0");
-    assert(printFloat(buf[], 0x1.1ap0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.16p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(buf[], 0x1.10p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(buf[], -0x1.18p0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.28p0, f, RoundingMode.down) == "-0x1.3p+0");
-    assert(printFloat(buf[], -0x1.1ap0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.16p0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(buf[], -0x1.10p0, f, RoundingMode.down) == "-0x1.1p+0");
+    assert(printFloat(0x1.18p0,  f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.28p0,  f, RoundingMode.down) == "0x1.2p+0");
+    assert(printFloat(0x1.1ap0,  f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.16p0,  f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(0x1.10p0,  f, RoundingMode.down) == "0x1.1p+0");
+    assert(printFloat(-0x1.18p0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.28p0, f, RoundingMode.down) == "-0x1.3p+0");
+    assert(printFloat(-0x1.1ap0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.16p0, f, RoundingMode.down) == "-0x1.2p+0");
+    assert(printFloat(-0x1.10p0, f, RoundingMode.down) == "-0x1.1p+0");
 }
 
 // for 100% coverage
@@ -691,10 +684,9 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
     f.precision = 3;
-    char[32] buf;
 
-    assert(printFloat(buf[], 0x1.19f81p0, f) == "0x1.1a0p+0");
-    assert(printFloat(buf[], 0x1.19f01p0, f) == "0x1.19fp+0");
+    assert(printFloat(0x1.19f81p0, f) == "0x1.1a0p+0");
+    assert(printFloat(0x1.19f01p0, f) == "0x1.19fp+0");
 }
 
 @safe unittest
@@ -702,13 +694,12 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'A';
     f.precision = 3;
-    char[32] buf;
 
-    assert(printFloat(buf[], 0x1.19f81p0, f) == "0X1.1A0P+0");
-    assert(printFloat(buf[], 0x1.19f01p0, f) == "0X1.19FP+0");
+    assert(printFloat(0x1.19f81p0, f) == "0X1.1A0P+0");
+    assert(printFloat(0x1.19f01p0, f) == "0X1.19FP+0");
 }
 
-private auto printFloatE(bool g, Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+private void printFloatE(bool g, Writer, T, Char)(auto ref Writer w, T val,
     FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -730,8 +721,7 @@ if (is(T == float) || is(T == double)
             writeAligned(w, sgn, "0", ".", "", f, PrecisionType.allDigits);
         else
             writeAligned(w, sgn, "0", ".", is_upper ? "E+00" : "e+00", f, PrecisionType.fractionalDigits);
-
-        return buf[0 .. 0];
+        return;
     }
 
     // add leading 1 for normalized values or correct exponent for denormalied values
@@ -1250,248 +1240,238 @@ printFloat_done:
     else
         writeAligned(w, sgn, dec_buf[left .. left + 1], dec_buf[left + 1 .. right],
                      exp_buf[exp_pos .. $], f, PrecisionType.fractionalDigits);
-
-    return buf[0 .. 0];
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.nan, f) == "-nan");
-    assert(printFloat(buf[], float.infinity, f) == "inf");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0.000000e+00");
-    assert(printFloat(buf[], -0.0f, f) == "-0.000000e+00");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0.000000e+00");
+    assert(printFloat(-0.0f, f) == "-0.000000e+00");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "1.000000e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "-1.000000e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "1.000000e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "-1.000000e-10");
-    assert(printFloat(buf[], 0.1f, f) == "1.000000e-01");
-    assert(printFloat(buf[], -0.1f, f) == "-1.000000e-01");
-    assert(printFloat(buf[], 10.0f, f) == "1.000000e+01");
-    assert(printFloat(buf[], -10.0f, f) == "-1.000000e+01");
-    assert(printFloat(buf[], 1e30f, f) == "1.000000e+30");
-    assert(printFloat(buf[], -1e30f, f) == "-1.000000e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "9.999946e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "-9.999946e-41");
+    assert(printFloat(1e-30f, f) == "1.000000e-30");
+    assert(printFloat(-1e-30f, f) == "-1.000000e-30");
+    assert(printFloat(1e-10f, f) == "1.000000e-10");
+    assert(printFloat(-1e-10f, f) == "-1.000000e-10");
+    assert(printFloat(0.1f, f) == "1.000000e-01");
+    assert(printFloat(-0.1f, f) == "-1.000000e-01");
+    assert(printFloat(10.0f, f) == "1.000000e+01");
+    assert(printFloat(-10.0f, f) == "-1.000000e+01");
+    assert(printFloat(1e30f, f) == "1.000000e+30");
+    assert(printFloat(-1e30f, f) == "-1.000000e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298e-45");
+    assert(printFloat(nextUp(0.0f), f) == "1.401298e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "-1.401298e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
     f.width = 20;
     f.precision = 10;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "    0.0000000000e+00");
-    assert(printFloat(buf[], -0.0f, f) == "   -0.0000000000e+00");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "    0.0000000000e+00");
+    assert(printFloat(-0.0f, f) == "   -0.0000000000e+00");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "    9.9999461011e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "   -9.9999461011e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "    1.0000000032e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "   -1.0000000032e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "    1.0000000134e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "   -1.0000000134e-10");
-    assert(printFloat(buf[], 0.1f, f) == "    1.0000000149e-01");
-    assert(printFloat(buf[], -0.1f, f) == "   -1.0000000149e-01");
-    assert(printFloat(buf[], 10.0f, f) == "    1.0000000000e+01");
-    assert(printFloat(buf[], -10.0f, f) == "   -1.0000000000e+01");
-    assert(printFloat(buf[], 1e30f, f) == "    1.0000000150e+30");
-    assert(printFloat(buf[], -1e30f, f) == "   -1.0000000150e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "    9.9999461011e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "   -9.9999461011e-41");
+    assert(printFloat(1e-30f, f) == "    1.0000000032e-30");
+    assert(printFloat(-1e-30f, f) == "   -1.0000000032e-30");
+    assert(printFloat(1e-10f, f) == "    1.0000000134e-10");
+    assert(printFloat(-1e-10f, f) == "   -1.0000000134e-10");
+    assert(printFloat(0.1f, f) == "    1.0000000149e-01");
+    assert(printFloat(-0.1f, f) == "   -1.0000000149e-01");
+    assert(printFloat(10.0f, f) == "    1.0000000000e+01");
+    assert(printFloat(-10.0f, f) == "   -1.0000000000e+01");
+    assert(printFloat(1e30f, f) == "    1.0000000150e+30");
+    assert(printFloat(-1e30f, f) == "   -1.0000000150e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "    1.4012984643e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "   -1.4012984643e-45");
+    assert(printFloat(nextUp(0.0f), f) == "    1.4012984643e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "   -1.4012984643e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
     f.width = 20;
     f.precision = 10;
     f.flDash = true;
 
-    assert(printFloat(buf[], float.nan, f) == "nan                 ");
-    assert(printFloat(buf[], -float.nan, f) == "-nan                ");
-    assert(printFloat(buf[], float.infinity, f) == "inf                 ");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
-    assert(printFloat(buf[], 0.0f, f) == "0.0000000000e+00    ");
-    assert(printFloat(buf[], -0.0f, f) == "-0.0000000000e+00   ");
+    assert(printFloat(float.nan, f) == "nan                 ");
+    assert(printFloat(-float.nan, f) == "-nan                ");
+    assert(printFloat(float.infinity, f) == "inf                 ");
+    assert(printFloat(-float.infinity, f) == "-inf                ");
+    assert(printFloat(0.0f, f) == "0.0000000000e+00    ");
+    assert(printFloat(-0.0f, f) == "-0.0000000000e+00   ");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.9999461011e-41    ");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.9999461011e-41   ");
-    assert(printFloat(buf[], 1e-30f, f) == "1.0000000032e-30    ");
-    assert(printFloat(buf[], -1e-30f, f) == "-1.0000000032e-30   ");
-    assert(printFloat(buf[], 1e-10f, f) == "1.0000000134e-10    ");
-    assert(printFloat(buf[], -1e-10f, f) == "-1.0000000134e-10   ");
-    assert(printFloat(buf[], 0.1f, f) == "1.0000000149e-01    ");
-    assert(printFloat(buf[], -0.1f, f) == "-1.0000000149e-01   ");
-    assert(printFloat(buf[], 10.0f, f) == "1.0000000000e+01    ");
-    assert(printFloat(buf[], -10.0f, f) == "-1.0000000000e+01   ");
-    assert(printFloat(buf[], 1e30f, f) == "1.0000000150e+30    ");
-    assert(printFloat(buf[], -1e30f, f) == "-1.0000000150e+30   ");
+    assert(printFloat(cast(float) 1e-40, f) == "9.9999461011e-41    ");
+    assert(printFloat(cast(float) -1e-40, f) == "-9.9999461011e-41   ");
+    assert(printFloat(1e-30f, f) == "1.0000000032e-30    ");
+    assert(printFloat(-1e-30f, f) == "-1.0000000032e-30   ");
+    assert(printFloat(1e-10f, f) == "1.0000000134e-10    ");
+    assert(printFloat(-1e-10f, f) == "-1.0000000134e-10   ");
+    assert(printFloat(0.1f, f) == "1.0000000149e-01    ");
+    assert(printFloat(-0.1f, f) == "-1.0000000149e-01   ");
+    assert(printFloat(10.0f, f) == "1.0000000000e+01    ");
+    assert(printFloat(-10.0f, f) == "-1.0000000000e+01   ");
+    assert(printFloat(1e30f, f) == "1.0000000150e+30    ");
+    assert(printFloat(-1e30f, f) == "-1.0000000150e+30   ");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "1.4012984643e-45    ");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.4012984643e-45   ");
+    assert(printFloat(nextUp(0.0f), f) == "1.4012984643e-45    ");
+    assert(printFloat(nextDown(-0.0f), f) == "-1.4012984643e-45   ");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
     f.width = 20;
     f.precision = 10;
     f.flZero = true;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "00000.0000000000e+00");
-    assert(printFloat(buf[], -0.0f, f) == "-0000.0000000000e+00");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "00000.0000000000e+00");
+    assert(printFloat(-0.0f, f) == "-0000.0000000000e+00");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "00009.9999461011e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-0009.9999461011e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "00001.0000000032e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "-0001.0000000032e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "00001.0000000134e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "-0001.0000000134e-10");
-    assert(printFloat(buf[], 0.1f, f) == "00001.0000000149e-01");
-    assert(printFloat(buf[], -0.1f, f) == "-0001.0000000149e-01");
-    assert(printFloat(buf[], 10.0f, f) == "00001.0000000000e+01");
-    assert(printFloat(buf[], -10.0f, f) == "-0001.0000000000e+01");
-    assert(printFloat(buf[], 1e30f, f) == "00001.0000000150e+30");
-    assert(printFloat(buf[], -1e30f, f) == "-0001.0000000150e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "00009.9999461011e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "-0009.9999461011e-41");
+    assert(printFloat(1e-30f, f) == "00001.0000000032e-30");
+    assert(printFloat(-1e-30f, f) == "-0001.0000000032e-30");
+    assert(printFloat(1e-10f, f) == "00001.0000000134e-10");
+    assert(printFloat(-1e-10f, f) == "-0001.0000000134e-10");
+    assert(printFloat(0.1f, f) == "00001.0000000149e-01");
+    assert(printFloat(-0.1f, f) == "-0001.0000000149e-01");
+    assert(printFloat(10.0f, f) == "00001.0000000000e+01");
+    assert(printFloat(-10.0f, f) == "-0001.0000000000e+01");
+    assert(printFloat(1e30f, f) == "00001.0000000150e+30");
+    assert(printFloat(-1e30f, f) == "-0001.0000000150e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "00001.4012984643e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-0001.4012984643e-45");
+    assert(printFloat(nextUp(0.0f), f) == "00001.4012984643e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "-0001.4012984643e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
     f.precision = 1;
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.3e+01");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.3e+01");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
+    assert(printFloat(11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
+    assert(printFloat(12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.3e+01");
+    assert(printFloat(11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
+    assert(printFloat(11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
+    assert(printFloat(11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
+    assert(printFloat(-11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
+    assert(printFloat(-12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.3e+01");
+    assert(printFloat(-11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
+    assert(printFloat(-11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
+    assert(printFloat(-11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
 
-    assert(printFloat(buf[], 11.5f, f) == "1.2e+01");
-    assert(printFloat(buf[], 12.5f, f) == "1.2e+01");
-    assert(printFloat(buf[], 11.7f, f) == "1.2e+01");
-    assert(printFloat(buf[], 11.3f, f) == "1.1e+01");
-    assert(printFloat(buf[], 11.0f, f) == "1.1e+01");
-    assert(printFloat(buf[], -11.5f, f) == "-1.2e+01");
-    assert(printFloat(buf[], -12.5f, f) == "-1.2e+01");
-    assert(printFloat(buf[], -11.7f, f) == "-1.2e+01");
-    assert(printFloat(buf[], -11.3f, f) == "-1.1e+01");
-    assert(printFloat(buf[], -11.0f, f) == "-1.1e+01");
+    assert(printFloat(11.5f, f) == "1.2e+01");
+    assert(printFloat(12.5f, f) == "1.2e+01");
+    assert(printFloat(11.7f, f) == "1.2e+01");
+    assert(printFloat(11.3f, f) == "1.1e+01");
+    assert(printFloat(11.0f, f) == "1.1e+01");
+    assert(printFloat(-11.5f, f) == "-1.2e+01");
+    assert(printFloat(-12.5f, f) == "-1.2e+01");
+    assert(printFloat(-11.7f, f) == "-1.2e+01");
+    assert(printFloat(-11.3f, f) == "-1.1e+01");
+    assert(printFloat(-11.0f, f) == "-1.1e+01");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toZero) == "1.2e+01");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toZero) == "-1.2e+01");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toZero) == "-1.1e+01");
+    assert(printFloat(11.5f, f, RoundingMode.toZero) == "1.1e+01");
+    assert(printFloat(12.5f, f, RoundingMode.toZero) == "1.2e+01");
+    assert(printFloat(11.7f, f, RoundingMode.toZero) == "1.1e+01");
+    assert(printFloat(11.3f, f, RoundingMode.toZero) == "1.1e+01");
+    assert(printFloat(11.0f, f, RoundingMode.toZero) == "1.1e+01");
+    assert(printFloat(-11.5f, f, RoundingMode.toZero) == "-1.1e+01");
+    assert(printFloat(-12.5f, f, RoundingMode.toZero) == "-1.2e+01");
+    assert(printFloat(-11.7f, f, RoundingMode.toZero) == "-1.1e+01");
+    assert(printFloat(-11.3f, f, RoundingMode.toZero) == "-1.1e+01");
+    assert(printFloat(-11.0f, f, RoundingMode.toZero) == "-1.1e+01");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.up) == "1.3e+01");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.up) == "1.1e+01");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.up) == "-1.2e+01");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.up) == "-1.1e+01");
+    assert(printFloat(11.5f, f, RoundingMode.up) == "1.2e+01");
+    assert(printFloat(12.5f, f, RoundingMode.up) == "1.3e+01");
+    assert(printFloat(11.7f, f, RoundingMode.up) == "1.2e+01");
+    assert(printFloat(11.3f, f, RoundingMode.up) == "1.2e+01");
+    assert(printFloat(11.0f, f, RoundingMode.up) == "1.1e+01");
+    assert(printFloat(-11.5f, f, RoundingMode.up) == "-1.1e+01");
+    assert(printFloat(-12.5f, f, RoundingMode.up) == "-1.2e+01");
+    assert(printFloat(-11.7f, f, RoundingMode.up) == "-1.1e+01");
+    assert(printFloat(-11.3f, f, RoundingMode.up) == "-1.1e+01");
+    assert(printFloat(-11.0f, f, RoundingMode.up) == "-1.1e+01");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.down) == "1.2e+01");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.down) == "-1.3e+01");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.down) == "-1.1e+01");
+    assert(printFloat(11.5f, f, RoundingMode.down) == "1.1e+01");
+    assert(printFloat(12.5f, f, RoundingMode.down) == "1.2e+01");
+    assert(printFloat(11.7f, f, RoundingMode.down) == "1.1e+01");
+    assert(printFloat(11.3f, f, RoundingMode.down) == "1.1e+01");
+    assert(printFloat(11.0f, f, RoundingMode.down) == "1.1e+01");
+    assert(printFloat(-11.5f, f, RoundingMode.down) == "-1.2e+01");
+    assert(printFloat(-12.5f, f, RoundingMode.down) == "-1.3e+01");
+    assert(printFloat(-11.7f, f, RoundingMode.down) == "-1.2e+01");
+    assert(printFloat(-11.3f, f, RoundingMode.down) == "-1.2e+01");
+    assert(printFloat(-11.0f, f, RoundingMode.down) == "-1.1e+01");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
-    assert(printFloat(buf[], double.nan, f) == "nan");
-    assert(printFloat(buf[], -double.nan, f) == "-nan");
-    assert(printFloat(buf[], double.infinity, f) == "inf");
-    assert(printFloat(buf[], -double.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0, f) == "0.000000e+00");
-    assert(printFloat(buf[], -0.0, f) == "-0.000000e+00");
+    assert(printFloat(double.nan, f) == "nan");
+    assert(printFloat(-double.nan, f) == "-nan");
+    assert(printFloat(double.infinity, f) == "inf");
+    assert(printFloat(-double.infinity, f) == "-inf");
+    assert(printFloat(0.0, f) == "0.000000e+00");
+    assert(printFloat(-0.0, f) == "-0.000000e+00");
     // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], 1e-307 / 1000, f) == "1.000000e-310");
-    assert(printFloat(buf[], -1e-307 / 1000, f) == "-1.000000e-310");
-    assert(printFloat(buf[], 1e-30, f) == "1.000000e-30");
-    assert(printFloat(buf[], -1e-30, f) == "-1.000000e-30");
-    assert(printFloat(buf[], 1e-10, f) == "1.000000e-10");
-    assert(printFloat(buf[], -1e-10, f) == "-1.000000e-10");
-    assert(printFloat(buf[], 0.1, f) == "1.000000e-01");
-    assert(printFloat(buf[], -0.1, f) == "-1.000000e-01");
-    assert(printFloat(buf[], 10.0, f) == "1.000000e+01");
-    assert(printFloat(buf[], -10.0, f) == "-1.000000e+01");
-    assert(printFloat(buf[], 1e300, f) == "1.000000e+300");
-    assert(printFloat(buf[], -1e300, f) == "-1.000000e+300");
+    assert(printFloat(1e-307 / 1000, f) == "1.000000e-310");
+    assert(printFloat(-1e-307 / 1000, f) == "-1.000000e-310");
+    assert(printFloat(1e-30, f) == "1.000000e-30");
+    assert(printFloat(-1e-30, f) == "-1.000000e-30");
+    assert(printFloat(1e-10, f) == "1.000000e-10");
+    assert(printFloat(-1e-10, f) == "-1.000000e-10");
+    assert(printFloat(0.1, f) == "1.000000e-01");
+    assert(printFloat(-0.1, f) == "-1.000000e-01");
+    assert(printFloat(10.0, f) == "1.000000e+01");
+    assert(printFloat(-10.0, f) == "-1.000000e+01");
+    assert(printFloat(1e300, f) == "1.000000e+300");
+    assert(printFloat(-1e300, f) == "-1.000000e+300");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0), f) == "4.940656e-324");
-    assert(printFloat(buf[], nextDown(-0.0), f) == "-4.940656e-324");
+    assert(printFloat(nextUp(0.0), f) == "4.940656e-324");
+    assert(printFloat(nextDown(-0.0), f) == "-4.940656e-324");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
 
@@ -1499,7 +1479,7 @@ printFloat_done:
 
     double eps = nextUp(0.0);
     f.precision = 1000;
-    assert(printFloat(buf[], eps, f) ==
+    assert(printFloat(eps, f) ==
            "4.9406564584124654417656879286822137236505980261432476442558568250067550727020875186529983636163599"
            ~"23797965646954457177309266567103559397963987747960107818781263007131903114045278458171678489821036"
            ~"88718636056998730723050006387409153564984387312473397273169615140031715385398074126238565591171026"
@@ -1513,20 +1493,19 @@ printFloat_done:
            ~"000000000000000000000e-324");
 
     f.precision = 50;
-    assert(printFloat(buf[], double.max, f) ==
+    assert(printFloat(double.max, f) ==
            "1.79769313486231570814527423731704356798070567525845e+308");
-    assert(printFloat(buf[], double.epsilon, f) ==
+    assert(printFloat(double.epsilon, f) ==
            "2.22044604925031308084726333618164062500000000000000e-16");
 
     f.precision = 10;
-    assert(printFloat(buf[], 1.0/3.0, f) == "3.3333333333e-01");
-    assert(printFloat(buf[], 1.0/7.0, f) == "1.4285714286e-01");
-    assert(printFloat(buf[], 1.0/9.0, f) == "1.1111111111e-01");
+    assert(printFloat(1.0/3.0, f) == "3.3333333333e-01");
+    assert(printFloat(1.0/7.0, f) == "1.4285714286e-01");
+    assert(printFloat(1.0/9.0, f) == "1.1111111111e-01");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
     f.precision = 15;
@@ -1534,82 +1513,80 @@ printFloat_done:
     import std.math.constants : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                                 LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
 
-    assert(printFloat(buf[], cast(double) E, f) == "2.718281828459045e+00");
-    assert(printFloat(buf[], cast(double) PI, f) == "3.141592653589793e+00");
-    assert(printFloat(buf[], cast(double) PI_2, f) == "1.570796326794897e+00");
-    assert(printFloat(buf[], cast(double) PI_4, f) == "7.853981633974483e-01");
-    assert(printFloat(buf[], cast(double) M_1_PI, f) == "3.183098861837907e-01");
-    assert(printFloat(buf[], cast(double) M_2_PI, f) == "6.366197723675814e-01");
-    assert(printFloat(buf[], cast(double) M_2_SQRTPI, f) == "1.128379167095513e+00");
-    assert(printFloat(buf[], cast(double) LN10, f) == "2.302585092994046e+00");
-    assert(printFloat(buf[], cast(double) LN2, f) == "6.931471805599453e-01");
-    assert(printFloat(buf[], cast(double) LOG2, f) == "3.010299956639812e-01");
-    assert(printFloat(buf[], cast(double) LOG2E, f) == "1.442695040888963e+00");
-    assert(printFloat(buf[], cast(double) LOG2T, f) == "3.321928094887362e+00");
-    assert(printFloat(buf[], cast(double) LOG10E, f) == "4.342944819032518e-01");
-    assert(printFloat(buf[], cast(double) SQRT2, f) == "1.414213562373095e+00");
-    assert(printFloat(buf[], cast(double) SQRT1_2, f) == "7.071067811865476e-01");
+    assert(printFloat(cast(double) E, f) == "2.718281828459045e+00");
+    assert(printFloat(cast(double) PI, f) == "3.141592653589793e+00");
+    assert(printFloat(cast(double) PI_2, f) == "1.570796326794897e+00");
+    assert(printFloat(cast(double) PI_4, f) == "7.853981633974483e-01");
+    assert(printFloat(cast(double) M_1_PI, f) == "3.183098861837907e-01");
+    assert(printFloat(cast(double) M_2_PI, f) == "6.366197723675814e-01");
+    assert(printFloat(cast(double) M_2_SQRTPI, f) == "1.128379167095513e+00");
+    assert(printFloat(cast(double) LN10, f) == "2.302585092994046e+00");
+    assert(printFloat(cast(double) LN2, f) == "6.931471805599453e-01");
+    assert(printFloat(cast(double) LOG2, f) == "3.010299956639812e-01");
+    assert(printFloat(cast(double) LOG2E, f) == "1.442695040888963e+00");
+    assert(printFloat(cast(double) LOG2T, f) == "3.321928094887362e+00");
+    assert(printFloat(cast(double) LOG10E, f) == "4.342944819032518e-01");
+    assert(printFloat(cast(double) SQRT2, f) == "1.414213562373095e+00");
+    assert(printFloat(cast(double) SQRT1_2, f) == "7.071067811865476e-01");
 }
 
 // for 100% coverage
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'E';
     f.precision = 80;
-    assert(printFloat(buf[], 5.62776e+12f, f) ==
+    assert(printFloat(5.62776e+12f, f) ==
            "5.62775982080000000000000000000000000000000000000000000000000000000000000000000000E+12");
 
     f.precision = 49;
-    assert(printFloat(buf[], 2.5997869e-12f, f) ==
+    assert(printFloat(2.5997869e-12f, f) ==
            "2.5997869221999758693186777236405760049819946289062E-12");
 
     f.precision = 6;
-    assert(printFloat(buf[], -1.1418613e+07f, f) == "-1.141861E+07");
-    assert(printFloat(buf[], -1.368281e+07f, f) == "-1.368281E+07");
+    assert(printFloat(-1.1418613e+07f, f) == "-1.141861E+07");
+    assert(printFloat(-1.368281e+07f, f) == "-1.368281E+07");
 
     f.precision = 0;
-    assert(printFloat(buf[], 709422.0f, f, RoundingMode.up) == "8E+05");
+    assert(printFloat(709422.0f, f, RoundingMode.up) == "8E+05");
 
     f.precision = 1;
-    assert(printFloat(buf[], -245.666f, f) == "-2.5E+02");
+    assert(printFloat(-245.666f, f) == "-2.5E+02");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'e';
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0L, f) == "0.000000e+00");
-    assert(printFloat(buf[], -0.0L, f) == "-0.000000e+00");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
+    assert(printFloat(0.0L, f) == "0.000000e+00");
+    assert(printFloat(-0.0L, f) == "-0.000000e+00");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1e-4940L, f) == "1.000000e-4940");
-        assert(printFloat(buf[], -1e-4940L, f) == "-1.000000e-4940");
-        assert(printFloat(buf[], 1e-30L, f) == "1.000000e-30");
-        assert(printFloat(buf[], -1e-30L, f) == "-1.000000e-30");
-        assert(printFloat(buf[], 1e-10L, f) == "1.000000e-10");
-        assert(printFloat(buf[], -1e-10L, f) == "-1.000000e-10");
-        assert(printFloat(buf[], 0.1L, f) == "1.000000e-01");
-        assert(printFloat(buf[], -0.1L, f) == "-1.000000e-01");
-        assert(printFloat(buf[], 10.0L, f) == "1.000000e+01");
-        assert(printFloat(buf[], -10.0L, f) == "-1.000000e+01");
+        assert(printFloat(1e-4940L, f) == "1.000000e-4940");
+        assert(printFloat(-1e-4940L, f) == "-1.000000e-4940");
+        assert(printFloat(1e-30L, f) == "1.000000e-30");
+        assert(printFloat(-1e-30L, f) == "-1.000000e-30");
+        assert(printFloat(1e-10L, f) == "1.000000e-10");
+        assert(printFloat(-1e-10L, f) == "-1.000000e-10");
+        assert(printFloat(0.1L, f) == "1.000000e-01");
+        assert(printFloat(-0.1L, f) == "-1.000000e-01");
+        assert(printFloat(10.0L, f) == "1.000000e+01");
+        assert(printFloat(-10.0L, f) == "-1.000000e+01");
         version (Windows) {} // issue 20972
         else
         {
-            assert(printFloat(buf[], 1e4000L, f) == "1.000000e+4000");
-            assert(printFloat(buf[], -1e4000L, f) == "-1.000000e+4000");
+            assert(printFloat(1e4000L, f) == "1.000000e+4000");
+            assert(printFloat(-1e4000L, f) == "-1.000000e+4000");
         }
 
         import std.math.operations : nextUp, nextDown;
-        assert(printFloat(buf[], nextUp(0.0L), f) == "3.645200e-4951");
-        assert(printFloat(buf[], nextDown(-0.0L), f) == "-3.645200e-4951");
+        assert(printFloat(nextUp(0.0L), f) == "3.645200e-4951");
+        assert(printFloat(nextDown(-0.0L), f) == "-3.645200e-4951");
     }
 }
 
@@ -1627,29 +1604,28 @@ printFloat_done:
         enum test = cast(int) log2(3.05e2312L);
         static if (real.mant_dig == 64 && test == 7681)
         {
-            char[256] buf;
             auto f = FormatSpec!dchar("");
             f.spec = 'e';
-            assert(printFloat(buf[], real.infinity, f) == "inf");
-            assert(printFloat(buf[], 10.0L, f) == "1.000000e+01");
-            assert(printFloat(buf[], 2.6080L, f) == "2.608000e+00");
-            assert(printFloat(buf[], 3.05e2312L, f) == "3.050000e+2312");
+            assert(printFloat(real.infinity, f) == "inf");
+            assert(printFloat(10.0L, f) == "1.000000e+01");
+            assert(printFloat(2.6080L, f) == "2.608000e+00");
+            assert(printFloat(3.05e2312L, f) == "3.050000e+2312");
 
             f.precision = 60;
-            assert(printFloat(buf[], 2.65e-54L, f) ==
+            assert(printFloat(2.65e-54L, f) ==
                    "2.650000000000000000059009987400547013941028940935296547599415e-54");
 
             /*
              commented out, because CTFE is currently too slow for 5000 digits with extreme values
 
             f.precision = 5000;
-            auto result2 = printFloat(buf[], 1.2119e-4822L, f);
+            auto result2 = printFloat(1.2119e-4822L, f);
             assert(result2.length == 5008);
             assert(result2[$ - 20 .. $] == "60729486595339e-4822");
-            auto result3 = printFloat(buf[], real.min_normal, f);
+            auto result3 = printFloat(real.min_normal, f);
             assert(result3.length == 5008);
             assert(result3[$ - 20 .. $] == "20781410082267e-4932");
-            auto result4 = printFloat(buf[], real.min_normal.nextDown, f);
+            auto result4 = printFloat(real.min_normal.nextDown, f);
             assert(result4.length == 5008);
             assert(result4[$ - 20 .. $] == "81413263331006e-4932");
              */
@@ -1657,7 +1633,7 @@ printFloat_done:
     });
 }
 
-private auto printFloatF(bool g, Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+private void printFloatF(bool g, Writer, T, Char)(auto ref Writer w, T val,
     FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -1676,8 +1652,7 @@ if (is(T == float) || is(T == double)
     if (exp == 0 && mnt == 0)
     {
         writeAligned(w, sgn, "0", ".", "", f, PrecisionType.fractionalDigits);
-
-        return buf[0 .. 0];
+        return;
     }
 
     // add leading 1 for normalized values or correct exponent for denormalied values
@@ -2066,280 +2041,271 @@ printFloat_done:
         writeAligned(w, sgn, dec_buf[left .. start], dec_buf[start .. right], "", f, PrecisionType.allDigits);
     else
         writeAligned(w, sgn, dec_buf[left .. start], dec_buf[start .. right], "", f, PrecisionType.fractionalDigits);
-
-    return buf[0 .. 0];
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.nan, f) == "-nan");
-    assert(printFloat(buf[], float.infinity, f) == "inf");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0.000000");
-    assert(printFloat(buf[], -0.0f, f) == "-0.000000");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0.000000");
+    assert(printFloat(-0.0f, f) == "-0.000000");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "0.000000");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-0.000000");
-    assert(printFloat(buf[], 1e-30f, f) == "0.000000");
-    assert(printFloat(buf[], -1e-30f, f) == "-0.000000");
-    assert(printFloat(buf[], 1e-10f, f) == "0.000000");
-    assert(printFloat(buf[], -1e-10f, f) == "-0.000000");
-    assert(printFloat(buf[], 0.1f, f) == "0.100000");
-    assert(printFloat(buf[], -0.1f, f) == "-0.100000");
-    assert(printFloat(buf[], 10.0f, f) == "10.000000");
-    assert(printFloat(buf[], -10.0f, f) == "-10.000000");
-    assert(printFloat(buf[], 1e30f, f) == "1000000015047466219876688855040.000000");
-    assert(printFloat(buf[], -1e30f, f) == "-1000000015047466219876688855040.000000");
+    assert(printFloat(cast(float) 1e-40, f) == "0.000000");
+    assert(printFloat(cast(float) -1e-40, f) == "-0.000000");
+    assert(printFloat(1e-30f, f) == "0.000000");
+    assert(printFloat(-1e-30f, f) == "-0.000000");
+    assert(printFloat(1e-10f, f) == "0.000000");
+    assert(printFloat(-1e-10f, f) == "-0.000000");
+    assert(printFloat(0.1f, f) == "0.100000");
+    assert(printFloat(-0.1f, f) == "-0.100000");
+    assert(printFloat(10.0f, f) == "10.000000");
+    assert(printFloat(-10.0f, f) == "-10.000000");
+    assert(printFloat(1e30f, f) == "1000000015047466219876688855040.000000");
+    assert(printFloat(-1e30f, f) == "-1000000015047466219876688855040.000000");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "0.000000");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-0.000000");
+    assert(printFloat(nextUp(0.0f), f) == "0.000000");
+    assert(printFloat(nextDown(-0.0f), f) == "-0.000000");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.width = 20;
     f.precision = 10;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "        0.0000000000");
-    assert(printFloat(buf[], -0.0f, f) == "       -0.0000000000");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "        0.0000000000");
+    assert(printFloat(-0.0f, f) == "       -0.0000000000");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "        0.0000000000");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "       -0.0000000000");
-    assert(printFloat(buf[], 1e-30f, f) == "        0.0000000000");
-    assert(printFloat(buf[], -1e-30f, f) == "       -0.0000000000");
-    assert(printFloat(buf[], 1e-10f, f) == "        0.0000000001");
-    assert(printFloat(buf[], -1e-10f, f) == "       -0.0000000001");
-    assert(printFloat(buf[], 0.1f, f) == "        0.1000000015");
-    assert(printFloat(buf[], -0.1f, f) == "       -0.1000000015");
-    assert(printFloat(buf[], 10.0f, f) == "       10.0000000000");
-    assert(printFloat(buf[], -10.0f, f) == "      -10.0000000000");
-    assert(printFloat(buf[], 1e30f, f) == "1000000015047466219876688855040.0000000000");
-    assert(printFloat(buf[], -1e30f, f) == "-1000000015047466219876688855040.0000000000");
+    assert(printFloat(cast(float) 1e-40, f) == "        0.0000000000");
+    assert(printFloat(cast(float) -1e-40, f) == "       -0.0000000000");
+    assert(printFloat(1e-30f, f) == "        0.0000000000");
+    assert(printFloat(-1e-30f, f) == "       -0.0000000000");
+    assert(printFloat(1e-10f, f) == "        0.0000000001");
+    assert(printFloat(-1e-10f, f) == "       -0.0000000001");
+    assert(printFloat(0.1f, f) == "        0.1000000015");
+    assert(printFloat(-0.1f, f) == "       -0.1000000015");
+    assert(printFloat(10.0f, f) == "       10.0000000000");
+    assert(printFloat(-10.0f, f) == "      -10.0000000000");
+    assert(printFloat(1e30f, f) == "1000000015047466219876688855040.0000000000");
+    assert(printFloat(-1e30f, f) == "-1000000015047466219876688855040.0000000000");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "        0.0000000000");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "       -0.0000000000");
+    assert(printFloat(nextUp(0.0f), f) == "        0.0000000000");
+    assert(printFloat(nextDown(-0.0f), f) == "       -0.0000000000");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.width = 20;
     f.precision = 10;
     f.flDash = true;
 
-    assert(printFloat(buf[], float.nan, f) == "nan                 ");
-    assert(printFloat(buf[], -float.nan, f) == "-nan                ");
-    assert(printFloat(buf[], float.infinity, f) == "inf                 ");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
-    assert(printFloat(buf[], 0.0f, f) == "0.0000000000        ");
-    assert(printFloat(buf[], -0.0f, f) == "-0.0000000000       ");
+    assert(printFloat(float.nan, f) == "nan                 ");
+    assert(printFloat(-float.nan, f) == "-nan                ");
+    assert(printFloat(float.infinity, f) == "inf                 ");
+    assert(printFloat(-float.infinity, f) == "-inf                ");
+    assert(printFloat(0.0f, f) == "0.0000000000        ");
+    assert(printFloat(-0.0f, f) == "-0.0000000000       ");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "0.0000000000        ");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-0.0000000000       ");
-    assert(printFloat(buf[], 1e-30f, f) == "0.0000000000        ");
-    assert(printFloat(buf[], -1e-30f, f) == "-0.0000000000       ");
-    assert(printFloat(buf[], 1e-10f, f) == "0.0000000001        ");
-    assert(printFloat(buf[], -1e-10f, f) == "-0.0000000001       ");
-    assert(printFloat(buf[], 0.1f, f) == "0.1000000015        ");
-    assert(printFloat(buf[], -0.1f, f) == "-0.1000000015       ");
-    assert(printFloat(buf[], 10.0f, f) == "10.0000000000       ");
-    assert(printFloat(buf[], -10.0f, f) == "-10.0000000000      ");
-    assert(printFloat(buf[], 1e30f, f) == "1000000015047466219876688855040.0000000000");
-    assert(printFloat(buf[], -1e30f, f) == "-1000000015047466219876688855040.0000000000");
+    assert(printFloat(cast(float) 1e-40, f) == "0.0000000000        ");
+    assert(printFloat(cast(float) -1e-40, f) == "-0.0000000000       ");
+    assert(printFloat(1e-30f, f) == "0.0000000000        ");
+    assert(printFloat(-1e-30f, f) == "-0.0000000000       ");
+    assert(printFloat(1e-10f, f) == "0.0000000001        ");
+    assert(printFloat(-1e-10f, f) == "-0.0000000001       ");
+    assert(printFloat(0.1f, f) == "0.1000000015        ");
+    assert(printFloat(-0.1f, f) == "-0.1000000015       ");
+    assert(printFloat(10.0f, f) == "10.0000000000       ");
+    assert(printFloat(-10.0f, f) == "-10.0000000000      ");
+    assert(printFloat(1e30f, f) == "1000000015047466219876688855040.0000000000");
+    assert(printFloat(-1e30f, f) == "-1000000015047466219876688855040.0000000000");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "0.0000000000        ");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-0.0000000000       ");
+    assert(printFloat(nextUp(0.0f), f) == "0.0000000000        ");
+    assert(printFloat(nextDown(-0.0f), f) == "-0.0000000000       ");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.width = 20;
     f.precision = 10;
     f.flZero = true;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "000000000.0000000000");
-    assert(printFloat(buf[], -0.0f, f) == "-00000000.0000000000");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "000000000.0000000000");
+    assert(printFloat(-0.0f, f) == "-00000000.0000000000");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "000000000.0000000000");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-00000000.0000000000");
-    assert(printFloat(buf[], 1e-30f, f) == "000000000.0000000000");
-    assert(printFloat(buf[], -1e-30f, f) == "-00000000.0000000000");
-    assert(printFloat(buf[], 1e-10f, f) == "000000000.0000000001");
-    assert(printFloat(buf[], -1e-10f, f) == "-00000000.0000000001");
-    assert(printFloat(buf[], 0.1f, f) == "000000000.1000000015");
-    assert(printFloat(buf[], -0.1f, f) == "-00000000.1000000015");
-    assert(printFloat(buf[], 10.0f, f) == "000000010.0000000000");
-    assert(printFloat(buf[], -10.0f, f) == "-00000010.0000000000");
-    assert(printFloat(buf[], 1e30f, f) == "1000000015047466219876688855040.0000000000");
-    assert(printFloat(buf[], -1e30f, f) == "-1000000015047466219876688855040.0000000000");
+    assert(printFloat(cast(float) 1e-40, f) == "000000000.0000000000");
+    assert(printFloat(cast(float) -1e-40, f) == "-00000000.0000000000");
+    assert(printFloat(1e-30f, f) == "000000000.0000000000");
+    assert(printFloat(-1e-30f, f) == "-00000000.0000000000");
+    assert(printFloat(1e-10f, f) == "000000000.0000000001");
+    assert(printFloat(-1e-10f, f) == "-00000000.0000000001");
+    assert(printFloat(0.1f, f) == "000000000.1000000015");
+    assert(printFloat(-0.1f, f) == "-00000000.1000000015");
+    assert(printFloat(10.0f, f) == "000000010.0000000000");
+    assert(printFloat(-10.0f, f) == "-00000010.0000000000");
+    assert(printFloat(1e30f, f) == "1000000015047466219876688855040.0000000000");
+    assert(printFloat(-1e30f, f) == "-1000000015047466219876688855040.0000000000");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "000000000.0000000000");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-00000000.0000000000");
+    assert(printFloat(nextUp(0.0f), f) == "000000000.0000000000");
+    assert(printFloat(nextDown(-0.0f), f) == "-00000000.0000000000");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.precision = 0;
 
     // ties away from zero
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "13");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-13");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "13");
+    assert(printFloat(11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(-12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-13");
+    assert(printFloat(-11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(-11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
 
     // ties to even
-    assert(printFloat(buf[], 11.5f, f) == "12");
-    assert(printFloat(buf[], 12.5f, f) == "12");
-    assert(printFloat(buf[], 11.7f, f) == "12");
-    assert(printFloat(buf[], 11.3f, f) == "11");
-    assert(printFloat(buf[], 11.0f, f) == "11");
-    assert(printFloat(buf[], -11.5f, f) == "-12");
-    assert(printFloat(buf[], -12.5f, f) == "-12");
-    assert(printFloat(buf[], -11.7f, f) == "-12");
-    assert(printFloat(buf[], -11.3f, f) == "-11");
-    assert(printFloat(buf[], -11.0f, f) == "-11");
+    assert(printFloat(11.5f, f) == "12");
+    assert(printFloat(12.5f, f) == "12");
+    assert(printFloat(11.7f, f) == "12");
+    assert(printFloat(11.3f, f) == "11");
+    assert(printFloat(11.0f, f) == "11");
+    assert(printFloat(-11.5f, f) == "-12");
+    assert(printFloat(-12.5f, f) == "-12");
+    assert(printFloat(-11.7f, f) == "-12");
+    assert(printFloat(-11.3f, f) == "-11");
+    assert(printFloat(-11.0f, f) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toZero) == "12");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toZero) == "-12");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(12.5f, f, RoundingMode.toZero) == "12");
+    assert(printFloat(11.7f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(11.3f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-12.5f, f, RoundingMode.toZero) == "-12");
+    assert(printFloat(-11.7f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-11.3f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.toZero) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.up) == "13");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.up) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.up) == "-12");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.up) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.up) == "12");
+    assert(printFloat(12.5f, f, RoundingMode.up) == "13");
+    assert(printFloat(11.7f, f, RoundingMode.up) == "12");
+    assert(printFloat(11.3f, f, RoundingMode.up) == "12");
+    assert(printFloat(11.0f, f, RoundingMode.up) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-12.5f, f, RoundingMode.up) == "-12");
+    assert(printFloat(-11.7f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-11.3f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.up) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.down) == "12");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.down) == "-13");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.down) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.down) == "11");
+    assert(printFloat(12.5f, f, RoundingMode.down) == "12");
+    assert(printFloat(11.7f, f, RoundingMode.down) == "11");
+    assert(printFloat(11.3f, f, RoundingMode.down) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.down) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-12.5f, f, RoundingMode.down) == "-13");
+    assert(printFloat(-11.7f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-11.3f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-11.0f, f, RoundingMode.down) == "-11");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
-    assert(printFloat(buf[], double.nan, f) == "nan");
-    assert(printFloat(buf[], -double.nan, f) == "-nan");
-    assert(printFloat(buf[], double.infinity, f) == "inf");
-    assert(printFloat(buf[], -double.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0, f) == "0.000000");
-    assert(printFloat(buf[], -0.0, f) == "-0.000000");
+    assert(printFloat(double.nan, f) == "nan");
+    assert(printFloat(-double.nan, f) == "-nan");
+    assert(printFloat(double.infinity, f) == "inf");
+    assert(printFloat(-double.infinity, f) == "-inf");
+    assert(printFloat(0.0, f) == "0.000000");
+    assert(printFloat(-0.0, f) == "-0.000000");
     // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], 1e-307 / 1000, f) == "0.000000");
-    assert(printFloat(buf[], -1e-307 / 1000, f) == "-0.000000");
-    assert(printFloat(buf[], 1e-30, f) == "0.000000");
-    assert(printFloat(buf[], -1e-30, f) == "-0.000000");
-    assert(printFloat(buf[], 1e-10, f) == "0.000000");
-    assert(printFloat(buf[], -1e-10, f) == "-0.000000");
-    assert(printFloat(buf[], 0.1, f) == "0.100000");
-    assert(printFloat(buf[], -0.1, f) == "-0.100000");
-    assert(printFloat(buf[], 10.0, f) == "10.000000");
-    assert(printFloat(buf[], -10.0, f) == "-10.000000");
-    assert(printFloat(buf[], 1e300, f) ==
+    assert(printFloat(1e-307 / 1000, f) == "0.000000");
+    assert(printFloat(-1e-307 / 1000, f) == "-0.000000");
+    assert(printFloat(1e-30, f) == "0.000000");
+    assert(printFloat(-1e-30, f) == "-0.000000");
+    assert(printFloat(1e-10, f) == "0.000000");
+    assert(printFloat(-1e-10, f) == "-0.000000");
+    assert(printFloat(0.1, f) == "0.100000");
+    assert(printFloat(-0.1, f) == "-0.100000");
+    assert(printFloat(10.0, f) == "10.000000");
+    assert(printFloat(-10.0, f) == "-10.000000");
+    assert(printFloat(1e300, f) ==
            "100000000000000005250476025520442024870446858110815915491585411551180245798890819578637137508044786"
           ~"404370444383288387817694252323536043057564479218478670698284838720092657580373783023379478809005936"
           ~"895323497079994508111903896764088007465274278014249457925878882005684283811566947219638686545940054"
           ~"0160.000000");
-    assert(printFloat(buf[], -1e300, f) ==
+    assert(printFloat(-1e300, f) ==
            "-100000000000000005250476025520442024870446858110815915491585411551180245798890819578637137508044786"
           ~"404370444383288387817694252323536043057564479218478670698284838720092657580373783023379478809005936"
           ~"895323497079994508111903896764088007465274278014249457925878882005684283811566947219638686545940054"
           ~"0160.000000");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0), f) == "0.000000");
-    assert(printFloat(buf[], nextDown(-0.0), f) == "-0.000000");
+    assert(printFloat(nextUp(0.0), f) == "0.000000");
+    assert(printFloat(nextDown(-0.0), f) == "-0.000000");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0L, f) == "0.000000");
-    assert(printFloat(buf[], -0.0L, f) == "-0.000000");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
+    assert(printFloat(0.0L, f) == "0.000000");
+    assert(printFloat(-0.0L, f) == "-0.000000");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1e-4940L, f) == "0.000000");
-        assert(printFloat(buf[], -1e-4940L, f) == "-0.000000");
-        assert(printFloat(buf[], 1e-30L, f) == "0.000000");
-        assert(printFloat(buf[], -1e-30L, f) == "-0.000000");
-        assert(printFloat(buf[], 1e-10L, f) == "0.000000");
-        assert(printFloat(buf[], -1e-10L, f) == "-0.000000");
-        assert(printFloat(buf[], 0.1L, f) == "0.100000");
-        assert(printFloat(buf[], -0.1L, f) == "-0.100000");
-        assert(printFloat(buf[], 10.0L, f) == "10.000000");
-        assert(printFloat(buf[], -10.0L, f) == "-10.000000");
+        assert(printFloat(1e-4940L, f) == "0.000000");
+        assert(printFloat(-1e-4940L, f) == "-0.000000");
+        assert(printFloat(1e-30L, f) == "0.000000");
+        assert(printFloat(-1e-30L, f) == "-0.000000");
+        assert(printFloat(1e-10L, f) == "0.000000");
+        assert(printFloat(-1e-10L, f) == "-0.000000");
+        assert(printFloat(0.1L, f) == "0.100000");
+        assert(printFloat(-0.1L, f) == "-0.100000");
+        assert(printFloat(10.0L, f) == "10.000000");
+        assert(printFloat(-10.0L, f) == "-10.000000");
         version (Windows) {} // issue 20972
         else
         {
-            auto result1 = printFloat(buf[], 1e4000L, f);
+            auto result1 = printFloat(1e4000L, f);
             assert(result1.length == 4007 && result1[0 .. 40] == "9999999999999999999965463873099623784932");
-            auto result2 = printFloat(buf[], -1e4000L, f);
+            auto result2 = printFloat(-1e4000L, f);
             assert(result2.length == 4008 && result2[0 .. 40] == "-999999999999999999996546387309962378493");
         }
 
         import std.math.operations : nextUp, nextDown;
-        assert(printFloat(buf[], nextUp(0.0L), f) == "0.000000");
-        assert(printFloat(buf[], nextDown(-0.0L), f) == "-0.000000");
+        assert(printFloat(nextUp(0.0L), f) == "0.000000");
+        assert(printFloat(nextDown(-0.0L), f) == "-0.000000");
     }
 }
 
@@ -2357,31 +2323,30 @@ printFloat_done:
         enum test = cast(int) log2(3.05e2312L);
         static if (real.mant_dig == 64 && test == 7681)
         {
-            char[256] buf;
             auto f = FormatSpec!dchar("");
             f.spec = 'f';
-            assert(printFloat(buf[], real.infinity, f) == "inf");
-            assert(printFloat(buf[], 10.0L, f) == "10.000000");
-            assert(printFloat(buf[], 2.6080L, f) == "2.608000");
-            auto result1 = printFloat(buf[], 3.05e2312L, f);
+            assert(printFloat(real.infinity, f) == "inf");
+            assert(printFloat(10.0L, f) == "10.000000");
+            assert(printFloat(2.6080L, f) == "2.608000");
+            auto result1 = printFloat(3.05e2312L, f);
             assert(result1.length == 2320);
             assert(result1[0 .. 20] == "30499999999999999999");
 
             f.precision = 60;
-            assert(printFloat(buf[], 2.65e-54L, f) ==
+            assert(printFloat(2.65e-54L, f) ==
                    "0.000000000000000000000000000000000000000000000000000002650000");
 
             /*
              commented out, because CTFE is currently too slow for 5000 digits with extreme values
 
             f.precision = 5000;
-            auto result2 = printFloat(buf[], 1.2119e-4822L, f);
+            auto result2 = printFloat(1.2119e-4822L, f);
             assert(result2.length == 5002);
             assert(result2[$ - 20 .. $] == "60076763752233836613");
-            auto result3 = printFloat(buf[], real.min_normal, f);
+            auto result3 = printFloat(real.min_normal, f);
             assert(result3.length == 5002);
             assert(result3[$ - 20 .. $] == "47124010882722980874");
-            auto result4 = printFloat(buf[], real.min_normal.nextDown, f);
+            auto result4 = printFloat(real.min_normal.nextDown, f);
             assert(result4.length == 5002);
             assert(result4[$ - 20 .. $] == "52925846892214823939");
              */
@@ -2391,7 +2356,6 @@ printFloat_done:
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
 
@@ -2399,7 +2363,7 @@ printFloat_done:
 
     double eps = nextUp(0.0);
     f.precision = 1000;
-    assert(printFloat(buf[], eps, f) ==
+    assert(printFloat(eps, f) ==
            "0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
            ~"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
            ~"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -2413,25 +2377,24 @@ printFloat_done:
            ~"509558373897335989937");
 
     f.precision = 0;
-    assert(printFloat(buf[], double.max, f) ==
+    assert(printFloat(double.max, f) ==
            "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878"
            ~"17154045895351438246423432132688946418276846754670353751698604991057655128207624549009038932894407"
            ~"58685084551339423045832369032229481658085593321233482747978262041447231687381771809192998812504040"
            ~"26184124858368");
 
     f.precision = 50;
-    assert(printFloat(buf[], double.epsilon, f) ==
+    assert(printFloat(double.epsilon, f) ==
            "0.00000000000000022204460492503130808472633361816406");
 
     f.precision = 10;
-    assert(printFloat(buf[], 1.0/3.0, f) == "0.3333333333");
-    assert(printFloat(buf[], 1.0/7.0, f) == "0.1428571429");
-    assert(printFloat(buf[], 1.0/9.0, f) == "0.1111111111");
+    assert(printFloat(1.0/3.0, f) == "0.3333333333");
+    assert(printFloat(1.0/7.0, f) == "0.1428571429");
+    assert(printFloat(1.0/9.0, f) == "0.1111111111");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.precision = 15;
@@ -2439,48 +2402,47 @@ printFloat_done:
     import std.math.constants : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                                 LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
 
-    assert(printFloat(buf[], cast(double) E, f) == "2.718281828459045");
-    assert(printFloat(buf[], cast(double) PI, f) == "3.141592653589793");
-    assert(printFloat(buf[], cast(double) PI_2, f) == "1.570796326794897");
-    assert(printFloat(buf[], cast(double) PI_4, f) == "0.785398163397448");
-    assert(printFloat(buf[], cast(double) M_1_PI, f) == "0.318309886183791");
-    assert(printFloat(buf[], cast(double) M_2_PI, f) == "0.636619772367581");
-    assert(printFloat(buf[], cast(double) M_2_SQRTPI, f) == "1.128379167095513");
-    assert(printFloat(buf[], cast(double) LN10, f) == "2.302585092994046");
-    assert(printFloat(buf[], cast(double) LN2, f) == "0.693147180559945");
-    assert(printFloat(buf[], cast(double) LOG2, f) == "0.301029995663981");
-    assert(printFloat(buf[], cast(double) LOG2E, f) == "1.442695040888963");
-    assert(printFloat(buf[], cast(double) LOG2T, f) == "3.321928094887362");
-    assert(printFloat(buf[], cast(double) LOG10E, f) == "0.434294481903252");
-    assert(printFloat(buf[], cast(double) SQRT2, f) == "1.414213562373095");
-    assert(printFloat(buf[], cast(double) SQRT1_2, f) == "0.707106781186548");
+    assert(printFloat(cast(double) E, f) == "2.718281828459045");
+    assert(printFloat(cast(double) PI, f) == "3.141592653589793");
+    assert(printFloat(cast(double) PI_2, f) == "1.570796326794897");
+    assert(printFloat(cast(double) PI_4, f) == "0.785398163397448");
+    assert(printFloat(cast(double) M_1_PI, f) == "0.318309886183791");
+    assert(printFloat(cast(double) M_2_PI, f) == "0.636619772367581");
+    assert(printFloat(cast(double) M_2_SQRTPI, f) == "1.128379167095513");
+    assert(printFloat(cast(double) LN10, f) == "2.302585092994046");
+    assert(printFloat(cast(double) LN2, f) == "0.693147180559945");
+    assert(printFloat(cast(double) LOG2, f) == "0.301029995663981");
+    assert(printFloat(cast(double) LOG2E, f) == "1.442695040888963");
+    assert(printFloat(cast(double) LOG2T, f) == "3.321928094887362");
+    assert(printFloat(cast(double) LOG10E, f) == "0.434294481903252");
+    assert(printFloat(cast(double) SQRT2, f) == "1.414213562373095");
+    assert(printFloat(cast(double) SQRT1_2, f) == "0.707106781186548");
 }
 
 // for 100% coverage
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'f';
     f.precision = 1;
-    assert(printFloat(buf[], 9.99, f) == "10.0");
+    assert(printFloat(9.99, f) == "10.0");
 
     import std.math.operations : nextUp;
 
     float eps = nextUp(0.0f);
 
     f.precision = 148;
-    assert(printFloat(buf[], eps, f, RoundingMode.toZero) ==
+    assert(printFloat(eps, f, RoundingMode.toZero) ==
            "0.0000000000000000000000000000000000000000000014012984643248170709237295832899161312802619418765157"
            ~"717570682838897910826858606014866381883621215820312");
 
     f.precision = 149;
-    assert(printFloat(buf[], eps, f, RoundingMode.toZero) ==
+    assert(printFloat(eps, f, RoundingMode.toZero) ==
            "0.0000000000000000000000000000000000000000000014012984643248170709237295832899161312802619418765157"
            ~"7175706828388979108268586060148663818836212158203125");
 }
 
-private auto printFloatG(Writer, T, Char)(return char[] buf, auto ref Writer w, T val,
+private void printFloatG(Writer, T, Char)(auto ref Writer w, T val,
     FormatSpec!Char f, RoundingMode rm, string sgn, int exp, ulong mnt, bool is_upper)
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
@@ -2517,9 +2479,9 @@ if (is(T == float) || is(T == double)
     }
 
     if (useE)
-        return printFloatE!true(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+        return printFloatE!true(w, val, f, rm, sgn, exp, mnt, is_upper);
     else
-        return printFloatF!true(buf, w, val, f, rm, sgn, exp, mnt, is_upper);
+        return printFloatF!true(w, val, f, rm, sgn, exp, mnt, is_upper);
 }
 
 @safe unittest
@@ -2532,219 +2494,213 @@ if (is(T == float) || is(T == double)
 
     import std.math.operations : nextDown, nextUp;
 
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
 
     double val = 999999.5;
-    assert(printFloat(buf[], val.nextUp, f) == "1e+06");
+    assert(printFloat(val.nextUp, f) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f) == "999999");
+    assert(printFloat(val.nextDown, f) == "999999");
 
     val = 0.00009999995;
-    assert(printFloat(buf[], val.nextUp, f) == "0.0001");
+    assert(printFloat(val.nextUp, f) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f) == "9.99999e-05");
+    assert(printFloat(val.nextDown, f) == "9.99999e-05");
 
     val = 1000000;
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.toZero) == "1e+06");
+    assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.toZero) == "999999");
+    assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "999999");
 
     val = 0.0001;
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.toZero) == "0.0001");
+    assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.toZero) == "9.99999e-05");
+    assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "9.99999e-05");
 
     val = 999999;
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.up) == "1e+06");
+    assert(printFloat(val.nextUp, f, RoundingMode.up) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.up) == "999999");
+    assert(printFloat(val.nextDown, f, RoundingMode.up) == "999999");
 
     // 0.0000999999 is actually represented as 0.0000999998999..., which is
     // less than 0.0000999999, so we need to use nextUp to get the corner case here
     val = nextUp(0.0000999999);
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.up) == "0.0001");
+    assert(printFloat(val.nextUp, f, RoundingMode.up) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.up) == "9.99999e-05");
+    assert(printFloat(val.nextDown, f, RoundingMode.up) == "9.99999e-05");
 
     val = 1000000;
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.down) == "1e+06");
+    assert(printFloat(val.nextUp, f, RoundingMode.down) == "1e+06");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.down) == "999999");
+    assert(printFloat(val.nextDown, f, RoundingMode.down) == "999999");
 
     val = 0.0001;
-    assert(printFloat(buf[], val.nextUp, f, RoundingMode.down) == "0.0001");
+    assert(printFloat(val.nextUp, f, RoundingMode.down) == "0.0001");
     val = nextDown(val);
-    assert(printFloat(buf[], val.nextDown, f, RoundingMode.down) == "9.99999e-05");
+    assert(printFloat(val.nextDown, f, RoundingMode.down) == "9.99999e-05");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.nan, f) == "-nan");
-    assert(printFloat(buf[], float.infinity, f) == "inf");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0");
-    assert(printFloat(buf[], -0.0f, f) == "-0");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0");
+    assert(printFloat(-0.0f, f) == "-0");
 
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.99995e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.99995e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "1e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "-1e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "1e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "-1e-10");
-    assert(printFloat(buf[], 0.1f, f) == "0.1");
-    assert(printFloat(buf[], -0.1f, f) == "-0.1");
-    assert(printFloat(buf[], 10.0f, f) == "10");
-    assert(printFloat(buf[], -10.0f, f) == "-10");
-    assert(printFloat(buf[], 1e30f, f) == "1e+30");
-    assert(printFloat(buf[], -1e30f, f) == "-1e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "9.99995e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "-9.99995e-41");
+    assert(printFloat(1e-30f, f) == "1e-30");
+    assert(printFloat(-1e-30f, f) == "-1e-30");
+    assert(printFloat(1e-10f, f) == "1e-10");
+    assert(printFloat(-1e-10f, f) == "-1e-10");
+    assert(printFloat(0.1f, f) == "0.1");
+    assert(printFloat(-0.1f, f) == "-0.1");
+    assert(printFloat(10.0f, f) == "10");
+    assert(printFloat(-10.0f, f) == "-10");
+    assert(printFloat(1e30f, f) == "1e+30");
+    assert(printFloat(-1e30f, f) == "-1e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "1.4013e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.4013e-45");
+    assert(printFloat(nextUp(0.0f), f) == "1.4013e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "-1.4013e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.width = 20;
     f.precision = 10;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "                   0");
-    assert(printFloat(buf[], -0.0f, f) == "                  -0");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "                   0");
+    assert(printFloat(-0.0f, f) == "                  -0");
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "     9.999946101e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "    -9.999946101e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "     1.000000003e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "    -1.000000003e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "     1.000000013e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "    -1.000000013e-10");
-    assert(printFloat(buf[], 0.1f, f) == "        0.1000000015");
-    assert(printFloat(buf[], -0.1f, f) == "       -0.1000000015");
-    assert(printFloat(buf[], 10.0f, f) == "                  10");
-    assert(printFloat(buf[], -10.0f, f) == "                 -10");
-    assert(printFloat(buf[], 1e30f, f) == "     1.000000015e+30");
-    assert(printFloat(buf[], -1e30f, f) == "    -1.000000015e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "     9.999946101e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "    -9.999946101e-41");
+    assert(printFloat(1e-30f, f) == "     1.000000003e-30");
+    assert(printFloat(-1e-30f, f) == "    -1.000000003e-30");
+    assert(printFloat(1e-10f, f) == "     1.000000013e-10");
+    assert(printFloat(-1e-10f, f) == "    -1.000000013e-10");
+    assert(printFloat(0.1f, f) == "        0.1000000015");
+    assert(printFloat(-0.1f, f) == "       -0.1000000015");
+    assert(printFloat(10.0f, f) == "                  10");
+    assert(printFloat(-10.0f, f) == "                 -10");
+    assert(printFloat(1e30f, f) == "     1.000000015e+30");
+    assert(printFloat(-1e30f, f) == "    -1.000000015e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "     1.401298464e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "    -1.401298464e-45");
+    assert(printFloat(nextUp(0.0f), f) == "     1.401298464e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "    -1.401298464e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.width = 20;
     f.precision = 10;
     f.flDash = true;
 
-    assert(printFloat(buf[], float.nan, f) == "nan                 ");
-    assert(printFloat(buf[], -float.nan, f) == "-nan                ");
-    assert(printFloat(buf[], float.infinity, f) == "inf                 ");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf                ");
-    assert(printFloat(buf[], 0.0f, f) == "0                   ");
-    assert(printFloat(buf[], -0.0f, f) == "-0                  ");
+    assert(printFloat(float.nan, f) == "nan                 ");
+    assert(printFloat(-float.nan, f) == "-nan                ");
+    assert(printFloat(float.infinity, f) == "inf                 ");
+    assert(printFloat(-float.infinity, f) == "-inf                ");
+    assert(printFloat(0.0f, f) == "0                   ");
+    assert(printFloat(-0.0f, f) == "-0                  ");
 
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41     ");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41    ");
-    assert(printFloat(buf[], 1e-30f, f) == "1.000000003e-30     ");
-    assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30    ");
-    assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10     ");
-    assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10    ");
-    assert(printFloat(buf[], 0.1f, f) == "0.1000000015        ");
-    assert(printFloat(buf[], -0.1f, f) == "-0.1000000015       ");
-    assert(printFloat(buf[], 10.0f, f) == "10                  ");
-    assert(printFloat(buf[], -10.0f, f) == "-10                 ");
-    assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30     ");
-    assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30    ");
+    assert(printFloat(cast(float) 1e-40, f) == "9.999946101e-41     ");
+    assert(printFloat(cast(float) -1e-40, f) == "-9.999946101e-41    ");
+    assert(printFloat(1e-30f, f) == "1.000000003e-30     ");
+    assert(printFloat(-1e-30f, f) == "-1.000000003e-30    ");
+    assert(printFloat(1e-10f, f) == "1.000000013e-10     ");
+    assert(printFloat(-1e-10f, f) == "-1.000000013e-10    ");
+    assert(printFloat(0.1f, f) == "0.1000000015        ");
+    assert(printFloat(-0.1f, f) == "-0.1000000015       ");
+    assert(printFloat(10.0f, f) == "10                  ");
+    assert(printFloat(-10.0f, f) == "-10                 ");
+    assert(printFloat(1e30f, f) == "1.000000015e+30     ");
+    assert(printFloat(-1e30f, f) == "-1.000000015e+30    ");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45     ");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45    ");
+    assert(printFloat(nextUp(0.0f), f) == "1.401298464e-45     ");
+    assert(printFloat(nextDown(-0.0f), f) == "-1.401298464e-45    ");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.width = 20;
     f.precision = 10;
     f.flZero = true;
 
-    assert(printFloat(buf[], float.nan, f) == "                 nan");
-    assert(printFloat(buf[], -float.nan, f) == "                -nan");
-    assert(printFloat(buf[], float.infinity, f) == "                 inf");
-    assert(printFloat(buf[], -float.infinity, f) == "                -inf");
-    assert(printFloat(buf[], 0.0f, f) == "00000000000000000000");
-    assert(printFloat(buf[], -0.0f, f) == "-0000000000000000000");
+    assert(printFloat(float.nan, f) == "                 nan");
+    assert(printFloat(-float.nan, f) == "                -nan");
+    assert(printFloat(float.infinity, f) == "                 inf");
+    assert(printFloat(-float.infinity, f) == "                -inf");
+    assert(printFloat(0.0f, f) == "00000000000000000000");
+    assert(printFloat(-0.0f, f) == "-0000000000000000000");
 
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "000009.999946101e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-00009.999946101e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "000001.000000003e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "-00001.000000003e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "000001.000000013e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "-00001.000000013e-10");
-    assert(printFloat(buf[], 0.1f, f) == "000000000.1000000015");
-    assert(printFloat(buf[], -0.1f, f) == "-00000000.1000000015");
-    assert(printFloat(buf[], 10.0f, f) == "00000000000000000010");
-    assert(printFloat(buf[], -10.0f, f) == "-0000000000000000010");
-    assert(printFloat(buf[], 1e30f, f) == "000001.000000015e+30");
-    assert(printFloat(buf[], -1e30f, f) == "-00001.000000015e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "000009.999946101e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "-00009.999946101e-41");
+    assert(printFloat(1e-30f, f) == "000001.000000003e-30");
+    assert(printFloat(-1e-30f, f) == "-00001.000000003e-30");
+    assert(printFloat(1e-10f, f) == "000001.000000013e-10");
+    assert(printFloat(-1e-10f, f) == "-00001.000000013e-10");
+    assert(printFloat(0.1f, f) == "000000000.1000000015");
+    assert(printFloat(-0.1f, f) == "-00000000.1000000015");
+    assert(printFloat(10.0f, f) == "00000000000000000010");
+    assert(printFloat(-10.0f, f) == "-0000000000000000010");
+    assert(printFloat(1e30f, f) == "000001.000000015e+30");
+    assert(printFloat(-1e30f, f) == "-00001.000000015e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "000001.401298464e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-00001.401298464e-45");
+    assert(printFloat(nextUp(0.0f), f) == "000001.401298464e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "-00001.401298464e-45");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.precision = 10;
     f.flHash = true;
 
-    assert(printFloat(buf[], float.nan, f) == "nan");
-    assert(printFloat(buf[], -float.nan, f) == "-nan");
-    assert(printFloat(buf[], float.infinity, f) == "inf");
-    assert(printFloat(buf[], -float.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0f, f) == "0.000000000");
-    assert(printFloat(buf[], -0.0f, f) == "-0.000000000");
+    assert(printFloat(float.nan, f) == "nan");
+    assert(printFloat(-float.nan, f) == "-nan");
+    assert(printFloat(float.infinity, f) == "inf");
+    assert(printFloat(-float.infinity, f) == "-inf");
+    assert(printFloat(0.0f, f) == "0.000000000");
+    assert(printFloat(-0.0f, f) == "-0.000000000");
 
     // cast needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], cast(float) 1e-40, f) == "9.999946101e-41");
-    assert(printFloat(buf[], cast(float) -1e-40, f) == "-9.999946101e-41");
-    assert(printFloat(buf[], 1e-30f, f) == "1.000000003e-30");
-    assert(printFloat(buf[], -1e-30f, f) == "-1.000000003e-30");
-    assert(printFloat(buf[], 1e-10f, f) == "1.000000013e-10");
-    assert(printFloat(buf[], -1e-10f, f) == "-1.000000013e-10");
-    assert(printFloat(buf[], 0.1f, f) == "0.1000000015");
-    assert(printFloat(buf[], -0.1f, f) == "-0.1000000015");
-    assert(printFloat(buf[], 10.0f, f) == "10.00000000");
-    assert(printFloat(buf[], -10.0f, f) == "-10.00000000");
-    assert(printFloat(buf[], 1e30f, f) == "1.000000015e+30");
-    assert(printFloat(buf[], -1e30f, f) == "-1.000000015e+30");
+    assert(printFloat(cast(float) 1e-40, f) == "9.999946101e-41");
+    assert(printFloat(cast(float) -1e-40, f) == "-9.999946101e-41");
+    assert(printFloat(1e-30f, f) == "1.000000003e-30");
+    assert(printFloat(-1e-30f, f) == "-1.000000003e-30");
+    assert(printFloat(1e-10f, f) == "1.000000013e-10");
+    assert(printFloat(-1e-10f, f) == "-1.000000013e-10");
+    assert(printFloat(0.1f, f) == "0.1000000015");
+    assert(printFloat(-0.1f, f) == "-0.1000000015");
+    assert(printFloat(10.0f, f) == "10.00000000");
+    assert(printFloat(-10.0f, f) == "-10.00000000");
+    assert(printFloat(1e30f, f) == "1.000000015e+30");
+    assert(printFloat(-1e30f, f) == "-1.000000015e+30");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0f), f) == "1.401298464e-45");
-    assert(printFloat(buf[], nextDown(-0.0f), f) == "-1.401298464e-45");
+    assert(printFloat(nextUp(0.0f), f) == "1.401298464e-45");
+    assert(printFloat(nextDown(-0.0f), f) == "-1.401298464e-45");
 }
 
 @safe unittest
@@ -2754,93 +2710,92 @@ if (is(T == float) || is(T == double)
     f.spec = 'g';
     f.precision = 2;
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "13");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-13");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "13");
+    assert(printFloat(11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "12");
+    assert(printFloat(11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(-12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-13");
+    assert(printFloat(-11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-12");
+    assert(printFloat(-11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-11");
 
     // ties to even
-    assert(printFloat(buf[], 11.5f, f) == "12");
-    assert(printFloat(buf[], 12.5f, f) == "12");
-    assert(printFloat(buf[], 11.7f, f) == "12");
-    assert(printFloat(buf[], 11.3f, f) == "11");
-    assert(printFloat(buf[], 11.0f, f) == "11");
-    assert(printFloat(buf[], -11.5f, f) == "-12");
-    assert(printFloat(buf[], -12.5f, f) == "-12");
-    assert(printFloat(buf[], -11.7f, f) == "-12");
-    assert(printFloat(buf[], -11.3f, f) == "-11");
-    assert(printFloat(buf[], -11.0f, f) == "-11");
+    assert(printFloat(11.5f, f) == "12");
+    assert(printFloat(12.5f, f) == "12");
+    assert(printFloat(11.7f, f) == "12");
+    assert(printFloat(11.3f, f) == "11");
+    assert(printFloat(11.0f, f) == "11");
+    assert(printFloat(-11.5f, f) == "-12");
+    assert(printFloat(-12.5f, f) == "-12");
+    assert(printFloat(-11.7f, f) == "-12");
+    assert(printFloat(-11.3f, f) == "-11");
+    assert(printFloat(-11.0f, f) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.toZero) == "12");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.toZero) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.toZero) == "-12");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.toZero) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(12.5f, f, RoundingMode.toZero) == "12");
+    assert(printFloat(11.7f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(11.3f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.toZero) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-12.5f, f, RoundingMode.toZero) == "-12");
+    assert(printFloat(-11.7f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-11.3f, f, RoundingMode.toZero) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.toZero) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.up) == "13");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.up) == "12");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.up) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.up) == "-12");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.up) == "-11");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.up) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.up) == "12");
+    assert(printFloat(12.5f, f, RoundingMode.up) == "13");
+    assert(printFloat(11.7f, f, RoundingMode.up) == "12");
+    assert(printFloat(11.3f, f, RoundingMode.up) == "12");
+    assert(printFloat(11.0f, f, RoundingMode.up) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-12.5f, f, RoundingMode.up) == "-12");
+    assert(printFloat(-11.7f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-11.3f, f, RoundingMode.up) == "-11");
+    assert(printFloat(-11.0f, f, RoundingMode.up) == "-11");
 
-    assert(printFloat(buf[], 11.5f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 12.5f, f, RoundingMode.down) == "12");
-    assert(printFloat(buf[], 11.7f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 11.3f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], 11.0f, f, RoundingMode.down) == "11");
-    assert(printFloat(buf[], -11.5f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -12.5f, f, RoundingMode.down) == "-13");
-    assert(printFloat(buf[], -11.7f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -11.3f, f, RoundingMode.down) == "-12");
-    assert(printFloat(buf[], -11.0f, f, RoundingMode.down) == "-11");
+    assert(printFloat(11.5f, f, RoundingMode.down) == "11");
+    assert(printFloat(12.5f, f, RoundingMode.down) == "12");
+    assert(printFloat(11.7f, f, RoundingMode.down) == "11");
+    assert(printFloat(11.3f, f, RoundingMode.down) == "11");
+    assert(printFloat(11.0f, f, RoundingMode.down) == "11");
+    assert(printFloat(-11.5f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-12.5f, f, RoundingMode.down) == "-13");
+    assert(printFloat(-11.7f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-11.3f, f, RoundingMode.down) == "-12");
+    assert(printFloat(-11.0f, f, RoundingMode.down) == "-11");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
 
-    assert(printFloat(buf[], double.nan, f) == "nan");
-    assert(printFloat(buf[], -double.nan, f) == "-nan");
-    assert(printFloat(buf[], double.infinity, f) == "inf");
-    assert(printFloat(buf[], -double.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0, f) == "0");
-    assert(printFloat(buf[], -0.0, f) == "-0");
+    assert(printFloat(double.nan, f) == "nan");
+    assert(printFloat(-double.nan, f) == "-nan");
+    assert(printFloat(double.infinity, f) == "inf");
+    assert(printFloat(-double.infinity, f) == "-inf");
+    assert(printFloat(0.0, f) == "0");
+    assert(printFloat(-0.0, f) == "-0");
 
     // / 1000 needed due to https://issues.dlang.org/show_bug.cgi?id=20361
-    assert(printFloat(buf[], 1e-307 / 1000, f) == "1e-310");
-    assert(printFloat(buf[], -1e-307 / 1000, f) == "-1e-310");
-    assert(printFloat(buf[], 1e-30, f) == "1e-30");
-    assert(printFloat(buf[], -1e-30, f) == "-1e-30");
-    assert(printFloat(buf[], 1e-10, f) == "1e-10");
-    assert(printFloat(buf[], -1e-10, f) == "-1e-10");
-    assert(printFloat(buf[], 0.1, f) == "0.1");
-    assert(printFloat(buf[], -0.1, f) == "-0.1");
-    assert(printFloat(buf[], 10.0, f) == "10");
-    assert(printFloat(buf[], -10.0, f) == "-10");
-    assert(printFloat(buf[], 1e300, f) == "1e+300");
-    assert(printFloat(buf[], -1e300, f) == "-1e+300");
+    assert(printFloat(1e-307 / 1000, f) == "1e-310");
+    assert(printFloat(-1e-307 / 1000, f) == "-1e-310");
+    assert(printFloat(1e-30, f) == "1e-30");
+    assert(printFloat(-1e-30, f) == "-1e-30");
+    assert(printFloat(1e-10, f) == "1e-10");
+    assert(printFloat(-1e-10, f) == "-1e-10");
+    assert(printFloat(0.1, f) == "0.1");
+    assert(printFloat(-0.1, f) == "-0.1");
+    assert(printFloat(10.0, f) == "10");
+    assert(printFloat(-10.0, f) == "-10");
+    assert(printFloat(1e300, f) == "1e+300");
+    assert(printFloat(-1e300, f) == "-1e+300");
 
     import std.math.operations : nextUp, nextDown;
-    assert(printFloat(buf[], nextUp(0.0), f) == "4.94066e-324");
-    assert(printFloat(buf[], nextDown(-0.0), f) == "-4.94066e-324");
+    assert(printFloat(nextUp(0.0), f) == "4.94066e-324");
+    assert(printFloat(nextDown(-0.0), f) == "-4.94066e-324");
 }
 
 @safe unittest
@@ -2849,15 +2804,14 @@ if (is(T == float) || is(T == double)
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
 
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
 
@@ -2865,7 +2819,7 @@ if (is(T == float) || is(T == double)
 
     double eps = nextUp(0.0);
     f.precision = 1000;
-    assert(printFloat(buf[], eps, f) ==
+    assert(printFloat(eps, f) ==
            "4.940656458412465441765687928682213723650598026143247644255856825006"
            ~ "755072702087518652998363616359923797965646954457177309266567103559"
            ~ "397963987747960107818781263007131903114045278458171678489821036887"
@@ -2880,20 +2834,19 @@ if (is(T == float) || is(T == double)
            ~ "506419718265533447265625e-324");
 
     f.precision = 50;
-    assert(printFloat(buf[], double.max, f) ==
+    assert(printFloat(double.max, f) ==
            "1.7976931348623157081452742373170435679807056752584e+308");
-    assert(printFloat(buf[], double.epsilon, f) ==
+    assert(printFloat(double.epsilon, f) ==
            "2.220446049250313080847263336181640625e-16");
 
     f.precision = 10;
-    assert(printFloat(buf[], 1.0/3.0, f) == "0.3333333333");
-    assert(printFloat(buf[], 1.0/7.0, f) == "0.1428571429");
-    assert(printFloat(buf[], 1.0/9.0, f) == "0.1111111111");
+    assert(printFloat(1.0/3.0, f) == "0.3333333333");
+    assert(printFloat(1.0/7.0, f) == "0.1428571429");
+    assert(printFloat(1.0/9.0, f) == "0.1111111111");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.precision = 15;
@@ -2901,68 +2854,66 @@ if (is(T == float) || is(T == double)
     import std.math.constants : E, PI, PI_2, PI_4, M_1_PI, M_2_PI, M_2_SQRTPI,
                                 LN10, LN2, LOG2, LOG2E, LOG2T, LOG10E, SQRT2, SQRT1_2;
 
-    assert(printFloat(buf[], cast(double) E, f) == "2.71828182845905");
-    assert(printFloat(buf[], cast(double) PI, f) == "3.14159265358979");
-    assert(printFloat(buf[], cast(double) PI_2, f) == "1.5707963267949");
-    assert(printFloat(buf[], cast(double) PI_4, f) == "0.785398163397448");
-    assert(printFloat(buf[], cast(double) M_1_PI, f) == "0.318309886183791");
-    assert(printFloat(buf[], cast(double) M_2_PI, f) == "0.636619772367581");
-    assert(printFloat(buf[], cast(double) M_2_SQRTPI, f) == "1.12837916709551");
-    assert(printFloat(buf[], cast(double) LN10, f) == "2.30258509299405");
-    assert(printFloat(buf[], cast(double) LN2, f) == "0.693147180559945");
-    assert(printFloat(buf[], cast(double) LOG2, f) == "0.301029995663981");
-    assert(printFloat(buf[], cast(double) LOG2E, f) == "1.44269504088896");
-    assert(printFloat(buf[], cast(double) LOG2T, f) == "3.32192809488736");
-    assert(printFloat(buf[], cast(double) LOG10E, f) == "0.434294481903252");
-    assert(printFloat(buf[], cast(double) SQRT2, f) == "1.4142135623731");
-    assert(printFloat(buf[], cast(double) SQRT1_2, f) == "0.707106781186548");
+    assert(printFloat(cast(double) E, f) == "2.71828182845905");
+    assert(printFloat(cast(double) PI, f) == "3.14159265358979");
+    assert(printFloat(cast(double) PI_2, f) == "1.5707963267949");
+    assert(printFloat(cast(double) PI_4, f) == "0.785398163397448");
+    assert(printFloat(cast(double) M_1_PI, f) == "0.318309886183791");
+    assert(printFloat(cast(double) M_2_PI, f) == "0.636619772367581");
+    assert(printFloat(cast(double) M_2_SQRTPI, f) == "1.12837916709551");
+    assert(printFloat(cast(double) LN10, f) == "2.30258509299405");
+    assert(printFloat(cast(double) LN2, f) == "0.693147180559945");
+    assert(printFloat(cast(double) LOG2, f) == "0.301029995663981");
+    assert(printFloat(cast(double) LOG2E, f) == "1.44269504088896");
+    assert(printFloat(cast(double) LOG2T, f) == "3.32192809488736");
+    assert(printFloat(cast(double) LOG10E, f) == "0.434294481903252");
+    assert(printFloat(cast(double) SQRT2, f) == "1.4142135623731");
+    assert(printFloat(cast(double) SQRT1_2, f) == "0.707106781186548");
 }
 
 // for 100% coverage
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
     f.precision = 0;
 
-    assert(printFloat(buf[], 0.009999, f) == "0.01");
+    assert(printFloat(0.009999, f) == "0.01");
 }
 
 @safe unittest
 {
-    char[256] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
-    assert(printFloat(buf[], real.nan, f) == "nan");
-    assert(printFloat(buf[], -real.nan, f) == "-nan");
-    assert(printFloat(buf[], real.infinity, f) == "inf");
-    assert(printFloat(buf[], -real.infinity, f) == "-inf");
-    assert(printFloat(buf[], 0.0L, f) == "0");
-    assert(printFloat(buf[], -0.0L, f) == "-0");
+    assert(printFloat(real.nan, f) == "nan");
+    assert(printFloat(-real.nan, f) == "-nan");
+    assert(printFloat(real.infinity, f) == "inf");
+    assert(printFloat(-real.infinity, f) == "-inf");
+    assert(printFloat(0.0L, f) == "0");
+    assert(printFloat(-0.0L, f) == "-0");
 
     static if (real.mant_dig == 64)
     {
-        assert(printFloat(buf[], 1e-4940L, f) == "1e-4940");
-        assert(printFloat(buf[], -1e-4940L, f) == "-1e-4940");
-        assert(printFloat(buf[], 1e-30L, f) == "1e-30");
-        assert(printFloat(buf[], -1e-30L, f) == "-1e-30");
-        assert(printFloat(buf[], 1e-10L, f) == "1e-10");
-        assert(printFloat(buf[], -1e-10L, f) == "-1e-10");
-        assert(printFloat(buf[], 0.1L, f) == "0.1");
-        assert(printFloat(buf[], -0.1L, f) == "-0.1");
-        assert(printFloat(buf[], 10.0L, f) == "10");
-        assert(printFloat(buf[], -10.0L, f) == "-10");
+        assert(printFloat(1e-4940L, f) == "1e-4940");
+        assert(printFloat(-1e-4940L, f) == "-1e-4940");
+        assert(printFloat(1e-30L, f) == "1e-30");
+        assert(printFloat(-1e-30L, f) == "-1e-30");
+        assert(printFloat(1e-10L, f) == "1e-10");
+        assert(printFloat(-1e-10L, f) == "-1e-10");
+        assert(printFloat(0.1L, f) == "0.1");
+        assert(printFloat(-0.1L, f) == "-0.1");
+        assert(printFloat(10.0L, f) == "10");
+        assert(printFloat(-10.0L, f) == "-10");
         version (Windows) {} // issue 20972
         else
         {
-            assert(printFloat(buf[], 1e4000L, f) == "1e+4000");
-            assert(printFloat(buf[], -1e4000L, f) == "-1e+4000");
+            assert(printFloat(1e4000L, f) == "1e+4000");
+            assert(printFloat(-1e4000L, f) == "-1e+4000");
         }
 
         import std.math.operations : nextUp, nextDown;
-        assert(printFloat(buf[], nextUp(0.0L), f) == "3.6452e-4951");
-        assert(printFloat(buf[], nextDown(-0.0L), f) == "-3.6452e-4951");
+        assert(printFloat(nextUp(0.0L), f) == "3.6452e-4951");
+        assert(printFloat(nextDown(-0.0L), f) == "-3.6452e-4951");
     }
 }
 
@@ -2980,29 +2931,28 @@ if (is(T == float) || is(T == double)
         enum test = cast(int) log2(3.05e2312L);
         static if (real.mant_dig == 64 && test == 7681)
         {
-            char[256] buf;
             auto f = FormatSpec!dchar("");
             f.spec = 'g';
-            assert(printFloat(buf[], real.infinity, f) == "inf");
-            assert(printFloat(buf[], 10.0L, f) == "10");
-            assert(printFloat(buf[], 2.6080L, f) == "2.608");
-            assert(printFloat(buf[], 3.05e2312L, f) == "3.05e+2312");
+            assert(printFloat(real.infinity, f) == "inf");
+            assert(printFloat(10.0L, f) == "10");
+            assert(printFloat(2.6080L, f) == "2.608");
+            assert(printFloat(3.05e2312L, f) == "3.05e+2312");
 
             f.precision = 60;
-            assert(printFloat(buf[], 2.65e-54L, f) ==
+            assert(printFloat(2.65e-54L, f) ==
                    "2.65000000000000000005900998740054701394102894093529654759941e-54");
 
             /*
              commented out, because CTFE is currently too slow for 5000 digits with extreme values
 
             f.precision = 5000;
-            auto result2 = printFloat(buf[], 1.2119e-4822L, f);
+            auto result2 = printFloat(1.2119e-4822L, f);
             assert(result2.length == 5007);
             assert(result2[$ - 20 .. $] == "26072948659534e-4822");
-            auto result3 = printFloat(buf[], real.min_normal, f);
+            auto result3 = printFloat(real.min_normal, f);
             assert(result3.length == 5007);
             assert(result3[$ - 20 .. $] == "72078141008227e-4932");
-            auto result4 = printFloat(buf[], real.min_normal.nextDown, f);
+            auto result4 = printFloat(real.min_normal.nextDown, f);
             assert(result4.length == 5007);
             assert(result4[$ - 20 .. $] == "48141326333101e-4932");
              */
@@ -3019,64 +2969,63 @@ if (is(T == float) || is(T == double)
     import core.memory;
     auto stats = GC.stats;
 
-    char[512] buf;
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
-    assert(printFloat(buf[], w, float.nan, f) == "");
-    assert(printFloat(buf[], w, -float.infinity, f) == "");
-    assert(printFloat(buf[], w, 0.0f, f) == "");
+    printFloat(w, float.nan, f);
+    printFloat(w, -float.infinity, f);
+    printFloat(w, 0.0f, f);
 
-    assert(printFloat(buf[], w, -double.nan, f) == "");
-    assert(printFloat(buf[], w, double.infinity, f) == "");
-    assert(printFloat(buf[], w, -0.0, f) == "");
+    printFloat(w, -double.nan, f);
+    printFloat(w, double.infinity, f);
+    printFloat(w, -0.0, f);
 
     import std.math.operations : nextUp;
     import std.math.constants : E;
 
-    assert(printFloat(buf[], w, nextUp(0.0f), f) == "");
-    assert(printFloat(buf[], w, cast(float) E, f) == "");
+    printFloat(w, nextUp(0.0f), f);
+    printFloat(w, cast(float) E, f);
 
     f.precision = 1000;
-    assert(printFloat(buf[], w, float.nan, f) == "");
-    assert(printFloat(buf[], w, 0.0, f) == "");
-    assert(printFloat(buf[], w, 1.23456789e+100, f) == "");
+    printFloat(w, float.nan, f);
+    printFloat(w, 0.0, f);
+    printFloat(w, 1.23456789e+100, f);
 
     f.spec = 'E';
     f.precision = 80;
-    assert(printFloat(buf[], w, 5.62776e+12f, f) == "");
+    printFloat(w, 5.62776e+12f, f);
 
     f.precision = 6;
-    assert(printFloat(buf[], w, -1.1418613e+07f, f) == "");
+    printFloat(w, -1.1418613e+07f, f);
 
     f.precision = 20;
-    assert(printFloat(buf[], w, double.max, f) == "");
-    assert(printFloat(buf[], w, nextUp(0.0), f) == "");
+    printFloat(w, double.max, f);
+    printFloat(w, nextUp(0.0), f);
 
     f.precision = 1000;
-    assert(printFloat(buf[], w, 1.0, f) == "");
+    printFloat(w, 1.0, f);
 
     f.spec = 'f';
     f.precision = 15;
-    assert(printFloat(buf[], w, cast(double) E, f) == "");
+    printFloat(w, cast(double) E, f);
 
     f.precision = 20;
-    assert(printFloat(buf[], w, double.max, f) == "");
-    assert(printFloat(buf[], w, nextUp(0.0), f) == "");
+    printFloat(w, double.max, f);
+    printFloat(w, nextUp(0.0), f);
 
     f.precision = 1000;
-    assert(printFloat(buf[], w, 1.0, f) == "");
+    printFloat(w, 1.0, f);
 
     f.spec = 'g';
     f.precision = 15;
-    assert(printFloat(buf[], w, cast(double) E, f) == "");
+    printFloat(w, cast(double) E, f);
 
     f.precision = 20;
-    assert(printFloat(buf[], w, double.max, f) == "");
-    assert(printFloat(buf[], w, nextUp(0.0), f) == "");
+    printFloat(w, double.max, f);
+    printFloat(w, nextUp(0.0), f);
 
     f.flHash = true;
     f.precision = 1000;
-    assert(printFloat(buf[], w, 1.0, f) == "");
+    printFloat(w, 1.0, f);
 
     assert(GC.stats.usedSize == stats.usedSize);
 }

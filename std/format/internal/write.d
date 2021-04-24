@@ -506,9 +506,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
 
         fs.spec = spec2;
-        buf = printFloat(buf2[], w, val, fs, mode);
-        len = buf.length;
-        if (len == 0) return;
+        printFloat(w, val, fs, mode);
     }
     else
     {
@@ -561,87 +559,87 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
         len = min(n, buf2.length-1);
         buf = buf2;
-    }
 
-    if (fs.flSeparator && !inf && !nan)
-    {
-        ptrdiff_t indexOfRemovable()
+        if (fs.flSeparator && !inf && !nan)
         {
-            if (len < 2)
-                return -1;
-
-            size_t start = (buf[0 .. 1].indexOfAny(" 0123456789") == -1) ? 1 : 0;
-            if (len < 2 + start)
-                return -1;
-            if ((buf[start] == ' ') || (buf[start] == '0' && buf[start + 1] != '.'))
-                return start;
-
-            return -1;
-        }
-
-        ptrdiff_t dot, firstDigit, ePos, dotIdx, firstLen;
-        size_t separatorScoreCnt;
-
-        while (true)
-        {
-            dot = buf[0 .. len].indexOf('.');
-            firstDigit = buf[0 .. len].indexOfAny("0123456789");
-            ePos = buf[0 .. len].indexOf('e');
-            dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
-
-            firstLen = dotIdx - firstDigit;
-            separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
-
-            ptrdiff_t removableIdx = (len + separatorScoreCnt > fs.width) ? indexOfRemovable() : -1;
-            if ((removableIdx != -1) &&
-                ((firstLen - (buf[removableIdx] == '0' ? 2 : 1)) / fs.separators + len - 1 >= fs.width))
+            ptrdiff_t indexOfRemovable()
             {
-                buf[removableIdx .. $ - 1] = buf.dup[removableIdx + 1 .. $];
-                len--;
+                if (len < 2)
+                    return -1;
+
+                size_t start = (buf[0 .. 1].indexOfAny(" 0123456789") == -1) ? 1 : 0;
+                if (len < 2 + start)
+                    return -1;
+                if ((buf[start] == ' ') || (buf[start] == '0' && buf[start + 1] != '.'))
+                    return start;
+
+                return -1;
             }
-            else
-                break;
-        }
 
-        immutable afterDotIdx = (ePos != -1) ? ePos : len;
+            ptrdiff_t dot, firstDigit, ePos, dotIdx, firstLen;
+            size_t separatorScoreCnt;
 
-        // plus, minus, prefix
-        if (firstDigit > 0)
-        {
-            put(w, buf[0 .. firstDigit]);
-        }
-
-        // digits until dot with separator
-        for (auto j = 0; j < firstLen; ++j)
-        {
-            if (j > 0 && (firstLen - j) % fs.separators == 0)
+            while (true)
             {
-                put(w, fs.separatorChar);
+                dot = buf[0 .. len].indexOf('.');
+                firstDigit = buf[0 .. len].indexOfAny("0123456789");
+                ePos = buf[0 .. len].indexOf('e');
+                dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
+
+                firstLen = dotIdx - firstDigit;
+                separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
+
+                ptrdiff_t removableIdx = (len + separatorScoreCnt > fs.width) ? indexOfRemovable() : -1;
+                if ((removableIdx != -1) &&
+                    ((firstLen - (buf[removableIdx] == '0' ? 2 : 1)) / fs.separators + len - 1 >= fs.width))
+                {
+                    buf[removableIdx .. $ - 1] = buf.dup[removableIdx + 1 .. $];
+                    len--;
+                }
+                else
+                    break;
             }
-            put(w, buf[j + firstDigit]);
-        }
 
-        // print dot for decimal numbers only or with '#' format specifier
-        if (dot != -1 || fs.flHash)
-        {
-            put(w, '.');
-        }
+            immutable afterDotIdx = (ePos != -1) ? ePos : len;
 
-        // digits after dot
-        for (auto j = dotIdx + 1; j < afterDotIdx; ++j)
-        {
-            put(w, buf[j]);
-        }
+            // plus, minus, prefix
+            if (firstDigit > 0)
+            {
+                put(w, buf[0 .. firstDigit]);
+            }
 
-        // rest
-        if (ePos != -1)
-        {
-            put(w, buf[afterDotIdx .. len]);
+            // digits until dot with separator
+            for (auto j = 0; j < firstLen; ++j)
+            {
+                if (j > 0 && (firstLen - j) % fs.separators == 0)
+                {
+                    put(w, fs.separatorChar);
+                }
+                put(w, buf[j + firstDigit]);
+            }
+
+            // print dot for decimal numbers only or with '#' format specifier
+            if (dot != -1 || fs.flHash)
+            {
+                put(w, '.');
+            }
+
+            // digits after dot
+            for (auto j = dotIdx + 1; j < afterDotIdx; ++j)
+            {
+                put(w, buf[j]);
+            }
+
+            // rest
+            if (ePos != -1)
+            {
+                put(w, buf[afterDotIdx .. len]);
+            }
         }
-    }
-    else
-    {
-        put(w, buf[0 .. len]);
+        else
+        {
+            put(w, buf[0 .. len]);
+        }
     }
 }
 
