@@ -1511,8 +1511,6 @@ Note:
 
     $(UL
     $(LI An exception is thrown.)
-    $(LI A floating point number of type `real` is formatted.)
-    $(LI The representation of a floating point number exceeds 500 characters.)
     $(LI A custom `toString` function of a compound type allocates.))
  */
 char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
