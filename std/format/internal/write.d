@@ -946,6 +946,12 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format!"% 0,e"(0.0) == " 0.000000e+00");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21841
+@safe pure unittest
+{
+    assert(format!"%0.0,e"(0.0) == "0e+00");
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=21836
 @safe pure unittest
 {
