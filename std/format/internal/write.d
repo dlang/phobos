@@ -933,6 +933,12 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21842
+@safe pure unittest
+{
+    assert(format!"%-+05,g"(1.0) == "+1   ");
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=20536
 @safe pure unittest
 {
