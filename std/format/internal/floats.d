@@ -1662,9 +1662,7 @@ private auto printFloatF(bool g, Writer, T, Char)(return char[] buf, auto ref Wr
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
-    import std.conv : to;
-    import std.algorithm.comparison : max;
-    import std.math : log10, abs, floor, ceil;
+    import std.format.internal.write : writeAligned, PrecisionType;
 
     enum int bias = T.max_exp - 1;
 
@@ -1677,8 +1675,6 @@ if (is(T == float) || is(T == double)
     // special treatment for 0.0
     if (exp == 0 && mnt == 0)
     {
-        import std.format.internal.write : writeAligned, PrecisionType;
-
         writeAligned(w, sgn, "0", ".", "", f, PrecisionType.fractionalDigits);
 
         return buf[0 .. 0];
@@ -1691,50 +1687,7 @@ if (is(T == float) || is(T == double)
         exp = 1;
     exp -= bias;
 
-    // estimate the number of bytes needed left and right of the decimal point
-    // the speed of the algorithm depends on being as accurate as possible with
-    // this estimate
-
-    // Default for the right side is the number of digits given by f.precision plus one for the dot.
-    static if (g)
-        auto max_right = max(0, f.precision - cast(int) val.abs.log10.floor + 1);
-    else
-        auto max_right = f.precision + 1;
-
-    // If the exponent is <= 0 there is only the sign and one digit left of the dot, else
-    // we have to estimate the number of digits. The factor between exp, which is the number of
-    // digits in binary system and the searched number is log_2(10). We round this down to 3.32 to
-    // get a conservative estimate. We need to add 3, because of the sign, the fact, that the
-    // logarithm is one to small and because we need to round up instead of down, which to!int does.
-    static if (g)
-        auto max_left = max(2, 2 + cast(int) val.abs.log10.ceil);
-    else
-        auto max_left = exp > 0 ? to!int(exp / 3.32) + 3 : 2;
-
-    // If the result is not left justified, we may need to add more digits here for getting the
-    // correct width.
-    if (!f.flDash)
-    {
-        static if (g)
-            // %g cannot reduce the value by max_right due to trailing zeros, which are removed later
-            max_left = max(max_left, f.width);
-        else
-            max_left = max(max_left, f.width - max_right + 2);
-    }
-
-    // If the result is left justified, we may need to add more digits to the right. This strongly
-    // depends, on the exponent, see above. This time, we need to be conservative in the other direction
-    // for not missing a digit; therefore we round log_2(10) up to 3.33.
-    if (exp > 0 && f.flDash)
-        max_right = max(max_right, f.width - to!int(exp / 3.33) - 1);
-    else if (f.flDash)
-        max_right = max(max_right, f.width - 1);
-
-    size_t length = max_left + max_right;
-    char[] buffer = length <= buf.length ? buf[0 .. length] : new char[length];
-    size_t start = max_left;
-    size_t left = max_left;
-    size_t right = max_left;
+    char[T.max_exp + T.mant_dig + 1] dec_buf;
 
     // for rounding we need to know if the rest of the number is exactly 0, between 0 and 0.5, 0.5 or above 0.5
     enum roundType { ZERO, LOWER, FIVE, UPPER }
@@ -1800,9 +1753,17 @@ if (is(T == float) || is(T == double)
             enum max_buf = 18;
     }
 
+    size_t start = 2;
+    size_t left = 2;
+    size_t right = 2;
+
     ulong[max_buf] bigbuf;
     if (exp >= T.mant_dig)
     {
+        left = start = dec_buf.length - 1;
+        right = dec_buf.length;
+        dec_buf[start] = '.';
+
         // large number without fractional digits
         //
         // As this number does not fit in a ulong, we use an array of ulongs. We only use 60 of the 64 bits,
@@ -1845,12 +1806,8 @@ if (is(T == float) || is(T == double)
             if (mybig[msu] == 0)
                 ++msu;
 
-            buffer[--left] = cast(byte) ('0' + mod);
+            dec_buf[--left] = cast(byte) ('0' + mod);
         }
-
-        if (f.precision > 0 || f.flHash) buffer[right++] = '.';
-
-        static if (g) start = left; // count precision from first digit
 
         next = roundType.ZERO;
     }
@@ -1895,9 +1852,8 @@ if (is(T == float) || is(T == double)
                 mybig[0] = mnt << (upper - T.mant_dig);
         }
 
-        buffer[--left] = '0'; // 0 left of the dot
-
-        if (f.precision > 0 || f.flHash) buffer[right++] = '.';
+        dec_buf[--left] = '0'; // 0 left of the dot
+        dec_buf[right++] = '.';
 
         static if (g)
         {
@@ -1922,16 +1878,18 @@ if (is(T == float) || is(T == double)
             if (mybig[lsu] == 0)
                 ++lsu;
 
-            buffer[right++] = cast(byte) ('0' + over);
+            dec_buf[right++] = cast(byte) ('0' + over);
 
             static if (g)
             {
-                if (buffer[right - 1] != '0')
+                if (dec_buf[right - 1] != '0')
                     found = true;
                 else if (!found)
                     start++;
             }
         }
+
+        static if (g) start = 2;
 
         if (lsu >= count - 1 && mybig[count - 1] == 0)
             next = roundType.ZERO;
@@ -1975,16 +1933,22 @@ if (is(T == float) || is(T == double)
 
         // creating int part
         if (int_part == 0)
-            buffer[--left] = '0';
+            dec_buf[--left] = '0';
         else
+        {
+            import core.bitop : bsr;
+            left = right = start = int_part.bsr * 100 / 332 + 4;
+
             while (int_part > 0)
             {
-                buffer[--left] = '0' + (int_part % 10);
+                dec_buf[--left] = '0' + (int_part % 10);
                 int_part /= 10;
             }
+        }
 
-        if (f.precision > 0 || f.flHash)
-            buffer[right++] = '.';
+        static if (g) size_t save_start = right;
+
+        dec_buf[right++] = '.';
 
         // creating frac part
         static if (g) start = left + (found ? 0 : 1);
@@ -2004,11 +1968,11 @@ if (is(T == float) || is(T == double)
                         tail &= (1L << tail_length) - 1;
                 }
             }
-            buffer[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
+            dec_buf[right++] = cast(byte)('0' + (frac_part >> (T.mant_dig - 1 - exp)));
 
             static if (g)
             {
-                if (buffer[right - 1] != '0')
+                if (dec_buf[right - 1] != '0')
                     found = true;
                 else if (!found)
                     start++;
@@ -2016,6 +1980,8 @@ if (is(T == float) || is(T == double)
 
             frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
         }
+
+        static if (g) start = save_start;
 
         if (frac_part == 0)
             next = roundType.ZERO;
@@ -2059,91 +2025,49 @@ if (is(T == float) || is(T == double)
             else
             {
                 // Round to nearest, ties to even
-                auto last = buffer[right - 1];
-                if (last == '.') last = buffer[right - 2];
+                auto last = dec_buf[right - 1];
+                if (last == '.') last = dec_buf[right - 2];
                 roundUp = last % 2 != 0;
             }
         }
-    }
-
-    if (f.precision > 0 || f.flHash)
-    {
-        // adding zeros
-        buffer[right .. f.precision + start + 1] = '0';
-        right = f.precision + start + 1;
     }
 
     if (roundUp)
     {
         foreach_reverse (i;left .. right)
         {
-            if (buffer[i] == '.') continue;
-            if (buffer[i] == '9')
-                buffer[i] = '0';
+            if (dec_buf[i] == '.') continue;
+            if (dec_buf[i] == '9')
+                dec_buf[i] = '0';
             else
             {
-                buffer[i]++;
+                dec_buf[i]++;
                 static if (g)
                 {
                     // in case of 0.0...009...9 => 0.0...010...0 we have to remove
                     // the right most digit to get the precision right
-                    if (buffer[i] == '1')
+                    if (dec_buf[i] == '1')
                     {
                         foreach (j;left .. i)
-                            if (buffer[j] != '0' && buffer[j] != '.') goto printFloat_done;
+                            if (dec_buf[j] != '0' && dec_buf[j] != '.') goto printFloat_done;
                         right--;
                     }
                 }
                 goto printFloat_done;
             }
         }
-        buffer[--left] = '1';
+        dec_buf[--left] = '1';
 printFloat_done:
     }
 
+    while (right > start + 1 && dec_buf[right - 1] == '0') right--;
+
     static if (g)
-    {
-        if (!f.flHash)
-        {
-            // removing trailing 0s
-            while (right > left && buffer[right - 1]=='0')
-                right--;
-            if (right > left && buffer[right - 1]=='.')
-                right--;
-        }
-    }
+        writeAligned(w, sgn, dec_buf[left .. start], dec_buf[start .. right], "", f, PrecisionType.allDigits);
+    else
+        writeAligned(w, sgn, dec_buf[left .. start], dec_buf[start .. right], "", f, PrecisionType.fractionalDigits);
 
-    // sign and padding
-    bool need_sgn = false;
-    if (sgn != "")
-    {
-        // when padding with zeros we need to postpone adding the sign
-        if (right - left < f.width && !f.flDash && f.flZero)
-            need_sgn = true;
-        else
-            buffer[--left] = sgn[0];
-    }
-
-    if (right - left < f.width)
-    {
-        if (f.flDash)
-        {
-            // padding right
-            buffer[right .. f.width + left] = ' ';
-            right = f.width + left;
-        }
-        else
-        {
-            // padding left
-            buffer[right - f.width .. left] = f.flZero ? '0' : ' ';
-            left = right - f.width;
-        }
-    }
-
-    if (need_sgn)
-        buffer[left] = sgn[0];
-
-    return buffer[left .. right];
+    return buf[0 .. 0];
 }
 
 @safe unittest
@@ -3133,26 +3057,26 @@ if (is(T == float) || is(T == double)
 
     f.spec = 'f';
     f.precision = 15;
-    assert(printFloat(buf[], w, cast(double) E, f) == "2.718281828459045");
+    assert(printFloat(buf[], w, cast(double) E, f) == "");
 
     f.precision = 20;
-    assert(printFloat(buf[], w, double.max, f).length == 330);
-    assert(printFloat(buf[], w, nextUp(0.0), f) == "0.00000000000000000000");
+    assert(printFloat(buf[], w, double.max, f) == "");
+    assert(printFloat(buf[], w, nextUp(0.0), f) == "");
 
-    f.precision = 498;
-    assert(printFloat(buf[], w, 1.0, f).length == 500);
+    f.precision = 1000;
+    assert(printFloat(buf[], w, 1.0, f) == "");
 
     f.spec = 'g';
     f.precision = 15;
-    assert(printFloat(buf[], w, cast(double) E, f) == "2.71828182845905");
+    assert(printFloat(buf[], w, cast(double) E, f) == "");
 
     f.precision = 20;
     assert(printFloat(buf[], w, double.max, f) == "");
     assert(printFloat(buf[], w, nextUp(0.0), f) == "");
 
     f.flHash = true;
-    f.precision = 499;
-    assert(printFloat(buf[], w, 1.0, f).length == 500);
+    f.precision = 1000;
+    assert(printFloat(buf[], w, 1.0, f) == "");
 
     assert(GC.stats.usedSize == stats.usedSize);
 }
