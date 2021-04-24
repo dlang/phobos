@@ -108,6 +108,16 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%07s",true) == "   true");
 }
 
+@safe pure unittest
+{
+    assert(format("%=8s",true)    == "  true  ");
+    assert(format("%=9s",false)   == "  false  ");
+    assert(format("%=9s",true)    == "   true  ");
+    assert(format("%-=9s",true)   == "  true   ");
+    assert(format("%=10s",false)  == "   false  ");
+    assert(format("%-=10s",false) == "  false   ");
+}
+
 /*
     `null` literal is formatted as `"null"`
  */
@@ -3315,9 +3325,19 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3 && isSomeString!T4)
     }
 
     // left padding
-    if ((!f.flZero || p == PrecisionType.integer) && !f.flDash && delta > 0)
-        foreach (i ; 0 .. delta)
-            put(w, ' ');
+    if ((!f.flZero || p == PrecisionType.integer) && delta > 0)
+    {
+        if (f.flEqual)
+        {
+            foreach (i ; 0 .. delta / 2 + ((delta % 2 == 1 && !f.flDash) ? 1 : 0))
+                put(w, ' ');
+        }
+        else if (!f.flDash)
+        {
+            foreach (i ; 0 .. delta)
+                put(w, ' ');
+        }
+    }
 
     // prefix
     put(w, prefix);
@@ -3393,9 +3413,19 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3 && isSomeString!T4)
     put(w, suffix);
 
     // right padding
-    if (f.flDash && delta > 0)
-        foreach (i ; 0 .. delta)
-            put(w, ' ');
+    if (delta > 0)
+    {
+        if (f.flEqual)
+        {
+            foreach (i ; 0 .. delta / 2 + ((delta % 2 == 1 && f.flDash) ? 1 : 0))
+                put(w, ' ');
+        }
+        else if (f.flDash)
+        {
+            foreach (i ; 0 .. delta)
+                put(w, ' ');
+        }
+    }
 }
 
 @safe pure unittest
