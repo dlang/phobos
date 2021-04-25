@@ -2809,7 +2809,7 @@ template FieldNameTuple(T)
     else static if (is(T == class))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
     else
-        alias FieldNameTuple = AliasSeq!"";
+        alias FieldNameTuple = AliasSeq!();
 }
 
 ///
@@ -2818,12 +2818,12 @@ template FieldNameTuple(T)
     import std.meta : AliasSeq;
     struct S { int x; float y; }
     static assert(FieldNameTuple!S == AliasSeq!("x", "y"));
-    static assert(FieldNameTuple!int == AliasSeq!"");
+    static assert(FieldNameTuple!int == AliasSeq!());
 }
 
 @safe unittest
 {
-    static assert(FieldNameTuple!int == AliasSeq!"");
+    static assert(FieldNameTuple!int == AliasSeq!());
 
     static struct StaticStruct1 { }
     static assert(is(FieldNameTuple!StaticStruct1 == AliasSeq!()));
@@ -2850,6 +2850,9 @@ template FieldNameTuple(T)
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(FieldNameTuple!NestedClass == AliasSeq!"a");
+
+    interface I {}
+    static assert(FieldNameTuple!I == AliasSeq!());
 }
 
 
