@@ -497,6 +497,63 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format!"%#.0o"(0) == "0");
 }
 
+@safe pure unittest
+{
+    assert(format!"%e"(10000) == "1.0000e+04");
+    assert(format!"%.2e"(10000) == "1.00e+04");
+    assert(format!"%.10e"(10000) == "1.0000000000e+04");
+
+    assert(format!"%e"(9999) == "9.999e+03");
+    assert(format!"%.2e"(9999) == "1.00e+04");
+    assert(format!"%.10e"(9999) == "9.9990000000e+03");
+
+    assert(format!"%f"(10000) == "10000");
+    assert(format!"%.2f"(10000) == "10000.00");
+
+    assert(format!"%g"(10000) == "10000");
+    assert(format!"%.2g"(10000) == "1e+04");
+    assert(format!"%.10g"(10000) == "10000");
+
+    assert(format!"%#g"(10000) == "10000.");
+    assert(format!"%#.2g"(10000) == "1.0e+04");
+    assert(format!"%#.10g"(10000) == "10000.00000");
+
+    assert(format!"%g"(9999) == "9999");
+    assert(format!"%.2g"(9999) == "1e+04");
+    assert(format!"%.10g"(9999) == "9999");
+
+    assert(format!"%a"(0x10000) == "0x1.0000p+16");
+    assert(format!"%.2a"(0x10000) == "0x1.00p+16");
+    assert(format!"%.10a"(0x10000) == "0x1.0000000000p+16");
+
+    assert(format!"%a"(0xffff) == "0xf.fffp+12");
+    assert(format!"%.2a"(0xffff) == "0x1.00p+16");
+    assert(format!"%.10a"(0xffff) == "0xf.fff0000000p+12");
+}
+
+@safe pure unittest
+{
+    assert(format!"%.3e"(ulong.max) == "1.845e+19");
+    assert(format!"%.3f"(ulong.max) == "18446744073709551615.000");
+    assert(format!"%.3g"(ulong.max) == "1.84e+19");
+    assert(format!"%.3a"(ulong.max) == "0x1.000p+64");
+
+    assert(format!"%.3e"(long.min) == "-9.223e+18");
+    assert(format!"%.3f"(long.min) == "-9223372036854775808.000");
+    assert(format!"%.3g"(long.min) == "-9.22e+18");
+    assert(format!"%.3a"(long.min) == "-0x8.000p+60");
+
+    assert(format!"%e"(0) == "0e+00");
+    assert(format!"%f"(0) == "0");
+    assert(format!"%g"(0) == "0");
+    assert(format!"%a"(0) == "0x0p+00");
+}
+
+@safe pure unittest
+{
+    assert(format!"%.0g"(1500) == "2e+03");
+}
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
