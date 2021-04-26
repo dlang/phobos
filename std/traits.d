@@ -2798,7 +2798,7 @@ private enum NameOf(alias T) = T.stringof;
  * hidden fields like the virtual function table pointer or a context pointer
  * for nested types.
  * Inherited fields (for classes) are not included.
- * If `T` isn't a struct, class, or union, an
+ * If `T` isn't a struct, class, interface or union, an
  * expression tuple with an empty string is returned.
  */
 template FieldNameTuple(T)
@@ -2806,10 +2806,10 @@ template FieldNameTuple(T)
     import std.meta : staticMap;
     static if (is(T == struct) || is(T == union))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
     else
-        alias FieldNameTuple = AliasSeq!();
+        alias FieldNameTuple = AliasSeq!"";
 }
 
 ///
@@ -2818,12 +2818,12 @@ template FieldNameTuple(T)
     import std.meta : AliasSeq;
     struct S { int x; float y; }
     static assert(FieldNameTuple!S == AliasSeq!("x", "y"));
-    static assert(FieldNameTuple!int == AliasSeq!());
+    static assert(FieldNameTuple!int == AliasSeq!"");
 }
 
 @safe unittest
 {
-    static assert(FieldNameTuple!int == AliasSeq!());
+    static assert(FieldNameTuple!int == AliasSeq!"");
 
     static struct StaticStruct1 { }
     static assert(is(FieldNameTuple!StaticStruct1 == AliasSeq!()));
