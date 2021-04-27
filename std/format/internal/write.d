@@ -404,27 +404,9 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
-    import std.ascii : isUpper;
     import std.format : enforceFmt;
-    import std.math.traits : isInfinity, isNaN, signbit;
     import std.range.primitives : put;
-    import std.string : indexOf, indexOfAny;
-
-    string nanInfStr(scope const ref FormatSpec!Char f, const bool nan,
-        const bool inf, const int sb, const bool up) @safe pure nothrow
-    {
-        return nan
-            ? up
-                ? sb ? "-NAN" : f.flPlus ? "+NAN" : (f.flSpace ? " NAN" : "NAN")
-                : sb ? "-nan" : f.flPlus ? "+nan" : (f.flSpace ? " nan" : "nan")
-            : inf
-                ? up
-                    ? sb ? "-INF" : f.flPlus ? "+INF" : (f.flSpace ? " INF" : "INF")
-                    : sb ? "-inf" : f.flPlus ? "+inf" : (f.flSpace ? " inf" : "inf")
-                : "";
-    }
 
     FloatingPointTypeOf!T val = obj;
     const char spec = f.spec;
@@ -453,194 +435,66 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         "incompatible format character for floating point argument: %" ~ spec);
 
     FormatSpec!Char fs = f; // fs is copy for change its values.
-    const spec2 = spec == 's' ? 'g' : spec;
+    fs.spec = spec == 's' ? 'g' : spec;
 
-    version (CRuntime_Microsoft)
-    {
-        // convert early to get "inf" in case of overflow
-        // windows handels inf and nan strange
-        // https://devblogs.microsoft.com/oldnewthing/20130228-01/?p=5103
-        immutable double tval = val;
-    }
-    else
-    {
-        alias tval = val;
-    }
-
-    const nan = isNaN(tval);
-    const inf = isInfinity(tval);
-
-    char[512] buf2 = void;
-    size_t len;
-    char[] buf;
     static if (is(T == float) || is(T == double)
                || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
     {
-        import std.format.internal.floats : RoundingMode, printFloat;
-        import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
-
-        auto mode = RoundingMode.toNearestTiesToEven;
-
-        if (!__ctfe)
-        {
-            // std.math's FloatingPointControl isn't available on all target platforms
-            static if (is(FloatingPointControl))
-            {
-                switch (FloatingPointControl.rounding)
-                {
-                case FloatingPointControl.roundUp:
-                    mode = RoundingMode.up;
-                    break;
-                case FloatingPointControl.roundDown:
-                    mode = RoundingMode.down;
-                    break;
-                case FloatingPointControl.roundToZero:
-                    mode = RoundingMode.toZero;
-                    break;
-                case FloatingPointControl.roundToNearest:
-                    mode = RoundingMode.toNearestTiesToEven;
-                    break;
-                default: assert(false, "Unknown floating point rounding mode");
-                }
-            }
-        }
-
-        fs.spec = spec2;
-        printFloat(w, val, fs, mode);
+        alias tval = val;
     }
     else
     {
-        if (nan || inf)
+        import std.math.traits : isInfinity;
+        import std.math.operations : nextUp;
+
+        // reals that are not supported by printFloat are cast to double.
+        double tval = val;
+
+        // Numbers greater than double.max are converted to double.max:
+        if (val > double.max && !isInfinity(val))
+            tval = double.max;
+        if (val < -double.max && !isInfinity(val))
+            tval = -double.max;
+
+        // Numbers between the smallest representable double subnormal and 0.0
+        // are converted to the smallest representable double subnormal:
+        enum doubleLowest = nextUp(0.0);
+        if (val > 0 && val < doubleLowest)
+            tval = doubleLowest;
+        if (val < 0 && val > -doubleLowest)
+            tval = -doubleLowest;
+    }
+
+    import std.format.internal.floats : RoundingMode, printFloat;
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
+
+    auto mode = RoundingMode.toNearestTiesToEven;
+
+    if (!__ctfe)
+    {
+        // std.math's FloatingPointControl isn't available on all target platforms
+        static if (is(FloatingPointControl))
         {
-            const sb = signbit(tval);
-            const up = isUpper(spec);
-            string ns = nanInfStr(f, nan, inf, sb, up);
-            FormatSpec!Char co;
-            co.spec = 's';
-            co.width = f.width;
-            co.flDash = f.flDash;
-            import std.format : formatValue;
-            formatValue(w, ns, co);
-            return;
-        }
-
-        enforceFmt(!__ctfe, mixin("\"Unsupported `real` type: real.sizeof = ", real.sizeof,
-                                  " | real.mant_dig = ", real.mant_dig, "\""));
-
-        char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
-             + 1 /*\0*/] sprintfSpec = void;
-        sprintfSpec[0] = '%';
-        uint i = 1;
-        if (fs.flDash) sprintfSpec[i++] = '-';
-        if (fs.flPlus) sprintfSpec[i++] = '+';
-        if (fs.flZero) sprintfSpec[i++] = '0';
-        if (fs.flSpace) sprintfSpec[i++] = ' ';
-        if (fs.flHash) sprintfSpec[i++] = '#';
-        sprintfSpec[i .. i + 3] = "*.*";
-        i += 3;
-        if (is(immutable typeof(val) == immutable real)) sprintfSpec[i++] = 'L';
-        sprintfSpec[i++] = spec2;
-        sprintfSpec[i] = 0;
-        //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
-
-        //writefln("'%s'", sprintfSpec[0 .. i]);
-
-        immutable n = () @trusted {
-            import core.stdc.stdio : snprintf;
-            return snprintf(buf2.ptr, buf2.length,
-                            sprintfSpec.ptr,
-                            fs.width,
-                            // negative precision is same as no precision specified
-                            fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-                            tval);
-        }();
-
-        enforceFmt(n >= 0, "floating point formatting failure");
-
-        len = min(n, buf2.length-1);
-        buf = buf2;
-
-        if (fs.flSeparator && !inf && !nan)
-        {
-            ptrdiff_t indexOfRemovable()
+            switch (FloatingPointControl.rounding)
             {
-                if (len < 2)
-                    return -1;
-
-                size_t start = (buf[0 .. 1].indexOfAny(" 0123456789") == -1) ? 1 : 0;
-                if (len < 2 + start)
-                    return -1;
-                if ((buf[start] == ' ') || (buf[start] == '0' && buf[start + 1] != '.'))
-                    return start;
-
-                return -1;
+            case FloatingPointControl.roundUp:
+                mode = RoundingMode.up;
+                break;
+            case FloatingPointControl.roundDown:
+                mode = RoundingMode.down;
+                break;
+            case FloatingPointControl.roundToZero:
+                mode = RoundingMode.toZero;
+                break;
+            case FloatingPointControl.roundToNearest:
+                mode = RoundingMode.toNearestTiesToEven;
+                break;
+            default: assert(false, "Unknown floating point rounding mode");
             }
-
-            ptrdiff_t dot, firstDigit, ePos, dotIdx, firstLen;
-            size_t separatorScoreCnt;
-
-            while (true)
-            {
-                dot = buf[0 .. len].indexOf('.');
-                firstDigit = buf[0 .. len].indexOfAny("0123456789");
-                ePos = buf[0 .. len].indexOf('e');
-                dotIdx = dot == -1 ? ePos == -1 ? len : ePos : dot;
-
-                firstLen = dotIdx - firstDigit;
-                separatorScoreCnt = (firstLen > 0) ? (firstLen - 1) / fs.separators : 0;
-
-                ptrdiff_t removableIdx = (len + separatorScoreCnt > fs.width) ? indexOfRemovable() : -1;
-                if ((removableIdx != -1) &&
-                    ((firstLen - (buf[removableIdx] == '0' ? 2 : 1)) / fs.separators + len - 1 >= fs.width))
-                {
-                    buf[removableIdx .. $ - 1] = buf.dup[removableIdx + 1 .. $];
-                    len--;
-                }
-                else
-                    break;
-            }
-
-            immutable afterDotIdx = (ePos != -1) ? ePos : len;
-
-            // plus, minus, prefix
-            if (firstDigit > 0)
-            {
-                put(w, buf[0 .. firstDigit]);
-            }
-
-            // digits until dot with separator
-            for (auto j = 0; j < firstLen; ++j)
-            {
-                if (j > 0 && (firstLen - j) % fs.separators == 0)
-                {
-                    put(w, fs.separatorChar);
-                }
-                put(w, buf[j + firstDigit]);
-            }
-
-            // print dot for decimal numbers only or with '#' format specifier
-            if (dot != -1 || fs.flHash)
-            {
-                put(w, '.');
-            }
-
-            // digits after dot
-            for (auto j = dotIdx + 1; j < afterDotIdx; ++j)
-            {
-                put(w, buf[j]);
-            }
-
-            // rest
-            if (ePos != -1)
-            {
-                put(w, buf[afterDotIdx .. len]);
-            }
-        }
-        else
-        {
-            put(w, buf[0 .. len]);
         }
     }
+
+    printFloat(w, tval, fs, mode);
 }
 
 @safe unittest
