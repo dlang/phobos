@@ -5082,6 +5082,8 @@ template AllImplicitConversionTargets(T)
         alias AllImplicitConversionTargets = AliasSeq!(typeof(null));
     else static if (is(T == class))
         alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
+    else static if (is(T == interface))
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), InterfacesTuple!(T));
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
        static if (is(typeof(T.init[0]) == shared))
@@ -5128,6 +5130,14 @@ template AllImplicitConversionTargets(T)
     static assert(is(AllImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
     static assert(is(AllImplicitConversionTargets!(immutable C) == AliasSeq!(
         immutable Object, immutable A, immutable B
+    )));
+
+    interface I : A, B {}
+
+    static assert(is(AllImplicitConversionTargets!(I) == AliasSeq!(A, B)));
+    static assert(is(AllImplicitConversionTargets!(const I) == AliasSeq!(const A, const B)));
+    static assert(is(AllImplicitConversionTargets!(immutable I) == AliasSeq!(
+        immutable A, immutable B
     )));
 }
 
