@@ -11,6 +11,3 @@ static assert(pi == "3.14159");
 enum golden_ratio = format!"|%+-20.10E|"((1 + sqrt(5.0)) / 2);
 static assert(golden_ratio == "|+1.6180339887E+00   |");
 ------
-
-Note: compile time formatting `real`s is only supported for 64-bit
-reals and 80-bit reals.

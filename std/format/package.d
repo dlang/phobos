@@ -300,6 +300,9 @@ $(UL
        of the floating point unit, if available.)
   $(LI The floating point values `NaN` and `Infinity` are formatted as
        `nan` and `inf`, possibly preceded by $(B '+') or $(B '-') sign.)
+  $(LI Formatting reals is only supported for 64 bit reals and 80 bit reals.
+       All other reals are cast to double before they are formatted. This will
+       cause the result to be `inf` for very large numbers.)
   $(LI Characters and strings formatted with the $(B 's') format character
        inside of compound types are surrounded by single and double quotes
        and unprintable characters are escaped. To avoid this, a $(B '-')
