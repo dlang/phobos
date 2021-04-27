@@ -568,12 +568,10 @@ private auto defaultFactoryImpl(Char)(const ref Regex!Char re)
 // Used to generate a pure wrapper for defaultFactoryImpl. Based on the example in
 // the std.traits.SetFunctionAttributes documentation.
 private auto assumePureFunction(T)(T t)
+if (isFunctionPointer!T)
 {
-    if (isFunctionPointer!T)
-    {
-        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
-        return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
-    }
+    enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+    return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
 }
 
 // A workaround for R-T enum re = regex(...)

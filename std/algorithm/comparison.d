@@ -713,20 +713,10 @@ if (isInputRange!R1 && isInputRange!R2)
     {
         import std.utf : decode;
 
-        // For speed only
-        static int threeWayCompareLength(size_t a, size_t b)
-        {
-            static if (size_t.sizeof == int.sizeof)
-                return a - b;
-            else
-                // Faster than return b < a ? 1 : a < b ? -1 : 0;
-                return (a > b) - (a < b);
-        }
-
         for (size_t i1, i2;;)
         {
-            if (i1 == r1.length) return threeWayCompareLength(i2, r2.length);
-            if (i2 == r2.length) return threeWayCompareLength(r1.length, i1);
+            if (i1 == r1.length) return -int(i2 < r2.length);
+            if (i2 == r2.length) return 1;
             immutable c1 = decode(r1, i1),
                 c2 = decode(r2, i2);
             if (c1 != c2)

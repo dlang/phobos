@@ -153,6 +153,9 @@ if (is(Unqual!Char == Char))
         /// The format specifier contained a `'#'`.
         bool flHash;
 
+        /// The format specifier contained a `'='`.
+        bool flEqual;
+
         /// The format specifier contained a `','`.
         bool flSeparator;
 
@@ -170,8 +173,9 @@ if (is(Unqual!Char == Char))
                         bool, "flSpace", 1,
                         bool, "flPlus", 1,
                         bool, "flHash", 1,
+                        bool, "flEqual", 1,
                         bool, "flSeparator", 1,
-                        ubyte, "", 2));
+                        ubyte, "", 1));
             ubyte allFlags;
         }
     }
@@ -282,6 +286,7 @@ if (is(Unqual!Char == Char))
             flZero = false;
             flSpace = false;
             flPlus = false;
+            flEqual = false;
             flHash = false;
             flSeparator = false;
         }
@@ -361,6 +366,7 @@ if (is(Unqual!Char == Char))
                 return;
             case '-': flDash = true; ++i; break;
             case '+': flPlus = true; ++i; break;
+            case '=': flEqual = true; ++i; break;
             case '#': flHash = true; ++i; break;
             case '0': flZero = true; ++i; break;
             case ' ': flSpace = true; ++i; break;
@@ -511,6 +517,7 @@ if (is(Unqual!Char == Char))
             flSpace = false;
             flPlus = false;
             flHash = false;
+            flEqual = false;
             flSeparator = false;
         }
         else
@@ -583,6 +590,7 @@ if (is(Unqual!Char == Char))
         if (flZero) put(w, '0');
         if (flSpace) put(w, ' ');
         if (flPlus) put(w, '+');
+        if (flEqual) put(w, '=');
         if (flHash) put(w, '#');
         if (width != 0)
             formatValue(w, width, f);
@@ -649,6 +657,8 @@ if (is(Unqual!Char == Char))
         formatValue(writer, flSpace, s);
         put(writer, "\nflPlus = ");
         formatValue(writer, flPlus, s);
+        put(writer, "\nflEqual = ");
+        formatValue(writer, flEqual, s);
         put(writer, "\nflHash = ");
         formatValue(writer, flHash, s);
         put(writer, "\nflSeparator = ");
@@ -797,6 +807,7 @@ if (is(Unqual!Char == Char))
         "\nflZero = false" ~
         "\nflSpace = false" ~
         "\nflPlus = false" ~
+        "\nflEqual = false" ~
         "\nflHash = false" ~
         "\nflSeparator = false" ~
         "\nnested = " ~

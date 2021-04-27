@@ -105,7 +105,7 @@ $(I Flags):
     $(I empty)
     $(I Flag) $(I Flags)
 $(I Flag):
-    $(B '-')|$(B '+')|$(B '&nbsp;')|$(B '0')|$(B '#')
+    $(B '-')|$(B '+')|$(B '&nbsp;')|$(B '0')|$(B '#')|$(B '=')
 $(I Width):
     $(I OptionalPositionalInteger)
 $(I Precision):
@@ -221,6 +221,12 @@ $(BOOKTABLE ,
              different meaning: (1) with $(B 'r') it denotes to use little
              endian and (2) in case of a compound indicator it means that
              no special handling of the members is applied.))
+   $(TR $(TD $(B '='))
+        $(TD When the formatted result is shorter then the value
+             given by the width parameter, the output is centered.
+             If the central position is not possible it is moved slightly
+             to the right. In this case, if $(B '-') flag is present in
+             addition to the $(B '=') flag, it is moved slightly to the left.))
    $(TR $(TD $(B '+')&nbsp;/&nbsp;$(B '&nbsp;'))
         $(TD Applies to numerical values. By default, positive numbers are not
              formatted to include the `+` sign. With one of these two flags present,

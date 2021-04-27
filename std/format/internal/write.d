@@ -108,6 +108,16 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%07s",true) == "   true");
 }
 
+@safe pure unittest
+{
+    assert(format("%=8s",true)    == "  true  ");
+    assert(format("%=9s",false)   == "  false  ");
+    assert(format("%=9s",true)    == "   true  ");
+    assert(format("%-=9s",true)   == "  true   ");
+    assert(format("%=10s",false)  == "   false  ");
+    assert(format("%-=10s",false) == "  false   ");
+}
+
 /*
     `null` literal is formatted as `"null"`
  */
@@ -918,11 +928,56 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21853
+@safe pure unittest
+{
+    import std.math.exponential : log2;
+
+    // log2 is broken for x87-reals on some computers in CTFE
+    // the following test excludes these computers from the test
+    // (issue 21757)
+    enum test = cast(int) log2(3.05e2312L);
+    static if (real.mant_dig == 64 && test == 7681) // 80 bit reals
+    {
+        static assert(format!"%e"(real.max) == "1.189731e+4932");
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21842
+@safe pure unittest
+{
+    assert(format!"%-+05,g"(1.0) == "+1   ");
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=20536
 @safe pure unittest
 {
     real r = .00000095367431640625L;
     assert(format("%a", r) == "0x1p-20");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21840
+@safe pure unittest
+{
+    assert(format!"% 0,e"(0.0) == " 0.000000e+00");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21841
+@safe pure unittest
+{
+    assert(format!"%0.0,e"(0.0) == "0e+00");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21836
+@safe pure unittest
+{
+    assert(format!"%-5,1g"(0.0) == "0    ");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21838
+@safe pure unittest
+{
+    assert(format!"%#,a"(0.0) == "0x0.p+0");
 }
 
 /*
@@ -3181,20 +3236,38 @@ if (isSomeString!T)
     assert(w.data == "a本Ä       ", w.data);
 }
 
+enum PrecisionType
+{
+    none,
+    integer,
+    fractionalDigits,
+    allDigits,
+}
+
 void writeAligned(Writer, T1, T2, T3, Char)(auto ref Writer w,
     T1 prefix, T2 grouped, T3 suffix, scope const ref FormatSpec!Char f,
     bool integer_precision = false)
 if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
 {
-    // writes: left padding, prefix, leading zeros, grouped, suffix, right padding
+    writeAligned(w, prefix, grouped, "", suffix, f,
+                 integer_precision ? PrecisionType.integer : PrecisionType.none);
+}
 
-    if (integer_precision && f.precision == f.UNSPECIFIED)
-        integer_precision = false;
+void writeAligned(Writer, T1, T2, T3, T4, Char)(auto ref Writer w,
+    T1 prefix, T2 grouped, T3 fracts, T4 suffix, scope const ref FormatSpec!Char f,
+    PrecisionType p = PrecisionType.none)
+if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3 && isSomeString!T4)
+{
+    // writes: left padding, prefix, leading zeros, grouped, fracts, suffix, right padding
+
+    if (p == PrecisionType.integer && f.precision == f.UNSPECIFIED)
+        p = PrecisionType.none;
 
     import std.range.primitives : put;
 
     long prefixWidth;
     long groupedWidth = grouped.length; // TODO: does not take graphemes into account
+    long fractsWidth = fracts.length; // TODO: does not take graphemes into account
     long suffixWidth;
 
     // TODO: remove this workaround which hides issue 21815
@@ -3211,13 +3284,36 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     // sepCount = number of separators to be inserted
     long sepCount = doGrouping ? (groupedWidth - 1) / f.separators : 0;
 
-    long width = prefixWidth + sepCount + groupedWidth + suffixWidth;
+    long trailingZeros = 0;
+    if (p == PrecisionType.fractionalDigits)
+        trailingZeros = f.precision - (fractsWidth - 1);
+    if (p == PrecisionType.allDigits && f.flHash)
+    {
+        if (grouped != "0")
+            trailingZeros = f.precision - (fractsWidth - 1) - groupedWidth;
+        else
+        {
+            trailingZeros = f.precision - fractsWidth;
+            foreach (i;0 .. fracts.length)
+                if (fracts[i] != '0' && fracts[i] != '.')
+                {
+                    trailingZeros = f.precision - (fracts.length - i);
+                    break;
+                }
+        }
+    }
+
+    auto nodot = fracts == "." && trailingZeros == 0 && !f.flHash;
+
+    if (nodot) fractsWidth = 0;
+
+    long width = prefixWidth + sepCount + groupedWidth + fractsWidth + trailingZeros + suffixWidth;
     long delta = f.width - width;
 
     // with integers, precision is considered the minimum number of digits;
     // if digits are missing, we have to recalculate everything
     long pregrouped = 0;
-    if (integer_precision && groupedWidth < f.precision)
+    if (p == PrecisionType.integer && groupedWidth < f.precision)
     {
         pregrouped = f.precision - groupedWidth;
         delta -= pregrouped;
@@ -3229,15 +3325,25 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
     }
 
     // left padding
-    if ((!f.flZero || integer_precision) && !f.flDash && delta > 0)
-        foreach (i ; 0 .. delta)
-            put(w, ' ');
+    if ((!f.flZero || p == PrecisionType.integer) && delta > 0)
+    {
+        if (f.flEqual)
+        {
+            foreach (i ; 0 .. delta / 2 + ((delta % 2 == 1 && !f.flDash) ? 1 : 0))
+                put(w, ' ');
+        }
+        else if (!f.flDash)
+        {
+            foreach (i ; 0 .. delta)
+                put(w, ' ');
+        }
+    }
 
     // prefix
     put(w, prefix);
 
     // leading grouped zeros
-    if (f.flZero && !integer_precision && !f.flDash && delta > 0)
+    if (f.flZero && p != PrecisionType.integer && !f.flDash && delta > 0)
     {
         if (doGrouping)
         {
@@ -3295,13 +3401,31 @@ if (isSomeString!T1 && isSomeString!T2 && isSomeString!T3)
         put(w, grouped);
     }
 
+    // fracts
+    if (!nodot)
+        put(w, fracts);
+
+    // trailing zeros
+    foreach (i ; 0 .. trailingZeros)
+        put(w, '0');
+
     // suffix
     put(w, suffix);
 
     // right padding
-    if (f.flDash && delta > 0)
-        foreach (i ; 0 .. delta)
-            put(w, ' ');
+    if (delta > 0)
+    {
+        if (f.flEqual)
+        {
+            foreach (i ; 0 .. delta / 2 + ((delta % 2 == 1 && f.flDash) ? 1 : 0))
+                put(w, ' ');
+        }
+        else if (f.flDash)
+        {
+            foreach (i ; 0 .. delta)
+                put(w, ' ');
+        }
+    }
 }
 
 @safe pure unittest
