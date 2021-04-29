@@ -3145,7 +3145,7 @@ real log(real x) @safe pure nothrow @nogc
 real log10(real x) @safe pure nothrow @nogc
 {
     import std.math.constants : LOG2, LN2, SQRT1_2;
-    import std.math.algebraic : fabs;
+    import std.math.algebraic : fabs, poly;
     import std.math.traits : isNaN, isInfinity, signbit;
 
     version (INLINE_YL2X)
@@ -3307,7 +3307,7 @@ real log1p(real x) @safe pure nothrow @nogc
 real log2(real x) @safe pure nothrow @nogc
 {
     import std.math.traits : isNaN, isInfinity, signbit;
-    import std.math.constants : SQRT1_2;
+    import std.math.constants : SQRT1_2, LOG2E;
     import std.math.algebraic : poly;
 
     version (INLINE_YL2X)
