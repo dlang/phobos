@@ -1755,6 +1755,17 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = spec == '(' ? f.nested : defSpec;
 
+    // testing correct nested format spec
+    import std.format : NoOpSink;
+    auto noop = NoOpSink();
+    auto test = FormatSpec!Char(fmtSpec);
+    enforceFmt(test.writeUpToNextSpec(noop),
+        "nested format string for associative array contains no format specifier");
+    enforceFmt(test.writeUpToNextSpec(noop),
+        "nested format string for associative array contains only one format specifier");
+    enforceFmt(!test.writeUpToNextSpec(noop),
+        "nested format string for associative array contains more than two format specifiers");
+
     size_t i = 0;
     immutable end = val.length;
 
@@ -1861,6 +1872,19 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     formatTest(S1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`]);
     formatTest(S2(['c':1, 'd':2]), "S");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21875
+@system unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+
+    auto aa = [ 1 : "x", 2 : "y", 3 : "z" ];
+
+    assertThrown!FormatException(format("%(%)", aa));
+    assertThrown!FormatException(format("%(%s%)", aa));
+    assertThrown!FormatException(format("%(%s%s%s%)", aa));
 }
 
 enum HasToStringResult
