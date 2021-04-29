@@ -456,7 +456,9 @@ $(BOOKTABLE ,
                  is formatted according to the specifications given inside of the
                  compound specifier. The first specifier is used for formatting
                  the key and the second specifier is used for formatting the value.
-                 If only one specifier is provided, it is used for key and value.)
+                 The order can be changed with positional arguments. For example
+                 `"%(%2$s (%1$s), %)"` will write the value, followed by the key in
+                 parenthesis.)
    )
    $(TR $(MULTIROW_CELL 2, $(I Enum))
         $(TD $(B 's'))

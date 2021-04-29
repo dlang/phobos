@@ -1609,14 +1609,26 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = spec == '(' ? f.nested : defSpec;
 
+    auto key_first = true;
+
     // testing correct nested format spec
     import std.format : NoOpSink;
     auto noop = NoOpSink();
     auto test = FormatSpec!Char(fmtSpec);
     enforceFmt(test.writeUpToNextSpec(noop),
         "nested format string for associative array contains no format specifier");
+    enforceFmt(test.indexStart <= 2,
+        "positional parameter in nested format string for associative array may only be 1 or 2");
+    if (test.indexStart == 2)
+        key_first = false;
+
     enforceFmt(test.writeUpToNextSpec(noop),
         "nested format string for associative array contains only one format specifier");
+    enforceFmt(test.indexStart <= 2,
+        "positional parameter in nested format string for associative array may only be 1 or 2");
+    enforceFmt(test.indexStart == 0 || ((test.indexStart == 2) == key_first),
+        "wrong combination of positional parameters in nested format string");
+
     enforceFmt(!test.writeUpToNextSpec(noop),
         "nested format string for associative array contains more than two format specifiers");
 
@@ -1628,19 +1640,27 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     foreach (k, ref v; val)
     {
         auto fmt = FormatSpec!Char(fmtSpec);
-        fmt.writeUpToNextSpec(w);
-        if (f.flDash)
+
+        foreach (pos; 1 .. 3)
         {
-            formatValue(w, k, fmt);
             fmt.writeUpToNextSpec(w);
-            formatValue(w, v, fmt);
+
+            if (key_first == (pos == 1))
+            {
+                if (f.flDash)
+                    formatValue(w, k, fmt);
+                else
+                    formatElement(w, k, fmt);
+            }
+            else
+            {
+                if (f.flDash)
+                    formatValue(w, v, fmt);
+                else
+                    formatElement(w, v, fmt);
+            }
         }
-        else
-        {
-            formatElement(w, k, fmt);
-            fmt.writeUpToNextSpec(w);
-            formatElement(w, v, fmt);
-        }
+
         if (f.sep !is null)
         {
             fmt.writeUpToNextSpec(w);
@@ -1739,6 +1759,31 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assertThrown!FormatException(format("%(%)", aa));
     assertThrown!FormatException(format("%(%s%)", aa));
     assertThrown!FormatException(format("%(%s%s%s%)", aa));
+}
+
+@system unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+
+    auto aa = [ 1 : "x", 2 : "y", 3 : "z" ];
+
+    assertThrown!FormatException(format("%(%3$s%s%)", aa));
+    assertThrown!FormatException(format("%(%s%3$s%)", aa));
+    assertThrown!FormatException(format("%(%1$s%1$s%)", aa));
+    assertThrown!FormatException(format("%(%2$s%2$s%)", aa));
+    assertThrown!FormatException(format("%(%s%1$s%)", aa));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21808
+@system unittest
+{
+    auto spelled = [ 1 : "one" ];
+    assert(format("%-(%2$s (%1$s)%|, %)", spelled) == "one (1)");
+
+    spelled[2] = "two";
+    auto result = format("%-(%2$s (%1$s)%|, %)", spelled);
+    assert(result == "one (1), two (2)" || result == "two (2), one (1)");
 }
 
 enum HasToStringResult
