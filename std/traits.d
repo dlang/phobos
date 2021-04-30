@@ -2742,6 +2742,9 @@ template hasNested(T)
  * table pointer or a context pointer for nested types.
  * If `T` isn't a struct, class, interface or union returns a tuple
  * with one element `T`.
+ *
+ * History:
+ *   - Returned `AliasSeq!(Interface)` for interfaces prior to 2.097
  */
 template Fields(T)
 {
@@ -2802,6 +2805,9 @@ private enum NameOf(alias T) = T.stringof;
  * Inherited fields (for classes) are not included.
  * If `T` isn't a struct, class, interface or union, an
  * expression tuple with an empty string is returned.
+ *
+ * History:
+ *   - Returned `AliasSeq!""` for interfaces prior to 2.097
  */
 template FieldNameTuple(T)
 {
