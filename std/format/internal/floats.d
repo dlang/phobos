@@ -44,8 +44,6 @@ if (is(T == float) || is(T == double)
     int exp = bp.exponent;
     string sgn = bp.negative ? "-" : "";
 
-    enum maxexp = 2 * T.max_exp - 1;
-
     if (sgn == "" && f.flPlus) sgn = "+";
     if (sgn == "" && f.flSpace) sgn = " ";
 
@@ -56,7 +54,7 @@ if (is(T == float) || is(T == double)
     bool is_upper = f.spec == 'A' || f.spec == 'E' || f.spec=='F' || f.spec=='G';
 
     // special treatment for nan and inf
-    if (exp == maxexp)
+    if (exp == T.max_exp)
     {
         import std.format.internal.write : writeAligned;
 
@@ -90,7 +88,24 @@ if (is(T == float) || is(T == double)
     import std.algorithm.comparison : max;
     import std.format.internal.write : writeAligned, PrecisionType;
 
-    enum int bias = T.max_exp - 1;
+    char[3] prefix;
+    if (sgn != "") prefix[0] = sgn[0];
+    prefix[1] = '0';
+    prefix[2] = is_upper ? 'X' : 'x';
+
+    // print exponent
+    if (mnt == 0)
+    {
+        if (f.precision == f.UNSPECIFIED)
+            f.precision = 0;
+        writeAligned(w, prefix[1 - sgn.length .. $], "0", ".", is_upper ? "P+0" : "p+0",
+                     f, PrecisionType.fractionalDigits);
+        return;
+    }
+
+    // save integer part
+    char[1] first = '0' + ((mnt >> (T.mant_dig - 1)) & 1);
+    mnt &= (1L << (T.mant_dig - 1)) - 1;
 
     static if (is(T == float) || (is(T == real) && T.mant_dig == 64))
     {
@@ -120,27 +135,6 @@ if (is(T == float) || is(T == double)
 
     if (f.precision == f.UNSPECIFIED)
         f.precision = cast(int) hex_mant_pos - 1;
-
-    char[3] prefix;
-    if (sgn != "") prefix[0] = sgn[0];
-    prefix[1] = '0';
-    prefix[2] = is_upper ? 'X' : 'x';
-
-    // print exponent
-    if (exp == 0 && mnt == 0)
-    {
-        writeAligned(w, prefix[1 - sgn.length .. $], "0", ".", is_upper ? "P+0" : "p+0",
-                     f, PrecisionType.fractionalDigits);
-        return;
-    }
-
-    // save integer part
-    char[1] first = [exp == 0 ? '0' : '1'];
-
-    if (exp == 0)
-        exp = 1 - bias; // denormalized number
-    else
-        exp -= bias;
 
     auto exp_sgn = exp >= 0 ? '+' : '-';
     if (exp < 0) exp = -exp;
@@ -626,8 +620,6 @@ if (is(T == float) || is(T == double)
 {
     import std.format.internal.write : writeAligned, PrecisionType;
 
-    enum int bias = T.max_exp - 1;
-
     static if (!g)
     {
         if (f.precision == f.UNSPECIFIED)
@@ -635,7 +627,7 @@ if (is(T == float) || is(T == double)
     }
 
     // special treatment for 0.0
-    if (exp == 0 && mnt == 0)
+    if (mnt == 0)
     {
         static if (g)
             writeAligned(w, sgn, "0", ".", "", f, PrecisionType.allDigits);
@@ -643,13 +635,6 @@ if (is(T == float) || is(T == double)
             writeAligned(w, sgn, "0", ".", is_upper ? "E+00" : "e+00", f, PrecisionType.fractionalDigits);
         return;
     }
-
-    // add leading 1 for normalized values or correct exponent for denormalied values
-    if (exp != 0)
-        mnt |= 1L << (T.mant_dig - 1);
-    else
-        exp = 1;
-    exp -= bias;
 
     char[T.mant_dig + T.max_exp] dec_buf;
     char[T.max_10_exp.stringof.length + 2] exp_buf;
@@ -1560,8 +1545,6 @@ if (is(T == float) || is(T == double)
 {
     import std.format.internal.write : writeAligned, PrecisionType;
 
-    enum int bias = T.max_exp - 1;
-
     static if (!g)
     {
         if (f.precision == f.UNSPECIFIED)
@@ -1574,13 +1557,6 @@ if (is(T == float) || is(T == double)
         writeAligned(w, sgn, "0", ".", "", f, PrecisionType.fractionalDigits);
         return;
     }
-
-    // add leading 1 for normalized values or correct exponent for denormalied values
-    if (exp != 0)
-        mnt |= 1L << (T.mant_dig - 1);
-    else
-        exp = 1;
-    exp -= bias;
 
     char[T.max_exp + T.mant_dig + 1] dec_buf;
 
