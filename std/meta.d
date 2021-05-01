@@ -1798,23 +1798,16 @@ private:
  * not. Both a and b can be types, literals, or symbols.
  *
  * How:                     When:
- *      is(a == b)        - both are types
- *        a == b          - both are literals (true literals, enums)
- * __traits(isSame, a, b) - other cases (variables, functions,
- *                          templates, etc.)
+ *        a == b          - at least one rvalue (literals, enums, function calls)
+ * __traits(isSame, a, b) - other cases (types, variables, functions, templates, etc.)
  */
 private template isSame(ab...)
 if (ab.length == 2)
 {
-    static if (is(ab[0]) && is(ab[1]))
+    static if (!is(typeof(&ab[0] && &ab[1])) // at least one is an rvalue
+            && __traits(compiles, { enum isSame = ab[0] == ab[1]; })) // c-t comparable
     {
-        enum isSame = is(ab[0] == ab[1]);
-    }
-    else static if (!is(ab[0]) && !is(ab[1]) &&
-                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
-                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
-    {
-        enum isSame = (ab[0] == ab[1]);
+        enum isSame = ab[0] == ab[1];
     }
     else
     {
@@ -1824,6 +1817,9 @@ if (ab.length == 2)
 
 @safe unittest
 {
+    static struct S {}
+    static assert( isSame!(S(), S()));
+
     static assert( isSame!(int, int));
     static assert(!isSame!(int, short));
 
