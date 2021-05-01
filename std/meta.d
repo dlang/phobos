@@ -175,9 +175,6 @@ alias AliasSeq(TList...) = TList;
  */
 alias Alias(alias a) = a;
 
-/// Ditto
-alias Alias(T) = T;
-
 ///
 @safe unittest
 {
@@ -250,18 +247,23 @@ if (!isAggregateType!T || is(Unqual!T == T))
 
 /**
  * Returns the index of the first occurrence of T in the
- * sequence TList.
+ * sequence Seq.
  * If not found, -1 is returned.
  */
-template staticIndexOf(T, TList...)
+template staticIndexOf(alias T, Seq...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList);
-}
-
-/// Ditto
-template staticIndexOf(alias T, TList...)
-{
-    enum staticIndexOf = genericIndexOf!(T, TList);
+    static foreach (idx, arg; Seq)
+    {
+        static if (is(typeof(staticIndexOf) == void) && // not yet defined
+                   isSame!(T, arg))
+        {
+            enum staticIndexOf = idx;
+        }
+    }
+    static if (is(typeof(staticIndexOf) == void)) // no hit
+    {
+        enum staticIndexOf = -1;
+    }
 }
 
 ///
@@ -274,24 +276,6 @@ template staticIndexOf(alias T, TList...)
         writefln("The index of long is %s",
                  staticIndexOf!(long, AliasSeq!(int, long, double)));
         // prints: The index of long is 1
-    }
-}
-
-// [internal]
-private template genericIndexOf(args...)
-if (args.length >= 1)
-{
-    static foreach (idx, arg; args[1 .. $])
-    {
-        static if (is(typeof(genericIndexOf) == void) && // not yet defined
-                   isSame!(args[0], arg))
-        {
-            enum genericIndexOf = idx;
-        }
-    }
-    static if (is(typeof(genericIndexOf) == void)) // no hit
-    {
-        enum genericIndexOf = -1;
     }
 }
 
@@ -318,18 +302,25 @@ if (args.length >= 1)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the first occurrence,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from Seq with the first occurrence,
+ * if any, of E removed.
  */
-template Erase(T, TList...)
+template Erase(alias E, Seq...)
 {
-    alias Erase = GenericErase!(T, TList).result;
-}
+    static if (Seq.length)
+    {
+        alias head = Seq[0 .. 1];
+        alias tail = Seq[1 .. $];
 
-/// Ditto
-template Erase(alias T, TList...)
-{
-    alias Erase = GenericErase!(T, TList).result;
+        static if (isSame!(E, head))
+            alias Erase = tail;
+        else
+            alias Erase = AliasSeq!(head, Erase!(E, tail));
+    }
+    else
+    {
+        alias Erase = AliasSeq!();
+    }
 }
 
 ///
@@ -338,29 +329,6 @@ template Erase(alias T, TList...)
     alias Types = AliasSeq!(int, long, double, char);
     alias TL = Erase!(long, Types);
     static assert(is(TL == AliasSeq!(int, double, char)));
-}
-
-// [internal]
-private template GenericErase(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $] ;
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(e, head))
-            alias result = tail;
-        else
-            alias result = AliasSeq!(head, GenericErase!(e, tail).result);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -376,18 +344,29 @@ if (args.length >= 1)
 
 
 /**
- * Returns an `AliasSeq` created from TList with the all occurrences,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from Seq with the all occurrences,
+ * if any, of E removed.
  */
-template EraseAll(T, TList...)
+template EraseAll(alias E, Seq...)
 {
-    alias EraseAll = GenericEraseAll!(T, TList).result;
-}
+    static if (Seq.length)
+    {
+        alias head = Seq[0 .. 1];
+        alias tail = Seq[1 .. $];
+        alias next = AliasSeq!(
+            EraseAll!(E, tail[0..$/2]),
+            EraseAll!(E, tail[$/2..$])
+            );
 
-/// Ditto
-template EraseAll(alias T, TList...)
-{
-    alias EraseAll = GenericEraseAll!(T, TList).result;
+        static if (isSame!(E, head))
+            alias EraseAll = next;
+        else
+            alias EraseAll = AliasSeq!(head, next);
+    }
+    else
+    {
+        alias EraseAll = AliasSeq!();
+    }
 }
 
 ///
@@ -397,33 +376,6 @@ template EraseAll(alias T, TList...)
 
     alias TL = EraseAll!(long, Types);
     static assert(is(TL == AliasSeq!(int, int)));
-}
-
-// [internal]
-private template GenericEraseAll(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = AliasSeq!(
-            GenericEraseAll!(e, tail[0..$/2]).result,
-            GenericEraseAll!(e, tail[$/2..$]).result
-            );
-
-        static if (isSame!(e, head))
-            alias result = next;
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -517,30 +469,26 @@ template NoDuplicates(TList...)
 
 
 /**
- * Returns an `AliasSeq` created from TList with the first occurrence
+ * Returns an `AliasSeq` created from Seq with the first occurrence
  * of T, if found, replaced with U.
  */
-template Replace(T, U, TList...)
+template Replace(alias T, alias U, Seq...)
 {
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
+    static if (Seq.length)
+    {
+        alias head = Seq[0 .. 1];
+        alias tail = Seq[1 .. $];
 
-/// Ditto
-template Replace(alias T, U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(T, alias U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(alias T, alias U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
+        static if (isSame!(T, head))
+            alias Replace = AliasSeq!(U, tail);
+        else
+            alias Replace = AliasSeq!(head,
+                Replace!(T, U, tail));
+    }
+    else
+    {
+        alias Replace = AliasSeq!();
+    }
 }
 
 ///
@@ -551,31 +499,6 @@ template Replace(alias T, alias U, TList...)
     alias TL = Replace!(long, char, Types);
     static assert(is(TL == AliasSeq!(int, char, long, int, float)));
 }
-
-// [internal]
-private template GenericReplace(args...)
-if (args.length >= 2)
-{
-    alias from  = OldAlias!(args[0]);
-    alias to    = OldAlias!(args[1]);
-    alias tuple = args[2 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(from, head))
-            alias result = AliasSeq!(to, tail);
-        else
-            alias result = AliasSeq!(head,
-                GenericReplace!(from, to, tail).result);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
- }
 
 @safe unittest
 {
@@ -597,30 +520,26 @@ if (args.length >= 2)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with all occurrences
+ * Returns an `AliasSeq` created from Seq with all occurrences
  * of T, if found, replaced with U.
  */
-template ReplaceAll(T, U, TList...)
+template ReplaceAll(alias T, alias U, Seq...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
+    static if (Seq.length)
+    {
+        alias head = Seq[0 .. 1];
+        alias tail = Seq[1 .. $];
+        alias next = ReplaceAll!(T, U, tail);
 
-/// Ditto
-template ReplaceAll(alias T, U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(alias T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
+        static if (isSame!(T, head))
+            alias ReplaceAll = AliasSeq!(U, next);
+        else
+            alias ReplaceAll = AliasSeq!(head, next);
+    }
+    else
+    {
+        alias ReplaceAll = AliasSeq!();
+    }
 }
 
 ///
@@ -630,31 +549,6 @@ template ReplaceAll(alias T, alias U, TList...)
 
     alias TL = ReplaceAll!(long, char, Types);
     static assert(is(TL == AliasSeq!(int, char, char, int, float)));
-}
-
-// [internal]
-private template GenericReplaceAll(args...)
-if (args.length >= 2)
-{
-    alias from  = OldAlias!(args[0]);
-    alias to    = OldAlias!(args[1]);
-    alias tuple = args[2 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = GenericReplaceAll!(from, to, tail).result;
-
-        static if (isSame!(from, head))
-            alias result = AliasSeq!(to, next);
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -1645,10 +1539,9 @@ private template staticMerge(alias cmp, int half, Seq...)
     }
 }
 
-private template isLessEq(alias cmp, Seq...)
-if (Seq.length == 2)
+private template isLessEq(alias cmp, alias A, alias B)
 {
-    private enum Result = cmp!(Seq[1], Seq[0]);
+    private enum Result = cmp!(B, A);
     static if (is(typeof(Result) == bool))
         enum isLessEq = !Result;
     else static if (is(typeof(Result) : int))
@@ -1803,22 +1696,21 @@ private:
  * __traits(isSame, a, b) - other cases (variables, functions,
  *                          templates, etc.)
  */
-private template isSame(ab...)
-if (ab.length == 2)
+private template isSame(alias A, alias B)
 {
-    static if (is(ab[0]) && is(ab[1]))
+    static if (is(A) && is(B))
     {
-        enum isSame = is(ab[0] == ab[1]);
+        enum isSame = is(A == B);
     }
-    else static if (!is(ab[0]) && !is(ab[1]) &&
-                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
-                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
+    else static if (!is(A) && !is(B) &&
+                    !(is(typeof(&A)) && is(typeof(&B))) &&
+                     __traits(compiles, { enum isSame = A == B; }))
     {
-        enum isSame = (ab[0] == ab[1]);
+        enum isSame = (A == B);
     }
     else
     {
-        enum isSame = __traits(isSame, ab[0], ab[1]);
+        enum isSame = __traits(isSame, A, B);
     }
 }
 
