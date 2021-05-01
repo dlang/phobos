@@ -1078,6 +1078,18 @@ Throws: `Exception` if `buffer` is empty.
         assertThrown(f.rawRead(u));
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=21728
+    @system unittest
+    {
+        import std.process : pipe;
+        import std.exception : assertThrown;
+
+        auto p = pipe();
+        p.readEnd.close;
+        ubyte[1] u;
+        assertThrown(p.readEnd.rawRead(u));
+    }
+
 /**
 Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
 handle. The number of items to write and the size of each
