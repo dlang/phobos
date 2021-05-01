@@ -4890,6 +4890,9 @@ private struct ChunksImpl
     int opApply(D)(scope D dg)
     {
         import core.stdc.stdlib : alloca;
+        import std.exception : enforce;
+
+        enforce(f.isOpen, "Attempting to read from an unopened file");
         enum maxStackSize = 1024 * 16;
         ubyte[] buffer = void;
         if (size < maxStackSize)
@@ -4955,6 +4958,20 @@ private struct ChunksImpl
     f.close();
 }
 
+// Issue 21730 - null ptr dereferenced in ChunksImpl.opApply (SIGSEGV)
+@system unittest
+{
+    import std.exception : assertThrown;
+    static import std.file;
+
+    auto deleteme = testFilename();
+    scope(exit) { if (std.file.exists(deleteme)) std.file.remove(deleteme); }
+
+    auto err1 = File(deleteme, "w+x");
+    err1.close;
+    std.file.remove(deleteme);
+    assertThrown(() {foreach (ubyte[] buf; chunks(err1, 4096)) {}}());
+}
 
 /**
 Writes an array or range to a file.
