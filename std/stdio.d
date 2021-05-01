@@ -1023,10 +1023,11 @@ Throws: `Exception` if `buffer` is empty.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        import std.exception : errnoEnforce;
+        import std.exception : enforce, errnoEnforce;
 
         if (!buffer.length)
             throw new Exception("rawRead must take a non-empty buffer");
+        enforce(isOpen, "Attempting to read from an unopened file");
         version (Windows)
         {
             immutable fd = ._fileno(_p.handle);
@@ -1065,6 +1066,16 @@ Throws: `Exception` if `buffer` is empty.
         auto buf = f.rawRead(new char[5]);
         f.close();
         assert(buf == "\r\n\n\r\n");
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=21729
+    @system unittest
+    {
+        import std.exception : assertThrown;
+
+        File f;
+        ubyte[1] u;
+        assertThrown(f.rawRead(u));
     }
 
 /**
