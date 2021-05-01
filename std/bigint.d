@@ -27,8 +27,10 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-import std.format : FormatSpec, FormatException;
+import std.format.spec : FormatSpec;
+import std.format : FormatException;
 import std.internal.math.biguintcore;
+import std.internal.math.biguintnoasm : BigDigit;
 import std.range.primitives;
 import std.traits;
 
@@ -145,6 +147,39 @@ public:
         assertThrown!ConvException(BigInt(r4));
     }
 
+    /**
+     * Construct a `BigInt` from a sign and a magnitude.
+     *
+     * The magnitude is an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+     * of unsigned integers that satisfies either $(REF hasLength, std,range,primitives)
+     * or $(REF isForwardRange, std,range,primitives). The first (leftmost)
+     * element of the magnitude is considered the most significant.
+     *
+     * Params:
+     *     isNegative = true for negative, false for non-negative
+     *          (ignored when magnitude is zero)
+     *     magnitude = a finite range of unsigned integers
+     */
+    this(Range)(bool isNegative, Range magnitude) if (
+        isInputRange!Range &&
+        isUnsigned!(ElementType!Range) &&
+        (hasLength!Range || isForwardRange!Range) &&
+        !isInfinite!Range)
+    {
+        data.fromMagnitude(magnitude);
+        sign = isNegative && !data.isZero;
+    }
+
+    ///
+    pure @safe unittest
+    {
+        ubyte[] magnitude = [1, 2, 3, 4, 5, 6];
+        auto b1 = BigInt(false, magnitude);
+        assert(cast(long) b1 == 0x01_02_03_04_05_06L);
+        auto b2 = BigInt(true, magnitude);
+        assert(cast(long) b2 == -0x01_02_03_04_05_06L);
+    }
+
     /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
@@ -161,7 +196,7 @@ public:
     }
 
     /// Construct a `BigInt` from another `BigInt`.
-    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(immutable T == immutable BigInt))
     {
         opAssign(x);
     }
@@ -290,7 +325,23 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
-        else static if (op=="|" || op=="&" || op=="^")
+        else static if (op=="&")
+        {
+            if (y >= 0 && (y <= 1 || !sign)) // In these cases we can avoid some allocation.
+            {
+                static if (T.sizeof <= uint.sizeof && BigDigit.sizeof <= uint.sizeof)
+                    data = cast(ulong) data.peekUint(0) & y;
+                else
+                    data = data.peekUlong(0) & y;
+                sign = false;
+            }
+            else
+            {
+                BigInt b = y;
+                opOpAssign!op(b);
+            }
+        }
+        else static if (op=="|" || op=="^")
         {
             BigInt b = y;
             opOpAssign!op(b);
@@ -481,11 +532,11 @@ public:
         // BigInt % long => long
         // BigInt % ulong => BigInt
         // BigInt % other_type => int
-        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        static if (is(immutable T == immutable long) || is(immutable T == immutable ulong))
         {
             auto r = this % BigInt(y);
 
-            static if (is(Unqual!T == long))
+            static if (is(immutable T == immutable long))
             {
                 return r.toLong();
             }
@@ -498,7 +549,7 @@ public:
         else
         {
             immutable uint u = absUnsign(y);
-            static if (is(Unqual!T == uint))
+            static if (is(immutable T == immutable uint))
                alias R = long;
             else
                alias R = int;
@@ -656,11 +707,8 @@ public:
     }
 
     /// ditto
-    bool opEquals(T)(const T y) const nothrow @nogc if (isFloatingPoint!T)
+    bool opEquals(T)(const T y) const pure nothrow @nogc if (isFloatingPoint!T)
     {
-        // This is a separate function from the isIntegral!T case
-        // due to the impurity of std.math.scalbn which is used
-        // for 80 bit floats.
         return 0 == opCmp(y);
     }
 
@@ -689,7 +737,7 @@ public:
 
     @safe unittest
     {
-        import std.math : nextDown, nextUp;
+        import std.math.operations : nextDown, nextUp;
 
         const x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
         BigInt x1 = x + 1;
@@ -834,13 +882,16 @@ public:
     ///
     @system unittest
     {
-        assert(0x1.abcd_e8p+124f        == cast(float)  BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124  == cast(double) BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124L == cast(real)   BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
+        assert(cast(float)  BigInt("35540592535949172786332045140593475584")
+                == 35540592535949172786332045140593475584.0f);
+        assert(cast(double) BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0);
+        assert(cast(real)   BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0L);
 
-        assert(-0x1.3456_78p+108f        == cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108  == cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108L == cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
+        assert(cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000") == -0x1.3456_78p+108f       );
+        assert(cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108 );
+        assert(cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108L);
     }
 
     /// Rounding when casting to floating point
@@ -853,42 +904,42 @@ public:
 
         // BigInts that fall somewhere between two non-infinite floats/doubles
         // are rounded to the closer value when cast to float/double.
-        assert(0x1.aaa_aaep+28f == cast(float) BigInt(0x1aaa_aae7));
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaff));
-        assert(-0x1.aaaaaep+28f == cast(float) BigInt(-0x1aaa_aae7));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaff));
+        assert(cast(float) BigInt(0x1aaa_aae7) == 0x1.aaa_aaep+28f);
+        assert(cast(float) BigInt(0x1aaa_aaff) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aae7) == -0x1.aaaaaep+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaff) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77));
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff));
-        assert(-0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77) == 0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77) == -0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that fall exactly between two non-infinite floats/doubles
         // are rounded away from zero when cast to float/double. (Note that
         // in most environments this is NOT the same rounding rule rule used
         // when casting int/long to float/double.)
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaf0));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaf0));
+        assert(cast(float) BigInt(0x1aaa_aaf0) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaf0) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that are bounded on one side by the largest positive or
         // most negative finite float/double and on the other side by infinity
         // or -infinity are rounded as if in place of infinity was the value
         // `2^^(T.max_exp)` when cast to float/double.
-        assert(float.infinity == cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(-float.infinity == cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") == float.infinity);
+        assert(cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999") == -float.infinity);
 
-        assert(double.infinity > cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(real.infinity > cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < double.infinity);
+        assert(cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < real.infinity);
     }
 
     @safe unittest
     {
         // Test exponent overflow is correct.
-        assert(0x1.000000p+29f == cast(float) BigInt(0x1fffffff));
-        assert(0x1.000000p+61 == cast(double) BigInt(0x1fff_ffff_ffff_fff0));
+        assert(cast(float) BigInt(0x1fffffff) == 0x1.000000p+29f);
+        assert(cast(double) BigInt(0x1fff_ffff_ffff_fff0) == 0x1.000000p+61);
     }
 
     private T toFloat(T, string roundingMode)() @safe nothrow @nogc const
@@ -929,7 +980,8 @@ public:
                 uint resultBits = (uint(isNegative) << 31) | // sign bit
                     ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
                     cast(uint) ((sansExponent << 1) >>> (64 - 23)); // mantissa.
-                return *cast(float*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(float*) &resultBits)();
             }
             else static if (T.mant_dig == double.mant_dig)
             {
@@ -938,18 +990,19 @@ public:
                 ulong resultBits = (ulong(isNegative) << 63) | // sign bit
                     ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
                     ((sansExponent << 1) >>> (64 - 52)); // mantissa.
-                return *cast(double*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(double*) &resultBits)();
             }
             else
             {
-                import std.math : scalbn;
-                return scalbn(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
+                import core.math : ldexp;
+                return ldexp(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
                     cast(int) exponent - 65);
             }
         }
         else
         {
-            import std.math : scalbn;
+            import core.math : ldexp;
             const ulongLength = data.ulongLength;
             if ((ulongLength - 1) * 64L > int.max)
                 return isNegative ? -T.infinity : T.infinity;
@@ -958,20 +1011,20 @@ public:
             if (w1 == 0)
                 return T(0); // Special: bsr(w1) is undefined.
             int bitsStillNeeded = totalNeededBits - bsr(w1) - 1;
-            T acc = scalbn(w1, scale);
+            T acc = ldexp(cast(T) w1, scale);
             for (ptrdiff_t i = ulongLength - 2; i >= 0 && bitsStillNeeded > 0; i--)
             {
                 ulong w = data.peekUlong(i);
                 // To round towards zero we must make sure not to use too many bits.
                 if (bitsStillNeeded >= 64)
                 {
-                    acc += scalbn(w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     bitsStillNeeded -= 64;
                 }
                 else
                 {
                     w = (w >>> (64 - bitsStillNeeded)) << (64 - bitsStillNeeded);
-                    acc += scalbn(w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     break;
                 }
             }
@@ -988,7 +1041,7 @@ public:
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
-    if (is(Unqual!T == BigInt))
+    if (is(immutable T == immutable BigInt))
     {
         return this;
     }
@@ -1026,7 +1079,8 @@ public:
     int opCmp(T)(const T y) nothrow @nogc @safe const if (isFloatingPoint!T)
     {
         import core.bitop : bsr;
-        import std.math : cmp, isFinite;
+        import std.math.operations : cmp;
+        import std.math.traits : isFinite;
 
         const asFloat = toFloat!(T, "truncate");
         if (asFloat != y)
@@ -1236,7 +1290,7 @@ public:
         }
         assert(buff.length > 0, "Invalid buffer length");
 
-        char signChar = isNegative() ? '-' : 0;
+        char signChar = isNegative ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
 
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
@@ -1316,7 +1370,7 @@ public:
     // the function failed to instantiate.
     @system unittest
     {
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
         import std.array : appender;
         BigInt num = 503;
         auto dst = appender!string();
@@ -1409,10 +1463,7 @@ private:
     {
         return data.isZero();
     }
-    bool isNegative() pure const nothrow @nogc @safe
-    {
-        return sign;
-    }
+    alias isNegative = sign;
 
     // Generate a runtime error if division by zero occurs
     void checkDivByZero() pure const nothrow @safe
@@ -1699,7 +1750,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1750,7 +1801,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1801,7 +1852,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1853,7 +1904,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     auto w1 = appender!string();
     auto w2 = appender!string();
@@ -1878,7 +1929,7 @@ unittest
 
 @safe unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
     auto r = abs(BigInt(-1000)); // https://issues.dlang.org/show_bug.cgi?id=6486
     assert(r == 1000);
 
@@ -2110,23 +2161,23 @@ unittest
 {
     auto x = BigInt(-3);
     x %= 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= cast(ushort) 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= 3L;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(3);
     x %= -3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15678
@@ -2279,12 +2330,13 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow @safe
 
     while (exponent)
     {
-        if (exponent & 1)
+        if (exponent.data.peekUint(0) & 1)
         {
             result = (result * base) % modulus;
         }
 
-        base = ((base % modulus) * (base % modulus)) % modulus;
+        auto tmp = base % modulus;
+        base = (tmp * tmp) % modulus;
         exponent >>= 1;
     }
 

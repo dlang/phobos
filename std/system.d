@@ -39,7 +39,8 @@ immutable
         dragonFlyBSD, /// DragonFlyBSD
         solaris,   /// Solaris
         android,   /// Android
-        otherPosix /// Other Posix Systems
+        otherPosix, /// Other Posix Systems
+        unknown,   /// Unknown
     }
 
     /// The OS that the program was compiled for.
@@ -55,7 +56,7 @@ immutable
     else version (NetBSD)  OS os = OS.netBSD;
     else version (DragonFlyBSD) OS os = OS.dragonFlyBSD;
     else version (Posix)   OS os = OS.otherPosix;
-    else static assert(0, "Unknown OS.");
+    else OS os = OS.unknown;
 
     /++
         Byte order endianness.

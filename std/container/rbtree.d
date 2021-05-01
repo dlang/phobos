@@ -964,7 +964,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      * Check if any elements exist in the container.  Returns `false` if at least
      * one element exists.
      */
-    @property bool empty()
+    @property bool empty() const // pure, nothrow, @safe, @nogc: are inferred
     {
         return _end.left is null;
     }
@@ -1030,7 +1030,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH 1)
      */
-    Elem front()
+    inout(Elem) front() inout
     {
         return _begin.value;
     }
@@ -1040,7 +1040,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    Elem back()
+    inout(Elem) back() inout
     {
         return _end.prev.value;
     }
@@ -2164,8 +2164,12 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     const rt1 = redBlackTree(5,4,3,2,1);
-    static assert(is(typeof(rt1.length)));
-    static assert(is(typeof(5 in rt1)));
+    void allQualifiers() pure nothrow @safe @nogc {
+        assert(!rt1.empty);
+        assert(rt1.length == 5);
+        assert(5 in rt1);
+    }
+    allQualifiers();
 
     static assert(is(typeof(rt1.upperBound(3).front) == const(int)));
     import std.algorithm.comparison : equal;
@@ -2179,7 +2183,9 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     immutable rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.empty)));
     static assert(is(typeof(rt1.length)));
+    static assert(is(typeof(5 in rt1)));
 
     static assert(is(typeof(rt1.upperBound(3).front) == immutable(int)));
     import std.algorithm.comparison : equal;

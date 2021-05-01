@@ -39,7 +39,7 @@ import std.datetime.date : AllowDayOverflow, DateTimeException, daysToDayOfWeek,
                            DayOfWeek, isTimePoint, Month;
 import std.exception : enforce;
 import std.range.primitives : isOutputRange;
-import std.traits : isIntegral, Unqual;
+import std.traits : isIntegral;
 import std.typecons : Flag;
 
 version (StdUnittest) import std.exception : assertThrown;
@@ -137,7 +137,7 @@ public:
         --------------------
       +/
     this(U)(scope const TP begin, scope const U end) pure
-        if (is(Unqual!TP == Unqual!U))
+        if (is(immutable TP == immutable U))
     {
         if (!_valid(begin, end))
             throw new DateTimeException("Arguments would result in an invalid Interval.");

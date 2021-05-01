@@ -425,7 +425,7 @@ template isSeedable(Rng)
 }
 
 /**
-Linear Congruential generator.
+Linear Congruential generator. When m = 0, no modulus is used.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
 if (isUnsigned!UIntType)
@@ -603,7 +603,15 @@ Always `false` (random generators are infinite ranges).
  */
     enum bool empty = false;
 
-    private UIntType _x = m ? (a + c) % m : (a + c);
+    // https://issues.dlang.org/show_bug.cgi?id=21610
+    static if (m)
+    {
+        private UIntType _x = (a + c) % m;
+    }
+    else
+    {
+        private UIntType _x = a + c;
+    }
 }
 
 /// Declare your own linear congruential engine
@@ -626,6 +634,27 @@ Always `false` (random generators are infinite ranges).
     // Seed with an unpredictable value
     auto rnd = GLibcLCG(unpredictableSeed);
     auto n = rnd.front; // different across runs
+}
+
+/// Declare your own linear congruential engine
+@safe unittest
+{
+    // Visual C++'s LCG
+    alias MSVCLCG = LinearCongruentialEngine!(uint, 214013, 2531011, 0);
+
+    // seed with a constant
+    auto rnd = MSVCLCG(1);
+    auto n = rnd.front; // same for each run
+    assert(n == 2745024);
+}
+
+// Ensure that unseeded LCGs produce correct values
+@safe unittest
+{
+    alias LGE = LinearCongruentialEngine!(uint, 10000, 19682, 19683);
+
+    LGE rnd;
+    assert(rnd.front == 9999);
 }
 
 /**
@@ -902,7 +931,7 @@ Parameters for the generator.
    `Exception` if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
  */
-    void seed(T)(T range) if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    void seed(T)(T range) if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         this.seedImpl(range, this.state);
     }
@@ -912,7 +941,7 @@ Parameters for the generator.
        which can be used with an arbitrary `State` instance
     */
     private static void seedImpl(T)(T range, ref State mtState)
-        if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+        if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())
@@ -929,7 +958,7 @@ Parameters for the generator.
 
             UnsignedStringBuf buf = void;
             string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
-            s ~= unsignedToTempString(n, buf, 10) ~ " elements.";
+            s ~= unsignedToTempString(n, buf) ~ " elements.";
             throw new Exception(s);
         }
 
@@ -2075,7 +2104,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
-        import std.math : nextafter;
+        import std.math.operations : nextafter;
         NumberType _a = nextafter(cast(NumberType) a, NumberType.infinity);
     }
     else
@@ -2084,7 +2113,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     }
     static if (boundaries[1] == ')')
     {
-        import std.math : nextafter;
+        import std.math.operations : nextafter;
         NumberType _b = nextafter(cast(NumberType) b, -NumberType.infinity);
     }
     else
@@ -2427,9 +2456,9 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRand
     /* dchar does not use its full bit range, so we must
      * revert to the uniform with specified bounds
      */
-    static if (is(T == dchar))
+    static if (is(immutable T == immutable dchar))
     {
-        return uniform!"[]"(T.min, T.max);
+        return uniform!"[]"(T.min, T.max, urng);
     }
     else
     {
@@ -2467,6 +2496,16 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     enum Fruit { apple, mango, pear }
     version (X86_64) // https://issues.dlang.org/show_bug.cgi?id=15147
     assert(rnd.uniform!Fruit == Fruit.mango);
+}
+
+@safe unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=21383
+    auto rng1 = Xorshift32(123456789);
+    auto rng2 = rng1.save;
+    assert(rng1.uniform!dchar == rng2.uniform!dchar);
+    // https://issues.dlang.org/show_bug.cgi?id=21384
+    assert(rng1.uniform!(const shared dchar) <= dchar.max);
 }
 
 @safe unittest
@@ -2600,12 +2639,20 @@ do
 ///
 @safe @nogc unittest
 {
-    import std.math : feqrel;
+    import std.math.operations : feqrel;
 
     auto rnd = MinstdRand0(42);
 
-    assert(rnd.uniform01.feqrel(0.000328707) > 20);
-    assert(rnd.uniform01!float.feqrel(0.524587) > 20);
+    // Generate random numbers in the range in the range [0, 1)
+    auto u1 = uniform01(rnd);
+    assert(u1 >= 0 && u1 < 1);
+
+    auto u2 = rnd.uniform01!float;
+    assert(u2 >= 0 && u2 < 1);
+
+    // Confirm that the random values with the initial seed 42 are 0.000328707 and 0.524587
+    assert(u1.feqrel(0.000328707) > 20);
+    assert(u2.feqrel(0.524587) > 20);
 }
 
 @safe @nogc unittest
@@ -2665,15 +2712,15 @@ if (isFloatingPoint!F)
 @safe unittest
 {
     import std.algorithm.iteration : reduce;
-    import std.math : approxEqual;
+    import std.math.operations : isClose;
 
     auto a = uniformDistribution(5);
     assert(a.length == 5);
-    assert(approxEqual(reduce!"a + b"(a), 1));
+    assert(isClose(reduce!"a + b"(a), 1));
 
     a = uniformDistribution(10, a);
     assert(a.length == 10);
-    assert(approxEqual(reduce!"a + b"(a), 1));
+    assert(isClose(reduce!"a + b"(a), 1));
 }
 
 /**
@@ -3721,7 +3768,8 @@ Variable names are chosen to match those in Vitter's paper.
 */
     private size_t skipD()
     {
-        import std.math : isNaN, trunc;
+        import std.math.traits : isNaN;
+        import std.math.rounding : trunc;
         // Confirm that the check in Step D1 is valid and we
         // haven't been sent here by mistake
         assert((_alphaInverse * _toSelect) <= _available);

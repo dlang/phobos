@@ -688,7 +688,7 @@ $(TR $(TD Building blocks) $(TD
     Copyright: Copyright 2013 -
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
-    Source:    $(PHOBOSSRC std/uni.d)
+    Source:    $(PHOBOSSRC std/uni/package.d)
     Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
@@ -960,7 +960,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -1124,7 +1124,7 @@ private:
 
 size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     enum bits = _bits == 1 ? 1 : nextPow2(_bits - 1);// see PackedArrayView
     static if (bits > 8*size_t.sizeof)
     {
@@ -1149,7 +1149,7 @@ template PackedArrayView(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1159,7 +1159,7 @@ template PackedPtr(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1473,7 +1473,7 @@ private struct SliceOverIndexed(T)
 
     @property size_t length()const { return to-from;}
 
-    auto opDollar()const { return length; }
+    alias opDollar = length;
 
     @property bool empty()const { return from == to; }
 
@@ -1508,7 +1508,10 @@ private:
     T* arr;
 }
 
-static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+@safe pure nothrow @nogc unittest
+{
+    static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+}
 
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 if (is(Unqual!T == T))
@@ -1649,7 +1652,7 @@ template sharMethod(alias uniLowerBound)
         if (is(T : ElementType!Range))
     {
         import std.functional : binaryFun;
-        import std.math : nextPow2, truncPow2;
+        import std.math.algebraic : nextPow2, truncPow2;
         alias pred = binaryFun!_pred;
         if (range.length == 0)
             return 0;
@@ -2428,7 +2431,7 @@ public:
         ---
     */
 
-    private import std.format : FormatSpec;
+    private import std.format.spec : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2441,7 +2444,7 @@ public:
      */
     void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -5603,9 +5606,12 @@ struct sliceBits(size_t from, size_t to)
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
-static assert(bitSizeOf!lo8 == 8);
-static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
-static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+@safe pure nothrow @nogc unittest
+{
+    static assert(bitSizeOf!lo8 == 8);
+    static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
+    static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+}
 
 template Sequence(size_t start, size_t end)
 {
@@ -5919,8 +5925,12 @@ pure:
     @property DecompressedIntervals save() { return this; }
 }
 
-static assert(isInputRange!DecompressedIntervals);
-static assert(isForwardRange!DecompressedIntervals);
+@safe pure nothrow @nogc unittest
+{
+    static assert(isInputRange!DecompressedIntervals);
+    static assert(isForwardRange!DecompressedIntervals);
+}
+
 //============================================================================
 
 version (std_uni_bootstrap){}
@@ -7134,7 +7144,7 @@ if (is(C : dchar))
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
@@ -7167,7 +7177,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     // TODO: Bidirectional access
     static struct Result(R)
@@ -7270,7 +7280,7 @@ private static struct InputRangeString
     $(P If passed in a range of code points, returns a range with equivalent capabilities.)
 +/
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -7313,7 +7323,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 
 /// Ditto
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     import std.range.primitives : isBidirectionalRange, popBack;
     import std.traits : isNarrowString;

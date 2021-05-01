@@ -635,13 +635,12 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
 auto toLower(C)(C c)
 if (is(C : dchar))
 {
-    import std.traits : isAggregateType, OriginalType, Unqual;
+    import std.traits : OriginalType;
 
-    alias OC = OriginalType!C;
-    static if (isAggregateType!OC)
+    static if (!__traits(isScalar, C))
         alias R = dchar;
-    else
-        alias R = Unqual!OC;
+    else static if (is(immutable OriginalType!C == immutable OC, OC))
+        alias R = OC;
 
     return isUpper(c) ? cast(R)(cast(R) c + 'a' - 'A') : cast(R) c;
 }
@@ -698,13 +697,12 @@ if (is(C : dchar))
 auto toUpper(C)(C c)
 if (is(C : dchar))
 {
-    import std.traits : isAggregateType, OriginalType, Unqual;
+    import std.traits : OriginalType;
 
-    alias OC = OriginalType!C;
-    static if (isAggregateType!OC)
+    static if (!__traits(isScalar, C))
         alias R = dchar;
-    else
-        alias R = Unqual!OC;
+    else static if (is(immutable OriginalType!C == immutable OC, OC))
+        alias R = OC;
 
     return isLower(c) ? cast(R)(cast(R) c - ('a' - 'A')) : cast(R) c;
 }

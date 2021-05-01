@@ -139,7 +139,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 $(MODEL_FLAG) $(PIC) -transition=complex
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -147,7 +147,15 @@ override DFLAGS += -O -release
 endif
 
 ifdef ENABLE_COVERAGE
-override DFLAGS  += -cov
+override DFLAGS  += -cov=ctfe
+endif
+
+ifdef NO_AUTODECODE
+override DFLAGS += -version=NoAutodecodeStrings
+endif
+
+ifdef NO_AUTODECODE
+override DFLAGS += -version=NoAutodecodeStrings
 endif
 
 UDFLAGS=-unittest -version=StdUnittest
@@ -199,16 +207,16 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  net uni \
+  format math net uni \
   experimental range regex windows)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv csv demangle encoding exception file format \
-  functional getopt json math mathspecial meta mmfile numeric \
+  conv csv demangle encoding exception file \
+  functional getopt json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
-  stdio string system traits typecons \
+  stdio string sumtype system traits typecons \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
@@ -225,6 +233,9 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   bucketizer fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
+PACKAGE_std_format = package read spec write $(addprefix internal/, floats read write)
+PACKAGE_std_math = algebraic constants exponential hardware operations \
+  package remainder rounding traits trigonometry
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
@@ -234,6 +245,10 @@ PACKAGE_std_windows = charset registry syserror
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
+
+# NoAutodecode test modules.
+# List all modules whose unittests are known to work without autodecode enabled.
+NO_AUTODECODE_MODULES= std/utf
 
 # Other D modules that aren't under std/
 EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
@@ -406,7 +421,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(DFLAGS) -main $(UDFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL) -cov=ctfe -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
@@ -496,7 +511,7 @@ $(JSON) : $(ALL_D_FILES)
 ###########################################################
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -preview=markdown -version=StdDdoc \
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
@@ -555,17 +570,17 @@ $(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
 	DC=$(abspath $(DMD)) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" $(MAKE) -C $(DSCANNER_DIR) githash debug
 
-style: publictests style_lint
+style: style_lint publictests
 
 # runs static code analysis with Dscanner
-dscanner:
+dscanner: $(LIB)
 	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
-style_lint: dscanner $(LIB)
+style_lint_shellcmds:
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' $$(find etc std -name '*.d'); test $$? -eq 1
 
@@ -609,6 +624,7 @@ style_lint: dscanner $(LIB)
 		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
 	done
 
+style_lint: style_lint_shellcmds dscanner
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 
@@ -656,6 +672,27 @@ betterc: betterc-phobos-tests
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
 
+
+################################################################################
+# Full-module BetterC tests
+# -------------------------
+#
+# Test full modules with -betterC. Edit BETTERC_MODULES and
+# test/betterc_module_tests.d to add new modules to the list.
+#
+#   make -f posix.mak betterc-module-tests
+################################################################################
+
+BETTERC_MODULES=std/sumtype
+
+betterc: betterc-module-tests
+
+betterc-module-tests: $(ROOT)/betterctests/betterc_module_tests
+	$(ROOT)/betterctests/betterc_module_tests
+
+$(ROOT)/betterctests/betterc_module_tests: test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
+	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -of=$(ROOT)/betterctests/betterc_module_tests -betterC -unittest test/betterc_module_tests.d $(addsuffix .d,$(BETTERC_MODULES))
+
 ################################################################################
 
 .PHONY : auto-tester-build
@@ -676,5 +713,8 @@ endif
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc
+
+.PHONY: autodecode-test
+autodecode-test: $(addsuffix .test,$(NO_AUTODECODE_MODULES))
 
 .DELETE_ON_ERROR: # GNU Make directive (delete output files on error)

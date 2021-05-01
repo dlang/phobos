@@ -339,7 +339,7 @@ Throws:
 */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar)
     && isSomeChar!(Separator)
     && !is(Contents T : T[U], U : string))
 {
@@ -354,7 +354,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar)
     && isSomeChar!(Separator)
     && isForwardRange!Header
     && isSomeString!(ElementType!Header))
@@ -370,7 +370,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar)
     && isSomeChar!(Separator)
     && is(Header : typeof(null)))
 {
@@ -556,7 +556,7 @@ The header from the input can always be accessed from the `header` field.
 // Test structure conversion interface with unicode.
 @safe pure unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     wstring str = "\U00010143Hello,65,63.63\nWorld,123,3673.562"w;
     struct Layout
@@ -604,7 +604,7 @@ The header from the input can always be accessed from the `header` field.
 // Test struct & header interface and same unicode
 @safe unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     string str = "a,b,c\nHello,65,63.63\n➊➋➂❹,123,3673.562";
     struct Layout
@@ -834,7 +834,7 @@ private pure struct Input(Range, Malformed ErrorLevel)
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
 if (isSomeChar!Separator && isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar)
+    && is(immutable ElementType!Range == immutable dchar)
     && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
@@ -890,6 +890,12 @@ public:
         _separator = delimiter;
         _quote = quote;
 
+        if (_input.range.empty)
+        {
+            _empty = true;
+            return;
+        }
+
         prime();
     }
 
@@ -919,6 +925,12 @@ public:
         _input = new Input!(Range, ErrorLevel)(input);
         _separator = delimiter;
         _quote = quote;
+
+        if (_input.range.empty)
+        {
+            _empty = true;
+            return;
+        }
 
         size_t[string] colToIndex;
         foreach (h; colHeaders)
@@ -1207,6 +1219,7 @@ public:
         _input = input;
         _separator = delimiter;
         _quote = quote;
+
         _front = appender!(dchar[])();
         _popCount = indices.dup;
 
@@ -1417,7 +1430,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
 if (isSomeChar!Separator && isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar)
+    && is(immutable ElementType!Range == immutable dchar)
     && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
@@ -1749,4 +1762,24 @@ if (isSomeChar!Separator && isInputRange!Range
             assert(row == [4, 5, 6]);
         ++i;
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21629
+@safe pure unittest
+{
+    import std.typecons : Tuple;
+    struct Reccord
+    {
+        string a;
+        string b;
+    }
+
+    auto header = ["a" ,"b"];
+    string input = "";
+    assert(csvReader!Reccord(input).empty, "This should be empty");
+    assert(csvReader!Reccord(input, header).empty, "This should be empty");
+    assert(csvReader!(Tuple!(string,string))(input).empty, "This should be empty");
+    assert(csvReader!(string[string])(input, header).empty, "This should be empty");
+    assert(csvReader!(string[string])(input, null).empty, "This should be empty");
+    assert(csvReader!(int)(input, null).empty, "This should be empty");
 }

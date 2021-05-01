@@ -1,0 +1,14 @@
+Module `std.format` has been split into smaller modules
+
+The module `std.format` has been split into submodules:
+
+$(UL
+    $(LI `std.format.spec`: Symbols concerning the format string, mainly
+         the `struct FormatSpec` and the `template singleSpec`)
+    $(LI `std.format.read`: Symbols concerning reading input, mainly
+         the `template formattedRead` and the `template unformatValue`)
+    $(LI `std.format.write`: Symbols concerning writing output, mainly
+         the `template formattedWrite` and the `template formatValue`)
+)
+
+All public symbols are still accessible using std.format as usual.

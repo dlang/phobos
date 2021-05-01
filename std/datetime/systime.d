@@ -86,7 +86,7 @@ import std.datetime.timezone;// : LocalTime, SimpleTimeZone, TimeZone, UTC;
 import std.exception : enforce;
 import std.format : format;
 import std.range.primitives;
-import std.traits : isIntegral, isSigned, isSomeString, Unqual, isNarrowString;
+import std.traits : isIntegral, isSigned, isSomeString, isNarrowString;
 
 version (Windows)
 {
@@ -113,6 +113,16 @@ version (StdUnittest)
     initializeTests();
 }
 
+version (unittest) private bool clockSupported(ClockType c)
+{
+    // Skip unsupported clocks on older linux kernels, assume that only
+    // CLOCK_MONOTONIC and CLOCK_REALTIME exist, as that is the lowest
+    // common denominator supported by all versions of Linux pre-2.6.12.
+    version (Linux_Pre_2639)
+        return c == ClockType.normal || c == ClockType.precise;
+    else
+        return true;
+}
 
 /++
     Effectively a namespace to make it clear that the methods it contains are
@@ -168,10 +178,13 @@ public:
         import std.meta : AliasSeq;
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            auto value1 = Clock.currTime!ct;
-            auto value2 = Clock.currTime!ct(UTC());
-            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
-            assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
+            static if (clockSupported(ct))
+            {
+                auto value1 = Clock.currTime!ct;
+                auto value2 = Clock.currTime!ct(UTC());
+                assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+                assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
+            }
         }}
     }
 
@@ -309,6 +322,25 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
+            else version (OpenBSD)
+            {
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.openbsd.time : clock_gettime, CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if (clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else version (DragonFlyBSD)
             {
                 import core.sys.dragonflybsd.time : clock_gettime, CLOCK_REALTIME,
@@ -366,7 +398,7 @@ public:
     @safe unittest
     {
         import std.format : format;
-        import std.math : abs;
+        import std.math.algebraic : abs;
         import std.meta : AliasSeq;
         enum limit = convert!("seconds", "hnsecs")(2);
 
@@ -377,10 +409,13 @@ public:
 
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            auto value1 = Clock.currStdTime!ct;
-            auto value2 = Clock.currStdTime!ct;
-            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
-            assert(abs(value1 - value2) <= limit);
+            static if (clockSupported(ct))
+            {
+                auto value1 = Clock.currStdTime!ct;
+                auto value2 = Clock.currStdTime!ct;
+                assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+                assert(abs(value1 - value2) <= limit);
+            }
         }}
     }
 
@@ -2074,7 +2109,7 @@ public:
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
         internal representation of $(LREF SysTime).
      +/
-    @property long stdTime() @safe const pure nothrow scope
+    @property long stdTime() @safe const pure nothrow scope @nogc
     {
         return _stdTime;
     }
@@ -2523,7 +2558,7 @@ public:
 
     version (StdDdoc)
     {
-        private struct timespec {}
+        version (Windows) private struct timespec {}
         /++
             Returns a `timespec` which represents this $(LREF SysTime).
 
@@ -7916,7 +7951,7 @@ public:
         Returns a $(REF Date,std,datetime,date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == Date))
+        if (is(immutable T == immutable Date))
     {
         return Date(dayOfGregorianCal);
     }
@@ -7957,7 +7992,7 @@ public:
         $(LREF SysTime).
       +/
     DateTime opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == DateTime))
+        if (is(immutable T == immutable DateTime))
     {
         try
         {
@@ -8023,7 +8058,7 @@ public:
         $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == TimeOfDay))
+        if (is(immutable T == immutable TimeOfDay))
     {
         try
         {
@@ -8080,7 +8115,7 @@ public:
     // should be allowed, and it doesn't work without this opCast() since opCast()
     // has already been defined for other types.
     SysTime opCast(T)() @safe const pure nothrow scope
-        if (is(Unqual!T == SysTime))
+        if (is(immutable T == immutable SysTime))
     {
         return SysTime(_stdTime, _timezone);
     }
@@ -10244,7 +10279,7 @@ SysTime parseRFC822DateTime()(scope const char[] value) @safe
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(scope R value)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     import std.algorithm.searching : find, all;
     import std.ascii : isDigit, isAlpha, isPrintable;
@@ -10329,7 +10364,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     }
 
     // year
-    auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
+    auto found = value[2 .. value.length].find!(not!(isDigit))();
     size_t yearLen = value.length - found.length;
     if (found.length == 0)
         throw new DateTimeException("Invalid year");
@@ -10419,7 +10454,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
             case "J": case "j": throw new DateTimeException("Invalid timezone");
             default:
             {
-                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                if (all!(isAlpha)(value[0 .. tzLen]))
                 {
                     tz = new immutable SimpleTimeZone(Duration.zero);
                     break;
@@ -11215,7 +11250,7 @@ if (validTimeUnits(units) &&
   +/
 R _stripCFWS(R)(R range)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     immutable e = range.length;
     outer: for (size_t i = 0; i < e; )

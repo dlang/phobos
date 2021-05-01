@@ -13,8 +13,8 @@ enabled by default.
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(HTTP
-           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+Credits:   This module and its documentation are inspired by Perl's
+           $(HTTPS perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's `getopt` is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
            the passed-in pointers.
@@ -38,6 +38,7 @@ $(UL
        `std.getopt.config.passThrough` was not present.)
   $(LI A command-line option was not found, and
        `std.getopt.config.required` was present.)
+  $(LI A callback option is missing a value.)
 )
 */
 class GetOptException : Exception
@@ -97,8 +98,8 @@ void main(string[] args)
  the parameter cannot be parsed properly (e.g., a number is expected
  but not present), a `ConvException` exception is thrown.
  If `std.getopt.config.passThrough` was not passed to `getopt`
- and an unrecognized command-line argument is found, a `GetOptException`
- is thrown.
+ and an unrecognized command-line argument is found, or if a required
+ argument is missing a `GetOptException` is thrown.
 
  Depending on the type of the pointer being bound, `getopt`
  recognizes the following kinds of options:
@@ -190,11 +191,12 @@ getopt(args, "output", &outputFiles);
     "--output myfile.txt --output yourfile.txt" will set `outputFiles` to
     $(D [ "myfile.txt", "yourfile.txt" ]).
 
-    Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) to allow multiple elements in
+    one parameter.
 
 ---------
 string[] outputFiles;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "output", &outputFiles);
 ---------
 
@@ -217,7 +219,7 @@ getopt(args, "tune", &tuningParms);
 
 ---------
 double[string] tuningParms;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "tune", &tuningParms);
 ---------
 
@@ -344,18 +346,11 @@ Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. `-t`). `getopt` accepts such parameters
 seamlessly. When used with a double-dash (e.g. `--t`), a
 single-letter option behaves the same as a multi-letter option. When
-used with a single dash, a single-letter option is accepted. If the
-option has a parameter, that must be "stuck" to the option without
-any intervening space or "=":
-
----------
-uint timeout;
-getopt(args, "timeout|t", &timeout);
----------
+used with a single dash, a single-letter option is accepted.
 
 To set `timeout` to `5`, use either of the following: `--timeout=5`,
-$(D --timeout 5), `--t=5`, $(D --t 5), or `-t5`. Forms such as $(D -t 5)
-and `-timeout=5` will be not accepted.
+`--timeout 5`, `--t=5`, `--t 5`, `-t5`, or `-t 5`. Forms such as
+`-timeout=5` will be not accepted.
 
 For more details about short options, refer also to the next section.
 
@@ -874,7 +869,6 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         {
             import std.exception : enforce;
             // non-boolean option, which might include an argument
-            //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
             enum isCallbackWithLessThanTwoParameters =
                 (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
@@ -882,7 +876,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
-                enforce(i < args.length,
+                enforce!GetOptException(i < args.length,
                     "Missing value for argument " ~ a ~ ".");
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
@@ -1084,8 +1078,11 @@ string endOfOptions = "--";
 dchar assignChar = '=';
 
 /**
-   The string used to separate the elements of an array or associative array
-   (default is "" which means the elements are separated by whitespace).
+   When set to "", parameters to array and associative array receivers are
+   treated as an individual argument. That is, only one argument is appended or
+   inserted per appearance of the option switch. If `arraySep` is set to
+   something else, then each parameter is first split by the separator, and the
+   individual pieces are treated as arguments to the same option.
 
    Defaults to "" but can be assigned to prior to calling `getopt`.
  */
@@ -1188,7 +1185,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 @safe unittest
 {
     import std.conv;
-    import std.math;
+    import std.math.operations : isClose;
 
     uint paranoid = 2;
     string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
@@ -1245,8 +1242,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         getopt(testArgs, "tune", &tuningParms);
         assert(testArgs.length == 1);
         assert(tuningParms.length == 2);
-        assert(approxEqual(tuningParms["alpha"], 0.5));
-        assert(approxEqual(tuningParms["beta"], 0.6));
+        assert(isClose(tuningParms["alpha"], 0.5));
+        assert(isClose(tuningParms["beta"], 0.6));
         arraySep = "";
     }
 
@@ -1365,6 +1362,12 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
+
+    // check that GetOptException is thrown if the value is missing
+    args = ["program.name", "--verbose"];
+    try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
+    catch (GetOptException e) {}
+    catch (Exception e) { assert(0); }
 }
 
 @safe unittest // @safe std.getopt.config option use
@@ -1664,7 +1667,7 @@ Params:
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, string style = "%*s %*s%*s%s\n")
 {
     import std.algorithm.comparison : min, max;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     output.formattedWrite("%s\n", text);
 

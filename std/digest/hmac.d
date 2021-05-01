@@ -73,18 +73,20 @@ if (hashBlockSize % 8 == 0)
     {
         // if secret is too long, shorten it by computing its hash
         typeof(digest.finish()) buffer = void;
+        typeof(secret) secretBytes = secret;
+
         if (secret.length > blockSize / 8)
         {
             digest.start();
             digest.put(secret);
             buffer = digest.finish();
-            secret = buffer[];
+            secretBytes = buffer[];
         }
 
         // if secret is too short, it will be padded with zeroes
         // (the key buffer is already zero-initialized)
         import std.algorithm.mutation : copy;
-        secret.copy(key[]);
+        secretBytes.copy(key[]);
 
         start();
     }

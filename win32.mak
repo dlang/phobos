@@ -41,13 +41,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
+DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import
+UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -100,7 +100,6 @@ SRC= \
 SRC_STD_1= \
 	std\stdio.d \
 	std\string.d \
-	std\format.d \
 	std\file.d
 
 SRC_STD_2a= \
@@ -112,7 +111,6 @@ SRC_STD_2a= \
 
 SRC_STD_3= \
 	std\csv.d \
-	std\math.d \
 	std\complex.d \
 	std\numeric.d \
 	std\bigint.d \
@@ -156,6 +154,9 @@ SRC_STD_7= \
 	std\process.d \
 	std\package.d
 
+SRC_STD_7a= \
+	std\sumtype.d
+
 SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
@@ -163,7 +164,8 @@ SRC_STD= \
 	$(SRC_STD_3a) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
-	$(SRC_STD_7)
+	$(SRC_STD_7) \
+	$(SRC_STD_7a)
 
 SRC_STD_ALGO= \
 	std\algorithm\package.d \
@@ -201,6 +203,27 @@ SRC_STD_DIGEST= \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
+
+SRC_STD_FORMAT= \
+    std\format\package.d \
+    std\format\read.d \
+    std\format\spec.d \
+    std\format\write.d \
+    std\format\internal\floats.d \
+    std\format\internal\read.d \
+    std\format\internal\write.d
+
+SRC_STD_MATH= \
+    std\math\algebraic.d \
+    std\math\constants.d \
+    std\math\exponential.d \
+    std\math\operations.d \
+    std\math\hardware.d \
+    std\math\package.d \
+    std\math\remainder.d \
+    std\math\rounding.d \
+    std\math\traits.d \
+    std\math\trigonometry.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -309,6 +332,8 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
+	$(SRC_STD_FORMAT) \
+	$(SRC_STD_MATH) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -378,10 +403,13 @@ UNITTEST_OBJS= \
 		unittest3b.obj \
 		unittest4.obj \
 		unittest5.obj \
+		unittest5a.obj \
+		unittest5b.obj \
 		unittest6.obj \
 		unittest6a.obj \
 		unittest6b.obj \
 		unittest7.obj \
+		unittest7a.obj \
 		unittest8a.obj \
 		unittest8b.obj \
 		unittest8c.obj \
@@ -398,10 +426,13 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest3b.obj $(SRC_STD_DATETIME)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5.obj $(SRC_STD_ALGO)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5a.obj $(SRC_STD_FORMAT)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5b.obj $(SRC_STD_MATH)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6a.obj $(SRC_STD_EXP_ALLOC)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7.obj $(SRC_STD_7)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7a.obj $(SRC_STD_7a)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8b.obj $(SRC_STD_NET)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
@@ -420,91 +451,92 @@ unittest : $(LIB)
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-#	$(DMD) -conf= -cov $(UDFLAGS) -ofcov.exe -main $(SRC_TO_COMPILE) $(LIB)
+#	$(DMD) -conf= -cov=ctfe -cov $(UDFLAGS) -ofcov.exe -main $(SRC_TO_COMPILE) $(LIB)
 #	cov
 	del *.lst
-	$(DMD) -conf= -cov=83 $(UDFLAGS) -main -run std\stdio.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\string.d
-	$(DMD) -conf= -cov=71 $(UDFLAGS) -main -run std\format.d
-	$(DMD) -conf= -cov=83 $(UDFLAGS) -main -run std\file.d
-	$(DMD) -conf= -cov=86 $(UDFLAGS) -main -run std\range\package.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\array.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\functional.d
-	$(DMD) -conf= -cov=96 $(UDFLAGS) -main -run std\path.d
-	$(DMD) -conf= -cov=41 $(UDFLAGS) -main -run std\outbuffer.d
-	$(DMD) -conf= -cov=89 $(UDFLAGS) -main -run std\utf.d
-	$(DMD) -conf= -cov=93 $(UDFLAGS) -main -run std\csv.d
-	$(DMD) -conf= -cov=91 $(UDFLAGS) -main -run std\math.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\complex.d
-	$(DMD) -conf= -cov=70 $(UDFLAGS) -main -run std\numeric.d
-	$(DMD) -conf= -cov=94 $(UDFLAGS) -main -run std\bigint.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\bitmanip.d
-	$(DMD) -conf= -cov=82 $(UDFLAGS) -main -run std\typecons.d
-	$(DMD) -conf= -cov=44 $(UDFLAGS) -main -run std\uni\package.d
-	$(DMD) -conf= -cov=91 $(UDFLAGS) -main -run std\base64.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\ascii.d
-	$(DMD) -conf= -cov=0  $(UDFLAGS) -main -run std\demangle.d
-	$(DMD) -conf= -cov=57 $(UDFLAGS) -main -run std\uri.d
-	$(DMD) -conf= -cov=51 $(UDFLAGS) -main -run std\mmfile.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\getopt.d
-	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\signals.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\meta.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\typetuple.d
-	$(DMD) -conf= -cov=85 $(UDFLAGS) -main -run std\traits.d
-	$(DMD) -conf= -cov=62 $(UDFLAGS) -main -run std\encoding.d
-	$(DMD) -conf= -cov=61 $(UDFLAGS) -main -run std\xml.d
-	$(DMD) -conf= -cov=79 $(UDFLAGS) -main -run std\random.d
-	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\exception.d
-	$(DMD) -conf= -cov=73 $(UDFLAGS) -main -run std\concurrency.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\date.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\interval.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\package.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\stopwatch.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\systime.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\datetime\timezone.d
-	$(DMD) -conf= -cov=96 $(UDFLAGS) -main -run std\uuid.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\digest\crc.d
-	$(DMD) -conf= -cov=55 $(UDFLAGS) -main -run std\digest\sha.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\digest\md.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\digest\ripemd.d
-	$(DMD) -conf= -cov=75 $(UDFLAGS) -main -run std\digest\digest.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\digest\hmac.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\package.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\comparison.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\iteration.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\mutation.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\searching.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\setops.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\algorithm\sorting.d
-	$(DMD) -conf= -cov=83 $(UDFLAGS) -main -run std\variant.d
-	$(DMD) -conf= -cov=58 $(UDFLAGS) -main -run std\zlib.d
-	$(DMD) -conf= -cov=53 $(UDFLAGS) -main -run std\socket.d
-	$(DMD) -conf= -cov=95 $(UDFLAGS) -main -run std\container\array.d
-	$(DMD) -conf= -cov=68 $(UDFLAGS) -main -run std\container\binaryheap.d
-	$(DMD) -conf= -cov=91 $(UDFLAGS) -main -run std\container\dlist.d
-	$(DMD) -conf= -cov=93 $(UDFLAGS) -main -run std\container\rbtree.d
-	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\container\slist.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\container\util.d
-	$(DMD) -conf= -cov=100 $(UDFLAGS) -main -run std\container\package.d
-	$(DMD) -conf= -cov=90 $(UDFLAGS) -main -run std\conv.d
-	$(DMD) -conf= -cov=0  $(UDFLAGS) -main -run std\zip.d
-	$(DMD) -conf= -cov=77 $(UDFLAGS) -main -run std\regex\tests.d
-	$(DMD) -conf= -cov=77 $(UDFLAGS) -main -run std\regex\tests2.d
-	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\json.d
-	$(DMD) -conf= -cov=87 $(UDFLAGS) -main -run std\parallelism.d
-	$(DMD) -conf= -cov=50 $(UDFLAGS) -main -run std\mathspecial.d
-	$(DMD) -conf= -cov=71 $(UDFLAGS) -main -run std\process.d
-	$(DMD) -conf= -cov=70 $(UDFLAGS) -main -run std\net\isemail.d
-	$(DMD) -conf= -cov=2  $(UDFLAGS) -main -run std\net\curl.d
-	$(DMD) -conf= -cov=60 $(UDFLAGS) -main -run std\windows\registry.d
-	$(DMD) -conf= -cov=0  $(UDFLAGS) -main -run std\internal\digest\sha_SSSE3.d
-	$(DMD) -conf= -cov=50 $(UDFLAGS) -main -run std\internal\math\biguintcore.d
-	$(DMD) -conf= -cov=75 $(UDFLAGS) -main -run std\internal\math\biguintnoasm.d
-#	$(DMD) -conf= -cov $(UDFLAGS) -main -run std\internal\math\biguintx86.d
-	$(DMD) -conf= -cov=94 $(UDFLAGS) -main -run std\internal\math\gammafunction.d
-	$(DMD) -conf= -cov=92 $(UDFLAGS) -main -run std\internal\math\errorfunction.d
-	$(DMD) -conf= -cov=31 $(UDFLAGS) -main -run std\internal\windows\advapi32.d
-	$(DMD) -conf= -cov=58 $(UDFLAGS) -main -run etc\c\zlib.d
+	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\stdio.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\string.d
+	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\file.d
+	$(DMD) -conf= -cov=ctfe -cov=86 $(UDFLAGS) -main -run std\range\package.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\array.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\functional.d
+	$(DMD) -conf= -cov=ctfe -cov=96 $(UDFLAGS) -main -run std\path.d
+	$(DMD) -conf= -cov=ctfe -cov=41 $(UDFLAGS) -main -run std\outbuffer.d
+	$(DMD) -conf= -cov=ctfe -cov=89 $(UDFLAGS) -main -run std\utf.d
+	$(DMD) -conf= -cov=ctfe -cov=93 $(UDFLAGS) -main -run std\csv.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\complex.d
+	$(DMD) -conf= -cov=ctfe -cov=70 $(UDFLAGS) -main -run std\numeric.d
+	$(DMD) -conf= -cov=ctfe -cov=94 $(UDFLAGS) -main -run std\bigint.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\bitmanip.d
+	$(DMD) -conf= -cov=ctfe -cov=82 $(UDFLAGS) -main -run std\typecons.d
+	$(DMD) -conf= -cov=ctfe -cov=44 $(UDFLAGS) -main -run std\uni\package.d
+	$(DMD) -conf= -cov=ctfe -cov=91 $(UDFLAGS) -main -run std\base64.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\ascii.d
+	$(DMD) -conf= -cov=ctfe -cov=0  $(UDFLAGS) -main -run std\demangle.d
+	$(DMD) -conf= -cov=ctfe -cov=57 $(UDFLAGS) -main -run std\uri.d
+	$(DMD) -conf= -cov=ctfe -cov=51 $(UDFLAGS) -main -run std\mmfile.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\getopt.d
+	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\signals.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\meta.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\typetuple.d
+	$(DMD) -conf= -cov=ctfe -cov=85 $(UDFLAGS) -main -run std\traits.d
+	$(DMD) -conf= -cov=ctfe -cov=62 $(UDFLAGS) -main -run std\encoding.d
+	$(DMD) -conf= -cov=ctfe -cov=61 $(UDFLAGS) -main -run std\xml.d
+	$(DMD) -conf= -cov=ctfe -cov=79 $(UDFLAGS) -main -run std\random.d
+	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\exception.d
+	$(DMD) -conf= -cov=ctfe -cov=73 $(UDFLAGS) -main -run std\concurrency.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\date.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\interval.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\package.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\stopwatch.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\systime.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\datetime\timezone.d
+	$(DMD) -conf= -cov=ctfe -cov=96 $(UDFLAGS) -main -run std\uuid.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\crc.d
+	$(DMD) -conf= -cov=ctfe -cov=55 $(UDFLAGS) -main -run std\digest\sha.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\md.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\ripemd.d
+	$(DMD) -conf= -cov=ctfe -cov=75 $(UDFLAGS) -main -run std\digest\digest.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\hmac.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\package.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\comparison.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\iteration.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\mutation.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\searching.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\setops.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\sorting.d
+	$(DMD) -conf= -cov=ctfe -cov=71 $(UDFLAGS) -main -run std\format\package.d
+	$(DMD) -conf= -cov=ctfe -cov=71 $(UDFLAGS) -main -run std\math\package.d
+	$(DMD) -conf= -cov=ctfe -cov=83 $(UDFLAGS) -main -run std\variant.d
+	$(DMD) -conf= -cov=ctfe -cov=58 $(UDFLAGS) -main -run std\zlib.d
+	$(DMD) -conf= -cov=ctfe -cov=53 $(UDFLAGS) -main -run std\socket.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\container\array.d
+	$(DMD) -conf= -cov=ctfe -cov=68 $(UDFLAGS) -main -run std\container\binaryheap.d
+	$(DMD) -conf= -cov=ctfe -cov=91 $(UDFLAGS) -main -run std\container\dlist.d
+	$(DMD) -conf= -cov=ctfe -cov=93 $(UDFLAGS) -main -run std\container\rbtree.d
+	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\container\slist.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\container\util.d
+	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\container\package.d
+	$(DMD) -conf= -cov=ctfe -cov=90 $(UDFLAGS) -main -run std\conv.d
+	$(DMD) -conf= -cov=ctfe -cov=0  $(UDFLAGS) -main -run std\zip.d
+	$(DMD) -conf= -cov=ctfe -cov=77 $(UDFLAGS) -main -run std\regex\tests.d
+	$(DMD) -conf= -cov=ctfe -cov=77 $(UDFLAGS) -main -run std\regex\tests2.d
+	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\json.d
+	$(DMD) -conf= -cov=ctfe -cov=87 $(UDFLAGS) -main -run std\parallelism.d
+	$(DMD) -conf= -cov=ctfe -cov=50 $(UDFLAGS) -main -run std\mathspecial.d
+	$(DMD) -conf= -cov=ctfe -cov=71 $(UDFLAGS) -main -run std\process.d
+	$(DMD) -conf= -cov=ctfe -cov=70 $(UDFLAGS) -main -run std\net\isemail.d
+	$(DMD) -conf= -cov=ctfe -cov=2  $(UDFLAGS) -main -run std\net\curl.d
+	$(DMD) -conf= -cov=ctfe -cov=60 $(UDFLAGS) -main -run std\windows\registry.d
+	$(DMD) -conf= -cov=ctfe -cov=0  $(UDFLAGS) -main -run std\internal\digest\sha_SSSE3.d
+	$(DMD) -conf= -cov=ctfe -cov=50 $(UDFLAGS) -main -run std\internal\math\biguintcore.d
+	$(DMD) -conf= -cov=ctfe -cov=75 $(UDFLAGS) -main -run std\internal\math\biguintnoasm.d
+#	$(DMD) -conf= -cov=ctfe -cov $(UDFLAGS) -main -run std\internal\math\biguintx86.d
+	$(DMD) -conf= -cov=ctfe -cov=94 $(UDFLAGS) -main -run std\internal\math\gammafunction.d
+	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\internal\math\errorfunction.d
+	$(DMD) -conf= -cov=ctfe -cov=31 $(UDFLAGS) -main -run std\internal\windows\advapi32.d
+	$(DMD) -conf= -cov=ctfe -cov=58 $(UDFLAGS) -main -run etc\c\zlib.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\sumtype.d
 
 ######################################################
 
@@ -535,11 +567,13 @@ install: phobos.zip
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 
-auto-tester-build: targets
+auto-tester-build:
+	echo "Windows builds have been disabled on auto-tester"
 
 JOBS=$(NUMBER_OF_PROCESSORS)
 GMAKE=gmake
 
 auto-tester-test:
-	$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
-	CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)
+	echo "Windows builds have been disabled on auto-tester"
+	#$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
+	#CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)

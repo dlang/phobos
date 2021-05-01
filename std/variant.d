@@ -2,7 +2,7 @@
 
 /**
 This module implements a
-$(HTTP erdani.org/publications/cuj-04-2002.html,discriminated union)
+$(HTTP erdani.org/publications/cuj-04-2002.php.html,discriminated union)
 type (a.k.a.
 $(HTTP en.wikipedia.org/wiki/Tagged_union,tagged union),
 $(HTTP en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
@@ -22,6 +22,9 @@ In addition to $(LREF Variant), this module also defines the $(LREF Algebraic)
 type constructor. Unlike `Variant`, `Algebraic` only allows a finite set of
 types, which are specified in the instantiation (e.g. $(D Algebraic!(int,
 string)) may only hold an `int` or a `string`).
+
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
+code. Instead, use $(REF SumType, std,sumtype).)
 
 Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
 prompting the following improvements: (1) better support for arrays; (2) support
@@ -74,28 +77,53 @@ import std.meta, std.traits, std.typecons;
 
 /++
     Gives the `sizeof` the largest type given.
+
+    See_Also: https://forum.dlang.org/thread/wbpnncxepehgcswhuazl@forum.dlang.org?page=1
   +/
-template maxSize(T...)
+template maxSize(Ts...)
 {
-    static if (T.length == 1)
+    align(1) union Impl
     {
-        enum size_t maxSize = T[0].sizeof;
+        static foreach (i, T; Ts)
+        {
+            static if (!is(T == void))
+                mixin("T _field_", i, ";");
+        }
     }
-    else
-    {
-        import std.algorithm.comparison : max;
-        enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
-    }
+    enum maxSize = Impl.sizeof;
 }
 
 ///
 @safe unittest
 {
+    struct Cat { int a, b, c; }
+
+    align(1) struct S
+    {
+        long l;
+        ubyte b;
+    }
+
+    align(1) struct T
+    {
+        ubyte b;
+        long l;
+    }
+
     static assert(maxSize!(int, long) == 8);
     static assert(maxSize!(bool, byte) == 1);
-
-    struct Cat { int a, b, c; }
     static assert(maxSize!(bool, Cat) == 12);
+    static assert(maxSize!(char) == 1);
+    static assert(maxSize!(char, short, ubyte) == 2);
+    static assert(maxSize!(char, long, ubyte) == 8);
+    import std.algorithm.comparison : max;
+    static assert(maxSize!(long, S) == max(long.sizeof, S.sizeof));
+    static assert(maxSize!(S, T) == max(S.sizeof, T.sizeof));
+    static assert(maxSize!(int, ubyte[7]) == 7);
+    static assert(maxSize!(int, ubyte[3]) == 4);
+    static assert(maxSize!(int, int, ubyte[3]) == 4);
+    static assert(maxSize!(void, int, ubyte[3]) == 4);
+    static assert(maxSize!(void) == 1);
 }
 
 struct This;
@@ -249,25 +277,35 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                if (*rhsPA == *zis)
+                enum isEmptyStructWithoutOpEquals = is(A == struct) && A.tupleof.length == 0 &&
+                                                    !__traits(hasMember, A, "opEquals");
+                static if (isEmptyStructWithoutOpEquals)
                 {
+                    // The check above will always succeed if A is an empty struct.
+                    // Don't generate unreachable code as seen in
+                    // https://issues.dlang.org/show_bug.cgi?id=21231
                     return 0;
-                }
-                static if (is(typeof(*zis < *rhsPA)))
-                {
-                    // Many types (such as any using the default Object opCmp)
-                    // will throw on an invalid opCmp, so do it only
-                    // if the caller requests it.
-                    if (selector == OpID.compare)
-                        return *zis < *rhsPA ? -1 : 1;
-                    else
-                        return ptrdiff_t.min;
                 }
                 else
                 {
-                    // Not equal, and type does not support ordering
-                    // comparisons.
-                    return ptrdiff_t.min;
+                    if (*rhsPA == *zis)
+                        return 0;
+                    static if (is(typeof(*zis < *rhsPA)))
+                    {
+                        // Many types (such as any using the default Object opCmp)
+                        // will throw on an invalid opCmp, so do it only
+                        // if the caller requests it.
+                        if (selector == OpID.compare)
+                            return *zis < *rhsPA ? -1 : 1;
+                        else
+                            return ptrdiff_t.min;
+                    }
+                    else
+                    {
+                        // Not equal, and type does not support ordering
+                        // comparisons.
+                        return ptrdiff_t.min;
+                    }
                 }
             }
             else
@@ -287,11 +325,11 @@ private:
             alias UA = Unqual!A;
             static if (isStaticArray!A && is(typeof(UA.init[0])))
             {
-                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], AllImplicitConversionTargets!UA);
             }
             else
             {
-                alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, AllImplicitConversionTargets!UA);
             }
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
@@ -333,7 +371,7 @@ private:
                            is(T == shared const(U), U) ||
                            is(T ==    immutable(U), U))
                 {
-                    import std.conv : emplaceRef;
+                    import core.internal.lifetime : emplaceRef;
 
                     auto zat = cast(T*) target;
                     if (src)
@@ -457,7 +495,7 @@ private:
 
         case OpID.index:
             auto result = cast(Variant*) parm;
-            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void))
+            static if (isArray!(A) && !is(immutable typeof(A.init[0]) == immutable void))
             {
                 // array type; input and output are the same VariantN
                 size_t index = result.convertsTo!(int)
@@ -485,7 +523,7 @@ private:
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
                 break;
             }
-            else static if (isAssociativeArray!(A))
+            else static if (isAssociativeArray!(A) && is(typeof((*zis)[A.init.keys[0]] = A.init.values[0])))
             {
                 (*zis)[args[1].get!(typeof(A.init.keys[0]))]
                     = args[0].get!(typeof(A.init.values[0]));
@@ -497,7 +535,8 @@ private:
             }
 
         case OpID.catAssign:
-            static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
+            static if (!is(immutable typeof((*zis)[0]) == immutable void) &&
+                    is(typeof((*zis)[0])) && is(typeof(*zis ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(Variant*) parm;
@@ -655,6 +694,8 @@ public:
         }
         else
         {
+            import core.lifetime : copyEmplace;
+
             static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
@@ -662,46 +703,17 @@ public:
             }
 
             static if (T.sizeof <= size)
-            {
-                import core.stdc.string : memcpy;
-                // rhs has already been copied onto the stack, so even if T is
-                // shared, it's not really shared. Therefore, we can safely
-                // remove the shared qualifier when copying, as we are only
-                // copying from the unshared stack.
-                //
-                // In addition, the storage location is not accessible outside
-                // the Variant, so even if shared data is stored there, it's
-                // not really shared, as it's copied out as well.
-                memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
-                static if (hasElaborateCopyConstructor!T)
-                {
-                    // Safer than using typeid's postblit function because it
-                    // type-checks the postblit function against the qualifiers
-                    // of the type.
-                    (cast(T*)&store).__xpostblit();
-                }
-            }
+                copyEmplace(rhs, *cast(T*) &store);
             else
             {
-                import core.stdc.string : memcpy;
-                static if (__traits(compiles, {new T(T.init);}))
-                {
-                    auto p = new T(rhs);
-                }
-                else static if (is(T == U[n], U, size_t n))
-                {
-                    alias UT = Unqual!T;
-                    auto p = cast(UT*)(new U[n]).ptr;
-                    *p = cast(UT) rhs;
-                }
+                static if (is(T == U[n], U, size_t n))
+                    auto p = cast(T*) (new U[n]).ptr;
                 else
-                {
-                    alias UT = Unqual!T;
-                    auto p = new UT;
-                    *p = rhs;
-                }
-                memcpy(&store, &p, p.sizeof);
+                    auto p = new T;
+                copyEmplace(rhs, *p);
+                *(cast(T**) &store) = p;
             }
+
             fptr = &handler!(T);
         }
         return this;
@@ -802,7 +814,7 @@ public:
      * Returns `true` if and only if the `VariantN`
      * object holds an object implicitly convertible to type `T`.
      * Implicit convertibility is defined as per
-     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
+     * $(REF_ALTTEXT AllImplicitConversionTargets, AllImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const
@@ -922,9 +934,9 @@ public:
 
     // returns 1 if the two are equal
     bool opEquals(T)(auto ref T rhs) const
-    if (allowed!T || is(Unqual!T == VariantN))
+    if (allowed!T || is(immutable T == immutable VariantN))
     {
-        static if (is(Unqual!T == VariantN))
+        static if (is(immutable T == immutable VariantN))
             alias temp = rhs;
         else
             auto temp = VariantN(rhs);
@@ -1543,6 +1555,59 @@ pure nothrow @nogc
     v2 = const(S).init;
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21021
+@system unittest
+{
+    static struct S
+    {
+        int h;
+        int[5] array;
+        alias h this;
+    }
+
+    S msg;
+    msg.array[] = 3;
+    Variant a = msg;
+    auto other = a.get!S;
+    assert(msg.array[0] == 3);
+    assert(other.array[0] == 3);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21231
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opCmp(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a == b);
+    assert(!(a < b));
+
+    VariantN!(4, Empty) v = a;
+    assert(v == b);
+    assert(!(v < b));
+}
+
+// Compatibility with -preview=fieldwise
+@system unittest
+{
+    static struct Empty
+    {
+        bool opEquals(const scope ref Empty) const
+        { return false; }
+    }
+
+    Empty a, b;
+    assert(a != b);
+
+    VariantN!(4, Empty) v = a;
+    assert(v != b);
+}
+
 /**
 _Algebraic data type restricted to a closed set of possible
 types. It's an alias for $(LREF VariantN) with an
@@ -1551,6 +1616,8 @@ useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
 manipulation.
 
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
+code. Instead, use $(REF SumType, std,sumtype).)
 */
 template Algebraic(T...)
 {
@@ -1895,7 +1962,7 @@ static class VariantException : Exception
     assert( v.peek!(double) );
     assert( v.convertsTo!(real) );
     //@@@ BUG IN COMPILER: DOUBLE SHOULD NOT IMPLICITLY CONVERT TO FLOAT
-    assert( !v.convertsTo!(float) );
+    assert( v.convertsTo!(float) );
     assert( *v.peek!(double) == 3.1413 );
 
     auto u = Variant(v);
@@ -1976,15 +2043,6 @@ static class VariantException : Exception
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
-}
-
-version (TestComplex)
-deprecated
-@system unittest
-{
-    auto v3 = Variant(1+2.0i);
-    hash[v3] = 2;
-    assert( hash[v3] == 2 );
 }
 
 @system unittest
@@ -2260,6 +2318,15 @@ deprecated
     testPeekWith!(TestStruct!true)();
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=18780
+@system unittest
+{
+    int x = 7;
+    Variant a = x;
+    assert(a.convertsTo!ulong);
+    assert(a.convertsTo!uint);
+}
+
 /**
  * Applies a delegate or function to the given $(LREF Algebraic) depending on the held type,
  * ensuring that all types are handled by the visiting functions.
@@ -2410,11 +2477,11 @@ if (Handlers.length > 0)
 
     Algebraic!(int, string) maybenumber = 2;
     // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
-    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    static assert( __traits(compiles, maybenumber.visit!((string x) => x ~ "a", x => "foobar"[0 .. x + 1])));
     // bad, x ~ "a" valid for string but not int
-    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x ~ "a")));
     // bad, two generics, each only applies in one case
-    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+    static assert(!__traits(compiles, maybenumber.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2523,6 +2590,24 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
         Result result;
 
+        enum int nonmatch = ()
+        {
+            foreach (int dgidx, dg; Handler)
+            {
+                bool found = false;
+                foreach (T; AllowedTypes)
+                {
+                    found |= __traits(compiles, { static assert(isSomeFunction!(dg!T)); });
+                    found |= __traits(compiles, (T t) { dg(t); });
+                    found |= __traits(compiles, dg());
+                }
+                if (!found) return dgidx;
+            }
+            return -1;
+        }();
+        static assert(nonmatch == -1, "No match for visit handler #"~
+            nonmatch.stringof~" ("~Handler[nonmatch].stringof~")");
+
         foreach (tidx, T; AllowedTypes)
         {
             bool added = false;
@@ -2554,7 +2639,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                         result.indices[tidx] = dgidx;
                     }
                 }
-                else static if (isSomeFunction!(dg!T))
+                else static if (__traits(compiles, { static assert(isSomeFunction!(dg!T)); }))
                 {
                     assert(result.generalFuncIdx == -1 ||
                            result.generalFuncIdx == dgidx,
@@ -2562,10 +2647,6 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                     result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
-                else
-                {
-                    static assert(false, dg.stringof ~ " is not a function or delegate");
-                }
             }
 
             if (!added)
@@ -2617,6 +2698,19 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     }
 
     assert(false);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21253
+@system unittest
+{
+    static struct A { int n; }
+    static struct B {        }
+
+    auto a = Algebraic!(A, B)(B());
+    assert(a.visit!(
+        (B _) => 42,
+        (a  ) => a.n
+    ) == 42);
 }
 
 @system unittest
@@ -3102,4 +3196,11 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     alias Outer = Algebraic!(Inner, This*);
 
     static assert(is(Outer.AllowedTypes == AliasSeq!(Inner, Outer*)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21296
+@system unittest
+{
+    immutable aa = ["0": 0];
+    auto v = Variant(aa); // compile error
 }

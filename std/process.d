@@ -108,6 +108,7 @@ version (Windows)
 import std.internal.cstring;
 import std.range.primitives;
 import std.stdio;
+import std.traits : isSomeChar;
 
 version (OSX)
     version = Darwin;
@@ -213,9 +214,7 @@ static:
     string opIndex(scope const(char)[] name) @safe
     {
         import std.exception : enforce;
-        string value;
-        enforce(getImpl(name, value), "Environment variable not found: "~name);
-        return value;
+        return get(name, null).enforce("Environment variable not found: "~name);
     }
 
     /**
@@ -253,8 +252,8 @@ static:
     string get(scope const(char)[] name, string defaultValue = null) @safe
     {
         string value;
-        auto found = getImpl(name, value);
-        return found ? value : defaultValue;
+        getImpl(name, (result) { value = result ? cachedToString(result) : defaultValue; });
+        return value;
     }
 
     /**
@@ -322,7 +321,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    void remove(scope const(char)[] name) @trusted nothrow @nogc // TODO: @safe
+    void remove(scope const(char)[] name) @trusted nothrow @nogc
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
         else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
@@ -446,8 +445,13 @@ static:
     }
 
 private:
-    // Retrieves the environment variable, returns false on failure.
-    bool getImpl(scope const(char)[] name, out string value) @trusted
+    version (Windows) alias OSChar = WCHAR;
+    else version (Posix) alias OSChar = char;
+
+    // Retrieves the environment variable. Calls `sink` with a
+    // temporary buffer of OS characters, or `null` if the variable
+    // doesn't exist.
+    void getImpl(scope const(char)[] name, scope void delegate(const(OSChar)[]) @safe sink) @trusted
     {
         version (Windows)
         {
@@ -468,15 +472,12 @@ private:
             {
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
-                    return false;
+                    return sink(null);
                 if (err != NO_ERROR) // Some other Windows error, throw.
                     throw new WindowsException(err);
             }
             if (len <= 1)
-            {
-                value = "";
-                return true;
-            }
+                return sink("");
             buf.length = len;
 
             while (true)
@@ -488,21 +489,15 @@ private:
                 {
                     immutable err = GetLastError();
                     if (err == NO_ERROR) // sucessfully read a 0-length variable
-                    {
-                        value = "";
-                        return true;
-                    }
+                        return sink("");
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
-                        return false;
+                        return sink(null);
                     // some other windows error
                     throw new WindowsException(err);
                 }
                 assert(lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
-                {
-                    value = toUTF8(buf[0 .. lenRead]);
-                    return true;
-                }
+                    return sink(buf[0 .. lenRead]);
                 // resize and go around again, because the environment variable grew
                 buf.length = lenRead;
             }
@@ -512,25 +507,30 @@ private:
             import core.stdc.string : strlen;
 
             const vz = core.sys.posix.stdlib.getenv(name.tempCString());
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v.empty)
-            {
-                // Return non-null array for blank result to distinguish from
-                // not-present result.
-                lastResult = "";
-            }
-            else if (v != lastResult)
-            {
-                lastResult = v.idup;
-            }
-            value = lastResult;
-            return true;
-        }
+            if (vz == null) return sink(null);
+            return sink(vz[0 .. strlen(vz)]);
+       }
         else static assert(0);
+    }
+
+    string cachedToString(C)(scope const(C)[] v) @safe
+    {
+        import std.algorithm.comparison : equal;
+
+        // Cache the last call's result.
+        static string lastResult;
+        if (v.empty)
+        {
+            // Return non-null array for blank result to distinguish from
+            // not-present result.
+            lastResult = "";
+        }
+        else if (!v.equal(lastResult))
+        {
+            import std.conv : to;
+            lastResult = v.to!string;
+        }
+        return lastResult;
     }
 }
 
@@ -666,6 +666,18 @@ private:
     assert(tidA != tidB);
 }
 
+
+package(std) string uniqueTempPath() @safe
+{
+    import std.file : tempDir;
+    import std.path : buildPath;
+    import std.uuid : randomUUID;
+    // Path should contain spaces to test escaping whitespace
+    return buildPath(tempDir(), "std.process temporary file " ~
+        randomUUID().toString());
+}
+
+
 version (iOSDerived) {}
 else:
 
@@ -797,11 +809,20 @@ Pid spawnProcess(scope const(char[])[] args,
                  const string[string] env = null,
                  Config config = Config.none,
                  scope const char[] workDir = null)
-    @trusted // TODO: Should be @safe
+    @safe
 {
-    version (Windows)    auto  args2 = escapeShellArguments(args);
-    else version (Posix) alias args2 = args;
-    return spawnProcessImpl(args2, stdin, stdout, stderr, env, config, workDir);
+    version (Windows)
+    {
+        const commandLine = escapeShellArguments(args);
+        const program = args.length ? args[0] : null;
+        return spawnProcessWin(commandLine, program, stdin, stdout, stderr, env, config, workDir);
+    }
+    else version (Posix)
+    {
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
+    }
+    else
+        static assert(0);
 }
 
 /// ditto
@@ -852,6 +873,7 @@ version (Posix) private enum InternalError : ubyte
     getrlimit,
     doubleFork,
     malloc,
+    preExec,
 }
 
 /*
@@ -861,13 +883,13 @@ envz should be a zero-terminated array of zero-terminated strings
 on the form "var=value".
 */
 version (Posix)
-private Pid spawnProcessImpl(scope const(char[])[] args,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             scope const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessPosix(scope const(char[])[] args,
+                              File stdin,
+                              File stdout,
+                              File stderr,
+                              scope const string[string] env,
+                              Config config,
+                              scope const(char)[] workDir)
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
@@ -878,12 +900,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
-    if (any!isDirSeparator(name))
-    {
-        if (!isExecutable(name))
-            throw new ProcessException(text("Not an executable file: ", name));
-    }
-    else
+    if (!any!isDirSeparator(name))
     {
         name = searchPathFor(name);
         if (name is null)
@@ -897,7 +914,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     argz[$-1] = null;
 
     // Prepare environment.
-    auto envz = createEnv(env, !(config & Config.newEnv));
+    auto envz = createEnv(env, !(config.flags & Config.Flags.newEnv));
 
     // Open the working directory.
     // We use open in the parent and fchdir in the child
@@ -944,13 +961,13 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     since the first and the second forks will run in parallel.
     */
     int[2] pidPipe;
-    if (config & Config.detached)
+    if (config.flags & Config.Flags.detached)
     {
         if (core.sys.posix.unistd.pipe(pidPipe) != 0)
             throw ProcessException.newFromErrno("Could not create pipe to get process pid");
         setCLOEXEC(pidPipe[1], true);
     }
-    scope(exit) if (config & Config.detached) close(pidPipe[0]);
+    scope(exit) if (config.flags & Config.Flags.detached) close(pidPipe[0]);
 
     static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
     {
@@ -964,7 +981,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
     void closePipeWriteEnds()
     {
         close(forkPipe[1]);
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             close(pidPipe[1]);
     }
 
@@ -982,7 +999,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
         // Child process
 
         // no need for the read end of pipe on child side
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
             close(pidPipe[0]);
         close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
@@ -1017,7 +1034,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
             setCLOEXEC(STDOUT_FILENO, false);
             setCLOEXEC(STDERR_FILENO, false);
 
-            if (!(config & Config.inheritFDs))
+            if (!(config.flags & Config.Flags.inheritFDs))
             {
                 // NOTE: malloc() and getrlimit() are not on the POSIX async
                 // signal safe functions list, but practically this should
@@ -1079,6 +1096,14 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                 if (stderrFD > STDERR_FILENO)  close(stderrFD);
             }
 
+            if (config.preExecFunction !is null)
+            {
+                if (config.preExecFunction() != true)
+                {
+                    abortOnError(forkPipeOut, InternalError.preExec, .errno);
+                }
+            }
+
             // Execute program.
             core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
 
@@ -1086,7 +1111,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
             abortOnError(forkPipeOut, InternalError.exec, .errno);
         }
 
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
         {
             auto secondFork = core.sys.posix.unistd.fork();
             if (secondFork == 0)
@@ -1127,7 +1152,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
         // Save error number just in case if subsequent "waitpid" fails and overrides errno
         immutable lastError = .errno;
 
-        if (config & Config.detached)
+        if (config.flags & Config.Flags.detached)
         {
             // Forked child exits right after creating second fork. So it should be safe to wait here.
             import core.sys.posix.sys.wait : waitpid;
@@ -1153,15 +1178,18 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                     errorMsg = "getrlimit failed";
                     break;
                 case InternalError.exec:
-                    errorMsg = "Failed to execute program";
+                    errorMsg = "Failed to execute '" ~ cast(string) name ~ "'";
                     break;
                 case InternalError.doubleFork:
                     // Can happen only when starting detached process
-                    assert(config & Config.detached);
+                    assert(config.flags & Config.Flags.detached);
                     errorMsg = "Failed to fork twice";
                     break;
                 case InternalError.malloc:
                     errorMsg = "Failed to allocate memory";
+                    break;
+                case InternalError.preExec:
+                    errorMsg = "Failed to execute preExecFunction";
                     break;
                 case InternalError.noerror:
                     assert(false);
@@ -1170,7 +1198,7 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
                 throw ProcessException.newFromErrno(error, errorMsg);
             throw new ProcessException(errorMsg);
         }
-        else if (config & Config.detached)
+        else if (config.flags & Config.Flags.detached)
         {
             owned = false;
             if (read(pidPipe[0], &id, id.sizeof) != id.sizeof)
@@ -1178,17 +1206,71 @@ private Pid spawnProcessImpl(scope const(char[])[] args,
         }
 
         // Parent process:  Close streams and return.
-        if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStdin ) && stdinFD  > STDERR_FILENO
                                             && stdinFD  != getFD(std.stdio.stdin ))
             stdin.close();
-        if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStdout) && stdoutFD > STDERR_FILENO
                                             && stdoutFD != getFD(std.stdio.stdout))
             stdout.close();
-        if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+        if (!(config.flags & Config.Flags.retainStderr) && stderrFD > STDERR_FILENO
                                             && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
         return new Pid(id, owned);
     }
+}
+
+version (Posix)
+@system unittest
+{
+    import std.concurrency : ownerTid, receiveTimeout, send, spawn;
+    import std.datetime : seconds;
+
+    sigset_t ss;
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &ss, null);
+
+    Config config = {
+        preExecFunction: () @trusted @nogc nothrow {
+            // Reset signal handlers
+            sigset_t ss;
+            if (sigfillset(&ss) != 0)
+            {
+                return false;
+            }
+            if (sigprocmask(SIG_UNBLOCK, &ss, null) != 0)
+            {
+                return false;
+            }
+            return true;
+        },
+    };
+
+    auto pid = spawnProcess(["sleep", "10000"],
+                            std.stdio.stdin,
+                            std.stdio.stdout,
+                            std.stdio.stderr,
+                            null,
+                            config,
+                            null);
+    scope(failure)
+    {
+        kill(pid, SIGKILL);
+        wait(pid);
+    }
+
+    // kill the spawned process with SIGINT
+    // and send its return code
+    spawn((shared Pid pid) {
+        auto p = cast() pid;
+        kill(p, SIGINT);
+        auto code = wait(p);
+        assert(code < 0);
+        send(ownerTid, code);
+    }, cast(shared) pid);
+
+    auto received = receiveTimeout(3.seconds, (int) {});
+    assert(received);
 }
 
 /*
@@ -1201,21 +1283,23 @@ envz must be a pointer to a block of UTF-16 characters on the form
 "var1=value1\0var2=value2\0...varN=valueN\0\0".
 */
 version (Windows)
-private Pid spawnProcessImpl(scope const(char)[] commandLine,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             scope const(char)[] workDir)
+private Pid spawnProcessWin(scope const(char)[] commandLine,
+                            scope const(char)[] program,
+                            File stdin,
+                            File stdout,
+                            File stderr,
+                            scope const string[string] env,
+                            Config config,
+                            scope const(char)[] workDir)
     @trusted
 {
     import core.exception : RangeError;
+    import std.conv : text;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
 
     // Prepare environment.
-    auto envz = createEnv(env, !(config & Config.newEnv));
+    auto envz = createEnv(env, !(config.flags & Config.Flags.newEnv));
 
     // Startup info for CreateProcessW().
     STARTUPINFO_W startinfo;
@@ -1267,28 +1351,28 @@ private Pid spawnProcessImpl(scope const(char)[] commandLine,
     PROCESS_INFORMATION pi;
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
-        ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
+        ((config.flags & Config.Flags.suppressConsole) ? CREATE_NO_WINDOW : 0);
     // workaround until https://issues.dlang.org/show_bug.cgi?id=14696 is fixed
     auto pworkDir = workDir.tempCStringW();
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr,
                         null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
-        throw ProcessException.newFromLastError("Failed to spawn new process");
+        throw ProcessException.newFromLastError("Failed to spawn process \"" ~ cast(string) program ~ '"');
 
     // figure out if we should close any of the streams
-    if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStdin ) && stdinFD  > STDERR_FILENO
                                         && stdinFD  != getFD(std.stdio.stdin ))
         stdin.close();
-    if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStdout) && stdoutFD > STDERR_FILENO
                                         && stdoutFD != getFD(std.stdio.stdout))
         stdout.close();
-    if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+    if (!(config.flags & Config.Flags.retainStderr) && stderrFD > STDERR_FILENO
                                         && stderrFD != getFD(std.stdio.stderr))
         stderr.close();
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
-    if (config & Config.detached)
+    if (config.flags & Config.Flags.detached)
     {
         CloseHandle(pi.hProcess);
         return new Pid(pi.dwProcessId);
@@ -1410,29 +1494,40 @@ version (Windows) @system unittest
 // Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
 version (Posix)
-private string searchPathFor(scope const(char)[] executable)
-    @trusted //TODO: @safe nothrow
+package(std) string searchPathFor(scope const(char)[] executable)
+    @safe
 {
     import std.algorithm.iteration : splitter;
-    import std.conv : to;
-    import std.path : buildPath;
+    import std.conv : text;
+    import std.path : chainPath;
 
-    auto pathz = core.stdc.stdlib.getenv("PATH");
-    if (pathz == null)  return null;
+    string result;
 
-    foreach (dir; splitter(to!string(pathz), ':'))
-    {
-        auto execPath = buildPath(dir, executable);
-        if (isExecutable(execPath))  return execPath;
-    }
+    environment.getImpl("PATH",
+        (scope const(char)[] path)
+        {
+            if (!path)
+                return;
 
-    return null;
+            foreach (dir; splitter(path, ":"))
+            {
+                auto execPath = chainPath(dir, executable);
+                if (isExecutable(execPath))
+                {
+                    result = text(execPath);
+                    return;
+                }
+            }
+        });
+
+    return result;
 }
 
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(scope const(char)[] path) @trusted nothrow @nogc //TODO: @safe
+private bool isExecutable(R)(R path) @trusted nothrow @nogc
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
@@ -1609,32 +1704,39 @@ version (Posix) @system unittest
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
-        echo %INPUT% error %~2 1>&2";
+        echo %INPUT% error %~2 1>&2
+        echo done > %3";
     else version (Posix) TestScript prog =
        "read INPUT
         echo $INPUT output $1
-        echo $INPUT error $2 >&2";
+        echo $INPUT error $2 >&2
+        echo done > \"$3\"";
 
     // Pipes
     void testPipes(Config config)
     {
+        import std.file, std.uuid, core.thread, std.exception;
         auto pipei = pipe();
         auto pipeo = pipe();
         auto pipee = pipe();
-        auto pid = spawnProcess([prog.path, "foo", "bar"],
+        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto pid = spawnProcess([prog.path, "foo", "bar", done],
                                     pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
         pipei.writeEnd.writeln("input");
         pipei.writeEnd.flush();
         assert(pipeo.readEnd.readln().chomp() == "input output foo");
         assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-        if (!(config & Config.detached))
+        if (config.flags & Config.Flags.detached)
+            while (!done.exists) Thread.sleep(10.msecs);
+        else
             wait(pid);
+        while (remove(done).collectException) Thread.sleep(10.msecs);
     }
 
     // Files
     void testFiles(Config config)
     {
-        import std.ascii, std.file, std.uuid, core.thread;
+        import std.ascii, std.file, std.uuid, core.thread, std.exception;
         auto pathi = buildPath(tempDir(), randomUUID().toString());
         auto patho = buildPath(tempDir(), randomUUID().toString());
         auto pathe = buildPath(tempDir(), randomUUID().toString());
@@ -1642,17 +1744,18 @@ version (Posix) @system unittest
         auto filei = File(pathi, "r");
         auto fileo = File(patho, "w");
         auto filee = File(pathe, "w");
-        auto pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee, null, config);
-        if (!(config & Config.detached))
-            wait(pid);
+        auto done = buildPath(tempDir(), randomUUID().toString());
+        auto pid = spawnProcess([prog.path, "bar", "baz", done], filei, fileo, filee, null, config);
+        if (config.flags & Config.Flags.detached)
+            while (!done.exists) Thread.sleep(10.msecs);
         else
-            // We need to wait a little to ensure that the process has finished and data was written to files
-            Thread.sleep(500.msecs);
+            wait(pid);
         assert(readText(patho).chomp() == "INPUT output bar");
         assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
-        remove(pathi);
-        remove(patho);
-        remove(pathe);
+        while (remove(pathi).collectException) Thread.sleep(10.msecs);
+        while (remove(patho).collectException) Thread.sleep(10.msecs);
+        while (remove(pathe).collectException) Thread.sleep(10.msecs);
+        while (remove(done).collectException) Thread.sleep(10.msecs);
     }
 
     testPipes(Config.none);
@@ -1663,11 +1766,16 @@ version (Posix) @system unittest
 
 @system unittest // Error handling in spawnProcess()
 {
-    import std.exception : assertThrown;
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    import std.algorithm.searching : canFind;
+    import std.exception : assertThrown, collectExceptionMsg;
+
+    static void testNotFoundException(string program)
+    {
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program)).canFind(program));
+        assert(collectExceptionMsg!ProcessException(spawnProcess(program, null, Config.detached)).canFind(program));
+    }
+    testNotFoundException("ewrgiuhrifuheiohnmnvqweoijwf");
+    testNotFoundException("./rgiuhrifuheiohnmnvqweoijwf");
 
     // can't execute malformed file with executable permissions
     version (Posix)
@@ -1781,6 +1889,22 @@ version (Windows)
     assert(data == "AAAAAAAAAABBBBB\r\n", data);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20765
+// Test that running processes with relative path works in conjunction
+// with indicating a workDir.
+version (Posix) @system unittest
+{
+    import std.file : mkdir, write, setAttributes;
+    import std.conv : octal;
+
+    auto dir = uniqueTempPath();
+    mkdir(dir);
+    write(dir ~ "/program", "#!/bin/sh\necho Hello");
+    setAttributes(dir ~ "/program", octal!700);
+
+    assert(execute(["./program"], null, Config.none, size_t.max, dir).output == "Hello\n");
+}
+
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
 the current user's preferred _command interpreter (aka. shell).
@@ -1813,7 +1937,7 @@ Pid spawnShell(scope const(char)[] command,
                Config config = Config.none,
                scope const(char)[] workDir = null,
                scope string shellPath = nativeShell)
-    @trusted // TODO: Should be @safe
+    @safe
 {
     version (Windows)
     {
@@ -1821,8 +1945,9 @@ Pid spawnShell(scope const(char)[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(shellPath)
-                    ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        const commandLine = escapeShellFileName(shellPath)
+                            ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
+        return spawnProcessWin(commandLine, shellPath, stdin, stdout, stderr, env, config, workDir);
     }
     else version (Posix)
     {
@@ -1830,8 +1955,10 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
+        return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
-    return spawnProcessImpl(args, stdin, stdout, stderr, env, config, workDir);
+    else
+        static assert(0);
 }
 
 /// ditto
@@ -1892,11 +2019,9 @@ version (Windows)
 
 
 /**
-Flags that control the behaviour of process creation functions in this
-module. Most flags only apply to $(LREF spawnProcess) and
+Options that control the behaviour of process creation functions in this
+module. Most options only apply to $(LREF spawnProcess) and
 $(LREF spawnShell).
-
-Use bitwise OR to combine flags.
 
 Example:
 ---
@@ -1915,76 +2040,116 @@ scope(exit)
 }
 ---
 */
-enum Config
+struct Config
 {
-    none = 0,
+    /**
+       Flag options.
+       Use bitwise OR to combine flags.
+    **/
+    enum Flags
+    {
+        none = 0,
+
+        /**
+        By default, the child process inherits the parent's environment,
+        and any environment variables passed to $(LREF spawnProcess) will
+        be added to it.  If this flag is set, the only variables in the
+        child process' environment will be those given to spawnProcess.
+        */
+        newEnv = 1,
+
+        /**
+        Unless the child process inherits the standard input/output/error
+        streams of its parent, one almost always wants the streams closed
+        in the parent when $(LREF spawnProcess) returns.  Therefore, by
+        default, this is done.  If this is not desirable, pass any of these
+        options to spawnProcess.
+        */
+        retainStdin  = 2,
+        retainStdout = 4,                                  /// ditto
+        retainStderr = 8,                                  /// ditto
+
+        /**
+        On Windows, if the child process is a console application, this
+        flag will prevent the creation of a console window.  Otherwise,
+        it will be ignored. On POSIX, `suppressConsole` has no effect.
+        */
+        suppressConsole = 16,
+
+        /**
+        On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
+        are by default inherited by the child process.  As this may lead
+        to subtle bugs when pipes or multiple threads are involved,
+        $(LREF spawnProcess) ensures that all file descriptors except the
+        ones that correspond to standard input/output/error are closed
+        in the child process when it starts.  Use `inheritFDs` to prevent
+        this.
+
+        On Windows, this option has no effect, and any handles which have been
+        explicitly marked as inheritable will always be inherited by the child
+        process.
+        */
+        inheritFDs = 32,
+
+        /**
+        Spawn process in detached state. This removes the need in calling
+        $(LREF wait) to clean up the process resources.
+
+        Note:
+        Calling $(LREF wait) or $(LREF kill) with the resulting `Pid` is invalid.
+        */
+        detached = 64,
+
+        /**
+        By default, the $(LREF execute) and $(LREF executeShell) functions
+        will capture child processes' both stdout and stderr. This can be
+        undesirable if the standard output is to be processed or otherwise
+        used by the invoking program, as `execute`'s result would then
+        contain a mix of output and warning/error messages.
+
+        Specify this flag when calling `execute` or `executeShell` to
+        cause invoked processes' stderr stream to be sent to $(REF stderr,
+        std,stdio), and only capture and return standard output.
+
+        This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
+        */
+        stderrPassThrough = 128,
+    }
+    Flags flags; /// ditto
 
     /**
-    By default, the child process inherits the parent's environment,
-    and any environment variables passed to $(LREF spawnProcess) will
-    be added to it.  If this flag is set, the only variables in the
-    child process' environment will be those given to spawnProcess.
+       For backwards compatibility, and cases when only flags need to
+       be specified in the `Config`, these allow building `Config`
+       instances using flag names only.
     */
-    newEnv = 1,
+    enum Config none = Config.init;
+    enum Config newEnv = Config(Flags.newEnv); /// ditto
+    enum Config retainStdin = Config(Flags.retainStdin); /// ditto
+    enum Config retainStdout = Config(Flags.retainStdout); /// ditto
+    enum Config retainStderr = Config(Flags.retainStderr); /// ditto
+    enum Config suppressConsole = Config(Flags.suppressConsole); /// ditto
+    enum Config inheritFDs = Config(Flags.inheritFDs); /// ditto
+    enum Config detached = Config(Flags.detached); /// ditto
+    enum Config stderrPassThrough = Config(Flags.stderrPassThrough); /// ditto
+    Config opBinary(string op : "|")(Config other)
+    {
+        return Config(flags | other.flags);
+    } /// ditto
 
-    /**
-    Unless the child process inherits the standard input/output/error
-    streams of its parent, one almost always wants the streams closed
-    in the parent when $(LREF spawnProcess) returns.  Therefore, by
-    default, this is done.  If this is not desirable, pass any of these
-    options to spawnProcess.
-    */
-    retainStdin  = 2,
-    retainStdout = 4,                                  /// ditto
-    retainStderr = 8,                                  /// ditto
-
-    /**
-    On Windows, if the child process is a console application, this
-    flag will prevent the creation of a console window.  Otherwise,
-    it will be ignored. On POSIX, `suppressConsole` has no effect.
-    */
-    suppressConsole = 16,
-
-    /**
-    On POSIX, open $(LINK2 http://en.wikipedia.org/wiki/File_descriptor,file descriptors)
-    are by default inherited by the child process.  As this may lead
-    to subtle bugs when pipes or multiple threads are involved,
-    $(LREF spawnProcess) ensures that all file descriptors except the
-    ones that correspond to standard input/output/error are closed
-    in the child process when it starts.  Use `inheritFDs` to prevent
-    this.
-
-    On Windows, this option has no effect, and any handles which have been
-    explicitly marked as inheritable will always be inherited by the child
-    process.
-    */
-    inheritFDs = 32,
-
-    /**
-    Spawn process in detached state. This removes the need in calling
-    $(LREF wait) to clean up the process resources.
-
-    Note:
-    Calling $(LREF wait) or $(LREF kill) with the resulting `Pid` is invalid.
-    */
-    detached = 64,
-
-    /**
-    By default, the $(LREF execute) and $(LREF executeShell) functions
-    will capture child processes' both stdout and stderr. This can be
-    undesirable if the standard output is to be processed or otherwise
-    used by the invoking program, as `execute`'s result would then
-    contain a mix of output and warning/error messages.
-
-    Specify this flag when calling `execute` or `executeShell` to
-    cause invoked processes' stderr stream to be sent to $(REF stderr,
-    std,stdio), and only capture and return standard output.
-
-    This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
-    */
-    stderrPassThrough = 128,
+    version (StdDdoc)
+    {
+        /**
+        A function that is called before `exec` in $(LREF spawnProcess).
+        It returns `true` if succeeded and otherwise returns `false`.
+        On Windows, this member is not available.
+        */
+        bool function() nothrow @nogc @safe preExecFunction;
+    }
+    else version (Posix)
+    {
+        bool function() nothrow @nogc @safe preExecFunction;
+    }
 }
-
 
 /// A handle that corresponds to a spawned process.
 final class Pid
@@ -2089,7 +2254,7 @@ private:
     }
     else version (Windows)
     {
-        int performWait(bool block) @trusted
+        int performWait(const bool block, const DWORD timeout = INFINITE) @trusted
         {
             import std.exception : enforce;
             enforce!ProcessException(owned, "Can't wait on a detached process");
@@ -2097,9 +2262,15 @@ private:
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
-                auto result = WaitForSingleObject(_handle, INFINITE);
+                auto result = WaitForSingleObject(_handle, timeout);
                 if (result != WAIT_OBJECT_0)
+                {
+                    // Wait time exceeded `timeout` milliseconds?
+                    if (result == WAIT_TIMEOUT && timeout != INFINITE)
+                        return 0;
+
                     throw ProcessException.newFromLastError("Wait failed.");
+                }
             }
             if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
                 throw ProcessException.newFromLastError();
@@ -2108,6 +2279,20 @@ private:
             _handle = INVALID_HANDLE_VALUE;
             _processID = terminated;
             return _exitCode;
+        }
+
+        int performWait(Duration timeout) @safe
+        {
+            import std.exception : enforce;
+            const msecs = timeout.total!"msecs";
+
+            // Limit this implementation the maximum wait time offered by
+            // WaitForSingleObject. One could theoretically break up larger
+            // durations into multiple waits but (DWORD.max - 1).msecs
+            // (> 7 weeks, 17 hours) should be enough for the usual case.
+            // DWORD.max is reserved for INFINITE
+            enforce!ProcessException(msecs < DWORD.max, "Timeout exceeds maximum wait time!");
+            return performWait(true, cast(DWORD) msecs);
         }
 
         ~this()
@@ -2219,6 +2404,67 @@ int wait(Pid pid) @safe
     else version (Posix) assert(pid.osHandle < 0);
 }
 
+private import std.typecons : Tuple;
+
+/**
+Waits until either the process associated with `pid` terminates or the
+elapsed time exceeds the given timeout.
+
+If the process terminates within the given duration it behaves exactly like
+`wait`, except that it returns a tuple `(true, exit code)`.
+
+If the process does not terminate within the given duration it will stop
+waiting and return `(false, 0).`
+
+The timeout may not exceed `(uint.max - 1).msecs` (~ 7 weeks, 17 hours).
+
+$(BLUE This function is Windows-Only.)
+
+Returns:
+An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
+
+Throws:
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
+
+Example:
+See the $(LREF spawnProcess) documentation.
+
+See_also:
+$(LREF wait), for a blocking function without timeout.
+$(LREF tryWait), for a non-blocking function without timeout.
+*/
+version (StdDdoc)
+Tuple!(bool, "terminated", int, "status") waitTimeout(Pid pid, Duration timeout) @safe;
+
+else version (Windows)
+Tuple!(bool, "terminated", int, "status") waitTimeout(Pid pid, Duration timeout) @safe
+{
+    assert(pid !is null, "Called wait on a null Pid.");
+    auto code = pid.performWait(timeout);
+    return typeof(return)(pid._processID == Pid.terminated, code);
+}
+
+version (Windows)
+@system unittest // Pid and waitTimeout()
+{
+    import std.exception : collectException;
+    import std.typecons : tuple;
+
+    TestScript prog = ":Loop\ngoto Loop;";
+    auto pid = spawnProcess(prog.path);
+
+    // Doesn't block longer than one second
+    assert(waitTimeout(pid, 1.seconds) == tuple(false, 0));
+
+    kill(pid);
+    assert(waitTimeout(pid, 1.seconds) == tuple(true, 1)); // exit 1 because the process is killed
+
+    // Rejects timeouts exceeding the Windows API capabilities
+    const dur = DWORD.max.msecs;
+    const ex = collectException!ProcessException(waitTimeout(pid, dur));
+    assert(ex);
+    assert(ex.msg == "Timeout exceeds maximum wait time!");
+}
 
 /**
 A non-blocking version of $(LREF wait).
@@ -2747,7 +2993,7 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...
         childStderr = childStdout;
     }
 
-    config &= ~(Config.retainStdin | Config.retainStdout | Config.retainStderr);
+    config.flags &= ~(Config.Flags.retainStdin | Config.Flags.retainStdout | Config.Flags.retainStderr);
     pipes._pid = spawnFunc(command, childStdin, childStdout, childStderr,
                            env, config, workDir, extraArgs);
     return pipes;
@@ -2991,7 +3237,7 @@ auto execute(scope const(char[])[] args,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(args, env, config, maxOutput, workDir);
 }
@@ -3002,7 +3248,7 @@ auto execute(scope const(char)[] program,
              Config config = Config.none,
              size_t maxOutput = size_t.max,
              scope const(char)[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeProcess(program, env, config, maxOutput, workDir);
 }
@@ -3014,7 +3260,7 @@ auto executeShell(scope const(char)[] command,
                   size_t maxOutput = size_t.max,
                   scope const(char)[] workDir = null,
                   string shellPath = nativeShell)
-    @trusted //TODO: @safe
+    @safe
 {
     return executeImpl!pipeShell(command,
                                  env,
@@ -3032,12 +3278,13 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     size_t maxOutput = size_t.max,
     scope const(char)[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
+    @trusted //TODO: @safe
 {
     import std.algorithm.comparison : min;
     import std.array : appender;
     import std.typecons : Tuple;
 
-    auto redirect = (config & Config.stderrPassThrough)
+    auto redirect = (config.flags & Config.Flags.stderrPassThrough)
         ? Redirect.stdout
         : Redirect.stdout | Redirect.stderrToStdout;
 
@@ -3103,10 +3350,30 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto r3 = executeShell("exit 123");
     assert(r3.status == 123);
     assert(r3.output.empty);
-    auto r4 = executeShell("echo stderr test, please ignore 1>&2",
-        null, Config.stderrPassThrough);
-    assert(r4.status == 0);
-    assert(r4.output.empty);
+}
+
+@system unittest
+{
+    // Temporarily disable output to stderr so as to not spam the build log.
+    import std.stdio : stderr;
+    import std.typecons : Tuple;
+    import std.file : readText;
+    import std.traits : ReturnType;
+
+    ReturnType!executeShell r;
+    auto tmpname = uniqueTempPath;
+    auto t = stderr;
+    // Open a new scope to minimize code ran with stderr redirected.
+    {
+        stderr.open(tmpname, "w");
+        scope(exit) stderr = t;
+        r = executeShell("echo D rox>&2", null, Config.stderrPassThrough);
+    }
+    assert(r.status == 0);
+    assert(r.output.empty);
+    auto witness = readText(tmpname);
+    import std.ascii : newline;
+    assert(witness == "D rox" ~ newline, "'" ~ witness ~ "'");
 }
 
 @safe unittest
@@ -3245,17 +3512,6 @@ private struct TestScript
     }
 
     string path;
-}
-
-version (StdUnittest)
-private string uniqueTempPath() @safe
-{
-    import std.file : tempDir;
-    import std.path : buildPath;
-    import std.uuid : randomUUID;
-    // Path should contain spaces to test escaping whitespace
-    return buildPath(tempDir(), "std.process temporary file " ~
-        randomUUID().toString());
 }
 
 
@@ -4068,42 +4324,6 @@ version (Windows)
         ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
 }
-else version (OSX)
-{
-    import core.stdc.stdio;
-    import core.stdc.string;
-    import core.sys.posix.unistd;
-
-    void browse(scope const(char)[] url) nothrow @nogc
-    {
-        const(char)*[5] args;
-
-        auto curl = url.tempCString();
-        const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
-        if (browser)
-        {   browser = strdup(browser);
-            args[0] = browser;
-            args[1] = curl;
-            args[2] = null;
-        }
-        else
-        {
-            args[0] = "open".ptr;
-            args[1] = curl;
-            args[2] = null;
-        }
-
-        auto childpid = core.sys.posix.unistd.fork();
-        if (childpid == 0)
-        {
-            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
-            perror(args[0]);                // failed to execute
-            return;
-        }
-        if (browser)
-            free(cast(void*) browser);
-    }
-}
 else version (Posix)
 {
     import core.stdc.stdio;
@@ -4120,10 +4340,20 @@ else version (Posix)
             args[0] = browser;
         }
         else
-            //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
-            args[0] = "xdg-open".ptr;
+        {
+            version (OSX)
+            {
+                args[0] = "open".ptr;
+            }
+            else
+            {
+                //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
+                args[0] = "xdg-open".ptr;
+            }
+        }
 
-        args[1] = url.tempCString();
+        const buffer = url.tempCString(); // Retain buffer until end of scope
+        args[1] = buffer;
         args[2] = null;
 
         auto childpid = core.sys.posix.unistd.fork();
@@ -4135,7 +4365,29 @@ else version (Posix)
         }
         if (browser)
             free(cast(void*) browser);
+
+        version (StdUnittest)
+        {
+            // Verify that the test script actually suceeds
+            int status;
+            const check = waitpid(childpid, &status, 0);
+            assert(check != -1);
+            assert(status == 0);
+        }
     }
 }
 else
     static assert(0, "os not supported");
+
+version (Windows) { /* Doesn't use BROWSER */ }
+else
+@system unittest
+{
+    import std.conv : text;
+    import std.range : repeat;
+    immutable string url = text("http://", repeat('x', 249));
+
+    TestScript prog = `if [ "$1" != "` ~ url ~ `" ]; then exit 1; fi`;
+    environment["BROWSER"] = prog.path;
+    browse(url);
+}

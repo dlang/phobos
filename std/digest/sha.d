@@ -111,7 +111,7 @@ else version (D_InlineAsm_X86_64)
     private version = USE_SSSE3;
 }
 
-version (LittleEndian) import core.bitop : bswap;
+import core.bitop;
 
 public import std.digest;
 
@@ -119,59 +119,16 @@ public import std.digest;
  * Helper methods for encoding the buffer.
  * Can be removed if the optimizer can inline the methods from std.bitmanip.
  */
-private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
+version (LittleEndian)
 {
-    version (LittleEndian)
-        immutable ulong res = (cast(ulong)  bswap(cast(uint) val)) << 32 | bswap(cast(uint) (val >> 32));
-    else
-        immutable ulong res = val;
-    return *cast(ubyte[8]*) &res;
+    private alias nativeToBigEndian = bswap;
+    private alias bigEndianToNative = bswap;
 }
-
-private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
+else pragma(inline, true) private pure @nogc nothrow @safe
 {
-    version (LittleEndian)
-        immutable uint res = bswap(val);
-    else
-        immutable uint res = val;
-    return *cast(ubyte[4]*) &res;
-}
-
-private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-    {
-        import std.bitmanip : bigEndianToNative;
-        return bigEndianToNative!ulong(val);
-    }
-    else
-        return *cast(ulong*) &val;
-}
-
-private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
-{
-    version (LittleEndian)
-        return bswap(*cast(uint*) &val);
-    else
-        return *cast(uint*) &val;
-}
-
-//rotateLeft rotates x left n bits
-private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
-{
-    // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
-    // No assembler required.
-    return (x << n) | (x >> (32-n));
-}
-
-//rotateRight rotates x right n bits
-private uint rotateRight(uint x, uint n) @safe pure nothrow @nogc
-{
-    return (x >> n) | (x << (32-n));
-}
-private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
-{
-    return (x >> n) | (x << (64-n));
+    uint nativeToBigEndian(uint val) { return val; }
+    ulong nativeToBigEndian(ulong val) { return val; }
+    alias bigEndianToNative = nativeToBigEndian;
 }
 
 /**
@@ -354,6 +311,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * Basic SHA1/SHA2 functions.
          */
+        pragma(inline, true)
         static @safe pure nothrow @nogc
         {
             /* All SHA1/SHA2 */
@@ -364,16 +322,16 @@ struct SHA(uint hashBlockSize, uint digestSize)
             uint Parity(uint x, uint y, uint z) { return x ^ y ^ z; }
 
             /* SHA-224, SHA-256 */
-            uint BigSigma0(uint x) { return rotateRight(x, 2) ^ rotateRight(x, 13) ^ rotateRight(x, 22); }
-            uint BigSigma1(uint x) { return rotateRight(x, 6) ^ rotateRight(x, 11) ^ rotateRight(x, 25); }
-            uint SmSigma0(uint x) { return rotateRight(x, 7) ^ rotateRight(x, 18) ^ x >> 3; }
-            uint SmSigma1(uint x) { return rotateRight(x, 17) ^ rotateRight(x, 19) ^ x >> 10; }
+            uint BigSigma0(uint x) { return core.bitop.ror(x, 2) ^ core.bitop.ror(x, 13) ^ core.bitop.ror(x, 22); }
+            uint BigSigma1(uint x) { return core.bitop.ror(x, 6) ^ core.bitop.ror(x, 11) ^ core.bitop.ror(x, 25); }
+            uint SmSigma0(uint x) { return core.bitop.ror(x, 7) ^ core.bitop.ror(x, 18) ^ x >> 3; }
+            uint SmSigma1(uint x) { return core.bitop.ror(x, 17) ^ core.bitop.ror(x, 19) ^ x >> 10; }
 
             /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
-            ulong BigSigma0(ulong x) { return rotateRight(x, 28) ^ rotateRight(x, 34) ^ rotateRight(x, 39); }
-            ulong BigSigma1(ulong x) { return rotateRight(x, 14) ^ rotateRight(x, 18) ^ rotateRight(x, 41); }
-            ulong SmSigma0(ulong x) { return rotateRight(x, 1) ^ rotateRight(x, 8) ^ x >> 7; }
-            ulong SmSigma1(ulong x) { return rotateRight(x, 19) ^ rotateRight(x, 61) ^ x >> 6; }
+            ulong BigSigma0(ulong x) { return core.bitop.ror(x, 28) ^ core.bitop.ror(x, 34) ^ core.bitop.ror(x, 39); }
+            ulong BigSigma1(ulong x) { return core.bitop.ror(x, 14) ^ core.bitop.ror(x, 18) ^ core.bitop.ror(x, 41); }
+            ulong SmSigma0(ulong x) { return core.bitop.ror(x, 1) ^ core.bitop.ror(x, 8) ^ x >> 7; }
+            ulong SmSigma1(ulong x) { return core.bitop.ror(x, 19) ^ core.bitop.ror(x, 61) ^ x >> 6; }
         }
 
         /*
@@ -382,41 +340,41 @@ struct SHA(uint hashBlockSize, uint digestSize)
         static void T_0_15(int i, const(ubyte[64])* input, ref uint[16] W, uint A, ref uint B, uint C, uint D,
             uint E, ref uint T) pure nothrow @nogc
         {
-            uint Wi = W[i] = bigEndianToNative(*cast(ubyte[4]*)&((*input)[i*4]));
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + Wi + 0x5a827999;
-            B = rotateLeft(B, 30);
+            uint Wi = W[i] = bigEndianToNative(*cast(uint*) &((*input)[i*4]));
+            T = Ch(B, C, D) + E + core.bitop.rol(A, 5) + Wi + 0x5a827999;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_16_19(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E, ref uint T)
             pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Ch(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x5a827999;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Ch(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x5a827999;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_20_39(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x6ed9eba1;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Parity(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x6ed9eba1;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_40_59(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Maj(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x8f1bbcdc;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Maj(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0x8f1bbcdc;
+            B = core.bitop.rol(B, 30);
         }
 
         static void T_60_79(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
             ref uint T) pure nothrow @nogc
         {
-            W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
-            T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0xca62c1d6;
-            B = rotateLeft(B, 30);
+            W[i&15] = core.bitop.rol(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
+            T = Parity(B, C, D) + E + core.bitop.rol(A, 5) + W[i&15] + 0xca62c1d6;
+            B = core.bitop.rol(B, 30);
         }
 
         private static void transformX86(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
@@ -524,17 +482,20 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /*
          * SHA2 basic transformation. Transforms state based on block.
          */
+        pragma(inline, true)
         static void T_SHA2_0_15(Word)(int i, const(ubyte[blockSize/8])* input, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
         {
-            Word Wi = W[i] = bigEndianToNative(*cast(ubyte[Word.sizeof]*)&((*input)[i*Word.sizeof]));
+            Word Wi = W[i] = bigEndianToNative(*cast(Word*) &((*input)[i*Word.sizeof]));
             Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + Wi;
             Word T2 = BigSigma0(A) + Maj(A, B, C);
             D += T1;
             H = T1 + T2;
         }
 
+        // Temporarily disable inlining because it increases build speed by 10x.
+        // pragma(inline, true)
         static void T_SHA2_16_79(Word)(int i, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
             pure nothrow @nogc
@@ -748,11 +709,11 @@ struct SHA(uint hashBlockSize, uint digestSize)
         {
             static if (blockSize == 512)
             {
-                ubyte[32] data = void;
+                uint[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[8] bits = nativeToBigEndian(count[0]);
+                ulong bits = nativeToBigEndian(count[0]);
 
                 /* Pad out to 56 mod 64. */
                 index = (cast(uint) count[0] >> 3) & (64 - 1);
@@ -760,25 +721,23 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < ((digestSize == 160)? 5 : 8); i++)
-                    data[i*4..(i+1)*4] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. (digestSize == 160) ? 5 : 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte*) data.ptr)[0 .. digestSize/8];
             }
             else static if (blockSize == 1024)
             {
-                ubyte[64] data = void;
+                ulong[8] data = void;
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte[16] bits;
-                bits[ 0 .. 8] = nativeToBigEndian(count[1]);
-                bits[8 .. 16] = nativeToBigEndian(count[0]);
+                ulong[2] bits = [nativeToBigEndian(count[1]), nativeToBigEndian(count[0])];
 
                 /* Pad out to 112 mod 128. */
                 index = (cast(uint) count[0] >> 3) & (128 - 1);
@@ -786,15 +745,15 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 put(padding[0 .. padLen]);
 
                 /* Append length (before padding) */
-                put(bits);
+                put((cast(ubyte*) &bits)[0 .. bits.sizeof]);
 
                 /* Store state in digest */
-                for (auto i = 0; i < 8; i++)
-                    data[i*8..(i+1)*8] = nativeToBigEndian(state[i])[];
+                static foreach (i; 0 .. 8)
+                    data[i] = nativeToBigEndian(state[i]);
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0 .. digestSize/8];
+                return (cast(ubyte*) data.ptr)[0 .. digestSize/8];
             }
             else
                 static assert(0);

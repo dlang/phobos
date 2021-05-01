@@ -224,9 +224,9 @@ if (isSomeChar!Char)
 {
     import core.stdc.stddef : wchar_t;
 
-    static if (is(Unqual!Char == char))
+    static if (is(immutable Char == immutable char))
         import core.stdc.string : cstrlen = strlen;
-    else static if (is(Unqual!Char == wchar_t))
+    else static if (is(immutable Char == immutable wchar_t))
         import core.stdc.wchar_ : cstrlen = wcslen;
     else
         static size_t cstrlen(scope const Char* s)
@@ -325,6 +325,9 @@ out (result)
 do
 {
     import std.exception : assumeUnique;
+
+    if (s.empty) return "".ptr;
+
     /+ Unfortunately, this isn't reliable.
      We could make this work if string literals are put
      in read-only memory and we test if s[] is pointing into
@@ -346,26 +349,6 @@ do
     copy[s.length] = 0;
 
     return &assumeUnique(copy)[0];
-}
-
-/++ Ditto +/
-immutable(char)* toStringz(return scope string s) @trusted pure nothrow
-{
-    if (s.empty) return "".ptr;
-    /* Peek past end of s[], if it's 0, no conversion necessary.
-     * Note that the compiler will put a 0 past the end of static
-     * strings, and the storage allocator will put a 0 past the end
-     * of newly allocated char[]'s.
-     */
-    immutable p = s.ptr + s.length;
-    // Is p dereferenceable? A simple test: if the p points to an
-    // address multiple of 4, then conservatively assume the pointer
-    // might be pointing to a new block of memory, which might be
-    // unreadable. Otherwise, it's definitely pointing to valid
-    // memory.
-    if ((cast(size_t) p & 3) && *p == 0)
-        return &s[0];
-    return toStringz(cast(const char[]) s);
 }
 
 ///
@@ -395,6 +378,27 @@ pure nothrow @system unittest
     const string test2 = "";
     p = toStringz(test2);
     assert(*p == 0);
+
+    assert(toStringz([]) is toStringz(""));
+}
+
+pure nothrow @system unittest // https://issues.dlang.org/show_bug.cgi?id=15136
+{
+    static struct S
+    {
+        immutable char[5] str;
+        ubyte foo;
+        this(char[5] str) pure nothrow
+        {
+            this.str = str;
+        }
+    }
+    auto s = S("01234");
+    const str = s.str.toStringz;
+    assert(str !is s.str.ptr);
+    assert(*(str + 5) == 0); // Null terminated.
+    s.foo = 42;
+    assert(*(str + 5) == 0); // Still null terminated.
 }
 
 
@@ -1327,7 +1331,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 
     if (cs == Yes.caseSensitive)
     {
-        static if (is(Unqual!Char1 == Unqual!Char2))
+        static if (is(immutable Char1 == immutable Char2))
         {
             import core.stdc.string : memcmp;
 
@@ -3013,8 +3017,8 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     static import std.ascii;
     static import std.uni;
 
-    static if (is(Unqual!(ElementEncodingType!Range) == dchar)
-        || is(Unqual!(ElementEncodingType!Range) == wchar))
+    static if (is(immutable ElementEncodingType!Range == immutable dchar)
+        || is(immutable ElementEncodingType!Range == immutable wchar))
     {
         // Decoding is never needed for dchar. It happens not to be needed
         // here for wchar because no whitepace is outside the basic
@@ -3715,7 +3719,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : endsWith;
         if (str.endsWith(delimiter))
@@ -3866,7 +3870,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 {
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : startsWith;
         if (str.startsWith(delimiter))
@@ -5499,7 +5503,7 @@ private void translateImpl(C1, T, C2, Buffer)(const(C1)[] str,
   +/
 C[] translate(C = immutable char)(scope const(char)[] str, scope const(char)[] transTable,
               scope const(char)[] toRemove = null) @trusted pure nothrow
-if (is(Unqual!C == char))
+if (is(immutable C == immutable char))
 in
 {
     import std.conv : to;
@@ -5657,7 +5661,7 @@ do
   +/
 void translate(C = immutable char, Buffer)(scope const(char)[] str, scope const(char)[] transTable,
         scope const(char)[] toRemove, Buffer buffer) @trusted pure
-if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
+if (is(immutable C == immutable char) && isOutputRange!(Buffer, char))
 in
 {
     assert(transTable.length == 256, format!
@@ -6314,14 +6318,6 @@ if (isSomeString!S ||
     assert(!isNumeric("+"));
 }
 
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    import std.conv : to;
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
-}
-
 /*****************************
  * Soundex algorithm.
  *
@@ -6662,7 +6658,7 @@ if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
     isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
-    static if (is(Unqual!(ElementEncodingType!Range) == char))
+    static if (is(immutable ElementEncodingType!Range == immutable char))
     {
         // decoding needed for chars
         import std.utf : byDchar;
@@ -7148,7 +7144,7 @@ Throws:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr)
-if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+if (staticIndexOf!(immutable T, immutable ubyte, immutable ushort, immutable uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
     import std.exception : collectException;

@@ -291,7 +291,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 }
 
                 import std.conv : to;
-                import std.functional : forward;
+                import core.lifetime : forward;
                 template generateFun(size_t i)
                 {
                     enum name = TargetMembers[i].name;

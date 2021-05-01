@@ -368,14 +368,15 @@ struct JSONValue
      * A convenience getter that returns this `JSONValue` as the specified D type.
      * Note: only numeric, `bool`, `string`, `JSONValue[string]` and `JSONValue[]` types are accepted
      * Throws: `JSONException` if `T` cannot hold the contents of this `JSONValue`
+     *         `ConvException` in case of integer overflow when converting to `T`
      */
     @property inout(T) get(T)() inout const pure @safe
     {
-        static if (is(Unqual!T == string))
+        static if (is(immutable T == immutable string))
         {
             return str;
         }
-        else static if (is(Unqual!T == bool))
+        else static if (is(immutable T == immutable bool))
         {
             return boolean;
         }
@@ -393,13 +394,17 @@ struct JSONValue
                 throw new JSONException("JSONValue is not a number type");
             }
         }
-        else static if (__traits(isUnsigned, T))
+        else static if (isIntegral!T)
         {
-            return cast(T) uinteger;
-        }
-        else static if (isSigned!T)
-        {
-            return cast(T) integer;
+            switch (type)
+            {
+            case JSONType.uinteger:
+                return uinteger.to!T;
+            case JSONType.integer:
+                return integer.to!T;
+            default:
+                throw new JSONException("JSONValue is not a an integral type");
+            }
         }
         else
         {
@@ -420,6 +425,7 @@ struct JSONValue
     @safe unittest
     {
         import std.exception;
+        import std.conv;
         string s =
         `{
             "a": 123,
@@ -427,7 +433,9 @@ struct JSONValue
             "c": "text",
             "d": true,
             "e": [1, 2, 3],
-            "f": { "a": 1 }
+            "f": { "a": 1 },
+            "g": -45,
+            "h": ` ~ ulong.max.to!string ~ `,
          }`;
 
         struct a { }
@@ -435,16 +443,22 @@ struct JSONValue
         immutable json = parseJSON(s);
         assert(json["a"].get!double == 123.0);
         assert(json["a"].get!int == 123);
+        assert(json["a"].get!uint == 123);
         assert(json["b"].get!double == 3.1415);
-        assertThrown(json["b"].get!int);
+        assertThrown!JSONException(json["b"].get!int);
         assert(json["c"].get!string == "text");
         assert(json["d"].get!bool == true);
         assertNotThrown(json["e"].get!(JSONValue[]));
         assertNotThrown(json["f"].get!(JSONValue[string]));
         static assert(!__traits(compiles, json["a"].get!a));
-        assertThrown(json["e"].get!float);
-        assertThrown(json["d"].get!(JSONValue[string]));
-        assertThrown(json["f"].get!(JSONValue[]));
+        assertThrown!JSONException(json["e"].get!float);
+        assertThrown!JSONException(json["d"].get!(JSONValue[string]));
+        assertThrown!JSONException(json["f"].get!(JSONValue[]));
+        assert(json["g"].get!int == -45);
+        assertThrown!ConvException(json["g"].get!uint);
+        assert(json["h"].get!ulong == ulong.max);
+        assertThrown!ConvException(json["h"].get!uint);
+        assertNotThrown(json["h"].get!float);
     }
 
     private void assign(T)(T arg)
@@ -1636,7 +1650,7 @@ if (isOutputRange!(Out,char))
                 break;
 
             case JSONType.float_:
-                import std.math : isNaN, isInfinity;
+                import std.math.traits : isNaN, isInfinity;
 
                 auto val = value.store.floating;
 
@@ -1666,12 +1680,17 @@ if (isOutputRange!(Out,char))
                 }
                 else
                 {
-                    import std.format : format;
+                    import std.algorithm.searching : canFind;
+                    import std.format : sformat;
                     // The correct formula for the number of decimal digits needed for lossless round
                     // trips is actually:
                     //     ceil(log(pow(2.0, double.mant_dig - 1)) / log(10.0) + 1) == (double.dig + 2)
                     // Anything less will round off (1 + double.epsilon)
-                    json.put("%.18g".format(val));
+                    char[25] buf;
+                    auto result = buf[].sformat!"%.18g"(val);
+                    json.put(result);
+                    if (!result.canFind('e') && !result.canFind('.'))
+                        json.put(".0");
                 }
                 break;
 
@@ -1712,11 +1731,66 @@ if (isOutputRange!(Out,char))
 // https://issues.dlang.org/show_bug.cgi?id=20511
 @system unittest
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
     import std.range : nullSink, outputRangeObject;
 
     outputRangeObject!(const(char)[])(nullSink)
         .formattedWrite!"%s"(JSONValue.init);
+}
+
+// Issue 16432 - JSON incorrectly parses to string
+@safe unittest
+{
+    // Floating points numbers are rounded to the nearest integer and thus get
+    // incorrectly parsed
+
+    import std.math.operations : isClose;
+
+    string s = "{\"rating\": 3.0 }";
+    JSONValue j = parseJSON(s);
+    assert(j["rating"].type == JSONType.float_);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSONType.float_);
+    assert(isClose(j["rating"].floating, 3.0));
+
+    s = "{\"rating\": -3.0 }";
+    j = parseJSON(s);
+    assert(j["rating"].type == JSONType.float_);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSONType.float_);
+    assert(isClose(j["rating"].floating, -3.0));
+
+    // https://issues.dlang.org/show_bug.cgi?id=13660
+    auto jv1 = JSONValue(4.0);
+    auto textual = jv1.toString();
+    auto jv2 = parseJSON(textual);
+    assert(jv1.type == JSONType.float_);
+    assert(textual == "4.0");
+    assert(jv2.type == JSONType.float_);
+}
+
+@safe unittest
+{
+    // Adapted from https://github.com/dlang/phobos/pull/5005
+    // Result from toString is not checked here, because this
+    // might differ (%e-like or %f-like output) depending
+    // on OS and compiler optimization.
+    import std.math.operations : isClose;
+
+    // test positive extreme values
+    JSONValue j;
+    j["rating"] = 1e18 - 65;
+    assert(isClose(j.toString.parseJSON["rating"].floating, 1e18 - 65));
+
+    j["rating"] = 1e18 - 64;
+    assert(isClose(j.toString.parseJSON["rating"].floating, 1e18 - 64));
+
+    // negative extreme values
+    j["rating"] = -1e18 + 65;
+    assert(isClose(j.toString.parseJSON["rating"].floating, -1e18 + 65));
+
+    j["rating"] = -1e18 + 64;
+    assert(isClose(j.toString.parseJSON["rating"].floating, -1e18 + 64));
 }
 
 /**
@@ -2039,7 +2113,7 @@ EOF";
 @safe unittest
 {
     import std.exception : assertThrown;
-    import std.math : isNaN, isInfinity;
+    import std.math.traits : isNaN, isInfinity;
 
     // expected representations of NaN and Inf
     enum {
@@ -2113,7 +2187,7 @@ pure nothrow @safe unittest
 
     static bool test(const double num0)
     {
-        import std.math : feqrel;
+        import std.math.operations : feqrel;
         const json0 = JSONValue(num0);
         const num1 = to!double(toJSON(json0));
         static if (realInDoublePrecision)
@@ -2311,7 +2385,7 @@ pure nothrow @safe unittest
 @safe unittest
 {
     import std.array : appender;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     string s =
 `{

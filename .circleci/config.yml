@@ -18,7 +18,7 @@ jobs:
           name: Run all public unittests
       - run:
           command: ./.circleci/run.sh coverage
-          name: Run Phobos testsuite with -cov
+          name: Run Phobos testsuite with -cov=ctfe
       - run:
           command: bash <(curl -s https://codecov.io/bash)
           name: Upload coverage files to CodeCov

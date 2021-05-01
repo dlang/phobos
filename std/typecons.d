@@ -7,7 +7,7 @@ that allow construction of new, useful general-purpose types.
 $(SCRIPT inhibitQuickIndex = 1;)
 $(DIVC quickindex,
 $(BOOKTABLE,
-$(TR $(TH Category) $(TH Functions))
+$(TR $(TH Category) $(TH Symbols))
 $(TR $(TD Tuple) $(TD
     $(LREF isTuple)
     $(LREF Tuple)
@@ -69,7 +69,8 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
-import std.format : singleSpec, FormatSpec, formatValue;
+import std.format.spec : singleSpec, FormatSpec;
+import std.format.write : formatValue;
 import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
@@ -591,6 +592,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
         }
@@ -603,6 +605,7 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            import std.meta : AliasSeq;
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
         }
@@ -797,21 +800,42 @@ if (distinctFieldNames!(Specs))
          *           for comparison between `Tuple`s.
          *
          * Returns:
-         * For any values `v1` on the right-hand side and `v2` on the
-         * left-hand side:
+         * For any values `v1` contained by the left-hand side tuple and any
+         * values `v2` contained by the right-hand side:
+         *
+         * 0 if `v1 == v2` for all members or the following value for the
+         * first position were the mentioned criteria is not satisfied:
          *
          * $(UL
-         *   $(LI A negative integer if the expression `v1 < v2` is true.)
-         *   $(LI A positive integer if the expression `v1 > v2` is true.)
-         *   $(LI 0 if the expression `v1 == v2` is true.))
+         *   $(LI NaN, in case one of the operands is a NaN.)
+         *   $(LI A negative number if the expression `v1 < v2` is true.)
+         *   $(LI A positive number if the expression `v1 > v2` is true.))
          */
-        int opCmp(R)(R rhs)
+        auto opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math.traits : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -819,13 +843,31 @@ if (distinctFieldNames!(Specs))
         }
 
         /// ditto
-        int opCmp(R)(R rhs) const
+        auto opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
         {
             static foreach (i; 0 .. Types.length)
             {
                 if (field[i] != rhs.field[i])
                 {
+                    import std.math.traits : isNaN;
+                    static if (isFloatingPoint!(Types[i]))
+                    {
+                        if (isNaN(field[i]))
+                            return float.nan;
+                    }
+                    static if (isFloatingPoint!(typeof(rhs.field[i])))
+                    {
+                        if (isNaN(rhs.field[i]))
+                            return float.nan;
+                    }
+                    static if (is(typeof(field[i].opCmp(rhs.field[i]))) &&
+                               isFloatingPoint!(typeof(field[i].opCmp(rhs.field[i]))))
+                    {
+                        if (isNaN(field[i].opCmp(rhs.field[i])))
+                            return float.nan;
+                    }
+
                     return field[i] < rhs.field[i] ? -1 : 1;
                 }
             }
@@ -992,7 +1034,7 @@ if (distinctFieldNames!(Specs))
             t2 = tuple(3,4,5);
             auto t2Named = t2.rename!("", "b");
             // "a" no longer has a name
-            static assert(!hasMember!(typeof(t2Named), "a"));
+            static assert(!__traits(hasMember, typeof(t2Named), "a"));
             assert(t2Named[0] == 3);
             assert(t2Named.b == 4);
             assert(t2Named.c == 5);
@@ -1227,7 +1269,7 @@ if (distinctFieldNames!(Specs))
             return app.data;
         }
 
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
 
         /**
          * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
@@ -1254,7 +1296,9 @@ if (distinctFieldNames!(Specs))
         /// ditto
         void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
         {
-            import std.format : formatElement, formattedWrite, FormatException;
+            import std.format : format, FormatException;
+            import std.format.write : formattedWrite;
+            import std.range : only;
             if (fmt.nested)
             {
                 if (fmt.sep)
@@ -1293,15 +1337,14 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
-                    // TODO: Change this once formatElement() works for shared objects.
+                    // TODO: Change this once format() works for shared objects.
                     static if (is(Type == class) && is(Type == shared))
                     {
                         sink(Type.stringof);
                     }
                     else
                     {
-                        FormatSpec!Char f;
-                        formatElement(sink, field[i], f);
+                        sink(format!("%(%s%)")(only(field[i])));
                     }
                 }
                 sink(footer);
@@ -1547,6 +1590,45 @@ if (distinctFieldNames!(Specs))
     enum T : Tuple!(int*) { a = T(null) }
     T t;
     t = T.a;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=13663
+@safe unittest
+{
+    auto t = tuple(real.nan);
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
+}
+
+@safe unittest
+{
+    struct S
+    {
+        float opCmp(S s) { return float.nan; }
+        bool opEquals(S s) { return false; }
+    }
+
+    auto t = tuple(S());
+    assert(!(t > t));
+    assert(!(t < t));
+    assert(!(t == t));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8015
+@safe unittest
+{
+    struct MyStruct
+    {
+        string str;
+        @property string toStr()
+        {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
 }
 
 /**
@@ -2699,7 +2781,7 @@ struct Nullable(T)
         _isNull = false;
     }
 
-    static if (is(T == struct) && hasElaborateDestructor!T)
+    static if (hasElaborateDestructor!T)
     {
         ~this()
         {
@@ -2715,18 +2797,27 @@ struct Nullable(T)
      * is not, then they are not equal. If they are both non-null, then they are
      * equal if their values are equal.
      */
-    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (!is(CommonType!(This, Rhs) == void))
     {
-        if (_isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
-            return false;
-        return _value.payload == rhs._value.payload;
+        static if (is(This == Rhs))
+        {
+            if (_isNull)
+                return rhs._isNull;
+            if (rhs._isNull)
+                return false;
+            return _value.payload == rhs._value.payload;
+        }
+        else
+        {
+            alias Common = CommonType!(This, Rhs);
+            return cast(Common) this == cast(Common) rhs;
+        }
     }
 
     /// Ditto
-    bool opEquals(U)(auto ref const(U) rhs) const
-    if (!is(U : typeof(this)) && is(typeof(this.get == rhs)))
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (is(CommonType!(This, Rhs) == void) && is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value.payload;
     }
@@ -2872,7 +2963,7 @@ struct Nullable(T)
     @safe unittest
     {
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
 
         auto app = appender!string();
         Nullable!int a = 1;
@@ -2940,6 +3031,22 @@ struct Nullable(T)
     }
 
     /**
+     * If value is null, sets this to null, otherwise assigns
+     * `value.get` to the internally-held state. If the assignment
+     * succeeds, `this` becomes non-null.
+     *
+     * Params:
+     *     value = A value of type `Nullable!T` to assign to this `Nullable`.
+     */
+    void opAssign()(Nullable!T value)
+    {
+        if (value._isNull)
+            nullify();
+        else
+            opAssign(value.get());
+    }
+
+    /**
      * If this `Nullable` wraps a type that already has a null value
      * (such as a pointer), then assigning the null value to this
      * `Nullable` is no different than assigning any other value of
@@ -2991,54 +3098,6 @@ struct Nullable(T)
     {
         return isNull ? fallback : _value.payload;
     }
-
-    //@@@DEPRECATED_2.096@@@
-    deprecated(
-        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-    @system unittest
-    {
-        import core.exception : AssertError;
-        import std.exception : assertThrown, assertNotThrown;
-
-        Nullable!int ni;
-        int i = 42;
-        //`get` is implicitly called. Will throw
-        //an AssertError in non-release mode
-        assertThrown!AssertError(i = ni);
-        assert(i == 42);
-
-        ni = 5;
-        assertNotThrown!AssertError(i = ni);
-        assert(i == 5);
-    }
-
-    //@@@DEPRECATED_2.096@@@
-    deprecated(
-        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-    @property ref inout(T) get_() inout @safe pure nothrow
-    {
-        return get;
-    }
-
-    ///
-    @safe pure nothrow unittest
-    {
-        int i = 42;
-        Nullable!int ni;
-        int x = ni.get(i);
-        assert(x == i);
-
-        ni = 7;
-        x = ni.get(i);
-        assert(x == 7);
-    }
-
-    /**
-     * Implicitly converts to `T`.
-     * `this` must not be in the null state.
-     * This feature is deprecated and will be removed after 2.096.
-     */
-    alias get_ this;
 }
 
 /// ditto
@@ -3091,33 +3150,6 @@ auto nullable(T)(T t)
     a.nullify();
     assert(a.isNull);
     assertThrown!Throwable(a.get);
-}
-
-//@@@DEPRECATED_2.096@@@
-deprecated(
-    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-@system unittest
-{
-    import std.exception : assertThrown;
-
-    Nullable!int a;
-    assert(a.isNull);
-    assertThrown!Throwable(a.get);
-    a = 5;
-    assert(!a.isNull);
-    assert(a == 5);
-    assert(a != 3);
-    assert(a.get != 3);
-    a.nullify();
-    assert(a.isNull);
-    a = 3;
-    assert(a == 3);
-    a *= 6;
-    assert(a == 18);
-    a = a;
-    assert(a == 18);
-    a.nullify();
-    assertThrown!Throwable(a += 2);
 }
 @safe unittest
 {
@@ -3538,6 +3570,41 @@ deprecated(
     assert(typeid(Nullable!S).getHash(&s2) == 0);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21704
+@safe unittest
+{
+    import std.array : staticArray;
+
+    bool destroyed;
+
+    struct Probe
+    {
+        ~this() { destroyed = true; }
+    }
+
+    {
+        Nullable!(Probe[1]) test = [Probe()].staticArray;
+        destroyed = false;
+    }
+    assert(destroyed);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21705
+@safe unittest
+{
+    static struct S
+    {
+        int n;
+        bool opEquals(S rhs) { return n == rhs.n; }
+    }
+
+    Nullable!S test1 = S(1), test2 = S(1);
+    S s = S(1);
+
+    assert(test1 == s);
+    assert(test1 == test2);
+}
+
 /**
 Just like `Nullable!T`, except that the null state is defined as a
 particular value. For example, $(D Nullable!(uint, uint.max)) is an
@@ -3568,7 +3635,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -3971,11 +4039,11 @@ template apply(alias fun)
         {
             static if (MustWrapReturn)
             {
-                return fun(t.get).nullable;
+                return unaryFun!fun(t.get).nullable;
             }
             else
             {
-                return fun(t.get);
+                return unaryFun!fun(t.get);
             }
         }
         else
@@ -4046,6 +4114,14 @@ unittest
     S[] array = Nullable!(S[])().get(S[].init);
 }
 
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21199
+@safe @nogc nothrow pure
+unittest
+{
+    struct S { int i; }
+    assert(S(5).nullable.apply!"a.i" == 5);
+}
+
 /**
 Just like `Nullable!T`, except that the object refers to a value
 sitting elsewhere in memory. This makes assignments overwrite the
@@ -4069,7 +4145,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -4374,7 +4451,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 ///
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static abstract class C
     {
@@ -4397,7 +4474,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // return default
     {
@@ -5353,6 +5430,7 @@ private static:
 
             // Parameter storage classes.
             if (stc & STC.scope_) params ~= "scope ";
+            if (stc & STC.in_)    params ~= "in ";
             if (stc & STC.out_  ) params ~= "out ";
             if (stc & STC.ref_  ) params ~= "ref ";
             if (stc & STC.lazy_ ) params ~= "lazy ";
@@ -5650,7 +5728,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
             import std.conv : to;
-            import std.functional : forward;
+            import core.lifetime : forward;
             template generateFun(size_t i)
             {
                 enum name = TargetMembers[i].name;
@@ -5999,7 +6077,7 @@ package template GetOverloadedMethods(T)
                     enum isMethod = false;
             }
             alias follows = AliasSeq!(
-                std.meta.Filter!(isMethod, __traits(getOverloads, T, name)),
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }
@@ -6292,6 +6370,9 @@ autoInit == RefCountedAutoInitialize.no), user code must call either
 `refCountedStore.isInitialized` or `refCountedStore.ensureInitialized`
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
+
+If `T.this()` is annotated with `@disable` then `autoInit` must be
+`RefCountedAutoInitialize.no` in order to compile.
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
@@ -6330,10 +6411,11 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
-            import std.conv : emplace;
+            import core.lifetime : emplace, forward;
 
             allocateStore();
-            emplace(&_store._payload, args);
+            version (D_Exceptions) scope(failure) deallocateStore();
+            emplace(&_store._payload, forward!args);
             _store._count = 1;
         }
 
@@ -6362,6 +6444,16 @@ if (!is(T == class) && !(is(T == interface)))
             }
         }
 
+        private void deallocateStore() nothrow pure
+        {
+            static if (enableGCScan)
+            {
+                pureGcRemoveRange(&this._store._payload);
+            }
+            pureFree(_store);
+            _store = null;
+        }
+
         /**
            Returns `true` if and only if the underlying store has been
            allocated and initialized.
@@ -6385,9 +6477,18 @@ if (!is(T == class) && !(is(T == interface)))
         /**
            Makes sure the payload was properly initialized. Such a
            call is typically inserted before using the payload.
+
+           This function is unavailable if `T.this()` is annotated with
+           `@disable`.
         */
-        void ensureInitialized()
+        void ensureInitialized()()
         {
+            // By checking for `@disable this()` and failing early we can
+            // produce a clearer error message.
+            static assert(__traits(compiles, { static T t; }),
+                "Cannot automatically initialize `" ~ fullyQualifiedName!T ~
+                "` because `" ~ fullyQualifiedName!T ~
+                ".this()` is annotated with `@disable`.");
             if (!isInitialized) initialize();
         }
 
@@ -6407,8 +6508,14 @@ Constructor that initializes the payload.
 Postcondition: `refCountedStore.isInitialized`
  */
     this(A...)(auto ref A args) if (A.length > 0)
+    out
     {
-        _refCounted.initialize(args);
+        assert(refCountedStore.isInitialized);
+    }
+    do
+    {
+        import core.lifetime : forward;
+        _refCounted.initialize(forward!args);
     }
 
     /// Ditto
@@ -6439,15 +6546,9 @@ to deallocate the corresponding resource.
         assert(_refCounted._store._count > 0);
         if (--_refCounted._store._count)
             return;
-        // Done, deallocate
+        // Done, destroy and deallocate
         .destroy(_refCounted._store._payload);
-        static if (enableGCScan)
-        {
-            pureGcRemoveRange(&_refCounted._store._payload);
-        }
-
-        pureFree(_refCounted._store);
-        _refCounted._store = null;
+        _refCounted.deallocateStore();
     }
 
 /**
@@ -6528,6 +6629,15 @@ refCountedStore.ensureInitialized). Otherwise, just issues $(D
 assert(refCountedStore.isInitialized)).
  */
     alias refCountedPayload this;
+
+    static if (is(T == struct) && !is(typeof((ref T t) => t.toString())))
+    {
+        string toString(this This)()
+        {
+            import std.conv : to;
+            return to!string(refCountedPayload);
+        }
+    }
 }
 
 ///
@@ -6611,11 +6721,16 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=6436
 @betterC @system pure unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    struct S
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = RefCounted!S(val);
-    assert(val == 4);
+    auto s1 = RefCounted!S(1);
+    int lval = 3;
+    auto s2 = RefCounted!S(lval);
+    assert(lval == 4);
 }
 
 // gc_addRange coverage
@@ -6637,6 +6752,37 @@ pure @system unittest
     assert(b == 5);
 
     RefCounted!(int*) c;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21638
+@betterC @system pure nothrow @nogc unittest
+{
+    static struct NoDefaultCtor
+    {
+        @disable this();
+        this(int x) @nogc nothrow pure { this.x = x; }
+        int x;
+    }
+    auto rc = RefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
+    assert(rc.x == 5);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20502
+@system unittest
+{
+    import std.conv : to;
+    // Check that string conversion is transparent for refcounted
+    // structs that do not have either toString or alias this.
+    struct A { Object a; }
+    auto a  = A(new Object());
+    auto r = refCounted(a);
+    assert(to!string(r) == to!string(a));
+    assert(to!string(cast(const) r) == to!string(cast(const) a));
+    // Check that string conversion is still transparent for refcounted
+    // structs that have alias this.
+    struct B { int b; alias b this; }
+    struct C { B b; alias b this; }
+    assert(to!string(refCounted(C(B(123)))) == to!string(C(B(123))));
 }
 
 /**
@@ -6891,13 +7037,7 @@ mixin template Proxy(alias a)
             // built-in type field, manifest constant, and static non-mutable field
             enum opDispatch = mixin("a."~name);
         }
-        else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
-        {
-            // field or property function
-            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
-            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
-        }
-        else
+        else static if (__traits(isTemplate, mixin("a."~name)))
         {
             // member template
             template opDispatch(T...)
@@ -6906,6 +7046,13 @@ mixin template Proxy(alias a)
                 auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~targs~"(args)"); }
             }
         }
+        else
+        {
+            // field or property function
+            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
+            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
+        }
+
     }
 
     import std.traits : isArray;
@@ -6995,7 +7142,7 @@ mixin template Proxy(alias a)
  */
 @safe unittest
 {
-    import std.math;
+    import std.math.traits : isInfinity;
 
     float f = 1.0;
     assert(!f.isInfinity);
@@ -7918,13 +8065,13 @@ if (is(T == class))
     */
     @system auto scoped(Args...)(auto ref Args args)
     {
-        import std.conv : emplace;
+        import core.lifetime : emplace, forward;
 
         Scoped result = void;
         void* alignedStore = cast(void*) aligned(cast(size_t) result.Scoped_store.ptr);
         immutable size_t d = alignedStore - result.Scoped_store.ptr;
         *cast(size_t*) &result.Scoped_store[$ - size_t.sizeof] = d;
-        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], args);
+        emplace!(Unqual!T)(result.Scoped_store[d .. $ - size_t.sizeof], forward!args);
         return result;
     }
 }
@@ -8241,11 +8388,16 @@ if (alignment > 0 && !((alignment - 1) & alignment))
 
 @system unittest
 {
-    class C { this(ref int val) { assert(val == 3); ++val; } }
+    class C
+    {
+        this(int rval) { assert(rval == 1); }
+        this(ref int lval) { assert(lval == 3); ++lval; }
+    }
 
-    int val = 3;
-    auto s = scoped!C(val);
-    assert(val == 4);
+    auto c1 = scoped!C(1);
+    int lval = 3;
+    auto c2 = scoped!C(lval);
+    assert(lval == 4);
 }
 
 @system unittest
@@ -8974,6 +9126,8 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
                 result ~= ", ";
             if (storageClasses[i] & ParameterStorageClass.scope_)
                 result ~= "scope ";
+            if (storageClasses[i] & ParameterStorageClass.in_)
+                result ~= "in ";
             if (storageClasses[i] & ParameterStorageClass.out_)
                 result ~= "out ";
             if (storageClasses[i] & ParameterStorageClass.ref_)
@@ -9065,6 +9219,10 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
             float function(lazy float, long),
         int, float, int function(out long, ref const int),
             float function(out long, ref const float),
+        int, float, int function(in long, ref const int),
+            float function(in long, ref const float),
+        int, float, int function(long, in int),
+            float function(long, in float),
         int, int, int, int,
         int, float, int, float,
         int, float, const int, const float,
