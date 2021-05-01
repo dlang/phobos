@@ -1801,12 +1801,18 @@ private:
  *        a == b          - at least one rvalue (literals, enums, function calls)
  * __traits(isSame, a, b) - other cases (types, variables, functions, templates, etc.)
  */
-private template isSame(alias a, alias b)
+private template isSame(ab...)
+if (ab.length == 2)
 {
-    static if (__traits(compiles, a == b) && !__traits(compiles, &a))
-        enum isSame = a == b;
+    static if (!is(typeof(&ab[0] && &ab[1])) // at least one is an rvalue
+            && __traits(compiles, { enum isSame = ab[0] == ab[1]; })) // c-t comparable
+    {
+        enum isSame = ab[0] == ab[1];
+    }
     else
-        enum isSame = __traits(isSame, a, b);
+    {
+        enum isSame = __traits(isSame, ab[0], ab[1]);
+    }
 }
 
 @safe unittest
@@ -1839,6 +1845,8 @@ private template isSame(alias a, alias b)
     static assert( isSame!(X, X));
     static assert(!isSame!(X, Y));
     static assert(!isSame!(Y, Z));
+    static assert(isSame!(X, 1));
+    static assert(isSame!(1, X));
 
     int  foo();
     int  bar();
