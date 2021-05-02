@@ -2923,7 +2923,7 @@ ProcessPipes pipeShell(scope const(char)[] command,
 
 // Implementation of the pipeProcess() family of functions.
 private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd, ExtraSpawnFuncArgs...)
-                                    (Cmd command,
+                                    (scope Cmd command,
                                      Redirect redirectFlags,
                                      const string[string] env = null,
                                      Config config = Config.none,
