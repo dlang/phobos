@@ -945,4 +945,3 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
     assert(collectExceptionMsg!FormatException(format("%.*,*?d", 5))
         == "Missing separator digit width argument");
 }
-
