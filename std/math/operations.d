@@ -1006,7 +1006,11 @@ if (isFloatingPoint!(X))
 
    Warning:
         This template is considered out-dated. It will be removed from
-        Phobos in 2.106.0. Please use $(LREF isClose) instead.
+        Phobos in 2.106.0. Please use $(LREF isClose) instead. To achieve
+        a similar behaviour to `approxEqual(a, b)` use
+        `isClose(a, b, 1e-2, 1e-5)`. In case of comparing to 0.0,
+        `isClose(a, b, 0.0, eps)` should be used, where `eps`
+        represents the accepted deviation from 0.0."
 
    Params:
         value = Value to compare.
