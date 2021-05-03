@@ -1797,13 +1797,27 @@ private template isSame(alias a, alias b)
         enum isSame = __traits(isSame, a, b);
     }
 }
+// TODO: remove after https://github.com/dlang/dmd/pull/11320 and https://issues.dlang.org/show_bug.cgi?id=21889 are fixed
+private template isSame(A, B)
+{
+    enum isSame = is(A == B);
+}
 
 @safe unittest
 {
+    static assert(!isSame!(Object, const Object));
+    static assert(!isSame!(Object, immutable Object));
+
     static struct S {}
+    static assert(!isSame!(S, const S));
     static assert( isSame!(S(), S()));
 
+    static class C {}
+    static assert(!isSame!(C, const C));
+
     static assert( isSame!(int, int));
+    static assert(!isSame!(int, const int));
+    static assert(!isSame!(const int, immutable int));
     static assert(!isSame!(int, short));
 
     enum a = 1, b = 1, c = 2, s = "a", t = "a";
@@ -1828,8 +1842,8 @@ private template isSame(alias a, alias b)
     static assert( isSame!(X, X));
     static assert(!isSame!(X, Y));
     static assert(!isSame!(Y, Z));
-    static assert(isSame!(X, 1));
-    static assert(isSame!(1, X));
+    static assert( isSame!(X, 1));
+    static assert( isSame!(1, X));
 
     int  foo();
     int  bar();
