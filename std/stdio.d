@@ -3566,7 +3566,7 @@ void main()
 {
     @system struct SystemToString
     {
-        string toString() scope
+        string toString()
         {
             return "system";
         }
@@ -3574,7 +3574,7 @@ void main()
 
     @trusted struct TrustedToString
     {
-        string toString() scope
+        string toString()
         {
             return "trusted";
         }
@@ -3582,7 +3582,7 @@ void main()
 
     @safe struct SafeToString
     {
-        string toString() scope
+        string toString()
         {
             return "safe";
         }
@@ -3686,14 +3686,14 @@ void main()
         }
 
         static assert(!__traits(compiles, f.write(SystemToString().toString())));
-        // TODO static assert(!__traits(compiles, f.writeln(SystemToString())));
-        // TODO static assert(!__traits(compiles, f.writef("%s", SystemToString())));
-        // TODO static assert(!__traits(compiles, f.writefln("%s", SystemToString())));
+        static assert(!__traits(compiles, f.writeln(SystemToString())));
+        static assert(!__traits(compiles, f.writef("%s", SystemToString())));
+        static assert(!__traits(compiles, f.writefln("%s", SystemToString())));
 
         static assert(!__traits(compiles, write(SystemToString().toString())));
-        // TODO static assert(!__traits(compiles, writeln(SystemToString())));
-        // TODO static assert(!__traits(compiles, writef("%s", SystemToString())));
-        // TODO static assert(!__traits(compiles, writefln("%s", SystemToString())));
+        static assert(!__traits(compiles, writeln(SystemToString())));
+        static assert(!__traits(compiles, writef("%s", SystemToString())));
+        static assert(!__traits(compiles, writefln("%s", SystemToString())));
     }
 
     systemTests();
