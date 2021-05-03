@@ -1493,7 +1493,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 {
     static if (isFloatingPoint!S && isIntegral!T)
     {
-        import std.math : isNaN;
+        import std.math.traits : isNaN;
         if (value.isNaN) throw new ConvException("Input was NaN");
     }
 
@@ -1585,7 +1585,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     double d = double.nan;
     float f = to!float(d);
@@ -2137,7 +2137,8 @@ template roundTo(Target)
     Target roundTo(Source)(Source value)
     {
         import core.math : abs = fabs;
-        import std.math : log2, trunc;
+        import std.math.exponential : log2;
+        import std.math.rounding : trunc;
 
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
@@ -3390,9 +3391,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN, isInfinity;
     import std.typecons : Flag, Yes, No;
-    import std.math : isNaN, isInfinity;
     auto str = "123.456";
     assert(parse!double(str).isClose(123.456));
     auto str2 = "123.456";
@@ -3423,7 +3424,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN, fabs, isInfinity;
+    import std.math.traits : isNaN, isInfinity;
+    import std.math.algebraic : fabs;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -5049,7 +5051,7 @@ public import core.lifetime : emplace;
 {
     import std.array : array;
     import std.datetime : SysTime, UTC;
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static struct A
     {

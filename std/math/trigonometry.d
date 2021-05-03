@@ -75,7 +75,7 @@ float cos(float x) @safe pure nothrow @nogc { return core.math.cos(x); }
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(cos(0.0) == 1.0);
     assert(cos(1.0).isClose(0.5403023059));
@@ -86,6 +86,20 @@ float cos(float x) @safe pure nothrow @nogc { return core.math.cos(x); }
 {
     real function(real) pcos = &cos;
     assert(pcos != null);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math.algebraic : fabs;
+
+    float f = cos(-2.0f);
+    assert(fabs(f - -0.416147f) < .00001);
+
+    double d = cos(-2.0);
+    assert(fabs(d - -0.416147f) < .00001);
+
+    real r = cos(-2.0L);
+    assert(fabs(r - -0.416147f) < .00001);
 }
 
 /***********************************
@@ -119,7 +133,7 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
 ///
 @safe unittest
 {
-    import std.math : sin, PI;
+    import std.math.constants : PI;
     import std.stdio : writefln;
 
     void someFunc()
@@ -134,6 +148,20 @@ float sin(float x) @safe pure nothrow @nogc { return core.math.sin(x); }
 {
     real function(real) psin = &sin;
     assert(psin != null);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math.algebraic : fabs;
+
+    float f = sin(-2.0f);
+    assert(fabs(f - -0.909297f) < .00001);
+
+    double d = sin(-2.0);
+    assert(fabs(d - -0.909297f) < .00001);
+
+    real r = sin(-2.0L);
+    assert(fabs(r - -0.909297f) < .00001);
 }
 
 /****************************************************************************
@@ -168,7 +196,10 @@ float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(ca
 ///
 @safe unittest
 {
-    import std.math : isClose, isIdentical, PI, sqrt;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical;
+    import std.math.constants : PI;
+    import std.math.algebraic : sqrt;
 
     assert(isIdentical(tan(0.0), 0.0));
     assert(tan(PI).isClose(0, 0.0, 1e-10));
@@ -272,7 +303,11 @@ Lret: {}
 
 private T tanImpl(T)(T x) @safe pure nothrow @nogc
 {
-    import std.math : floatTraits, floor, isInfinity, isNaN, poly, PI, PI_4, RealFormat, signbit;
+    import std.math : floatTraits, RealFormat;
+    import std.math.constants : PI, PI_4;
+    import std.math.rounding : floor;
+    import std.math.algebraic : poly;
+    import std.math.traits : isInfinity, isNaN, signbit;
 
     // Coefficients for tan(x) and PI/4 split into three parts.
     enum realFormat = floatTraits!T.realFormat;
@@ -409,7 +444,9 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
 {
     static void testTan(T)()
     {
-        import std.math : CommonDefaultFor, isClose, isIdentical, isNaN, NaN, PI, PI_4;
+        import std.math.operations : CommonDefaultFor, isClose, NaN;
+        import std.math.traits : isIdentical, isNaN;
+        import std.math.constants : PI, PI_4;
 
         // ±0
         const T zero = 0.0;
@@ -473,8 +510,34 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testTan!T();
 
-    import std.math : isClose, PI, sqrt;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    import std.math.algebraic : sqrt;
     assert(isClose(tan(PI / 3), sqrt(3.0L), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math.algebraic : fabs;
+    import std.math.traits : isNaN;
+
+    float f = tan(-2.0f);
+    assert(fabs(f - 2.18504f) < .00001);
+
+    double d = tan(-2.0);
+    assert(fabs(d - 2.18504f) < .00001);
+
+    real r = tan(-2.0L);
+    assert(fabs(r - 2.18504f) < .00001);
+
+    // Verify correct behavior for large inputs
+    assert(!isNaN(tan(0x1p63)));
+    assert(!isNaN(tan(-0x1p63)));
+    static if (real.mant_dig >= 64)
+    {
+        assert(!isNaN(tan(0x1p300L)));
+        assert(!isNaN(tan(-0x1p300L)));
+    }
 }
 
 /***************
@@ -490,7 +553,7 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
  */
 real acos(real x) @safe pure nothrow @nogc
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     return atan2(sqrt(1-x*x), x);
 }
@@ -504,7 +567,9 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 ///
 @safe unittest
 {
-    import std.math : isClose, isNaN, PI;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
+    import std.math.constants : PI;
 
     assert(acos(0.0).isClose(1.570796327));
     assert(acos(0.5).isClose(PI / 3));
@@ -513,7 +578,8 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose, PI;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
 
     assert(isClose(acos(0.5), PI / 3, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -531,7 +597,7 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
  */
 real asin(real x) @safe pure nothrow @nogc
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     return atan2(x, sqrt(1-x*x));
 }
@@ -545,7 +611,9 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 ///
 @safe unittest
 {
-    import std.math : isClose, isIdentical, isNaN, PI;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical, isNaN;
+    import std.math.constants : PI;
 
     assert(isIdentical(asin(0.0), 0.0));
     assert(asin(0.5).isClose(PI / 6));
@@ -554,7 +622,8 @@ float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose, PI;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
 
     assert(isClose(asin(0.5), PI / 6, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -591,7 +660,10 @@ float atan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) atan(
 ///
 @safe unittest
 {
-    import std.math : isClose, isIdentical, PI, sqrt;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical;
+    import std.math.constants : PI;
+    import std.math.algebraic : sqrt;
 
     assert(isIdentical(atan(0.0), 0.0));
     assert(atan(sqrt(3.0)).isClose(PI / 3));
@@ -599,7 +671,10 @@ float atan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) atan(
 
 private T atanImpl(T)(T x) @safe pure nothrow @nogc
 {
-    import std.math : copysign, floatTraits, isInfinity, PI_2, PI_4, poly, RealFormat, signbit;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : copysign, isInfinity, signbit;
+    import std.math.constants : PI_2, PI_4;
+    import std.math.algebraic : poly;
 
     // Coefficients for atan(x)
     enum realFormat = floatTraits!T.realFormat;
@@ -759,7 +834,9 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
 {
     static void testAtan(T)()
     {
-        import std.math : CommonDefaultFor, isClose, isIdentical, NaN, PI_2, PI_4;
+        import std.math.operations : CommonDefaultFor, isClose, NaN;
+        import std.math.traits : isIdentical;
+        import std.math.constants : PI_2, PI_4;
 
         // ±0
         const T zero = 0.0;
@@ -804,7 +881,9 @@ private T atanImpl(T)(T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan!T();
 
-    import std.math : isClose, sqrt, PI;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
+    import std.math.constants : PI;
     assert(isClose(atan(sqrt(3.0L)), PI / 3, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
@@ -857,7 +936,9 @@ float atan2(float y, float x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : isClose, PI, sqrt;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    import std.math.algebraic : sqrt;
 
     assert(atan2(1.0, sqrt(3.0)).isClose(PI / 6));
 }
@@ -887,7 +968,8 @@ private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
 
 private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
 {
-    import std.math : copysign, isInfinity, isNaN, PI, PI_2, PI_4, signbit;
+    import std.math.traits : copysign, isInfinity, isNaN, signbit;
+    import std.math.constants : PI, PI_2, PI_4;
 
     // Special cases.
     if (isNaN(x) || isNaN(y))
@@ -942,7 +1024,9 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
 {
     static void testAtan2(T)()
     {
-        import std.math : isClose, isIdentical, isNaN, PI, PI_2, PI_4;
+        import std.math.operations : isClose;
+        import std.math.traits : isIdentical, isNaN;
+        import std.math.constants : PI, PI_2, PI_4;
 
         // NaN
         const T nan = T.nan;
@@ -1012,7 +1096,9 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
     foreach (T; AliasSeq!(real, double, float))
         testAtan2!T();
 
-    import std.math : isClose, sqrt, PI;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
+    import std.math.constants : PI;
     assert(isClose(atan2(1.0L, sqrt(3.0L)), PI / 6, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
 
@@ -1026,7 +1112,7 @@ private T atan2Impl(T)(T y, T x) @safe pure nothrow @nogc
  */
 real cosh(real x) @safe pure nothrow @nogc
 {
-    import std.math : exp;
+    import std.math.exponential : exp;
 
     //  cosh = (exp(x)+exp(-x))/2.
     // The naive implementation works correctly.
@@ -1043,7 +1129,8 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 ///
 @safe unittest
 {
-    import std.math : E, isClose;
+    import std.math.constants : E;
+    import std.math.operations : isClose;
 
     assert(cosh(0.0) == 1.0);
     assert(cosh(1.0).isClose((E + 1.0 / E) / 2));
@@ -1051,7 +1138,8 @@ float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real) x); }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose, E;
+    import std.math.constants : E;
+    import std.math.operations : isClose;
 
     assert(isClose(cosh(1.0), (E + 1.0 / E) / 2, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -1076,7 +1164,9 @@ float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
 ///
 @safe unittest
 {
-    import std.math : E, isClose, isIdentical;
+    import std.math.constants : E;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical;
 
     enum sinh1 = (E - 1.0 / E) / 2;
     import std.meta : AliasSeq;
@@ -1089,7 +1179,10 @@ float sinh(float x) @safe pure nothrow @nogc { return _sinh(x); }
 
 private F _sinh(F)(F x)
 {
-    import std.math : copysign, exp, expm1, fabs, LN2;
+    import std.math.traits : copysign;
+    import std.math.exponential : exp, expm1;
+    import std.math.algebraic : fabs;
+    import std.math.constants : LN2;
 
     //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
@@ -1106,7 +1199,8 @@ private F _sinh(F)(F x)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose, E;
+    import std.math.constants : E;
+    import std.math.operations : isClose;
 
     assert(isClose(sinh(1.0L), real((E - 1.0 / E) / 2), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -1130,7 +1224,8 @@ float tanh(float x) @safe pure nothrow @nogc { return _tanh(x); }
 ///
 @safe unittest
 {
-    import std.math : isClose, isIdentical;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical;
 
     assert(isIdentical(tanh(0.0), 0.0));
     assert(tanh(1.0).isClose(sinh(1.0) / cosh(1.0)));
@@ -1138,7 +1233,10 @@ float tanh(float x) @safe pure nothrow @nogc { return _tanh(x); }
 
 private F _tanh(F)(F x)
 {
-    import std.math : copysign, expm1, fabs, LN2;
+    import std.math.traits : copysign;
+    import std.math.exponential : expm1;
+    import std.math.algebraic : fabs;
+    import std.math.constants : LN2;
 
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
     if (fabs(x) > F.mant_dig * F(LN2))
@@ -1152,7 +1250,7 @@ private F _tanh(F)(F x)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(tanh(1.0L), sinh(1.0L) / cosh(1.0L), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -1186,7 +1284,7 @@ float acosh(float x) @safe pure nothrow @nogc { return _acosh(x); }
 ///
 @safe @nogc nothrow unittest
 {
-    import std.math : isIdentical, isNaN;
+    import std.math.traits : isIdentical, isNaN;
 
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
@@ -1197,7 +1295,9 @@ float acosh(float x) @safe pure nothrow @nogc { return _acosh(x); }
 
 private F _acosh(F)(F x) @safe pure nothrow @nogc
 {
-    import std.math : LN2, log, sqrt;
+    import std.math.constants : LN2;
+    import std.math.exponential : log;
+    import std.math.algebraic : sqrt;
 
     if (x > 1/F.epsilon)
         return F(LN2) + log(x);
@@ -1207,7 +1307,7 @@ private F _acosh(F)(F x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(acosh(cosh(3.0L)), 3.0L, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -1239,7 +1339,7 @@ float asinh(float x) @safe pure nothrow @nogc { return _asinh(x); }
 ///
 @safe @nogc nothrow unittest
 {
-    import std.math : isIdentical, isNaN;
+    import std.math.traits : isIdentical, isNaN;
 
     assert(isIdentical(asinh(0.0), 0.0));
     assert(isIdentical(asinh(-0.0), -0.0));
@@ -1250,7 +1350,10 @@ float asinh(float x) @safe pure nothrow @nogc { return _asinh(x); }
 
 private F _asinh(F)(F x)
 {
-    import std.math : copysign, fabs, log, log1p, LN2, sqrt;
+    import std.math.traits : copysign;
+    import std.math.algebraic : fabs, sqrt;
+    import std.math.exponential : log, log1p;
+    import std.math.constants : LN2;
 
     return (fabs(x) > 1 / F.epsilon)
         // beyond this point, x*x + 1 == x*x
@@ -1261,7 +1364,7 @@ private F _asinh(F)(F x)
 
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(asinh(sinh(3.0L)), 3.0L, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }
@@ -1286,7 +1389,7 @@ private F _asinh(F)(F x)
  */
 real atanh(real x) @safe pure nothrow @nogc
 {
-    import std.math : log1p;
+    import std.math.exponential : log1p;
 
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
     return  0.5 * log1p( 2 * x / (1 - x) );
@@ -1301,7 +1404,7 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 ///
 @safe @nogc nothrow unittest
 {
-    import std.math : isIdentical, isNaN;
+    import std.math.traits : isIdentical, isNaN;
 
     assert(isIdentical(atanh(0.0), 0.0));
     assert(isIdentical(atanh(-0.0),-0.0));
@@ -1312,7 +1415,7 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(atanh(tanh(0.5L)), 0.5, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
 }

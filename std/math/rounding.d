@@ -83,7 +83,7 @@ real ceil(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        import std.math : isInfinity, isNaN;
+        import std.math.traits : isInfinity, isNaN;
 
         // Special cases.
         if (isNaN(x) || isInfinity(x))
@@ -100,7 +100,7 @@ real ceil(real x) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(ceil(+123.456L) == +124);
     assert(ceil(-123.456L) == -123);
@@ -117,7 +117,7 @@ real ceil(real x) @trusted pure nothrow @nogc
 /// ditto
 double ceil(double x) @trusted pure nothrow @nogc
 {
-    import std.math : isInfinity, isNaN;
+    import std.math.traits : isInfinity, isNaN;
 
     // Special cases.
     if (isNaN(x) || isInfinity(x))
@@ -132,7 +132,7 @@ double ceil(double x) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(ceil(+123.456) == +124);
     assert(ceil(-123.456) == -123);
@@ -149,7 +149,7 @@ double ceil(double x) @trusted pure nothrow @nogc
 /// ditto
 float ceil(float x) @trusted pure nothrow @nogc
 {
-    import std.math : isInfinity, isNaN;
+    import std.math.traits : isInfinity, isNaN;
 
     // Special cases.
     if (isNaN(x) || isInfinity(x))
@@ -164,7 +164,7 @@ float ceil(float x) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(ceil(+123.456f) == +124);
     assert(ceil(-123.456f) == -123);
@@ -226,7 +226,7 @@ real floor(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        import std.math : isInfinity, isNaN;
+        import std.math.traits : isInfinity, isNaN;
 
         // Special cases.
         if (isNaN(x) || isInfinity(x) || x == 0.0)
@@ -239,7 +239,7 @@ real floor(real x) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(floor(+123.456L) == +123);
     assert(floor(-123.456L) == -124);
@@ -258,7 +258,7 @@ real floor(real x) @trusted pure nothrow @nogc
 /// ditto
 double floor(double x) @trusted pure nothrow @nogc
 {
-    import std.math : isInfinity, isNaN;
+    import std.math.traits : isInfinity, isNaN;
 
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
@@ -269,7 +269,7 @@ double floor(double x) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(floor(+123.456) == +123);
     assert(floor(-123.456) == -124);
@@ -288,7 +288,7 @@ double floor(double x) @trusted pure nothrow @nogc
 /// ditto
 float floor(float x) @trusted pure nothrow @nogc
 {
-    import std.math : isInfinity, isNaN;
+    import std.math.traits : isInfinity, isNaN;
 
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
@@ -299,7 +299,7 @@ float floor(float x) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(floor(+123.456f) == +123);
     assert(floor(-123.456f) == -124);
@@ -331,7 +331,7 @@ float floor(float x) @trusted pure nothrow @nogc
 Unqual!F quantize(alias rfunc = rint, F)(const F val, const F unit)
 if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 {
-    import std.math : isInfinity;
+    import std.math.traits : isInfinity;
 
     typeof(return) ret = val;
     if (unit != 0)
@@ -346,7 +346,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : floor, isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(12345.6789L.quantize(0.01L), 12345.68L));
     assert(isClose(12345.6789L.quantize!floor(0.01L), 12345.67L));
@@ -356,7 +356,8 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, isNaN;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
 
     assert(isClose(12345.6789L.quantize(0), 12345.6789L));
     assert(12345.6789L.quantize(real.infinity).isNaN);
@@ -376,7 +377,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 Unqual!F quantize(real base, alias rfunc = rint, F, E)(const F val, const E exp)
 if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F && isIntegral!E)
 {
-    import std.math : pow;
+    import std.math.exponential : pow;
 
     // TODO: Compile-time optimization for power-of-two bases?
     return quantize!rfunc(val, pow(cast(F) base, exp));
@@ -386,7 +387,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F && isIntegral!E)
 Unqual!F quantize(real base, long exp = 1, alias rfunc = rint, F)(const F val)
 if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 {
-    import std.math : pow;
+    import std.math.exponential : pow;
 
     enum unit = cast(F) pow(base, exp);
     return quantize!rfunc(val, unit);
@@ -395,7 +396,7 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : floor, isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(12345.6789L.quantize!10(-2), 12345.68L));
     assert(isClose(12345.6789L.quantize!(10, -2), 12345.68L));
@@ -408,7 +409,8 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : floor, log10, pow, isClose;
+    import std.math.exponential : log10, pow;
+    import std.math.operations : isClose;
     import std.meta : AliasSeq;
 
     static foreach (F; AliasSeq!(real, double, float))
@@ -443,7 +445,7 @@ real nearbyint(real x) @safe pure nothrow @nogc
 ///
 @safe pure unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(nearbyint(0.4) == 0);
     assert(nearbyint(0.5) == 0);
@@ -486,7 +488,7 @@ float rint(float x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     version (IeeeFlagsSupport) resetIeeeFlags();
     assert(rint(0.4) == 0);
@@ -731,7 +733,7 @@ auto round(real x) @trusted nothrow @nogc
 {
     version (CRuntime_Microsoft)
     {
-        import std.math : FloatingPointControl;
+        import std.math.hardware : FloatingPointControl;
 
         auto old = FloatingPointControl.getControlState();
         FloatingPointControl.setControlState(

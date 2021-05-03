@@ -153,6 +153,9 @@ if (is(Unqual!Char == Char))
         /// The format specifier contained a `'#'`.
         bool flHash;
 
+        /// The format specifier contained a `'='`.
+        bool flEqual;
+
         /// The format specifier contained a `','`.
         bool flSeparator;
 
@@ -170,8 +173,9 @@ if (is(Unqual!Char == Char))
                         bool, "flSpace", 1,
                         bool, "flPlus", 1,
                         bool, "flHash", 1,
+                        bool, "flEqual", 1,
                         bool, "flSeparator", 1,
-                        ubyte, "", 2));
+                        ubyte, "", 1));
             ubyte allFlags;
         }
     }
@@ -273,7 +277,7 @@ if (is(Unqual!Char == Char))
 
     private void fillUp() scope
     {
-        import std.format : arrayPtrDiff, enforceFmt, FormatException;
+        import std.format : enforceFmt, FormatException;
 
         // Reset content
         if (__ctfe)
@@ -282,6 +286,7 @@ if (is(Unqual!Char == Char))
             flZero = false;
             flSpace = false;
             flPlus = false;
+            flEqual = false;
             flHash = false;
             flSeparator = false;
         }
@@ -361,6 +366,7 @@ if (is(Unqual!Char == Char))
                 return;
             case '-': flDash = true; ++i; break;
             case '+': flPlus = true; ++i; break;
+            case '=': flEqual = true; ++i; break;
             case '#': flHash = true; ++i; break;
             case '0': flZero = true; ++i; break;
             case ' ': flSpace = true; ++i; break;
@@ -386,7 +392,7 @@ if (is(Unqual!Char == Char))
                 const widthOrArgIndex = parse!uint(tmp);
                 enforceFmt(tmp.length,
                     text("Incorrect format specifier %", trailing[i .. $]));
-                i = arrayPtrDiff(tmp, trailing);
+                i = trailing.length - tmp.length;
                 if (tmp.startsWith('$'))
                 {
                     // index of the form %n$
@@ -406,7 +412,7 @@ if (is(Unqual!Char == Char))
                     {
                         indexEnd = parse!(typeof(indexEnd))(tmp);
                     }
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                     enforceFmt(trailing[i++] == '$',
                         "$ expected");
                 }
@@ -431,7 +437,7 @@ if (is(Unqual!Char == Char))
                 {
                     auto tmp = trailing[i .. $];
                     separators = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else
                 {
@@ -472,13 +478,13 @@ if (is(Unqual!Char == Char))
                     precision = 0;
                     auto tmp = trailing[i .. $];
                     parse!int(tmp); // skip digits
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else if (isDigit(trailing[i]))
                 {
                     auto tmp = trailing[i .. $];
                     precision = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
+                    i = trailing.length - tmp.length;
                 }
                 else
                 {
@@ -511,6 +517,7 @@ if (is(Unqual!Char == Char))
             flSpace = false;
             flPlus = false;
             flHash = false;
+            flEqual = false;
             flSeparator = false;
         }
         else
@@ -583,8 +590,8 @@ if (is(Unqual!Char == Char))
         if (flZero) put(w, '0');
         if (flSpace) put(w, ' ');
         if (flPlus) put(w, '+');
+        if (flEqual) put(w, '=');
         if (flHash) put(w, '#');
-        if (flSeparator) put(w, ',');
         if (width != 0)
             formatValue(w, width, f);
         if (precision != FormatSpec!Char.UNSPECIFIED)
@@ -592,35 +599,10 @@ if (is(Unqual!Char == Char))
             put(w, '.');
             formatValue(w, precision, f);
         }
+        if (flSeparator) put(w, ',');
+        if (separators != FormatSpec!Char.UNSPECIFIED)
+            formatValue(w, separators, f);
         put(w, spec);
-        return w.data;
-    }
-
-    private const(Char)[] headUpToNextSpec()
-    {
-        import std.array : appender;
-
-        auto w = appender!(typeof(return))();
-        auto tr = trailing;
-
-        while (tr.length)
-        {
-            if (tr[0] == '%')
-            {
-                if (tr.length > 1 && tr[1] == '%')
-                {
-                    tr = tr[2 .. $];
-                    w.put('%');
-                }
-                else
-                    break;
-            }
-            else
-            {
-                w.put(tr.front);
-                tr.popFront();
-            }
-        }
         return w.data;
     }
 
@@ -675,6 +657,8 @@ if (is(Unqual!Char == Char))
         formatValue(writer, flSpace, s);
         put(writer, "\nflPlus = ");
         formatValue(writer, flPlus, s);
+        put(writer, "\nflEqual = ");
+        formatValue(writer, flEqual, s);
         put(writer, "\nflHash = ");
         formatValue(writer, flHash, s);
         put(writer, "\nflSeparator = ");
@@ -823,6 +807,7 @@ if (is(Unqual!Char == Char))
         "\nflZero = false" ~
         "\nflSpace = false" ~
         "\nflPlus = false" ~
+        "\nflEqual = false" ~
         "\nflHash = false" ~
         "\nflSeparator = false" ~
         "\nnested = " ~

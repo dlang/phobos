@@ -722,7 +722,7 @@ Returns:
 bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
 if (isNumeric!X)
 {
-    import std.math : frexp;
+    import std.math.exponential : frexp;
 
     static if (isFloatingPoint!X)
     {
@@ -748,7 +748,7 @@ if (isNumeric!X)
 ///
 @safe unittest
 {
-    import std.math : pow;
+    import std.math.exponential : pow;
 
     assert( isPowerOf2(1.0L));
     assert( isPowerOf2(2.0L));
@@ -779,7 +779,7 @@ if (isNumeric!X)
 
 @safe unittest
 {
-    import std.math : pow;
+    import std.math.exponential : pow;
     import std.meta : AliasSeq;
 
     enum smallP2 = pow(2.0L, -62);

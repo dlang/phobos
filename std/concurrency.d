@@ -387,7 +387,7 @@ public:
      * that a Tid executed in the future will have the same toString() output
      * as another Tid that has already terminated.
      */
-    void toString(scope void delegate(const(char)[]) sink)
+    void toString(scope void delegate(const(char)[]) sink) const
     {
         import std.format.write : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
@@ -405,6 +405,15 @@ public:
     assert(text(tid2) != "Tid(0)");
     auto tid3 = tid2;
     assert(text(tid2) == text(tid3));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21512
+@system unittest
+{
+    import std.format : format;
+
+    const(Tid) b = spawn(() {});
+    assert(format!"%s"(b)[0 .. 4] == "Tid(");
 }
 
 /**

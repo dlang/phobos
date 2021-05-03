@@ -63,7 +63,7 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
 /// ditto
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isIdentical, isNaN;
+    import std.math.traits : isIdentical, isNaN;
 
     assert(isIdentical(abs(-0.0L), 0.0L));
     assert(isNaN(abs(real.nan)));
@@ -147,7 +147,7 @@ float fabs(float f) @trusted pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : isIdentical;
+    import std.math.traits : isIdentical;
 
     assert(isIdentical(fabs(0.0f), 0.0f));
     assert(isIdentical(fabs(-0.0f), 0.0f));
@@ -166,6 +166,18 @@ float fabs(float f) @trusted pure nothrow @nogc
 {
     real function(real) pfabs = &fabs;
     assert(pfabs != null);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    float f = fabs(-2.0f);
+    assert(f == 2);
+
+    double d = fabs(-2.0);
+    assert(d == 2);
+
+    real r = fabs(-2.0L);
+    assert(r == 2);
 }
 
 /***************************************
@@ -192,7 +204,8 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : feqrel, isNaN;
+    import std.math.operations : feqrel;
+    import std.math.traits : isNaN;
 
     assert(sqrt(2.0).feqrel(1.4142) > 16);
     assert(sqrt(9.0).feqrel(3.0) > 16);
@@ -217,6 +230,18 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
     enum ZX82 = sqrt(7.0L);
 }
 
+@safe pure nothrow @nogc unittest
+{
+    float f = sqrt(2.0f);
+    assert(fabs(f * f - 2.0f) < .00001);
+
+    double d = sqrt(2.0);
+    assert(fabs(d * d - 2.0) < .00001);
+
+    real r = sqrt(2.0L);
+    assert(fabs(r * r - 2.0) < .00001);
+}
+
 /***************
  * Calculates the cube root of x.
  *
@@ -231,7 +256,8 @@ real cbrt(real x) @trusted nothrow @nogc
 {
     version (CRuntime_Microsoft)
     {
-        import std.math : copysign, exp2;
+        import std.math.traits : copysign;
+        import std.math.exponential : exp2;
 
         version (INLINE_YL2X)
             return copysign(exp2(core.math.yl2x(fabs(x), 1.0L/3.0L)), x);
@@ -245,7 +271,7 @@ real cbrt(real x) @trusted nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : feqrel;
+    import std.math.operations : feqrel;
 
     assert(cbrt(1.0).feqrel(1.0) > 16);
     assert(cbrt(27.0).feqrel(3.0) > 16);
@@ -327,7 +353,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : feqrel;
+    import std.math.operations : feqrel;
 
     assert(hypot(1.0, 1.0).feqrel(1.4142) > 16);
     assert(hypot(3.0, 4.0).feqrel(5.0) > 16);
@@ -337,7 +363,8 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.math : feqrel, isIdentical;
+    import std.math.operations : feqrel;
+    import std.math.traits : isIdentical;
 
     static real[3][] vals =     // x,y,hypot
         [
@@ -391,7 +418,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 T hypot(T)(const T x, const T y, const T z) @safe pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : fmax;
+    import std.math.operations : fmax;
     const absx = fabs(x);
     const absy = fabs(y);
     const absz = fabs(z);
@@ -409,7 +436,7 @@ if (isFloatingPoint!T)
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(hypot(1.0, 2.0, 2.0), 3.0));
     assert(isClose(hypot(2.0, 3.0, 6.0), 7.0));
@@ -419,7 +446,8 @@ if (isFloatingPoint!T)
 @safe unittest
 {
     import std.meta : AliasSeq;
-    import std.math : isIdentical, isClose;
+    import std.math.traits : isIdentical;
+    import std.math.operations : isClose;
     static foreach (T; AliasSeq!(float, double, real))
     {{
         static T[4][] vals = [
@@ -801,7 +829,7 @@ if (isFloatingPoint!T)
 
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
     import std.meta : AliasSeq;
 
     static foreach (T; AliasSeq!(float, double, real))
@@ -933,7 +961,7 @@ if (isFloatingPoint!T)
 
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
     import std.meta : AliasSeq;
 
     static foreach (T; AliasSeq!(float, double, real))
@@ -981,7 +1009,8 @@ private T powIntegralImpl(PowType type, T)(T val)
 
 private T powFloatingPointImpl(PowType type, T)(T x)
 {
-    import std.math : copysign, frexp, isFinite, ldexp;
+    import std.math.traits : copysign, isFinite;
+    import std.math.exponential : frexp, ldexp;
 
     if (!x.isFinite)
         return x;

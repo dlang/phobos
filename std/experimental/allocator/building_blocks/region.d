@@ -188,7 +188,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
     {
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
         assert(a.isPowerOf2);
 
         const rounded = goodAllocSize(n);
@@ -1184,7 +1184,7 @@ shared struct SharedRegion(ParentAllocator = NullAllocator,
     void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
     {
         import core.atomic : cas, atomicLoad;
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
 
         assert(a.isPowerOf2);
         if (n == 0) return null;

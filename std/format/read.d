@@ -96,11 +96,11 @@ module std.format.read;
     assert(result == 373 /* little endian */ || result == 29953 /* big endian */ );
 }
 
-// Floating point numbers
+/// Floating point numbers
 @safe pure unittest
 {
     import std.format.spec : singleSpec;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // natural notation
     auto str = "123.456";
@@ -363,7 +363,8 @@ if (isSomeString!(typeof(fmt)))
 
 @safe unittest
 {
-    import std.math : isClose, isNaN;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
     import std.range.primitives : empty;
 
     string s = " 1.2 3.4 ";
@@ -402,7 +403,8 @@ if (isSomeString!(typeof(fmt)))
 // for backwards compatibility
 @system pure unittest
 {
-    import std.math : isClose, isNaN;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
     import std.range.primitives : empty;
 
     string s = " 1.2 3.4 ";
@@ -412,6 +414,16 @@ if (isSomeString!(typeof(fmt)))
     assert(isClose(x, 1.2));
     assert(isClose(y, 3.4));
     assert(isNaN(z));
+}
+
+@system unittest
+{
+    string s = "hello!124:34.5";
+    string a;
+    int b;
+    double c;
+    formattedRead(s, "%s!%s:%s", &a, &b, &c);
+    assert(a == "hello" && b == 124 && c == 34.5);
 }
 
 @system pure unittest

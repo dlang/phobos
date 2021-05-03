@@ -737,7 +737,7 @@ public:
 
     @safe unittest
     {
-        import std.math : nextDown, nextUp;
+        import std.math.operations : nextDown, nextUp;
 
         const x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
         BigInt x1 = x + 1;
@@ -980,7 +980,8 @@ public:
                 uint resultBits = (uint(isNegative) << 31) | // sign bit
                     ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
                     cast(uint) ((sansExponent << 1) >>> (64 - 23)); // mantissa.
-                return *cast(float*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(float*) &resultBits)();
             }
             else static if (T.mant_dig == double.mant_dig)
             {
@@ -989,7 +990,8 @@ public:
                 ulong resultBits = (ulong(isNegative) << 63) | // sign bit
                     ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
                     ((sansExponent << 1) >>> (64 - 52)); // mantissa.
-                return *cast(double*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(double*) &resultBits)();
             }
             else
             {
@@ -1077,7 +1079,8 @@ public:
     int opCmp(T)(const T y) nothrow @nogc @safe const if (isFloatingPoint!T)
     {
         import core.bitop : bsr;
-        import std.math : cmp, isFinite;
+        import std.math.operations : cmp;
+        import std.math.traits : isFinite;
 
         const asFloat = toFloat!(T, "truncate");
         if (asFloat != y)
@@ -1926,7 +1929,7 @@ unittest
 
 @safe unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
     auto r = abs(BigInt(-1000)); // https://issues.dlang.org/show_bug.cgi?id=6486
     assert(r == 1000);
 

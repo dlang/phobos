@@ -821,43 +821,64 @@ public:
     @property inout(Captures!R) captures() inout { return _captures; }
 }
 
+private auto matchOnceImpl(RegEx, R)(R input, const auto ref RegEx prog) @trusted
+{
+    alias Char = BasicElementOf!R;
+    static struct Key
+    {
+        immutable(Char)[] pattern;
+        uint flags;
+    }
+    static Key cacheKey = Key("", -1);
+    static Matcher!Char cache;
+    auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
+    auto key = Key(prog.pattern, prog.flags);
+    Matcher!Char engine;
+    if (cacheKey == key)
+    {
+        engine = cache;
+        engine.rearm(input);
+    }
+    else
+    {
+        engine = factory.create(prog, input);
+        if (cache) factory.decRef(cache); // destroy cached engine *after* building a new one
+        cache = engine;
+        cacheKey = key;
+    }
+    auto captures = Captures!R(input, prog.ngroup, prog.dict);
+    captures.matches.mutate((slice) pure { captures._nMatch = engine.match(slice); });
+    return captures;
+}
+
+// Used to generate a pure wrapper for matchOnceImpl. Based on the example in the
+// std.traits.SetFunctionAttributes documentation.
+private auto assumePureFunction(T)(T t)
+{
+    if (isFunctionPointer!T)
+    {
+        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+        return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
+    }
+}
+
+// matchOnce is constructed as a safe, pure wrapper over matchOnceImpl. It can be
+// faked as pure because the static mutable variables are used to cache the key and
+// character matcher. The technique used avoids delegates and GC.
 private @safe auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog) pure
 {
-    auto matchOnceImp = () @trusted {
-        alias Char = BasicElementOf!R;
-        static struct Key
-        {
-            immutable(Char)[] pattern;
-            uint flags;
-        }
-        static Key cacheKey = Key("", -1);
-        static Matcher!Char cache;
-        auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
-        auto key = Key(prog.pattern, prog.flags);
-        Matcher!Char engine;
-        if (cacheKey == key)
-        {
-            engine = cache;
-            engine.rearm(input);
-        }
-        else
-        {
-            engine = factory.create(prog, input);
-            if (cache) factory.decRef(cache); // destroy cached engine *after* building a new one
-            cache = engine;
-            cacheKey = key;
-        }
-        auto captures = Captures!R(input, prog.ngroup, prog.dict);
-        captures.matches.mutate((slice) pure { captures._nMatch = engine.match(slice); });
-        return captures;
-    };
+    static auto impl(R input, const ref RegEx prog)
+    {
+        return matchOnceImpl(input, prog);
+    }
 
-    // this should be faked as pure because the static mutable variables are
-    // used to cache the key and the character matcher
-    alias T = typeof(matchOnceImp);
-        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
-        return (() @trusted =>
-            (cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) matchOnceImp))()();
+    static @trusted auto pureImpl(R input, const ref RegEx prog)
+    {
+        auto p = assumePureFunction(&impl);
+        return p(input, prog);
+    }
+
+    return pureImpl(input, prog);
 }
 
 private auto matchMany(RegEx, R)(R input, auto ref RegEx re) @safe

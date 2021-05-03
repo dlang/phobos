@@ -75,7 +75,7 @@ module std.algorithm.iteration;
 import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 
 private template aggregate(fun...)
 if (fun.length >= 1)
@@ -1343,7 +1343,7 @@ if (is(typeof(unaryFun!predicate)))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range;
 
     int[] arr = [ 1, 2, 3, 4, 5 ];
@@ -2819,7 +2819,7 @@ nothrow pure @system unittest
 nothrow @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     struct SomeRange
     {
@@ -2866,7 +2866,7 @@ nothrow @system unittest
 nothrow pure @system unittest
 {
     // Grouping by maximum adjacent difference:
-    import std.math : abs;
+    import std.math.algebraic : abs;
     import std.algorithm.comparison : equal;
     auto r3 = [1, 3, 2, 5, 4, 9, 10].splitWhen!((a, b) => abs(a-b) >= 3);
     assert(r3.equal!equal([
@@ -4020,7 +4020,7 @@ remarkable power and flexibility.
 @safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range;
 
     int[] arr = [ 1, 2, 3, 4, 5 ];
@@ -4075,7 +4075,8 @@ The number of seeds must be correspondingly increased.
 @safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.math : isClose, sqrt;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
     import std.typecons : tuple, Tuple;
 
     double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
@@ -4585,7 +4586,7 @@ if (fun.length >= 1)
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.range : chain;
 
     int[] arr = [1, 2, 3, 4, 5];
@@ -4641,7 +4642,7 @@ The number of seeds must be correspondingly increased.
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : map;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     double[] a = [3.0, 4, 7, 11, 3, 2, 5];
@@ -4696,7 +4697,7 @@ The number of seeds must be correspondingly increased.
 {
     import std.algorithm.comparison : max, min;
     import std.array : array;
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     const float a = 0.0;
@@ -4718,7 +4719,7 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
     import std.typecons : tuple;
 
     enum foo = "a + 0.5 * b";
@@ -4824,6 +4825,7 @@ Params:
     s = The element (or range) to be treated as the separator
         between range segments to be split.
     isTerminator = The predicate for deciding where to split the range when no separator is passed
+    keepSeparators = The flag for deciding if the separators are kept
 
 Constraints:
     The predicate `pred` needs to accept an element of `r` and the
@@ -4836,6 +4838,9 @@ Returns:
     the returned range will be likewise.
     When a range is used a separator, bidirectionality isn't possible.
 
+    If keepSeparators is equal to Yes.keepSeparators the output will also contain the
+    separators.
+
     If an empty range is given, the result is an empty range. If a range with
     one separator is given, the result is a range with two empty elements.
 
@@ -4844,7 +4849,10 @@ See_Also:
  $(REF _split, std,array) for a version that splits eagerly and
  $(LREF splitWhen), which compares adjacent elements instead of element against separator.
 */
-auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+auto splitter(alias pred = "a == b",
+              Flag!"keepSeparators" keepSeparators = No.keepSeparators,
+              Range,
+              Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
@@ -4868,6 +4876,11 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         else
         {
             enum _separatorLength = 1;
+        }
+
+        static if (keepSeparators)
+        {
+            bool _wasSeparator = true;
         }
 
         static if (isBidirectionalRange!Range)
@@ -4911,10 +4924,27 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         @property Range front()
         {
             assert(!empty, "Attempting to fetch the front of an empty splitter.");
-            if (_frontLength == _unComputed)
+            static if (keepSeparators)
             {
-                auto r = _input.find!pred(_separator);
-                _frontLength = _input.length - r.length;
+                if (!_wasSeparator)
+                {
+                    _frontLength = _separatorLength;
+                    _wasSeparator = true;
+                }
+                else if (_frontLength == _unComputed)
+                {
+                    auto r = _input.find!pred(_separator);
+                    _frontLength = _input.length - r.length;
+                    _wasSeparator = false;
+                }
+            }
+            else
+            {
+                if (_frontLength == _unComputed)
+                {
+                    auto r = _input.find!pred(_separator);
+                    _frontLength = _input.length - r.length;
+                }
             }
             return _input[0 .. _frontLength];
         }
@@ -4928,18 +4958,35 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             }
             assert(_frontLength <= _input.length, "The front position must"
                     ~ " not exceed the input.length");
-            if (_frontLength == _input.length)
+            static if (keepSeparators)
             {
-                // no more input and need to fetch => done
-                _frontLength = _atEnd;
+                if (_frontLength == _input.length && !_wasSeparator)
+                {
+                    _frontLength = _atEnd;
 
-                // Probably don't need this, but just for consistency:
-                _backLength = _atEnd;
+                    _backLength = _atEnd;
+                }
+                else
+                {
+                    _input = _input[_frontLength .. _input.length];
+                    _frontLength = _unComputed;
+                }
             }
             else
             {
-                _input = _input[_frontLength + _separatorLength .. _input.length];
-                _frontLength = _unComputed;
+                if (_frontLength == _input.length)
+                {
+                    // no more input and need to fetch => done
+                    _frontLength = _atEnd;
+
+                    // Probably don't need this, but just for consistency:
+                    _backLength = _atEnd;
+                }
+                else
+                {
+                    _input = _input[_frontLength + _separatorLength .. _input.length];
+                    _frontLength = _unComputed;
+                }
             }
         }
 
@@ -4958,16 +5005,40 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             @property Range back()
             {
                 assert(!empty, "Attempting to fetch the back of an empty splitter.");
-                if (_backLength == _unComputed)
+                static if (keepSeparators)
                 {
-                    immutable lastIndex = lastIndexOf(_input, _separator);
-                    if (lastIndex == -1)
+                    if (!_wasSeparator)
                     {
-                        _backLength = _input.length;
+                        _backLength = _separatorLength;
+                        _wasSeparator = true;
                     }
-                    else
+                    else if (_backLength == _unComputed)
                     {
-                        _backLength = _input.length - lastIndex - 1;
+                        immutable lastIndex = lastIndexOf(_input, _separator);
+                        if (lastIndex == -1)
+                        {
+                            _backLength = _input.length;
+                        }
+                        else
+                        {
+                            _backLength = _input.length - lastIndex - 1;
+                        }
+                        _wasSeparator = false;
+                    }
+                }
+                else
+                {
+                    if (_backLength == _unComputed)
+                    {
+                        immutable lastIndex = lastIndexOf(_input, _separator);
+                        if (lastIndex == -1)
+                        {
+                            _backLength = _input.length;
+                        }
+                        else
+                        {
+                            _backLength = _input.length - lastIndex - 1;
+                        }
                     }
                 }
                 return _input[_input.length - _backLength .. _input.length];
@@ -4983,16 +5054,32 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
                 }
                 assert(_backLength <= _input.length, "The end index must not"
                         ~ " exceed the length of the input");
-                if (_backLength == _input.length)
+                static if (keepSeparators)
                 {
-                    // no more input and need to fetch => done
-                    _frontLength = _atEnd;
-                    _backLength = _atEnd;
+                    if (_backLength == _input.length && !_wasSeparator)
+                    {
+                        _frontLength = _atEnd;
+                        _backLength = _atEnd;
+                    }
+                    else
+                    {
+                        _input = _input[0 .. _input.length - _backLength];
+                        _backLength = _unComputed;
+                    }
                 }
                 else
                 {
-                    _input = _input[0 .. _input.length - _backLength - _separatorLength];
-                    _backLength = _unComputed;
+                    if (_backLength == _input.length)
+                    {
+                        // no more input and need to fetch => done
+                        _frontLength = _atEnd;
+                        _backLength = _atEnd;
+                    }
+                    else
+                    {
+                        _input = _input[0 .. _input.length - _backLength - _separatorLength];
+                        _backLength = _unComputed;
+                    }
                 }
             }
         }
@@ -5013,6 +5100,20 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(a.splitter(0).equal(w));
 }
 
+/// Basic splitting with characters and numbers and keeping sentinels.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+
+    assert("a|bc|def".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "a", "|", "bc", "|", "def" ]));
+
+    int[] a = [1, 0, 2, 3, 0, 4, 5, 6];
+    int[][] w = [ [1], [0], [2, 3], [0], [4, 5, 6] ];
+    assert(a.splitter!("a == b", Yes.keepSeparators)(0).equal(w));
+}
+
 /// Adjacent separators.
 @safe unittest
 {
@@ -5029,6 +5130,27 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(a.splitter(0).equal(w));
 }
 
+/// Adjacent separators and keeping sentinels.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+
+    assert("|ab|".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "", "|", "ab", "|", "" ]));
+    assert("ab".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "ab" ]));
+
+    assert("a|b||c".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "a", "|", "b", "|", "", "|", "c" ]));
+    assert("hello  world".splitter!("a == b", Yes.keepSeparators)(' ')
+        .equal([ "hello", " ", "", " ", "world" ]));
+
+    auto a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    auto w = [ [1, 2], [0], [], [0], [3], [0], [4, 5], [0], [] ];
+    assert(a.splitter!("a == b", Yes.keepSeparators)(0).equal(w));
+}
+
 /// Empty and separator-only ranges.
 @safe unittest
 {
@@ -5038,6 +5160,20 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert("".splitter('|').empty);
     assert("|".splitter('|').equal([ "", "" ]));
     assert("||".splitter('|').equal([ "", "", "" ]));
+}
+
+/// Empty and separator-only ranges and keeping sentinels.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+    import std.range : empty;
+
+    assert("".splitter!("a == b", Yes.keepSeparators)('|').empty);
+    assert("|".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "", "|", "" ]));
+    assert("||".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "", "|", "", "|", "" ]));
 }
 
 /// Use a range for splitting
@@ -5060,6 +5196,32 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(a.splitter([0, 0]).equal([ [], [1] ]));
 }
 
+/// Use a range for splitting
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+
+    assert("a=>bc=>def".splitter!("a == b", Yes.keepSeparators)("=>")
+        .equal([ "a", "=>", "bc", "=>", "def" ]));
+    assert("a|b||c".splitter!("a == b", Yes.keepSeparators)("||")
+        .equal([ "a|b", "||", "c" ]));
+    assert("hello  world".splitter!("a == b", Yes.keepSeparators)("  ")
+        .equal([ "hello", "  ",  "world" ]));
+
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [0, 0], [3, 0, 4, 5, 0] ];
+    assert(a.splitter!("a == b", Yes.keepSeparators)([0, 0]).equal(w));
+
+    a = [ 0, 0 ];
+    assert(a.splitter!("a == b", Yes.keepSeparators)([0, 0])
+        .equal([ (int[]).init, [0, 0], (int[]).init ]));
+
+    a = [ 0, 0, 1 ];
+    assert(a.splitter!("a == b", Yes.keepSeparators)([0, 0])
+        .equal([ [], [0, 0], [1] ]));
+}
+
 /// Custom predicate functions.
 @safe unittest
 {
@@ -5071,6 +5233,21 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
     auto w = [ [0], [1], [2] ];
     assert(w.splitter!"a.front == b"(1).equal([ [[0]], [[2]] ]));
+}
+
+/// Custom predicate functions.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+    import std.ascii : toLower;
+
+    assert("abXcdxef".splitter!("a.toLower == b", Yes.keepSeparators)('x')
+        .equal([ "ab", "X", "cd", "x", "ef" ]));
+
+    auto w = [ [0], [1], [2] ];
+    assert(w.splitter!("a.front == b", Yes.keepSeparators)(1)
+        .equal([ [[0]], [[1]], [[2]] ]));
 }
 
 /// Use splitter without a separator
@@ -5105,12 +5282,34 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert("ab".splitter('|').equal([ "ab" ]));
 }
 
+/// Leading separators, trailing separators, or no separators.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+
+    assert("|ab|".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "", "|", "ab", "|", "" ]));
+    assert("ab".splitter!("a == b", Yes.keepSeparators)('|')
+        .equal([ "ab" ]));
+}
+
 /// Splitter returns bidirectional ranges if the delimiter is a single element
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
     assert("a|bc|def".splitter('|').retro.equal([ "def", "bc", "a" ]));
+}
+
+/// Splitter returns bidirectional ranges if the delimiter is a single element
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
+    import std.range : retro;
+    assert("a|bc|def".splitter!("a == b", Yes.keepSeparators)('|')
+        .retro.equal([ "def", "|", "bc", "|", "a" ]));
 }
 
 /// Splitting by word lazily
@@ -5221,7 +5420,10 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 }
 
 /// ditto
-auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+auto splitter(alias pred = "a == b",
+              Flag!"keepSeparators" keepSeparators = No.keepSeparators,
+              Range,
+              Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && (hasSlicing!Range || isNarrowString!Range)
         && isForwardRange!Separator
@@ -5238,15 +5440,38 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         // _frontLength == size_t.max means empty
         size_t _frontLength = size_t.max;
 
+        static if (keepSeparators)
+        {
+            bool _wasSeparator = true;
+        }
+
         @property auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
             if (_frontLength != _frontLength.max) return;
-            assert(!_input.empty, "The input must not be empty");
-            // compute front length
-            _frontLength = (_separator.empty) ? 1 :
+            static if (keepSeparators)
+            {
+                assert(!_input.empty || _wasSeparator, "The input must not be empty");
+                if (_wasSeparator)
+                {
+                    _frontLength = _input.length -
+                        find!pred(_input, _separator).length;
+                    _wasSeparator = false;
+                }
+                else
+                {
+                    _frontLength = separatorLength();
+                    _wasSeparator = true;
+                }
+            }
+            else
+            {
+                assert(!_input.empty, "The input must not be empty");
+                // compute front length
+                _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
+            }
         }
 
     public:
@@ -5271,7 +5496,14 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             @property bool empty()
             {
-                return _frontLength == size_t.max && _input.empty;
+                static if (keepSeparators)
+                {
+                    return _frontLength == size_t.max && _input.empty && !_wasSeparator;
+                }
+                else
+                {
+                    return _frontLength == size_t.max && _input.empty;
+                }
             }
         }
 
@@ -5279,24 +5511,32 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             assert(!empty, "Attempting to popFront an empty splitter.");
             ensureFrontLength();
-            if (_frontLength == _input.length)
+
+            static if (keepSeparators)
             {
-                // done, there's no separator in sight
-                _input = _input[_frontLength .. _frontLength];
-                _frontLength = _frontLength.max;
-                return;
+                _input = _input[_frontLength .. _input.length];
             }
-            if (_frontLength + separatorLength == _input.length)
+            else
             {
-                // Special case: popping the first-to-last item; there is
-                // an empty item right after this.
-                _input = _input[_input.length .. _input.length];
-                _frontLength = 0;
-                return;
+                if (_frontLength == _input.length)
+                {
+                    // done, there's no separator in sight
+                    _input = _input[_frontLength .. _frontLength];
+                    _frontLength = _frontLength.max;
+                    return;
+                }
+                if (_frontLength + separatorLength == _input.length)
+                {
+                    // Special case: popping the first-to-last item; there is
+                    // an empty item right after this.
+                    _input = _input[_input.length .. _input.length];
+                    _frontLength = 0;
+                    return;
+                }
+                // Normal case, pop one item and the separator, get ready for
+                // reading the next item
+                _input = _input[_frontLength + separatorLength .. _input.length];
             }
-            // Normal case, pop one item and the separator, get ready for
-            // reading the next item
-            _input = _input[_frontLength + separatorLength .. _input.length];
             // mark _frontLength as uninitialized
             _frontLength = _frontLength.max;
         }
@@ -6717,7 +6957,7 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     assert(sum([1F, 2, 3, 4]) == 10);
 
     //Force pair-wise floating point sumation on large integers
-    import std.math : isClose;
+    import std.math.operations : isClose;
     assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
                .isClose((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
@@ -6810,7 +7050,7 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
-    import std.math : isPowerOf2;
+    import std.math.traits : isPowerOf2;
     static assert(isPowerOf2(N), "N must be a power of 2");
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
@@ -6997,7 +7237,8 @@ if (isInputRange!R &&
 ///
 @safe @nogc pure nothrow unittest
 {
-    import std.math : isClose, isNaN;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
 
     static immutable arr1 = [1, 2, 3];
     static immutable arr2 = [1.5, 2.5, 12.5];
@@ -7011,7 +7252,7 @@ if (isInputRange!R &&
 @safe pure nothrow unittest
 {
     import std.internal.test.dummyrange : ReferenceInputRange;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto r1 = new ReferenceInputRange!int([1, 2, 3]);
     assert(r1.mean.isClose(2));
@@ -7025,7 +7266,7 @@ if (isInputRange!R &&
 {
     import std.bigint : BigInt;
     import std.internal.test.dummyrange : ReferenceInputRange;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")];
     auto bigint_arr2 = new ReferenceInputRange!BigInt([

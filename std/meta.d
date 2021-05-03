@@ -249,19 +249,21 @@ if (!isAggregateType!T || is(Unqual!T == T))
 }
 
 /**
- * Returns the index of the first occurrence of T in the
- * sequence TList.
- * If not found, -1 is returned.
+ * Returns the index of the first occurrence of `args[0]` in the
+ * sequence `args[1 .. $]`. `args` may be types or compile-time values.
+ * If not found, `-1` is returned.
  */
-template staticIndexOf(T, TList...)
+template staticIndexOf(args...)
+if (args.length >= 1)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList);
-}
-
-/// Ditto
-template staticIndexOf(alias T, TList...)
-{
-    enum staticIndexOf = genericIndexOf!(T, TList);
+    enum staticIndexOf =
+    {
+        static foreach (idx, arg; args[1 .. $])
+            static if (isSame!(args[0], arg))
+                // `if (__ctfe)` is redundant here but avoids the "Unreachable code" warning.
+                if (__ctfe) return idx;
+        return -1;
+    }();
 }
 
 ///
@@ -274,24 +276,6 @@ template staticIndexOf(alias T, TList...)
         writefln("The index of long is %s",
                  staticIndexOf!(long, AliasSeq!(int, long, double)));
         // prints: The index of long is 1
-    }
-}
-
-// [internal]
-private template genericIndexOf(args...)
-if (args.length >= 1)
-{
-    static foreach (idx, arg; args[1 .. $])
-    {
-        static if (is(typeof(genericIndexOf) == void) && // not yet defined
-                   isSame!(args[0], arg))
-        {
-            enum genericIndexOf = idx;
-        }
-    }
-    static if (is(typeof(genericIndexOf) == void)) // no hit
-    {
-        enum genericIndexOf = -1;
     }
 }
 
@@ -1798,32 +1782,27 @@ private:
  * not. Both a and b can be types, literals, or symbols.
  *
  * How:                     When:
- *      is(a == b)        - both are types
- *        a == b          - both are literals (true literals, enums)
- * __traits(isSame, a, b) - other cases (variables, functions,
- *                          templates, etc.)
+ *        a == b          - at least one rvalue (literals, enums, function calls)
+ * __traits(isSame, a, b) - other cases (types, variables, functions, templates, etc.)
  */
-private template isSame(ab...)
-if (ab.length == 2)
+private template isSame(alias a, alias b)
 {
-    static if (is(ab[0]) && is(ab[1]))
+    static if (!is(typeof(&a && &b)) // at least one is an rvalue
+            && __traits(compiles, { enum isSame = a == b; })) // c-t comparable
     {
-        enum isSame = is(ab[0] == ab[1]);
-    }
-    else static if (!is(ab[0]) && !is(ab[1]) &&
-                    !(is(typeof(&ab[0])) && is(typeof(&ab[1]))) &&
-                     __traits(compiles, { enum isSame = ab[0] == ab[1]; }))
-    {
-        enum isSame = (ab[0] == ab[1]);
+        enum isSame = a == b;
     }
     else
     {
-        enum isSame = __traits(isSame, ab[0], ab[1]);
+        enum isSame = __traits(isSame, a, b);
     }
 }
 
 @safe unittest
 {
+    static struct S {}
+    static assert( isSame!(S(), S()));
+
     static assert( isSame!(int, int));
     static assert(!isSame!(int, short));
 
@@ -1849,6 +1828,8 @@ if (ab.length == 2)
     static assert( isSame!(X, X));
     static assert(!isSame!(X, Y));
     static assert(!isSame!(Y, Z));
+    static assert(isSame!(X, 1));
+    static assert(isSame!(1, X));
 
     int  foo();
     int  bar();

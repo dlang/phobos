@@ -64,7 +64,9 @@ version (D_HardFloat)
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import std.math : abs, floor, isNaN, log2;
+    import std.math.algebraic : abs;
+    import std.math.rounding : floor;
+    import std.math.traits : isNaN;
     import std.traits : Unsigned;
 
     // NaN ^^ 0 is an exception defined by IEEE (yields 1 instead of NaN)
@@ -174,7 +176,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : feqrel;
+    import std.math.operations : feqrel;
 
     assert(pow(2.0, 5) == 32.0);
     assert(pow(1.5, 9).feqrel(38.4433) > 16);
@@ -184,7 +186,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, feqrel;
+    import std.math.operations : isClose, feqrel;
 
     // Make sure it instantiates and works properly on immutable values and
     // with various integer and float types.
@@ -218,7 +220,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(pow(2.0L, 10L), 1024, 1e-18));
 }
@@ -241,7 +243,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose, isInfinity;
+    import std.math.operations : isClose;
+    import std.math.traits : isInfinity;
 
     static float f1 = 19100.0f;
     static float f2 = 0.000012f;
@@ -273,7 +276,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
 @safe @nogc nothrow pure unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     enum f1 = 19100.0f;
     enum f2 = 0.000012f;
@@ -487,7 +490,8 @@ if (isIntegral!I && isFloatingPoint!F)
 Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
-    import std.math : exp2, fabs, isInfinity, isNaN, log2, signbit, sqrt;
+    import std.math.algebraic : fabs, sqrt;
+    import std.math.traits : isInfinity, isNaN, signbit;
 
     alias Float = typeof(return);
 
@@ -701,7 +705,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(pow(2.0, 3.0), 8.0));
     assert(isClose(pow(1.5, 10.0), 57.6650390625));
@@ -734,11 +738,11 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // the result is a complex number
     // which cannot be represented as floating point number
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
     assert(isNaN(pow(-2.5, -1.5)));
 
     // use the ^^-operator of std.complex instead
@@ -753,7 +757,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(pow(1.5, real.infinity) == real.infinity);
     assert(pow(0.5, real.infinity) == 0.0);
@@ -775,14 +779,16 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(pow(2.0L, 10.0L), 1024, 1e-18));
 }
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, isIdentical, isNaN, PI;
+    import std.math.operations : isClose;
+    import std.math.traits : isIdentical, isNaN;
+    import std.math.constants : PI;
 
     // Test all the special values.  These unittests can be run on Windows
     // by temporarily changing the version (linux) to version (all).
@@ -852,7 +858,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 // https://issues.dlang.org/show_bug.cgi?id=20508
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(isNaN(pow(-double.infinity, 0.5)));
 
@@ -861,6 +867,160 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(isNaN(pow(-real.infinity, 1.234)));
     assert(isNaN(pow(-real.infinity, -0.751)));
     assert(pow(-real.infinity, 0.0) == 1.0);
+}
+
+/** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
+ *
+ *  Params:
+ *      x = base
+ *      n = exponent
+ *      m = modulus
+ *
+ *  Returns:
+ *      `x` to the power `n`, modulo `m`.
+ *      The return type is the largest of `x`'s and `m`'s type.
+ *
+ * The function requires that all values have unsigned types.
+ */
+Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
+if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
+{
+    import std.meta : AliasSeq;
+
+    alias T = Unqual!(Largest!(F, H));
+    static if (T.sizeof <= 4)
+    {
+        alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
+    }
+
+    static T mulmod(T a, T b, T c)
+    {
+        static if (T.sizeof == 8)
+        {
+            static T addmod(T a, T b, T c)
+            {
+                b = c - b;
+                if (a >= b)
+                    return a - b;
+                else
+                    return c - b + a;
+            }
+
+            T result = 0, tmp;
+
+            b %= c;
+            while (a > 0)
+            {
+                if (a & 1)
+                    result = addmod(result, b, c);
+
+                a >>= 1;
+                b = addmod(b, b, c);
+            }
+
+            return result;
+        }
+        else
+        {
+            DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+            return result % c;
+        }
+    }
+
+    T base = x, result = 1, modulus = m;
+    Unqual!G exponent = n;
+
+    while (exponent > 0)
+    {
+        if (exponent & 1)
+            result = mulmod(result, base, modulus);
+
+        base = mulmod(base, base, modulus);
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(powmod(1U, 10U, 3U) == 1);
+    assert(powmod(3U, 2U, 6U) == 3);
+    assert(powmod(5U, 5U, 15U) == 5);
+    assert(powmod(2U, 3U, 5U) == 3);
+    assert(powmod(2U, 4U, 5U) == 1);
+    assert(powmod(2U, 5U, 5U) == 2);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    ulong a = 18446744073709551615u, b = 20u, c = 18446744073709551610u;
+    assert(powmod(a, b, c) == 95367431640625u);
+    a = 100; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 18223853583554725198u);
+    a = 117; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 11493139548346411394u);
+    a = 134; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 10979163786734356774u);
+    a = 151; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 7023018419737782840u);
+    a = 168; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 58082701842386811u);
+    a = 185; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 17423478386299876798u);
+    a = 202; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5522733478579799075u);
+    a = 219; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 15230218982491623487u);
+    a = 236; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5198328724976436000u);
+
+    a = 0; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 0);
+    a = 123; b = 0; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 1);
+
+    immutable ulong a1 = 253, b1 = 7919, c1 = 18446744073709551557u;
+    assert(powmod(a1, b1, c1) == 3883707345459248860u);
+
+    uint x = 100 ,y = 7919, z = 1844674407u;
+    assert(powmod(x, y, z) == 1613100340u);
+    x = 134; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 734956622u);
+    x = 151; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1738696945u);
+    x = 168; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1247580927u);
+    x = 185; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1293855176u);
+    x = 202; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1566963682u);
+    x = 219; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 181227807u);
+    x = 236; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 217988321u);
+    x = 253; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1588843243u);
+
+    x = 0; y = 7919; z = 184467u;
+    assert(powmod(x, y, z) == 0);
+    x = 123; y = 0; z = 1844674u;
+    assert(powmod(x, y, z) == 1);
+
+    immutable ubyte x1 = 117;
+    immutable uint y1 = 7919;
+    immutable uint z1 = 1844674407u;
+    auto res = powmod(x1, y1, z1);
+    assert(is(typeof(res) == uint));
+    assert(res == 9479781u);
+
+    immutable ushort x2 = 123;
+    immutable uint y2 = 203;
+    immutable ubyte z2 = 113;
+    auto res2 = powmod(x2, y2, z2);
+    assert(is(typeof(res2) == ushort));
+    assert(res2 == 42u);
 }
 
 /**
@@ -876,7 +1036,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 pragma(inline, true)
 real exp(real x) @trusted pure nothrow @nogc // TODO: @safe
 {
-    import std.math : LOG2E;
+    import std.math.constants : LOG2E;
 
     version (InlineAsm_X87)
     {
@@ -900,7 +1060,8 @@ float exp(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) exp(ca
 ///
 @safe unittest
 {
-    import std.math : feqrel, E;
+    import std.math.operations : feqrel;
+    import std.math.constants : E;
 
     assert(exp(0.0) == 1.0);
     assert(exp(3.0).feqrel(E * E * E) > 16);
@@ -908,7 +1069,11 @@ float exp(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) exp(ca
 
 private T expImpl(T)(T x) @safe pure nothrow @nogc
 {
-    import std.math : floatTraits, RealFormat, isNaN, floor, poly, LOG2E;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : isNaN;
+    import std.math.rounding : floor;
+    import std.math.algebraic : poly;
+    import std.math.constants : LOG2E;
 
     alias F = floatTraits!T;
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -1045,12 +1210,16 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : floatTraits, RealFormat, NaN, E, feqrel, isIdentical, abs, isClose;
+    import std.math : floatTraits, RealFormat;
+    import std.math.operations : NaN, feqrel, isClose;
+    import std.math.constants : E;
+    import std.math.traits : isIdentical;
+    import std.math.algebraic : abs;
 
-    version (IeeeFlagsSupport) import std.math : IeeeFlags, resetIeeeFlags, ieeeFlags;
+    version (IeeeFlagsSupport) import std.math.hardware : IeeeFlags, resetIeeeFlags, ieeeFlags;
     version (FloatingPointControlSupport)
     {
-        import std.math : FloatingPointControl;
+        import std.math.hardware : FloatingPointControl;
 
         FloatingPointControl ctrl;
         if (FloatingPointControl.hasExceptionTraps)
@@ -1237,7 +1406,8 @@ float expm1(float x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : isIdentical, feqrel;
+    import std.math.traits : isIdentical;
+    import std.math.operations : feqrel;
 
     assert(isIdentical(expm1(0.0), 0.0));
     assert(expm1(1.0).feqrel(1.71828) > 16);
@@ -1414,7 +1584,10 @@ L_largenegative:
 
 private T expm1Impl(T)(T x) @safe pure nothrow @nogc
 {
-    import std.math : floatTraits, RealFormat, floor, poly, LN2;
+    import std.math : floatTraits, RealFormat;
+    import std.math.rounding : floor;
+    import std.math.algebraic : poly;
+    import std.math.constants : LN2;
 
     // Coefficients for exp(x) - 1 and overflow/underflow limits.
     enum realFormat = floatTraits!T.realFormat;
@@ -1533,7 +1706,8 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isNaN, isClose, CommonDefaultFor;
+    import std.math.traits : isNaN;
+    import std.math.operations : isClose, CommonDefaultFor;
 
     static void testExpm1(T)()
     {
@@ -1588,7 +1762,8 @@ float exp2(float x) @nogc @safe pure nothrow { return __ctfe ? cast(float) exp2(
 ///
 @safe unittest
 {
-    import std.math : isIdentical, feqrel;
+    import std.math.traits : isIdentical;
+    import std.math.operations : feqrel;
 
     assert(isIdentical(exp2(0.0), 1.0));
     assert(exp2(2.0).feqrel(4.0) > 16);
@@ -1801,7 +1976,10 @@ L_was_nan:
 
 private T exp2Impl(T)(T x) @nogc @safe pure nothrow
 {
-    import std.math : floatTraits, RealFormat, isNaN, floor, poly;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : isNaN;
+    import std.math.rounding : floor;
+    import std.math.algebraic : poly;
 
     // Coefficients for exp2(x)
     enum realFormat = floatTraits!T.realFormat;
@@ -1920,7 +2098,9 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
 
 @safe @nogc nothrow unittest
 {
-    import std.math : feqrel, NaN, isIdentical, SQRT2, isClose;
+    import std.math.operations : feqrel, NaN, isClose;
+    import std.math.traits : isIdentical;
+    import std.math.constants : SQRT2;
 
     assert(feqrel(exp2(0.5L), SQRT2) >= real.mant_dig -1);
     assert(exp2(8.0L) == 256.0);
@@ -1985,7 +2165,8 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : isSubnormal, floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : isSubnormal;
 
     if (__ctfe)
     {
@@ -2211,7 +2392,7 @@ if (isFloatingPoint!T)
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -2228,7 +2409,7 @@ if (isFloatingPoint!T)
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     int exp;
     real mantissa = frexp(123.456L, exp);
@@ -2239,7 +2420,8 @@ if (isFloatingPoint!T)
 
 @safe unittest
 {
-    import std.math : isIdentical, floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat;
+    import std.math.traits : isIdentical;
     import std.meta : AliasSeq;
     import std.typecons : tuple, Tuple;
 
@@ -2570,7 +2752,8 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 @safe nothrow @nogc unittest
 {
-    import std.math : nextUp, floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat;
+    import std.math.operations : nextUp;
     import std.meta : AliasSeq;
     import std.typecons : Tuple;
     static foreach (F; AliasSeq!(float, double, real))
@@ -2720,7 +2903,7 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     static real[3][] vals =    // value,exp,ldexp
     [
@@ -2861,7 +3044,9 @@ private
  */
 real log(real x) @safe pure nothrow @nogc
 {
-    import std.math : LN2, LOG2, isInfinity, isNaN, signbit, SQRT1_2, poly;
+    import std.math.constants : LN2, LOG2, SQRT1_2;
+    import std.math.traits : isInfinity, isNaN, signbit;
+    import std.math.algebraic : poly;
 
     version (INLINE_YL2X)
         return core.math.yl2x(x, LN2);
@@ -2941,7 +3126,8 @@ real log(real x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : feqrel, E;
+    import std.math.operations : feqrel;
+    import std.math.constants : E;
 
     assert(feqrel(log(E), 1) >= real.mant_dig - 1);
 }
@@ -2958,7 +3144,9 @@ real log(real x) @safe pure nothrow @nogc
  */
 real log10(real x) @safe pure nothrow @nogc
 {
-    import std.math : LOG2, LN2, fabs, isNaN, isInfinity, signbit, SQRT1_2;
+    import std.math.constants : LOG2, LN2, SQRT1_2;
+    import std.math.algebraic : fabs, poly;
+    import std.math.traits : isNaN, isInfinity, signbit;
 
     version (INLINE_YL2X)
         return core.math.yl2x(x, LOG2);
@@ -3042,7 +3230,7 @@ real log10(real x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : fabs;
+    import std.math.algebraic : fabs;
 
     assert(fabs(log10(1000) - 3) < .000001);
 }
@@ -3063,7 +3251,9 @@ real log10(real x) @safe pure nothrow @nogc
  */
 real log1p(real x) @safe pure nothrow @nogc
 {
-    import std.math : fabs, isNaN, isInfinity, signbit, LN2;
+    import std.math.algebraic : fabs;
+    import std.math.traits : isNaN, isInfinity, signbit;
+    import std.math.constants : LN2;
 
     version (INLINE_YL2X)
     {
@@ -3090,7 +3280,8 @@ real log1p(real x) @safe pure nothrow @nogc
 ///
 @safe pure unittest
 {
-    import std.math : isIdentical, isNaN, feqrel;
+    import std.math.traits : isIdentical, isNaN;
+    import std.math.operations : feqrel;
 
     assert(isIdentical(log1p(0.0), 0.0));
     assert(log1p(1.0).feqrel(0.69314) > 16);
@@ -3115,7 +3306,9 @@ real log1p(real x) @safe pure nothrow @nogc
  */
 real log2(real x) @safe pure nothrow @nogc
 {
-    import std.math : isNaN, isInfinity, signbit, SQRT1_2, poly;
+    import std.math.traits : isNaN, isInfinity, signbit;
+    import std.math.constants : SQRT1_2, LOG2E;
+    import std.math.algebraic : poly;
 
     version (INLINE_YL2X)
         return core.math.yl2x(x, 1.0L);
@@ -3190,14 +3383,14 @@ real log2(real x) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     assert(isClose(log2(1024.0L), 10));
 }
 
 @safe @nogc nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // check if values are equal to 19 decimal digits of precision
     assert(isClose(log2(1024.0L), 10, 1e-18));
@@ -3292,7 +3485,7 @@ float scalbn(float x, int n) @safe pure nothrow @nogc { return _scalbn(x,n); }
 pragma(inline, true)
 private F _scalbn(F)(F x, int n)
 {
-    import std.math : isInfinity;
+    import std.math.traits : isInfinity;
 
     if (__ctfe)
     {

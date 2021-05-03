@@ -1047,7 +1047,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         {
             bool overflow;
             auto r = opChecked!op(lhs, T(payload), overflow);
-            if (overflow) r = hook.onOverflow!op(42);
+            if (overflow) r = hook.onOverflow!op(lhs, payload);
             return Checked!(typeof(r), Hook)(r);
         }
         else
@@ -1216,6 +1216,18 @@ if (is(typeof(Checked!(T, Hook)(value))))
     test!ubyte;
     test!(const ubyte);
     test!(immutable ubyte);
+}
+
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=21758
+    assert(4 * checked(5L) == 20);
+    assert(20 / checked(5L) == 4);
+    assert(2 ^^ checked(3L) == 8);
+    assert(12 % checked(5L) == 2);
+    assert((0xff & checked(3L)) == 3);
+    assert((0xf0 | checked(3L)) == 0xf3);
+    assert((0xff ^ checked(3L)) == 0xfc);
 }
 
 // Abort
@@ -1916,7 +1928,7 @@ struct ProperCompare
     assert(opCmpProper(42, 42.0) == 0);
     assert(opCmpProper(41, 42.0) < 0);
     assert(opCmpProper(42, 41.0) > 0);
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
     assert(isNaN(opCmpProper(41, double.init)));
     assert(opCmpProper(42u, 42) == 0);
     assert(opCmpProper(42, 42u) == 0);

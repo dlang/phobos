@@ -2798,7 +2798,7 @@ private enum NameOf(alias T) = T.stringof;
  * hidden fields like the virtual function table pointer or a context pointer
  * for nested types.
  * Inherited fields (for classes) are not included.
- * If `T` isn't a struct, class, or union, an
+ * If `T` isn't a struct, class, interface or union, an
  * expression tuple with an empty string is returned.
  */
 template FieldNameTuple(T)
@@ -2806,7 +2806,7 @@ template FieldNameTuple(T)
     import std.meta : staticMap;
     static if (is(T == struct) || is(T == union))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
     else
         alias FieldNameTuple = AliasSeq!"";
@@ -2850,6 +2850,9 @@ template FieldNameTuple(T)
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(FieldNameTuple!NestedClass == AliasSeq!"a");
+
+    interface I {}
+    static assert(FieldNameTuple!I == AliasSeq!());
 }
 
 
@@ -5079,6 +5082,8 @@ template AllImplicitConversionTargets(T)
         alias AllImplicitConversionTargets = AliasSeq!(typeof(null));
     else static if (is(T == class))
         alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
+    else static if (is(T == interface))
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), InterfacesTuple!(T));
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
        static if (is(typeof(T.init[0]) == shared))
@@ -5125,6 +5130,14 @@ template AllImplicitConversionTargets(T)
     static assert(is(AllImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
     static assert(is(AllImplicitConversionTargets!(immutable C) == AliasSeq!(
         immutable Object, immutable A, immutable B
+    )));
+
+    interface I : A, B {}
+
+    static assert(is(AllImplicitConversionTargets!(I) == AliasSeq!(A, B)));
+    static assert(is(AllImplicitConversionTargets!(const I) == AliasSeq!(const A, const B)));
+    static assert(is(AllImplicitConversionTargets!(immutable I) == AliasSeq!(
+        immutable A, immutable B
     )));
 }
 

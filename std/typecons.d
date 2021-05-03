@@ -818,7 +818,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -850,7 +850,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -1613,6 +1613,22 @@ if (distinctFieldNames!(Specs))
     assert(!(t > t));
     assert(!(t < t));
     assert(!(t == t));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8015
+@safe unittest
+{
+    struct MyStruct
+    {
+        string str;
+        @property string toStr()
+        {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
 }
 
 /**
@@ -4435,7 +4451,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 ///
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static abstract class C
     {
@@ -4458,7 +4474,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // return default
     {
@@ -7126,7 +7142,7 @@ mixin template Proxy(alias a)
  */
 @safe unittest
 {
-    import std.math;
+    import std.math.traits : isInfinity;
 
     float f = 1.0;
     assert(!f.isInfinity);
@@ -9110,6 +9126,8 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
                 result ~= ", ";
             if (storageClasses[i] & ParameterStorageClass.scope_)
                 result ~= "scope ";
+            if (storageClasses[i] & ParameterStorageClass.in_)
+                result ~= "in ";
             if (storageClasses[i] & ParameterStorageClass.out_)
                 result ~= "out ";
             if (storageClasses[i] & ParameterStorageClass.ref_)
@@ -9201,6 +9219,10 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
             float function(lazy float, long),
         int, float, int function(out long, ref const int),
             float function(out long, ref const float),
+        int, float, int function(in long, ref const int),
+            float function(in long, ref const float),
+        int, float, int function(long, in int),
+            float function(long, in float),
         int, int, int, int,
         int, float, int, float,
         int, float, const int, const float,

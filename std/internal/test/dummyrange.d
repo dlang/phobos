@@ -340,7 +340,7 @@ if (is(T == uint))
 pure struct Cmp(T)
 if (is(T == double))
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     static auto iota(size_t low = 1, size_t high = 11)
     {
