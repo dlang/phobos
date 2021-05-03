@@ -152,7 +152,7 @@ private struct RangeT(A)
         E moveBack()
         {
             assert(!empty, "Attempting to moveBack an empty Array");
-            assert(_a <= _outer.length,
+            assert(_b - 1 < _outer.length,
                 "Attempting to moveBack using an out of bounds high index on an Array");
             return move(_outer._data._payload[_b - 1]);
         }
