@@ -2127,10 +2127,7 @@ if (hasToString!(T, Char))
     }
     else static if (overload == HasToStringResult.hasSomeToString)
     {
-        static if (!noop)
-            () @trusted {       // TODO remove
-                put(w, val.toString());
-            } ();
+        static if (!noop) put(w, val.toString());
     }
     else
     {
