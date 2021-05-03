@@ -718,17 +718,15 @@ template Reverse(TList...)
 }
 
 /**
- * Returns the type from TList that is the most derived from type T.
- * If none are found, T is returned.
+ * Returns the type from `TList` that is the most derived from type `T`.
+ * If no such type is found, `T` is returned.
  */
 template MostDerived(T, TList...)
 {
-    static if (TList.length == 0)
-        alias MostDerived = T;
-    else static if (is(TList[0] : T))
-        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
-    else
-        alias MostDerived = MostDerived!(T, TList[1 .. $]);
+    import std.traits : Select;
+    alias MostDerived = T;
+    static foreach (U; TList)
+        MostDerived = Select!(is(U : MostDerived), U, MostDerived);
 }
 
 ///
@@ -749,14 +747,33 @@ template MostDerived(T, TList...)
  */
 template DerivedToFront(TList...)
 {
-    static if (TList.length == 0)
+    private template Merge(Ts...)
+    {
+        template With(Us...)
+        {
+            enum runLength =
+            {
+                static foreach (i, T; Ts)
+                {
+                    static if (is(Us[0] : T))
+                        if (__ctfe) return i;
+                }
+                return Ts.length;
+            }();
+            static if (runLength == Ts.length)
+                alias With = AliasSeq!(Ts, Us);
+            else static if (runLength == 0)
+                alias With = AliasSeq!(Us[0], Merge!Ts.With!(Us[1 .. $]));
+            else
+                alias With = AliasSeq!(Ts[0 .. runLength], Merge!(Ts[runLength .. $]).With!Us);
+        }
+    }
+
+    static if (TList.length <= 1)
         alias DerivedToFront = TList;
     else
         alias DerivedToFront =
-            AliasSeq!(MostDerived!(TList[0], TList[1 .. $]),
-                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
-                                TList[0],
-                                TList[1 .. $])));
+            Merge!(DerivedToFront!(TList[0 .. $ / 2])).With!(DerivedToFront!(TList[$ / 2 .. $]));
 }
 
 ///
