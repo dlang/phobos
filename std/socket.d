@@ -1245,9 +1245,10 @@ abstract class Address
     {
         string tis;
         () @trusted { tis = typeid(this).toString; } ();
-        const fmt = format("%s expects address of length %d, not %d", tis);
         if (len != this.nameLen)
-            throw new AddressException(fmt, 0);
+            throw new AddressException(
+                format("%s expects address of length %d, not %d", tis,
+                    this.nameLen, len), 0);
     }
 
     /// Family of this address.
