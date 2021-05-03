@@ -422,47 +422,38 @@ if (args.length >= 1)
 }
 
 /*
- * Erase any occurrence of the first `TList[0 .. N]` elements from `TList[N .. $]`.
+ * Merges `items1` assumed to consist of distinct elements with `items2` also 
+   assumed to consist of distinct elements. The result has no duplicates.
  *
  * Params:
- *   N = number of elements to delete from the `TList`
- *   TList = sequence of aliases
+ *   items1 = merge these
+ *   items2 = with these
  *
  * See_Also: $(LREF EraseAll)
  */
-private template EraseAllN(uint N, TList...)
+private template Merge(items1...)
 {
-    static if (N == 1)
+    template With(items2...)
     {
-        alias EraseAllN = EraseAll!(TList[0], TList[1 .. $]);
-    }
-    else
-    {
-        static if (N & 1)
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 + 1 .. N],
-                    EraseAllN!(N / 2 + 1, TList[0 .. N / 2 + 1], TList[N .. $]));
-        else
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 .. N],
-                    EraseAllN!(N / 2, TList[0 .. N / 2], TList[N .. $]));
+        alias With = AliasSeq!(items1);
+        static foreach (arg; items2)
+        {
+            static if (staticIndexOf!(arg, items1) < 0)
+                With = AliasSeq!(With, arg);
+        }
     }
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the all duplicate
+ * Returns an `AliasSeq` created from `args` with all duplicate
  * types removed.
  */
-template NoDuplicates(TList...)
+template NoDuplicates(args...)
 {
-    static if (TList.length >= 2)
-    {
-        alias fst = NoDuplicates!(TList[0 .. $/2]);
-        alias snd = NoDuplicates!(TList[$/2 .. $]);
-        alias NoDuplicates = AliasSeq!(fst, EraseAllN!(fst.length, fst, snd));
-    }
+    static if (args.length < 2)
+        alias NoDuplicates = args;
     else
-    {
-        alias NoDuplicates = TList;
-    }
+        alias NoDuplicates = Merge!(NoDuplicates!(args[0 .. $ / 2])).With!(NoDuplicates!(args[$ / 2 .. $]));
 }
 
 ///
