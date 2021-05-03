@@ -1243,10 +1243,11 @@ abstract class Address
     // Must be overridden for variable-length addresses.
     protected void setNameLen(socklen_t len)
     {
+        string tis;
+        () @trusted { tis = typeid(this).toString; } ();
+        const fmt = format("%s expects address of length %d, not %d", tis);
         if (len != this.nameLen)
-            throw new AddressException(
-                format("%s expects address of length %d, not %d", typeid(this),
-                    this.nameLen, len), 0);
+            throw new AddressException(fmt, 0);
     }
 
     /// Family of this address.
