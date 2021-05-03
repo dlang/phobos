@@ -2136,6 +2136,7 @@ package ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2) @trusted p
 
     tmp = format("%3,g", 1_000_000.123456);
     assert(tmp == "1e+06", "'" ~ tmp ~ "'");
+}
 
 ///
 @safe pure unittest
