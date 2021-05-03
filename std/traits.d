@@ -2740,14 +2740,17 @@ template hasNested(T)
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If `T` isn't a struct, class, or union returns a tuple
+ * If `T` isn't a struct, class, interface or union returns a tuple
  * with one element `T`.
+ *
+ * History:
+ *   - Returned `AliasSeq!(Interface)` for interfaces prior to 2.097
  */
 template Fields(T)
 {
     static if (is(T == struct) || is(T == union))
         alias Fields = typeof(T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias Fields = typeof(T.tupleof);
     else
         alias Fields = AliasSeq!T;
@@ -2786,8 +2789,10 @@ alias FieldTypeTuple = Fields;
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(is(FieldTypeTuple!NestedClass == AliasSeq!int));
-}
 
+    static interface I {}
+    static assert(is(Fields!I == AliasSeq!()));
+}
 
 //Required for FieldNameTuple
 private enum NameOf(alias T) = T.stringof;
@@ -2800,6 +2805,9 @@ private enum NameOf(alias T) = T.stringof;
  * Inherited fields (for classes) are not included.
  * If `T` isn't a struct, class, interface or union, an
  * expression tuple with an empty string is returned.
+ *
+ * History:
+ *   - Returned `AliasSeq!""` for interfaces prior to 2.097
  */
 template FieldNameTuple(T)
 {
