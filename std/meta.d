@@ -661,51 +661,13 @@ if (args.length >= 2)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the order reversed.
+ * Returns an `AliasSeq` created from `args` with the order reversed.
  */
-template Reverse(TList...)
+template Reverse(args...)
 {
-    static if (TList.length <= 1)
-    {
-        alias Reverse = TList;
-    }
-    /* Cases 2 to 8 are to speed up compile times
-     */
-    else static if (TList.length == 2)
-    {
-        alias Reverse = AliasSeq!(TList[1], TList[0]);
-    }
-    else static if (TList.length == 3)
-    {
-        alias Reverse = AliasSeq!(TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 4)
-    {
-        alias Reverse = AliasSeq!(TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 5)
-    {
-        alias Reverse = AliasSeq!(TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 6)
-    {
-        alias Reverse = AliasSeq!(TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 7)
-    {
-        alias Reverse = AliasSeq!(TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 8)
-    {
-        alias Reverse = AliasSeq!(TList[7], TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else
-    {
-        alias Reverse =
-            AliasSeq!(
-                Reverse!(TList[$/2 ..  $ ]),
-                Reverse!(TList[ 0  .. $/2]));
-    }
+    alias Reverse = AliasSeq!();
+    static foreach_reverse (arg; args)
+        Reverse = AliasSeq!(Reverse, arg);
 }
 
 ///
