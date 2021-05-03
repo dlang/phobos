@@ -1738,7 +1738,7 @@ Throws:
 See_Also:
     $(LREF sformat) for a variant, that tries to avoid garbage collection.
  */
-immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
+immutable(Char)[] format(Char, Args...)(scope const Char[] fmt, scope Args args)
 if (isSomeChar!Char)
 {
     import std.array : appender;
@@ -1796,7 +1796,7 @@ if (isSomeChar!Char)
 }
 
 /// ditto
-typeof(fmt) format(alias fmt, Args...)(Args args)
+typeof(fmt) format(alias fmt, Args...)(scope Args args)
 if (isSomeString!(typeof(fmt)))
 {
     import std.array : appender;
@@ -1970,7 +1970,7 @@ Note:
     $(LI The representation of a floating point number exceeds 500 characters.)
     $(LI A custom `toString` function of a compound type allocates.))
  */
-char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
+char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, scope Args args)
 {
     import core.exception : RangeError;
     import std.range.primitives;
@@ -2026,7 +2026,7 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
 }
 
 /// ditto
-char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+char[] sformat(alias fmt, Args...)(char[] buf, scope Args args)
 if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, Args);

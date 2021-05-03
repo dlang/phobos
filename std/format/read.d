@@ -233,7 +233,7 @@ Note:
     to that variable, but it is not recommended to do so, because this
     option might be removed in the future.
  */
-uint formattedRead(Range, Char, Args...)(auto ref Range r, const(Char)[] fmt, auto ref Args args)
+uint formattedRead(Range, Char, Args...)(auto ref Range r, scope const(Char)[] fmt, auto ref Args args)
 {
     import std.format : enforceFmt;
     import std.range.primitives : empty;
@@ -697,4 +697,3 @@ T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char
     auto result = unformatValue!(dchar[1])(input, spec);
     assert(result[0] == 'a');
 }
-

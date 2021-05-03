@@ -461,7 +461,7 @@ Note:
     implementation there are some cases where allocations occur.
     See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
  */
-uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[] fmt, Args args)
+uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[] fmt, scope Args args)
 {
     import std.conv : text;
     import std.format : enforceFmt, FormatException;
@@ -677,7 +677,7 @@ Note:
 See_Also:
     $(LREF formattedWrite) which formats several values at once.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, scope auto ref T val, scope const ref FormatSpec!Char f)
 {
     import std.format : enforceFmt;
 
