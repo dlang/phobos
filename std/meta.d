@@ -422,26 +422,21 @@ if (args.length >= 1)
 }
 
 /*
- * Merges `items1` assumed to consist of distinct elements with `items2` also 
-   assumed to consist of distinct elements. The result has no duplicates.
+ * Returns `items[0 .. $ - 1]` if `item[$ - 1]` found in `items[0 .. $ - 1]`, and
+ * `items` otherwise.
  *
  * Params:
- *   items1 = merge these
- *   items2 = with these
+ *   items = list to be processed
  *
- * See_Also: $(LREF EraseAll)
+ * See_Also: $(LREF NoDuplicates)
  */
-private template Merge(items1...)
+private template AppendUnique(items...)
 {
-    template With(items2...)
-    {
-        alias With = AliasSeq!(items1);
-        static foreach (arg; items2)
-        {
-            static if (staticIndexOf!(arg, items1) < 0)
-                With = AliasSeq!(With, arg);
-        }
-    }
+    alias head = items[0 .. $ - 1];
+    static if (staticIndexOf!(items[$ - 1], head) >= 0)
+        alias AppendUnique = head;
+    else
+        alias AppendUnique = items;
 }
 
 /**
@@ -450,10 +445,9 @@ private template Merge(items1...)
  */
 template NoDuplicates(args...)
 {
-    static if (args.length < 2)
-        alias NoDuplicates = args;
-    else
-        alias NoDuplicates = Merge!(NoDuplicates!(args[0 .. $ / 2])).With!(NoDuplicates!(args[$ / 2 .. $]));
+    alias NoDuplicates = AliasSeq!();
+    static foreach (arg; args)
+        NoDuplicates = AppendUnique!(NoDuplicates, arg);
 }
 
 ///
