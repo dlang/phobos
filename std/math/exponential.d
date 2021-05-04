@@ -64,7 +64,7 @@ version (D_HardFloat)
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import std.math.algebraic : abs;
+    import core.math : fabs;
     import std.math.rounding : floor;
     import std.math.traits : isNaN;
     import std.traits : Unsigned;
@@ -100,13 +100,13 @@ if (isFloatingPoint!(F) && isIntegral!(G))
     //
     // We use the following two conclusions:
     //
-    //    m * floor(log2(abs(v))) >= F.max_exp
-    // =>             abs(v) ^^ m >  F.max == nextDown(F.infinity)
+    //    m * floor(log2(fabs(v))) >= F.max_exp
+    // =>             fabs(v) ^^ m >  F.max == nextDown(F.infinity)
     //
     //    m * (bias - ex - 1) >= bias + F.mant_dig - 1
-    // =>         abs(v) ^^ m <  2 ^^ (-bias - F.mant_dig + 2) == nextUp(0.0)
+    // =>         fabs(v) ^^ m <  2 ^^ (-bias - F.mant_dig + 2) == nextUp(0.0)
     //
-    // floor(log2(abs(v))) == ex - bias can be directly taken from the
+    // floor(log2(fabs(v))) == ex - bias can be directly taken from the
     // exponent of the floating point represantation, to avoid long
     // calculations here.
 
@@ -132,8 +132,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
             // in CTFE we cannot access the bit patterns and have therefore to
             // fall back to the (slower) general case
             // skipping subnormals by setting ex = bias
-            ex = abs(v) == F.infinity ? 2 * bias + 1 :
-                (abs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(abs(v))) + bias));
+            ex = fabs(v) == F.infinity ? 2 * bias + 1 :
+                (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
         }
         else
         {
@@ -148,8 +148,8 @@ if (isFloatingPoint!(F) && isIntegral!(G))
         // In the general case we have to fall back to log2, which is slower, but still
         // a certain speed gain compared to not bailing out early.
             // skipping subnormals by setting ex = bias
-        ulong ex = abs(v) == F.infinity ? 2 * bias + 1 :
-            (abs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(abs(v))) + bias));
+        ulong ex = fabs(v) == F.infinity ? 2 * bias + 1 :
+            (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
     }
 
     // m * (...) can exceed ulong.max, we therefore first check m >= (...).
@@ -490,7 +490,7 @@ if (isIntegral!I && isFloatingPoint!F)
 Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
-    import std.math.algebraic : fabs, sqrt;
+    import core.math : fabs, sqrt;
     import std.math.traits : isInfinity, isNaN, signbit;
 
     alias Float = typeof(return);
@@ -1203,7 +1203,7 @@ private T expImpl(T)(T x) @safe pure nothrow @nogc
     }
 
     // Scale by power of 2.
-    x = ldexp(x, n);
+    x = core.math.ldexp(x, n);
 
     return x;
 }
@@ -1697,7 +1697,7 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
 
         // We have qx = exp(remainder LN2) - 1, so:
         //  exp(x) - 1 = 2^^n (qx + 1) - 1 = 2^^n qx + 2^^n - 1.
-        px = ldexp(cast(T) 1.0, n);
+        px = core.math.ldexp(cast(T) 1.0, n);
         x = px * qx + (px - cast(T) 1.0);
 
         return x;
@@ -2091,7 +2091,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     }
 
     // Scale by power of 2.
-    x = ldexp(x, n);
+    x = core.math.ldexp(x, n);
 
     return x;
 }
@@ -3145,7 +3145,7 @@ real log(real x) @safe pure nothrow @nogc
 real log10(real x) @safe pure nothrow @nogc
 {
     import std.math.constants : LOG2, LN2, SQRT1_2;
-    import std.math.algebraic : fabs, poly;
+    import std.math.algebraic : poly;
     import std.math.traits : isNaN, isInfinity, signbit;
 
     version (INLINE_YL2X)
@@ -3251,7 +3251,6 @@ real log10(real x) @safe pure nothrow @nogc
  */
 real log1p(real x) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : fabs;
     import std.math.traits : isNaN, isInfinity, signbit;
     import std.math.constants : LN2;
 
@@ -3259,7 +3258,7 @@ real log1p(real x) @safe pure nothrow @nogc
     {
         // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
         //    ie if -0.29 <= x <= 0.414
-        return (fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
+        return (core.math.fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
     }
     else
     {

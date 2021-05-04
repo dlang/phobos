@@ -866,7 +866,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
 if (isFloatingPoint!(X))
 {
     import std.math : floatTraits, RealFormat;
-    import std.math.algebraic : fabs;
+    import core.math : fabs;
 
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
@@ -1035,7 +1035,7 @@ if (isFloatingPoint!(X))
 deprecated("approxEqual will be removed in 2.106.0. Please use isClose instead.")
 bool approxEqual(T, U, V)(T value, U reference, V maxRelDiff = 1e-2, V maxAbsDiff = 1e-5)
 {
-    import std.math.algebraic : fabs;
+    import core.math : fabs;
     import std.range.primitives : empty, front, isInputRange, popFront;
     static if (isInputRange!T)
     {
@@ -1725,7 +1725,7 @@ if (isFloatingPoint!T)
     {
         if (__ctfe)
         {
-            import std.math.algebraic : abs, fabs;
+            import core.math : fabs;
             import std.math.rounding : floor;
             import std.math.traits : isInfinity, isNaN;
             import std.math.exponential : log2;
@@ -1737,7 +1737,7 @@ if (isFloatingPoint!T)
             else if (fabs(val) >= nextUp(real.max / 2))
                 ret.exponent = 32766;
             else
-                ret.exponent = cast(int) (val.abs.log2.floor() + 16383);
+                ret.exponent = cast(int) (val.fabs.log2.floor() + 16383);
 
             if (ret.exponent == 32767)
             {
@@ -1760,13 +1760,13 @@ if (isFloatingPoint!T)
                     val *= 2.0L ^^ delta;
                 }
 
-                ulong tmp = cast(ulong) abs(val);
+                ulong tmp = cast(ulong) fabs(val);
                 if (ret.exponent != 32767 && ret.exponent > 0 && tmp <= ulong.max / 2)
                 {
                     // correction, due to log2(val) being rounded up:
                     ret.exponent--;
                     val *= 2;
-                    tmp = cast(ulong) abs(val);
+                    tmp = cast(ulong) fabs(val);
                 }
 
                 ret.mantissa = tmp & ((1L << 63) - 1);

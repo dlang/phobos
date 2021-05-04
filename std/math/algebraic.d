@@ -302,6 +302,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
     // If one is huge and the other tiny, return the larger.
     // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
     // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).
+    import core.math : fabs, sqrt;
 
     enum real SQRTMIN = 0.5 * sqrt(real.min_normal); // This is a power of 2.
     enum real SQRTMAX = 1.0L / SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(real.max))
@@ -418,6 +419,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 T hypot(T)(const T x, const T y, const T z) @safe pure nothrow @nogc
 if (isFloatingPoint!T)
 {
+    import core.math : fabs, sqrt;
     import std.math.operations : fmax;
     const absx = fabs(x);
     const absy = fabs(y);
@@ -1010,7 +1012,7 @@ private T powIntegralImpl(PowType type, T)(T val)
 private T powFloatingPointImpl(PowType type, T)(T x)
 {
     import std.math.traits : copysign, isFinite;
-    import std.math.exponential : frexp, ldexp;
+    import std.math.exponential : frexp;
 
     if (!x.isFinite)
         return x;
@@ -1022,9 +1024,9 @@ private T powFloatingPointImpl(PowType type, T)(T x)
     auto y = frexp(x, exp);
 
     static if (type == PowType.ceil)
-        y = ldexp(cast(T) 0.5, exp + 1);
+        y = core.math.ldexp(cast(T) 0.5, exp + 1);
     else
-        y = ldexp(cast(T) 0.5, exp);
+        y = core.math.ldexp(cast(T) 0.5, exp);
 
     if (!y.isFinite)
         return cast(T) 0.0;

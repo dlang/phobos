@@ -553,7 +553,7 @@ private T tanImpl(T)(T x) @safe pure nothrow @nogc
  */
 real acos(real x) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : sqrt;
+    import core.math : sqrt;
 
     return atan2(sqrt(1-x*x), x);
 }
@@ -597,7 +597,7 @@ float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real) x); }
  */
 real asin(real x) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : sqrt;
+    import core.math : sqrt;
 
     return atan2(x, sqrt(1-x*x));
 }
@@ -1181,7 +1181,7 @@ private F _sinh(F)(F x)
 {
     import std.math.traits : copysign;
     import std.math.exponential : exp, expm1;
-    import std.math.algebraic : fabs;
+    import core.math : fabs;
     import std.math.constants : LN2;
 
     //  sinh(x) =  (exp(x)-exp(-x))/2;
@@ -1235,7 +1235,7 @@ private F _tanh(F)(F x)
 {
     import std.math.traits : copysign;
     import std.math.exponential : expm1;
-    import std.math.algebraic : fabs;
+    import core.math : fabs;
     import std.math.constants : LN2;
 
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
@@ -1297,7 +1297,7 @@ private F _acosh(F)(F x) @safe pure nothrow @nogc
 {
     import std.math.constants : LN2;
     import std.math.exponential : log;
-    import std.math.algebraic : sqrt;
+    import core.math : sqrt;
 
     if (x > 1/F.epsilon)
         return F(LN2) + log(x);
@@ -1351,7 +1351,7 @@ float asinh(float x) @safe pure nothrow @nogc { return _asinh(x); }
 private F _asinh(F)(F x)
 {
     import std.math.traits : copysign;
-    import std.math.algebraic : fabs, sqrt;
+    import core.math : fabs, sqrt;
     import std.math.exponential : log, log1p;
     import std.math.constants : LN2;
 
