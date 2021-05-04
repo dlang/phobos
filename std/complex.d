@@ -1105,9 +1105,9 @@ Complex!T atan(T)(Complex!T z) @safe pure nothrow @nogc
 */
 Complex!T sinh(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    static import std.math;
-    return Complex!T(std.math.sinh(z.re) * std.math.cos(z.im),
-                     std.math.cosh(z.re) * std.math.sin(z.im));
+    static import core.math, std.math;
+    return Complex!T(std.math.sinh(z.re) * core.math.cos(z.im),
+                     std.math.cosh(z.re) * core.math.sin(z.im));
 }
 
 ///
@@ -1122,9 +1122,9 @@ Complex!T sinh(T)(Complex!T z)  @safe pure nothrow @nogc
 /// ditto
 Complex!T cosh(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    static import std.math;
-    return Complex!T(std.math.cosh(z.re) * std.math.cos(z.im),
-                     std.math.sinh(z.re) * std.math.sin(z.im));
+    static import core.math, std.math;
+    return Complex!T(std.math.cosh(z.re) * core.math.cos(z.im),
+                     std.math.sinh(z.re) * core.math.sin(z.im));
 }
 
 ///

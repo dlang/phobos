@@ -739,7 +739,7 @@ auto round(real x) @trusted nothrow @nogc
         FloatingPointControl.setControlState(
             (old & (-1 - FloatingPointControl.roundingMask)) | FloatingPointControl.roundToZero
         );
-        x = rint((x >= 0) ? x + 0.5 : x - 0.5);
+        x = core.math.rint((x >= 0) ? x + 0.5 : x - 0.5);
         FloatingPointControl.setControlState(old);
         return x;
     }
