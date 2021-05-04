@@ -1465,59 +1465,30 @@ private template SmartAlias(T...)
 }
 
 /**
- * Creates an `AliasSeq` which repeats `TList` exactly `n` times.
+ * Creates an `AliasSeq` which repeats `items` exactly `n` times.
  */
-template Repeat(size_t n, TList...)
+template Repeat(size_t n, items...)
 {
     static if (n == 0)
     {
         alias Repeat = AliasSeq!();
     }
-    else static if (n == 1)
-    {
-        alias Repeat = AliasSeq!TList;
-    }
-    else static if (n == 2)
-    {
-        alias Repeat = AliasSeq!(TList, TList);
-    }
-    /* Cases 3 to 8 are to speed up compilation
-     */
-    else static if (n == 3)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList);
-    }
-    else static if (n == 4)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList);
-    }
-    else static if (n == 5)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList);
-    }
-    else static if (n == 6)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList);
-    }
-    else static if (n == 7)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList);
-    }
-    else static if (n == 8)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList, TList);
-    }
     else
     {
-        alias R = Repeat!((n - 1) / 2, TList);
-        static if ((n - 1) % 2 == 0)
+        alias Repeat = items;
+        enum log2n =
         {
-            alias Repeat = AliasSeq!(TList, R, R);
-        }
-        else
+            uint result = 0;
+            auto x = n;
+            while (x >>= 1)
+                ++result;
+            return result;
+        }();
+        static foreach (i; 0 .. log2n)
         {
-            alias Repeat = AliasSeq!(TList, TList, R, R);
+            Repeat = AliasSeq!(Repeat, Repeat);
         }
+        Repeat = AliasSeq!(Repeat, Repeat!(n - (1u << log2n), items));
     }
 }
 
@@ -1543,6 +1514,8 @@ template Repeat(size_t n, TList...)
 
     alias ImInt10 = Repeat!(10, int);
     static assert(is(ImInt10 == AliasSeq!(int, int, int, int, int, int, int, int, int, int)));
+
+    alias Big = Repeat!(1,000,000, int);
 }
 
 
