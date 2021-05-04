@@ -41,6 +41,7 @@ $(TR $(TD Index) $(TD
 ))
 $(TR $(TD Validation) $(TD
     $(LREF isValidDchar)
+    $(LREF isValidCodepoint)
     $(LREF validate)
 ))
 $(TR $(TD Miscellaneous) $(TD
@@ -306,6 +307,54 @@ pure nothrow @safe @nogc unittest
     });
 }
 
+/**
+Checks if a single character forms a valid code point.
+
+When standing alone, some characters are invalid code points. For
+example the `wchar` `0xD800` is a so called high surrogate, which can
+only be interpreted together with a low surrogate following it. As a
+standalone character it is considered invalid.
+
+See $(LINK2 http://www.unicode.org/versions/Unicode13.0.0/,
+Unicode Standard, D90, D91 and D92) for more details.
+
+Params:
+    c = character to test
+    Char = character type of `c`
+
+Returns:
+    `true`, if `c` forms a valid code point.
+ */
+bool isValidCodepoint(Char)(Char c)
+if (isSomeChar!Char)
+{
+    alias UChar = Unqual!Char;
+    static if (is(UChar == char))
+    {
+        return c <= 0x7F;
+    }
+    else static if (is(UChar == wchar))
+    {
+        return c <= 0xD7FF || c >= 0xE000;
+    }
+    else static if (is(UChar == dchar))
+    {
+        return isValidDchar(c);
+    }
+    else
+        static assert(false, "unknown character type: `" ~ Char.stringof ~ "`");
+}
+
+///
+@safe pure nothrow unittest
+{
+    assert( isValidCodepoint(cast(char) 0x40));
+    assert(!isValidCodepoint(cast(char) 0x80));
+    assert( isValidCodepoint(cast(wchar) 0x1234));
+    assert(!isValidCodepoint(cast(wchar) 0xD800));
+    assert( isValidCodepoint(cast(dchar) 0x0010FFFF));
+    assert(!isValidCodepoint(cast(dchar) 0x12345678));
+}
 
 /++
     Calculate the length of the UTF sequence starting at `index`
