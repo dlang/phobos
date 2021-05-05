@@ -1515,7 +1515,7 @@ template Repeat(size_t n, items...)
     alias ImInt10 = Repeat!(10, int);
     static assert(is(ImInt10 == AliasSeq!(int, int, int, int, int, int, int, int, int, int)));
 
-    alias Big = Repeat!(1,000,000, int);
+    alias Big = Repeat!(1_000_000, int);
 }
 
 
