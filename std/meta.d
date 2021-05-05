@@ -747,37 +747,8 @@ template MostDerived(T, TList...)
  */
 template DerivedToFront(TList...)
 {
-    static if (TList.length <= 1)
-        alias DerivedToFront = TList;
-    else
-        alias DerivedToFront = DerivedToFrontMerge!(
-            TList.length / 2,
-            DerivedToFront!(TList[0 .. $ / 2]),
-            DerivedToFront!(TList[$ / 2 .. $]));
-}
-
-/*
-    Assume `Ts[0 .. mid]` and `Ts[mid .. $]` are sorted with derived to front.
-    Result is a merged list of `Ts` all sorted with derived to front.
-
-    Kept at top level to save on possibly redundant instantiations.
-*/
-private template DerivedToFrontMerge(uint mid, Ts...)
-{
-    // Compute the run length of already "good" elements in Ts[0 .. mid]
-    enum run =
-    {
-        static if (mid < Ts.length)
-            static foreach (i, T; Ts[0 .. mid])
-                static if (is(Ts[mid] : T))
-                    if (__ctfe) return i;
-        return mid;
-    }();
-    static if (run == mid)
-        alias DerivedToFrontMerge = Ts;
-    else
-        alias DerivedToFrontMerge = AliasSeq!(Ts[mid], Ts[0 .. run],
-            DerivedToFrontMerge!(mid - run, Ts[run .. mid], Ts[mid + 1 .. $]));
+    private enum cmp(T, U) = is(T : U);
+    alias DerivedToFront = staticSort!(cmp, TList);
 }
 
 ///
