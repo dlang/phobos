@@ -458,22 +458,24 @@ template ImmutableOf(T)
  * Returns:
  *     The qualifier template from the given type `T`
  */
-template QualifierOf(T) {}
-
-// Implementation
-template QualifierOf(T : const inout shared U, U) { alias QualifierOf = SharedConstInoutOf; }
-template QualifierOf(T : const inout U, U) { alias QualifierOf = ConstInoutOf; }
-template QualifierOf(T : const shared U, U) { alias QualifierOf = SharedConstOf; }
-template QualifierOf(T : inout shared U, U) { alias QualifierOf = SharedInoutOf; }
-template QualifierOf(T : inout U, U) { alias QualifierOf = InoutOf; }
-template QualifierOf(T : shared U, U) { alias QualifierOf = SharedOf; }
-template QualifierOf(T : immutable U, U) { alias QualifierOf = ImmutableOf; }
-template QualifierOf(T : const U, U)
+template QualifierOf(T)
 {
-    static if (is(const T == T))
-        alias QualifierOf = ConstOf;
+    static if (is(immutable T == T))
+    {
+        alias QualifierOf = ImmutableOf;
+    }
     else
-        alias QualifierOf = MutableOf;
+    {
+        private enum quals = is(const T == T) | (is(inout T == T) << 1) | (is(shared T == T) << 2);
+        static if (quals == 0)      alias QualifierOf = MutableOf;
+        else static if (quals == 1) alias QualifierOf = ConstOf;
+        else static if (quals == 2) alias QualifierOf = InoutOf;
+        else static if (quals == 3) alias QualifierOf = ConstInoutOf;
+        else static if (quals == 4) alias QualifierOf = SharedOf;
+        else static if (quals == 5) alias QualifierOf = SharedConstOf;
+        else static if (quals == 6) alias QualifierOf = SharedInoutOf;
+        else                        alias QualifierOf = SharedConstInoutOf;
+    }
 }
 
 ///
