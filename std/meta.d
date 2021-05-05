@@ -1652,20 +1652,14 @@ if (Seq.length == 2)
  *
  * Returns: `true` if `Seq` is sorted; otherwise `false`
  */
-template staticIsSorted(alias cmp, Seq...)
-{
-    static if (Seq.length <= 1)
-        enum staticIsSorted = true;
-    else static if (Seq.length == 2)
-        enum staticIsSorted = isLessEq!(cmp, Seq[0], Seq[1]);
-    else
+enum staticIsSorted(alias cmp, items...) =
     {
-        enum staticIsSorted =
-            isLessEq!(cmp, Seq[($ / 2) - 1], Seq[$ / 2]) &&
-            staticIsSorted!(cmp, Seq[0 .. $ / 2]) &&
-            staticIsSorted!(cmp, Seq[$ / 2 .. $]);
-    }
-}
+        static if (items.length > 1)
+            static foreach (i, item; items[1 .. $])
+                static if (!isLessEq!(cmp, items[i], item))
+                    if (__ctfe) return false;
+        return true;
+    }();
 
 ///
 @safe unittest
