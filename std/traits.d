@@ -75,6 +75,7 @@
  *           $(LREF SharedOf)
  *           $(LREF SharedInoutOf)
  *           $(LREF SharedConstOf)
+ *           $(LREF SharedConstInoutOf)
  *           $(LREF ImmutableOf)
  *           $(LREF QualifierOf)
  * ))
@@ -397,6 +398,29 @@ template SharedConstOf(T)
  * Params:
  *     T = The type to qualify
  * Returns:
+ *     `T` with the `const`, `shared`, and `inout` qualifiers added.
+ */
+template SharedConstInoutOf(T)
+{
+    alias SharedConstInoutOf = shared(const(inout(T)));
+}
+
+///
+@safe unittest
+{
+    //pragma(msg, SharedConstInoutOf!(int));
+    static assert(is(SharedConstInoutOf!(int) == shared const inout int));
+    static assert(is(SharedConstInoutOf!(int) == const shared inout int));
+
+    static assert(is(SharedConstInoutOf!(inout int) == shared inout const int));
+    // immutable variables are implicitly shared and const
+    static assert(is(SharedConstInoutOf!(immutable int) == immutable int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
  *     `T` with the `immutable` qualifier added.
  */
 template ImmutableOf(T)
@@ -434,20 +458,20 @@ template ImmutableOf(T)
  * Returns:
  *     The qualifier template from the given type `T`
  */
-template QualifierOf(T)
+template QualifierOf(T) {}
+
+// Implementation
+template QualifierOf(T : const inout shared U, U) { alias QualifierOf = SharedConstInoutOf; }
+template QualifierOf(T : const inout U, U) { alias QualifierOf = ConstInoutOf; }
+template QualifierOf(T : const shared U, U) { alias QualifierOf = SharedConstOf; }
+template QualifierOf(T : inout shared U, U) { alias QualifierOf = SharedInoutOf; }
+template QualifierOf(T : inout U, U) { alias QualifierOf = InoutOf; }
+template QualifierOf(T : shared U, U) { alias QualifierOf = SharedOf; }
+template QualifierOf(T : immutable U, U) { alias QualifierOf = ImmutableOf; }
+template QualifierOf(T : const U, U)
 {
-    static if (is(T == shared(const U), U))
-        alias QualifierOf = SharedConstOf;
-    else static if (is(T == const U, U))
+    static if (is(const T == T))
         alias QualifierOf = ConstOf;
-    else static if (is(T == shared(inout U), U))
-        alias QualifierOf = SharedInoutOf;
-    else static if (is(T == inout U, U))
-        alias QualifierOf = InoutOf;
-    else static if (is(T == immutable U, U))
-        alias QualifierOf = ImmutableOf;
-    else static if (is(T == shared U, U))
-        alias QualifierOf = SharedOf;
     else
         alias QualifierOf = MutableOf;
 }
@@ -455,9 +479,11 @@ template QualifierOf(T)
 ///
 @safe unittest
 {
+    static assert(__traits(isSame, QualifierOf!(shared const inout int), SharedConstInoutOf));
     static assert(__traits(isSame, QualifierOf!(immutable int), ImmutableOf));
     static assert(__traits(isSame, QualifierOf!(shared int), SharedOf));
     static assert(__traits(isSame, QualifierOf!(shared inout int), SharedInoutOf));
+    static assert(__traits(isSame, QualifierOf!(int), MutableOf));
 }
 
 @safe unittest
