@@ -509,7 +509,7 @@ T enforce(T)(T value, lazy Throwable ex)
     assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
-private void bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
+private noreturn bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
