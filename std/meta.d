@@ -747,33 +747,37 @@ template MostDerived(T, TList...)
  */
 template DerivedToFront(TList...)
 {
-    private template Merge(Ts...)
-    {
-        template With(Us...)
-        {
-            enum runLength =
-            {
-                static foreach (i, T; Ts)
-                {
-                    static if (is(Us[0] : T))
-                        if (__ctfe) return i;
-                }
-                return Ts.length;
-            }();
-            static if (runLength == Ts.length)
-                alias With = AliasSeq!(Ts, Us);
-            else static if (runLength == 0)
-                alias With = AliasSeq!(Us[0], Merge!Ts.With!(Us[1 .. $]));
-            else
-                alias With = AliasSeq!(Ts[0 .. runLength], Merge!(Ts[runLength .. $]).With!Us);
-        }
-    }
-
     static if (TList.length <= 1)
         alias DerivedToFront = TList;
     else
-        alias DerivedToFront =
-            Merge!(DerivedToFront!(TList[0 .. $ / 2])).With!(DerivedToFront!(TList[$ / 2 .. $]));
+        alias DerivedToFront = DerivedToFrontMerge!(
+            TList.length / 2,
+            DerivedToFront!(TList[0 .. $ / 2]),
+            DerivedToFront!(TList[$ / 2 .. $]));
+}
+
+/*
+    Assume `Ts[0 .. mid]` and `Ts[mid .. $]` are sorted with derived to front.
+    Result is a merged list of `Ts` all sorted with derived to front.
+
+    Kept at top level to save on possibly redundant instantiations.
+*/
+private template DerivedToFrontMerge(uint mid, Ts...)
+{
+    // Compute the run length of already "good" elements in Ts[0 .. mid]
+    enum run =
+    {
+        static if (mid < Ts.length)
+            static foreach (i, T; Ts[0 .. mid])
+                static if (is(Ts[mid] : T))
+                    if (__ctfe) return i;
+        return mid;
+    }();
+    static if (run == mid)
+        alias DerivedToFrontMerge = Ts;
+    else
+        alias DerivedToFrontMerge = AliasSeq!(Ts[mid], Ts[0 .. run],
+            DerivedToFrontMerge!(mid - run, Ts[run .. mid], Ts[mid + 1 .. $]));
 }
 
 ///
@@ -786,6 +790,9 @@ template DerivedToFront(TList...)
 
     alias TL = DerivedToFront!(Types);
     static assert(is(TL == AliasSeq!(C, B, A)));
+
+    alias TL2 = DerivedToFront!(A, A, A, B, B, B, C, C, C);
+    static assert(is(TL2 == AliasSeq!(C, C, C, B, B, B, A, A, A)));
 }
 
 private enum staticMapExpandFactor = 150;
