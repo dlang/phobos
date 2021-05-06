@@ -285,12 +285,6 @@ private
     alias CharTypeList          = AliasSeq!(char, wchar, dchar);
 }
 
-package
-{
-    // Add the mutable qualifier to the given type T.
-    template MutableOf(T)     { alias MutableOf     =              T  ; }
-}
-
 /**
  * Params:
  *     T = The type to qualify
@@ -408,10 +402,8 @@ template SharedConstInoutOf(T)
 ///
 @safe unittest
 {
-    //pragma(msg, SharedConstInoutOf!(int));
     static assert(is(SharedConstInoutOf!(int) == shared const inout int));
     static assert(is(SharedConstInoutOf!(int) == const shared inout int));
-
     static assert(is(SharedConstInoutOf!(inout int) == shared inout const int));
     // immutable variables are implicitly shared and const
     static assert(is(SharedConstInoutOf!(immutable int) == immutable int));
@@ -439,7 +431,6 @@ template ImmutableOf(T)
 
 @safe unittest
 {
-    static assert(is(    MutableOf!int ==              int));
     static assert(is(      InoutOf!int ==        inout int));
     static assert(is(      ConstOf!int ==        const int));
     static assert(is(     SharedOf!int == shared       int));
@@ -467,7 +458,7 @@ template QualifierOf(T)
     else
     {
         private enum quals = is(const T == T) | (is(inout T == T) << 1) | (is(shared T == T) << 2);
-        static if (quals == 0)      alias QualifierOf = MutableOf;
+        static if (quals == 0)      { import std.meta : Alias; alias QualifierOf = Alias; }
         else static if (quals == 1) alias QualifierOf = ConstOf;
         else static if (quals == 2) alias QualifierOf = InoutOf;
         else static if (quals == 3) alias QualifierOf = ConstInoutOf;
@@ -485,7 +476,8 @@ template QualifierOf(T)
     static assert(__traits(isSame, QualifierOf!(immutable int), ImmutableOf));
     static assert(__traits(isSame, QualifierOf!(shared int), SharedOf));
     static assert(__traits(isSame, QualifierOf!(shared inout int), SharedInoutOf));
-    static assert(__traits(isSame, QualifierOf!(int), MutableOf));
+    import std.meta : Alias;
+    static assert(__traits(isSame, QualifierOf!(int), Alias));
 }
 
 @safe unittest
@@ -501,7 +493,8 @@ template QualifierOf(T)
 
 version (StdUnittest)
 {
-    alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
+    import std.meta : Alias;
+    alias TypeQualifierList = AliasSeq!(Alias, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
     struct SubTypeOf(T)
     {
@@ -6118,13 +6111,14 @@ template DynamicArrayTypeOf(T)
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
             static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-            static foreach (P; AliasSeq!(MutableOf, ConstOf, ImmutableOf))
+            static foreach (P; AliasSeq!(Alias, ConstOf, ImmutableOf))
             {
                 static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
                 static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -6186,8 +6180,9 @@ template StringTypeOf(T)
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; CharTypeList)
-        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf, InoutOf))
+        static foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, InoutOf))
         {
             static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
@@ -6760,9 +6755,10 @@ enum bool isNarrowString(T) = is(immutable T == immutable C[], C) && (is(C == ch
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; AliasSeq!(char[], string, wstring))
     {
-        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        static foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf)/*TypeQualifierList*/)
         {
             static assert( isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
