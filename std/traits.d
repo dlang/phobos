@@ -291,10 +291,7 @@ private
  * Returns:
  *     `T` with the `inout` qualifier added.
  */
-template InoutOf(T)
-{
-    alias InoutOf = inout(T);
-}
+alias InoutOf(T) = inout(T);
 
 ///
 @safe unittest
@@ -311,10 +308,7 @@ template InoutOf(T)
  * Returns:
  *     `T` with the `const` qualifier added.
  */
-template ConstOf(T)
-{
-    alias ConstOf = const(T);
-}
+alias ConstOf(T) = const(T);
 
 ///
 @safe unittest
@@ -331,10 +325,7 @@ template ConstOf(T)
  * Returns:
  *     `T` with the `shared` qualifier added.
  */
-template SharedOf(T)
-{
-    alias SharedOf = shared(T);
-}
+alias SharedOf(T) = shared(T);
 
 ///
 @safe unittest
@@ -351,10 +342,7 @@ template SharedOf(T)
  * Returns:
  *     `T` with the `inout` and `shared` qualifiers added.
  */
-template SharedInoutOf(T)
-{
-    alias SharedInoutOf = shared(inout(T));
-}
+alias SharedInoutOf(T) = shared(inout(T));
 
 ///
 @safe unittest
@@ -372,10 +360,7 @@ template SharedInoutOf(T)
  * Returns:
  *     `T` with the `const` and `shared` qualifiers added.
  */
-template SharedConstOf(T)
-{
-    alias SharedConstOf = shared(const(T));
-}
+alias SharedConstOf(T) = shared(const(T));
 
 ///
 @safe unittest
@@ -394,10 +379,7 @@ template SharedConstOf(T)
  * Returns:
  *     `T` with the `const`, `shared`, and `inout` qualifiers added.
  */
-template SharedConstInoutOf(T)
-{
-    alias SharedConstInoutOf = shared(const(inout(T)));
-}
+alias SharedConstInoutOf(T) = shared(const(inout(T)));
 
 ///
 @safe unittest
@@ -415,10 +397,7 @@ template SharedConstInoutOf(T)
  * Returns:
  *     `T` with the `immutable` qualifier added.
  */
-template ImmutableOf(T)
-{
-    alias ImmutableOf = immutable(T);
-}
+alias ImmutableOf(T) = immutable(T);
 
 ///
 @safe unittest
