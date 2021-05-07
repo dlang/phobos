@@ -780,8 +780,6 @@ private template fqnSym(alias T)
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
-    import std.format : format;
-
     // Convenience tags
     enum {
         _const = 0,
@@ -834,7 +832,7 @@ private template fqnType(T,
             import std.range : zip;
 
             string result = join(
-                map!(a => format("%s%s", a[0], a[1]))(
+                map!(a => (a[0] ~ a[1]))(
                     zip([staticMap!(storageClassesString, parameterStC)],
                         [staticMap!(fullyQualifiedName, parameters)])
                 ),
@@ -852,7 +850,7 @@ private template fqnType(T,
         enum linkage = functionLinkage!T;
 
         if (linkage != "D")
-            return format("extern(%s) ", linkage);
+            return "extern(" ~ linkage ~ ") ";
         else
             return "";
     }
@@ -865,16 +863,15 @@ private template fqnType(T,
         static if (attrs == FA.none)
             return "";
         else
-            return format("%s%s%s%s%s%s%s%s",
-                 attrs & FA.pure_ ? " pure" : "",
-                 attrs & FA.nothrow_ ? " nothrow" : "",
-                 attrs & FA.ref_ ? " ref" : "",
-                 attrs & FA.property ? " @property" : "",
-                 attrs & FA.trusted ? " @trusted" : "",
-                 attrs & FA.safe ? " @safe" : "",
-                 attrs & FA.nogc ? " @nogc" : "",
-                 attrs & FA.return_ ? " return" : ""
-            );
+            return
+                (attrs & FA.pure_ ? " pure" : "")
+                ~ (attrs & FA.nothrow_ ? " nothrow" : "")
+                ~ (attrs & FA.ref_ ? " ref" : "")
+                ~ (attrs & FA.property ? " @property" : "")
+                ~ (attrs & FA.trusted ? " @trusted" : "")
+                ~ (attrs & FA.safe ? " @safe" : "")
+                ~ (attrs & FA.nogc ? " @nogc" : "")
+                ~ (attrs & FA.return_ ? " return" : "");
     }
 
     string addQualifiers(string typeString,
@@ -883,15 +880,12 @@ private template fqnType(T,
         auto result = typeString;
         if (addShared)
         {
-            result = format("shared(%s)", result);
+            result = "shared(" ~ result ~")";
         }
         if (addConst || addImmutable || addInout)
         {
-            result = format("%s(%s)",
-                addConst ? "const" :
-                    addImmutable ? "immutable" : "inout",
-                result
-            );
+            result = (addConst ? "const" : addImmutable ? "immutable" : "inout")
+                ~ "(" ~ result ~ ")";
         }
         return result;
     }
@@ -928,61 +922,62 @@ private template fqnType(T,
     }
     else static if (isStaticArray!T)
     {
+        import std.conv : to;
         enum fqnType = chain!(
-            format("%s[%s]", fqnType!(typeof(T.init[0]), qualifiers), T.length)
+            fqnType!(typeof(T.init[0]), qualifiers) ~ "[" ~ to!string(T.length) ~ "]"
         );
     }
     else static if (isArray!T)
     {
         enum fqnType = chain!(
-            format("%s[]", fqnType!(typeof(T.init[0]), qualifiers))
+            fqnType!(typeof(T.init[0]), qualifiers) ~ "[]"
         );
     }
     else static if (isAssociativeArray!T)
     {
         enum fqnType = chain!(
-            format("%s[%s]", fqnType!(ValueType!T, qualifiers), fqnType!(KeyType!T, noQualifiers))
+            fqnType!(ValueType!T, qualifiers) ~ '[' ~ fqnType!(KeyType!T, noQualifiers) ~ ']'
         );
     }
     else static if (isSomeFunction!T)
     {
         static if (is(T F == delegate))
         {
-            enum qualifierString = format("%s%s",
-                is(F == shared) ? " shared" : "",
-                is(F == inout) ? " inout" :
-                is(F == immutable) ? " immutable" :
-                is(F == const) ? " const" : ""
-            );
-            enum formatStr = "%s%s delegate(%s)%s%s";
+            enum qualifierString =
+                (is(F == shared) ? " shared" : "")
+                ~ (is(F == inout) ? " inout" :
+                    is(F == immutable) ? " immutable" :
+                    is(F == const) ? " const" : "");
             enum fqnType = chain!(
-                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
-                    parametersTypeString!(T), functionAttributeString!T, qualifierString)
+                linkageString!T
+                ~ fqnType!(ReturnType!T, noQualifiers)
+                ~ " delegate(" ~ parametersTypeString!(T) ~ ")"
+                ~ functionAttributeString!T
+                ~ qualifierString
             );
         }
         else
         {
-            static if (isFunctionPointer!T)
-                enum formatStr = "%s%s function(%s)%s";
-            else
-                enum formatStr = "%s%s(%s)%s";
-
             enum fqnType = chain!(
-                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
-                    parametersTypeString!(T), functionAttributeString!T)
+                linkageString!T
+                ~ fqnType!(ReturnType!T, noQualifiers)
+                ~ (isFunctionPointer!T ? " function(" : "(")
+                ~ parametersTypeString!(T) ~ ")"
+                ~ functionAttributeString!T
             );
         }
     }
     else static if (isPointer!T)
     {
         enum fqnType = chain!(
-            format("%s*", fqnType!(PointerTarget!T, qualifiers))
+            fqnType!(PointerTarget!T, qualifiers) ~ "*"
         );
     }
     else static if (is(T : __vector(V[N]), V, size_t N))
     {
+        import std.conv : to;
         enum fqnType = chain!(
-            format("__vector(%s[%s])", fqnType!(V, qualifiers), N)
+            "__vector(" ~ fqnType!(V, qualifiers) ~ "[" ~ N.to!string ~ "])"
         );
     }
     else
