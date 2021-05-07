@@ -786,7 +786,7 @@ if (is(T == class))
 
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM float) separately. The definition is:
+   `float` separately. The definition is:
 
 ----
 struct FloatRep
@@ -803,17 +803,52 @@ struct FloatRep
 }
 ----
 */
-struct FloatRep
+alias FloatRep = FloatingPointRepresentation!float;
+
+/**
+   Allows manipulating the fraction, exponent, and sign parts of a
+   `double` separately. The definition is:
+
+----
+struct DoubleRep
 {
     union
     {
-        float value;
+        double value;
         mixin(bitfields!(
-                  uint,  "fraction", 23,
-                  ubyte, "exponent",  8,
-                  bool,  "sign",      1));
+                  ulong,   "fraction", 52,
+                  ushort,  "exponent", 11,
+                  bool,    "sign",      1));
     }
-    enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
+}
+----
+*/
+alias DoubleRep = FloatingPointRepresentation!double;
+
+private struct FloatingPointRepresentation(T)
+{
+    static if (is(T == float))
+    {
+        enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+        alias FractionType = uint;
+        alias ExponentType = ubyte;
+    }
+    else
+    {
+        enum uint bias = 1023, fractionBits = 52, exponentBits = 11, signBits = 1;
+        alias FractionType = ulong;
+        alias ExponentType = ushort;
+    }
+
+    union
+    {
+        T value;
+        mixin(bitfields!(
+                  FractionType, "fraction", fractionBits,
+                  ExponentType, "exponent", exponentBits,
+                  bool,  "sign",     signBits));
+    }
 }
 
 ///
@@ -862,39 +897,6 @@ struct FloatRep
     assert(rep.fraction == 2796203);
     assert(rep.exponent == 125);
     assert(rep.sign);
-}
-
-/**
-   Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM double) separately. The definition is:
-
-----
-struct DoubleRep
-{
-    union
-    {
-        double value;
-        mixin(bitfields!(
-                  ulong,   "fraction", 52,
-                  ushort,  "exponent", 11,
-                  bool,    "sign",      1));
-    }
-    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
-}
-----
-*/
-
-struct DoubleRep
-{
-    union
-    {
-        double value;
-        mixin(bitfields!(
-                  ulong,  "fraction", 52,
-                  ushort, "exponent", 11,
-                  bool,   "sign",      1));
-    }
-    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
 ///
