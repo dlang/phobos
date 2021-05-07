@@ -389,7 +389,7 @@ public:
      */
     void toString(W)(ref W w) const
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         auto p = () @trusted { return cast(void*) mbox; }();
         formattedWrite(w, "Tid(%x)", p);
     }
