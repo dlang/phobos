@@ -3677,7 +3677,7 @@ private long getWidth(T)(T s)
 enum RoundingClass { ZERO, LOWER, FIVE, UPPER }
 
 bool round(T)(ref T sequence, size_t left, size_t right, RoundingClass type, bool negative, char max = '9')
-in (left > 0) // != 0 because we might need one carry
+in (left >= 0) // should be left > 0, but if you know ahead, that there's no carry, left == 0 is fine
 in (left < sequence.length)
 in (right >= 0)
 in (right <= sequence.length)
