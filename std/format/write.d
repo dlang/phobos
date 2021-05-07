@@ -15,7 +15,7 @@ $(BOOKTABLE ,
 $(TR $(TH) $(TH s) $(TH c) $(TH d, u, b, o) $(TH x, X) $(TH e, E, f, F, g, G, a, A) $(TH r) $(TH compound))
 $(TR $(TD `bool`) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
 $(TR $(TD `null`) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)))
-$(TR $(TD $(I integer)) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
+$(TR $(TD $(I integer)) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD yes) $(TD yes) $(TD $(MDASH)))
 $(TR $(TD $(I floating point)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes) $(TD $(MDASH)))
 $(TR $(TD $(I character)) $(TD yes) $(TD yes) $(TD yes) $(TD yes) $(TD $(MDASH)) $(TD yes) $(TD $(MDASH)))
 $(TR $(TD $(I string)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH)) $(TD yes) $(TD yes))

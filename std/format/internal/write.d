@@ -184,10 +184,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 
     immutable uint base =
-        f.spec == 'x' || f.spec == 'X' ? 16 :
+        f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
         f.spec == 'o' ? 8 :
         f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
+        f.spec == 's' || f.spec == 'd' || f.spec == 'u'
+        || f.spec == 'e' || f.spec == 'E' || f.spec == 'f' || f.spec == 'F'
+        || f.spec == 'g' || f.spec == 'G' ? 10 :
         0;
 
     import std.format : enforceFmt;
@@ -200,7 +202,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     ulong arg = val;
     static if (isSigned!U)
     {
-        if (f.spec == 's' || f.spec == 'd')
+        if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
         {
             if (val < 0)
             {
@@ -218,7 +220,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         digits[pos--] = '0' + arg % base;
         if (base > 10 && digits[pos + 1] > '9')
-            digits[pos + 1] += (f.spec == 'x' ? 'a' : 'A') - '0' - 10;
+            digits[pos + 1] += ((f.spec == 'x' || f.spec == 'a') ? 'a' : 'A') - '0' - 10;
         arg /= base;
     } while (arg > 0);
 
@@ -226,25 +228,132 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     size_t left = 2;
     size_t right = 2;
 
-    if (negative)
-        prefix[right++] = '-';
-    else if (f.spec == 's' || f.spec == 'd')
+    // add sign
+    if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
     {
-        if (f.flPlus)
+        if (negative)
+            prefix[right++] = '-';
+        else if (f.flPlus)
             prefix[right++] = '+';
         else if (f.flSpace)
             prefix[right++] = ' ';
     }
-    if (f.flHash && (base == 16) && obj != 0)
-    {
-        prefix[--left] = f.spec;
-        prefix[--left] = '0';
-    }
-    if (f.flHash && (base == 8) && obj != 0
-        && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
-        prefix[--left] = '0';
 
-    writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], "", f, true);
+    // not a floating point like spec
+    if (f.spec == 'x' || f.spec == 'X' || f.spec == 'b' || f.spec == 'o' || f.spec == 'u'
+        || f.spec == 'd' || f.spec == 's')
+    {
+        if (f.flHash && (base == 16) && obj != 0)
+        {
+            prefix[--left] = f.spec;
+            prefix[--left] = '0';
+        }
+        if (f.flHash && (base == 8) && obj != 0
+            && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
+            prefix[--left] = '0';
+
+        writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], "", f, true);
+        return;
+    }
+
+    FormatSpec!Char fs = f;
+    if (f.precision == f.UNSPECIFIED)
+        fs.precision = cast(typeof(fs.precision)) (digits.length - pos - 2);
+
+    // %f like output
+    if (f.spec == 'f' || f.spec == 'F'
+        || ((f.spec == 'g' || f.spec == 'G') && (fs.precision >= digits.length - pos - 2)))
+    {
+        if (f.precision == f.UNSPECIFIED)
+            fs.precision = 0;
+
+        writeAligned(w, prefix[left .. right], digits[pos + 1 .. $], ".", "", fs,
+                     (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
+
+        return;
+    }
+
+    import std.algorithm.searching : all;
+
+    // at least one digit for %g
+    if ((f.spec == 'g' || f.spec == 'G') && fs.precision == 0)
+        fs.precision = 1;
+
+    // rounding
+    size_t digit_end = pos + fs.precision + ((f.spec == 'g' || f.spec == 'G') ? 1 : 2);
+    if (digit_end <= digits.length)
+    {
+        RoundingClass rt = RoundingClass.ZERO;
+        if (digit_end < digits.length)
+        {
+            auto tie = (f.spec == 'a' || f.spec == 'A') ? '8' : '5';
+            if (digits[digit_end] >= tie)
+            {
+                rt = RoundingClass.UPPER;
+                if (digits[digit_end] == tie && digits[digit_end + 1 .. $].all!(a => a == '0'))
+                    rt = RoundingClass.FIVE;
+            }
+            else
+            {
+                rt = RoundingClass.LOWER;
+                if (digits[digit_end .. $].all!(a => a == '0'))
+                    rt = RoundingClass.ZERO;
+            }
+        }
+
+        if (round(digits, pos + 1, digit_end, rt, negative,
+                  f.spec == 'a' ? 'f' : (f.spec == 'A' ? 'F' : '9')))
+        {
+            pos--;
+            digit_end--;
+        }
+    }
+
+    // convert to scientific notation
+    char[1] int_digit = void;
+    int_digit[0] = digits[pos + 1];
+    digits[pos + 1] = '.';
+
+    char[4] suffix = void;
+
+    if (f.spec == 'e' || f.spec == 'E' || f.spec == 'g' || f.spec == 'G')
+    {
+        suffix[0] = (f.spec == 'e' || f.spec == 'g') ? 'e' : 'E';
+        suffix[1] = '+';
+        suffix[2] = cast(char) ('0' + (digits.length - pos - 2) / 10);
+        suffix[3] = cast(char) ('0' + (digits.length - pos - 2) % 10);
+    }
+    else
+    {
+        if (right == 3)
+            prefix[0] = prefix[2];
+        prefix[1] = '0';
+        prefix[2] = f.spec == 'a' ? 'x' : 'X';
+
+        left = right == 3 ? 0 : 1;
+        right = 3;
+
+        suffix[0] = f.spec == 'a' ? 'p' : 'P';
+        suffix[1] = '+';
+        suffix[2] = cast(char) ('0' + ((digits.length - pos - 2) * 4) / 10);
+        suffix[3] = cast(char) ('0' + ((digits.length - pos - 2) * 4) % 10);
+    }
+
+    import std.algorithm.comparison : min;
+
+    // remove trailing zeros
+    if ((f.spec == 'g' || f.spec == 'G') && !f.flHash)
+    {
+        digit_end = min(digit_end, digits.length);
+        while (digit_end > pos + 1 &&
+               (digits[digit_end - 1] == '0' || digits[digit_end - 1] == '.'))
+            digit_end--;
+    }
+
+    writeAligned(w, prefix[left .. right], int_digit[0 .. $],
+                 digits[pos + 1 .. min(digit_end, $)],
+                 suffix[0 .. $], fs,
+                 (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
@@ -396,6 +505,63 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 @safe pure unittest
 {
     assert(format!"%#.0o"(0) == "0");
+}
+
+@safe pure unittest
+{
+    assert(format!"%e"(10000) == "1.0000e+04");
+    assert(format!"%.2e"(10000) == "1.00e+04");
+    assert(format!"%.10e"(10000) == "1.0000000000e+04");
+
+    assert(format!"%e"(9999) == "9.999e+03");
+    assert(format!"%.2e"(9999) == "1.00e+04");
+    assert(format!"%.10e"(9999) == "9.9990000000e+03");
+
+    assert(format!"%f"(10000) == "10000");
+    assert(format!"%.2f"(10000) == "10000.00");
+
+    assert(format!"%g"(10000) == "10000");
+    assert(format!"%.2g"(10000) == "1e+04");
+    assert(format!"%.10g"(10000) == "10000");
+
+    assert(format!"%#g"(10000) == "10000.");
+    assert(format!"%#.2g"(10000) == "1.0e+04");
+    assert(format!"%#.10g"(10000) == "10000.00000");
+
+    assert(format!"%g"(9999) == "9999");
+    assert(format!"%.2g"(9999) == "1e+04");
+    assert(format!"%.10g"(9999) == "9999");
+
+    assert(format!"%a"(0x10000) == "0x1.0000p+16");
+    assert(format!"%.2a"(0x10000) == "0x1.00p+16");
+    assert(format!"%.10a"(0x10000) == "0x1.0000000000p+16");
+
+    assert(format!"%a"(0xffff) == "0xf.fffp+12");
+    assert(format!"%.2a"(0xffff) == "0x1.00p+16");
+    assert(format!"%.10a"(0xffff) == "0xf.fff0000000p+12");
+}
+
+@safe pure unittest
+{
+    assert(format!"%.3e"(ulong.max) == "1.845e+19");
+    assert(format!"%.3f"(ulong.max) == "18446744073709551615.000");
+    assert(format!"%.3g"(ulong.max) == "1.84e+19");
+    assert(format!"%.3a"(ulong.max) == "0x1.000p+64");
+
+    assert(format!"%.3e"(long.min) == "-9.223e+18");
+    assert(format!"%.3f"(long.min) == "-9223372036854775808.000");
+    assert(format!"%.3g"(long.min) == "-9.22e+18");
+    assert(format!"%.3a"(long.min) == "-0x8.000p+60");
+
+    assert(format!"%e"(0) == "0e+00");
+    assert(format!"%f"(0) == "0");
+    assert(format!"%g"(0) == "0");
+    assert(format!"%a"(0) == "0x0p+00");
+}
+
+@safe pure unittest
+{
+    assert(format!"%.0g"(1500) == "2e+03");
 }
 
 /*
@@ -3500,6 +3666,282 @@ private long getWidth(T)(T s)
     for (size_t i; i < s.length; i += graphemeStride(s, i))
         ++width;
     return width;
+}
+
+enum RoundingClass { ZERO, LOWER, FIVE, UPPER }
+
+bool round(T)(ref T sequence, size_t left, size_t right, RoundingClass type, bool negative, char max = '9')
+in (left > 0) // != 0 because we might need one carry
+in (left < sequence.length)
+in (right >= 0)
+in (right <= sequence.length)
+in (right >= left)
+in (max == '9' || max == 'f' || max == 'F')
+{
+    import std.format.internal.floats : RoundingMode;
+    import std.math.hardware;
+
+    auto mode = RoundingMode.toNearestTiesToEven;
+
+    if (!__ctfe)
+    {
+        // std.math's FloatingPointControl isn't available on all target platforms
+        static if (is(FloatingPointControl))
+        {
+            switch (FloatingPointControl.rounding)
+            {
+            case FloatingPointControl.roundUp:
+                mode = RoundingMode.up;
+                break;
+            case FloatingPointControl.roundDown:
+                mode = RoundingMode.down;
+                break;
+            case FloatingPointControl.roundToZero:
+                mode = RoundingMode.toZero;
+                break;
+            case FloatingPointControl.roundToNearest:
+                mode = RoundingMode.toNearestTiesToEven;
+                break;
+            default: assert(false, "Unknown floating point rounding mode");
+            }
+        }
+    }
+
+    bool roundUp = false;
+    if (mode == RoundingMode.up)
+        roundUp = type != RoundingClass.ZERO && !negative;
+    else if (mode == RoundingMode.down)
+        roundUp = type != RoundingClass.ZERO && negative;
+    else if (mode == RoundingMode.toZero)
+        roundUp = false;
+    else
+    {
+        roundUp = type == RoundingClass.UPPER;
+
+        if (type == RoundingClass.FIVE)
+        {
+            // IEEE754 allows for two different ways of implementing roundToNearest:
+
+            if (mode == RoundingMode.toNearestTiesAwayFromZero)
+                roundUp = true;
+            else
+            {
+                // Round to nearest, ties to even
+                auto last = sequence[right - 1];
+                if (last == '.') last = sequence[right - 2];
+                roundUp = last % 2 != 0;
+            }
+        }
+    }
+
+    if (!roundUp) return false;
+
+    foreach_reverse (i;left .. right)
+    {
+        if (sequence[i] == '.') continue;
+        if (sequence[i] == max)
+            sequence[i] = '0';
+        else
+        {
+            if (max != '9' && sequence[i] == '9')
+                sequence[i] = max == 'f' ? 'a' : 'A';
+            else
+                sequence[i]++;
+            return false;
+        }
+    }
+
+    sequence[left - 1] = '1';
+    return true;
+}
+
+@safe unittest
+{
+    char[10] c;
+    size_t left = 5;
+    size_t right = 8;
+
+    c[4 .. 8] = "x.99";
+    assert(round(c, left, right, RoundingClass.UPPER, false) == true);
+    assert(c[4 .. 8] == "1.00");
+
+    c[4 .. 8] = "x.99";
+    assert(round(c, left, right, RoundingClass.FIVE, false) == true);
+    assert(c[4 .. 8] == "1.00");
+
+    c[4 .. 8] = "x.99";
+    assert(round(c, left, right, RoundingClass.LOWER, false) == false);
+    assert(c[4 .. 8] == "x.99");
+
+    c[4 .. 8] = "x.99";
+    assert(round(c, left, right, RoundingClass.ZERO, false) == false);
+    assert(c[4 .. 8] == "x.99");
+
+    import std.math.hardware;
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.UPPER, false) == true);
+        assert(c[4 .. 8] == "1.00");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.FIVE, false) == true);
+        assert(c[4 .. 8] == "1.00");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.LOWER, false) == true);
+        assert(c[4 .. 8] == "1.00");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.ZERO, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.UPPER, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.FIVE, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.LOWER, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.ZERO, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.UPPER, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.FIVE, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.LOWER, false) == false);
+        assert(c[4 .. 8] == "x.99");
+
+        c[4 .. 8] = "x.99";
+        assert(round(c, left, right, RoundingClass.ZERO, false) == false);
+        assert(c[4 .. 8] == "x.99");
+    }
+}
+
+@safe unittest
+{
+    char[10] c;
+    size_t left = 5;
+    size_t right = 8;
+
+    c[4 .. 8] = "x8.5";
+    assert(round(c, left, right, RoundingClass.UPPER, true) == false);
+    assert(c[4 .. 8] == "x8.6");
+
+    c[4 .. 8] = "x8.5";
+    assert(round(c, left, right, RoundingClass.FIVE, true) == false);
+    assert(c[4 .. 8] == "x8.6");
+
+    c[4 .. 8] = "x8.4";
+    assert(round(c, left, right, RoundingClass.FIVE, true) == false);
+    assert(c[4 .. 8] == "x8.4");
+
+    c[4 .. 8] = "x8.5";
+    assert(round(c, left, right, RoundingClass.LOWER, true) == false);
+    assert(c[4 .. 8] == "x8.5");
+
+    c[4 .. 8] = "x8.5";
+    assert(round(c, left, right, RoundingClass.ZERO, true) == false);
+    assert(c[4 .. 8] == "x8.5");
+
+    import std.math.hardware;
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.UPPER, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.FIVE, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.LOWER, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.ZERO, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.UPPER, true) == false);
+        assert(c[4 .. 8] == "x8.6");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.FIVE, true) == false);
+        assert(c[4 .. 8] == "x8.6");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.LOWER, true) == false);
+        assert(c[4 .. 8] == "x8.6");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.ZERO, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.UPPER, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.FIVE, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.LOWER, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+
+        c[4 .. 8] = "x8.5";
+        assert(round(c, left, right, RoundingClass.ZERO, true) == false);
+        assert(c[4 .. 8] == "x8.5");
+    }
+}
+
+@safe unittest
+{
+    char[10] c;
+    size_t left = 5;
+    size_t right = 8;
+
+    c[4 .. 8] = "x8.9";
+    assert(round(c, left, right, RoundingClass.UPPER, true, 'f') == false);
+    assert(c[4 .. 8] == "x8.a");
+
+    c[4 .. 8] = "x8.9";
+    assert(round(c, left, right, RoundingClass.UPPER, true, 'F') == false);
+    assert(c[4 .. 8] == "x8.A");
+
+    c[4 .. 8] = "x8.f";
+    assert(round(c, left, right, RoundingClass.UPPER, true, 'f') == false);
+    assert(c[4 .. 8] == "x9.0");
 }
 
 version (StdUnittest)

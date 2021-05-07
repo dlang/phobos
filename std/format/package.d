@@ -340,7 +340,7 @@ $(BOOKTABLE ,
    $(TR $(TD $(B 'r'))
             $(TD `\0` or `\1`)
    )
-   $(TR $(MULTIROW_CELL 3, $(I Integral))
+   $(TR $(MULTIROW_CELL 4, $(I Integral))
         $(TD $(B 's'), $(B 'd'))
             $(TD A signed decimal number. The $(B '#') flag is ignored.)
    )
@@ -351,6 +351,16 @@ $(BOOKTABLE ,
                  denotes that the number must be preceded by `0` and `0x`, with
                  the exception of the value 0, where this does not apply. For
                  $(B 'b') and $(B 'u') the $(B '#') flag has no effect.)
+   )
+   $(TR $(TD $(B 'e'), $(B 'E'), $(B 'f'), $(B 'F'), $(B 'g'), $(B 'G'), $(B 'a'), $(B 'A'))
+            $(TD As a floating point value with the same specifier.
+
+                 Default precision is large enough to add all digits
+                 of the integral value.
+
+                 In case of ($B 'a') and $(B 'A'), the integral digit can be
+                 any hexadecimal digit.
+               )
    )
    $(TR $(TD $(B 'r'))
             $(TD Characters taken directly from the binary representation.)
