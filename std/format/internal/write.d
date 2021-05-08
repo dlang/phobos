@@ -672,7 +672,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%#,3.0f", 1303.1982) == "1,303.");
 }
 
-@safe /*pure*/ unittest     // formatting floating point values is now impure
+@safe pure unittest
 {
     import std.conv : to;
     import std.exception : collectExceptionMsg;
@@ -3245,7 +3245,7 @@ if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T 
 // Fix for https://issues.dlang.org/show_bug.cgi?id=1591
 int getNthInt(string kind, A...)(uint index, A args)
 {
-    return getNth!(kind, isIntegral,int)(index, args);
+    return getNth!(kind, isIntegral, int)(index, args);
 }
 
 T getNth(string kind, alias Condition, T, A...)(uint index, A args)
