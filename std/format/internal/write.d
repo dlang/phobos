@@ -3265,12 +3265,12 @@ if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T 
 }
 
 // Fix for https://issues.dlang.org/show_bug.cgi?id=1591
-int getNthInt(string kind, A...)(uint index, A args)
+int getNthInt(string kind, A...)(uint index, auto ref A args)
 {
     return getNth!(kind, isIntegral, int)(index, args);
 }
 
-T getNth(string kind, alias Condition, T, A...)(uint index, A args)
+T getNth(string kind, alias Condition, T, A...)(uint index, auto ref A args)
 {
     import std.conv : text, to;
     import std.format : FormatException;
