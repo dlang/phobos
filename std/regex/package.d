@@ -851,17 +851,6 @@ private auto matchOnceImpl(RegEx, R)(R input, const auto ref RegEx prog) @truste
     return captures;
 }
 
-// Used to generate a pure wrapper for matchOnceImpl. Based on the example in the
-// std.traits.SetFunctionAttributes documentation.
-private auto assumePureFunction(T)(T t)
-{
-    if (isFunctionPointer!T)
-    {
-        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
-        return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
-    }
-}
-
 // matchOnce is constructed as a safe, pure wrapper over matchOnceImpl. It can be
 // faked as pure because the static mutable variables are used to cache the key and
 // character matcher. The technique used avoids delegates and GC.
