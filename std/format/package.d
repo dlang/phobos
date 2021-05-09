@@ -1356,8 +1356,8 @@ if (isSomeChar!Char)
 }
 
 /// ditto
-auto format(alias fmt, Args...)(Args args)
-if (is(StringTypeOf!(typeof(fmt))))
+typeof(fmt) format(alias fmt, Args...)(Args args)
+if (isSomeString!(typeof(fmt)))
 {
     import std.array : appender;
     import std.range.primitives : ElementEncodingType;
@@ -1409,25 +1409,6 @@ if (is(StringTypeOf!(typeof(fmt))))
     static assert(!__traits(compiles, format!"%f"(1.5, 2)));
     static assert(!__traits(compiles, format!"%s"(1.5L, 2)));
     static assert(!__traits(compiles, format!"%f"(1.5L, 2)));
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=21456
-@safe pure unittest
-{
-    enum FMTS1 = "%s is %s";
-    assert(format!FMTS1("Pi", 3.14) == "Pi is 3.14");
-
-    enum
-    {
-        FMTS2 = "%s is %s"
-    }
-    assert(format!FMTS2("Pi", 3.14) == "Pi is 3.14");
-
-    enum FMTS3 : string
-    {
-        ONE = "%s is %s"
-    }
-    assert(format!(FMTS3.ONE)("Pi", 3.14) == "Pi is 3.14");
 }
 
 // called during compilation to guess the length of the
