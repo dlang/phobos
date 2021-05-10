@@ -2558,7 +2558,7 @@ if (isConvertibleToString!R)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15658
-@system unittest
+@safe unittest
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
