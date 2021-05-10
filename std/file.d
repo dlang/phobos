@@ -629,7 +629,7 @@ if (isSomeString!S && (isInputRange!R && !isInfinite!R && isSomeChar!(ElementTyp
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
 
-@system unittest
+@safe unittest
 {
     import std.array : appender;
     import std.bitmanip : append, Endian;
