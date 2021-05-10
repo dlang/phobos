@@ -1620,7 +1620,7 @@ private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
         setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
-@system unittest
+@safe unittest
 {
     import std.stdio : File;
     string newdir = deleteme ~ r".dir";
