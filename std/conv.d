@@ -126,7 +126,7 @@ private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LIN
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
     if (source.empty)
-        throw parseError(text("unexpected end of input when expecting", "\"", c, "\""));
+        throw parseError(text("unexpected end of input when expecting \"", c, "\""));
     if (source.front != c)
         throw parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
