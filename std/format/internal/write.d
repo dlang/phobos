@@ -48,7 +48,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     });
 }
 
-@system unittest
+@safe unittest
 {
     class C1
     {
@@ -64,10 +64,12 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C1(false), "false");
-    formatTest(new C1(true),  "true");
-    formatTest(new C2(false), "C");
-    formatTest(new C2(true),  "C");
+    () @trusted {
+        formatTest(new C1(false), "false");
+        formatTest(new C1(true),  "true");
+        formatTest(new C2(false), "C");
+        formatTest(new C2(true),  "C");
+    } ();
 
     struct S1
     {
@@ -377,7 +379,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     });
 }
 
-@system unittest
+@safe unittest
 {
     class C1
     {
@@ -394,8 +396,10 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C1(10), "10");
-    formatTest(new C2(10), "C");
+    () @trusted {
+        formatTest(new C1(10), "10");
+        formatTest(new C2(10), "C");
+    } ();
 
     struct S1
     {
@@ -698,7 +702,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
 }
 
-@system unittest
+@safe unittest
 {
     formatTest(2.25, "2.25");
 
@@ -717,8 +721,10 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C1(2.25), "2.25");
-    formatTest(new C2(2.25), "C");
+    () @trusted {
+        formatTest(new C1(2.25), "2.25");
+        formatTest(new C2(2.25), "C");
+    } ();
 
     struct S1
     {
@@ -1067,7 +1073,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     });
 }
 
-@system unittest
+@safe unittest
 {
     class C1
     {
@@ -1084,8 +1090,10 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C1('c'), "c");
-    formatTest(new C2('c'), "C");
+    () @trusted {
+        formatTest(new C1('c'), "c");
+        formatTest(new C2('c'), "C");
+    } ();
 
     struct S1
     {
@@ -1152,7 +1160,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     assert(collectExceptionMsg(format("%d", "hi")).back == 'd');
 }
 
-@system unittest
+@safe unittest
 {
     // Test for bug 5371 for classes
     class C1
@@ -1169,8 +1177,10 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
         this(string s){ var = s; }
     }
 
-    formatTest(new C1("c1"), "c1");
-    formatTest(new C2("c2"), "c2");
+    () @trusted {
+        formatTest(new C1("c1"), "c1");
+        formatTest(new C2("c2"), "c2");
+    } ();
 
     // Test for bug 5371 for structs
     struct S1
@@ -1189,7 +1199,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     formatTest(S2("s2"), "s2");
 }
 
-@system unittest
+@safe unittest
 {
     class C3
     {
@@ -1199,7 +1209,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C3("c3"), "C");
+    () @trusted { formatTest(new C3("c3"), "C"); } ();
 
     struct S3
     {
@@ -1272,7 +1282,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -1305,6 +1315,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
     }
 
     // invalid UTF sequence needs hex-string literal postfix (c/w/d)
+    () @trusted
     {
         // U+FFFF with UTF-8 (Invalid code point for interchange)
         formatTest([cast(string)[0xEF, 0xBF, 0xBF]],
@@ -1317,7 +1328,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
         // U+FFFF with UTF-32 (Invalid code point for interchange)
         formatTest([cast(dstring)[0xFFFF]],
                    `[[cast(dchar) 0xFFFF]]`);
-    }
+    } ();
 }
 
 /*
@@ -1395,7 +1406,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 // alias this, input range I/F, and toString()
-@system unittest
+@safe unittest
 {
     struct S(int flags)
     {
@@ -1442,17 +1453,19 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
             override string toString() const { return "C"; }
     }
 
-    formatTest(new C!0b000([0, 1, 2]), (new C!0b000([])).toString());
-    formatTest(new C!0b001([0, 1, 2]), "[0, 1, 2]");    // Test for bug 7628
-    formatTest(new C!0b010([0, 1, 2]), "[0, 2, 4]");
-    formatTest(new C!0b011([0, 1, 2]), "[0, 2, 4]");
-    formatTest(new C!0b100([0, 1, 2]), "C");
-    formatTest(new C!0b101([0, 1, 2]), "C");            // Test for bug 7628
-    formatTest(new C!0b110([0, 1, 2]), "C");
-    formatTest(new C!0b111([0, 1, 2]), "C");
+    () @trusted {
+        formatTest(new C!0b000([0, 1, 2]), (new C!0b000([])).toString());
+        formatTest(new C!0b001([0, 1, 2]), "[0, 1, 2]");    // Test for bug 7628
+        formatTest(new C!0b010([0, 1, 2]), "[0, 2, 4]");
+        formatTest(new C!0b011([0, 1, 2]), "[0, 2, 4]");
+        formatTest(new C!0b100([0, 1, 2]), "C");
+        formatTest(new C!0b101([0, 1, 2]), "C");            // Test for bug 7628
+        formatTest(new C!0b110([0, 1, 2]), "C");
+        formatTest(new C!0b111([0, 1, 2]), "C");
+    } ();
 }
 
-@system unittest
+@safe unittest
 {
     // void[]
     void[] val0;
@@ -1464,7 +1477,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     void[0] sval0 = [];
     formatTest(sval0, "[]");
 
-    void[3] sval = cast(void[3]) cast(ubyte[3])[1, 2, 3];
+    void[3] sval = () @trusted { return cast(void[3]) cast(ubyte[3])[1, 2, 3]; } ();
     formatTest(sval, "[1, 2, 3]");
 }
 
@@ -1883,7 +1896,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest("%(%s:<%s>%|%)" , [1:2], "1:<2>");
 }
 
-@system unittest
+@safe unittest
 {
     class C1
     {
@@ -1900,8 +1913,10 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         override string toString() const { return "C"; }
     }
 
-    formatTest(new C1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`]);
-    formatTest(new C2(['c':1, 'd':2]), "C");
+    () @trusted {
+        formatTest(new C1(['c':1, 'd':2]), [`['c':1, 'd':2]`, `['d':2, 'c':1]`]);
+        formatTest(new C2(['c':1, 'd':2]), "C");
+    } ();
 
     struct S1
     {
@@ -1921,7 +1936,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21875
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     import std.format : FormatException;
@@ -1933,7 +1948,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assertThrown!FormatException(format("%(%s%s%s%)", aa));
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     import std.format : FormatException;
@@ -1948,7 +1963,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21808
-@system unittest
+@safe unittest
 {
     auto spelled = [ 1 : "one" ];
     assert(format("%-(%2$s (%1$s)%|, %)", spelled) == "one (1)");
@@ -2656,7 +2671,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     assert(result == "9");
 }
 
-@system unittest
+@safe unittest
 {
     // union formatting without toString
     union U1
@@ -2675,11 +2690,11 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
         string toString() const { return s; }
     }
     U2 u2;
-    u2.s = "hello";
+    () @trusted { u2.s = "hello"; } ();
     formatTest(u2, "hello");
 }
 
-@system unittest
+@safe unittest
 {
     import std.array : appender;
     import std.format : formatValue;
@@ -2740,7 +2755,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21722
-@system unittest
+@safe unittest
 {
     struct Bar
     {
@@ -2751,7 +2766,8 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     }
 
     Bar b;
-    assert(format("%b", b) == "Hello");
+    auto result = () @trusted { return format("%b", b); } ();
+    assert(result == "Hello");
 
     static if (hasPreviewIn)
     {
@@ -3010,7 +3026,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     assert(format("%s",p) != format("%s",b));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     // Test for https://issues.dlang.org/show_bug.cgi?id=7869
     struct S
@@ -3020,7 +3036,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     S* p = null;
     formatTest(p, "null");
 
-    S* q = cast(S*) 0xFFEECCAA;
+    S* q = () @trusted { return cast(S*) 0xFFEECCAA; } ();
     formatTest(q, "FFEECCAA");
 }
 
@@ -3044,14 +3060,14 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11778
-@system pure unittest
+@safe pure unittest
 {
     import std.exception : assertThrown;
     import std.format : FormatException;
 
     int* p = null;
     assertThrown!FormatException(format("%d", p));
-    assertThrown!FormatException(format("%04d", p + 2));
+    assertThrown!FormatException(format("%04d", () @trusted { return p + 2; } ()));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12505

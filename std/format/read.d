@@ -377,7 +377,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 // for backwards compatibility
-@system pure unittest
+@safe pure unittest
 {
     string s = "hello!124:34.5";
     string a;
@@ -401,7 +401,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 // for backwards compatibility
-@system pure unittest
+@safe pure unittest
 {
     import std.math.operations : isClose;
     import std.math.traits : isNaN;
@@ -416,7 +416,7 @@ if (isSomeString!(typeof(fmt)))
     assert(isNaN(z));
 }
 
-@system unittest
+@safe unittest
 {
     string s = "hello!124:34.5";
     string a;
@@ -426,7 +426,7 @@ if (isSomeString!(typeof(fmt)))
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -465,7 +465,7 @@ if (isSomeString!(typeof(fmt)))
     assert(!f1);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     union B
     {
@@ -481,7 +481,7 @@ if (isSomeString!(typeof(fmt)))
     assert(witness == b.typed);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     union A
     {
@@ -497,7 +497,7 @@ if (isSomeString!(typeof(fmt)))
     assert(witness == a.typed);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.typecons : Tuple;
 
@@ -521,7 +521,7 @@ if (isSomeString!(typeof(fmt)))
     assert(t[0] == 1 && t[1] == 2.125);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -533,7 +533,7 @@ if (isSomeString!(typeof(fmt)))
     assert(line == "c");
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -543,7 +543,7 @@ if (isSomeString!(typeof(fmt)))
     assert(s1 == [1,2,3]);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -568,7 +568,7 @@ if (isSomeString!(typeof(fmt)))
     assert(s4 == ["hello", "world"]);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.exception : assertThrown;
 
@@ -588,7 +588,7 @@ if (isSomeString!(typeof(fmt)))
     assertThrown(formattedRead(line, "%s", &sa3));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.exception : assertThrown;
     import std.format : FormatException;
@@ -605,7 +605,7 @@ if (isSomeString!(typeof(fmt)))
     assertThrown!FormatException(formattedRead(input, "[%(%s,%)]", &sa2));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -631,7 +631,7 @@ if (isSomeString!(typeof(fmt)))
     assert(s4 == "hello");
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
@@ -652,7 +652,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 // test rvalue using
-@system pure unittest
+@safe pure unittest
 {
     string[int] aa1;
     formattedRead!("%s")(`[1:"hello", 2:"world"]`, aa1);

@@ -252,7 +252,7 @@ compound specifiers, std,format) strings are treated differently.
 /**
 Dynamic arrays are formatted as input ranges.
  */
-@system pure unittest
+@safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
@@ -435,14 +435,14 @@ formatting, however, it applies to other aggregates as well.
 }
 
 /// Pointers are formatted as hexadecimal integers.
-@system pure unittest
+@safe pure unittest
 {
     import std.array : appender;
     import std.format.spec : singleSpec;
 
     auto w1 = appender!string();
     auto spec1 = singleSpec("%s");
-    auto p1 = cast(void*) 0xFFEECCAA;
+    auto p1 = () @trusted { return cast(void*) 0xFFEECCAA; } ();
     formatValue(w1, p1, spec1);
 
     assert(w1.data == "FFEECCAA");
@@ -450,7 +450,7 @@ formatting, however, it applies to other aggregates as well.
     // null pointers are printed as `"null"` when used with `%s` and as hexadecimal integer else
     auto w2 = appender!string();
     auto spec2 = singleSpec("%s");
-    auto p2 = cast(void*) 0x00000000;
+    auto p2 = () @trusted { return cast(void*) 0x00000000; } ();
     formatValue(w2, p2, spec2);
 
     assert(w2.data == "null");

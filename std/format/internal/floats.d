@@ -2857,13 +2857,13 @@ if (is(T == float) || is(T == double)
 }
 
 // check no allocations
-@system unittest
+@safe unittest
 {
     import std.format : NoOpSink;
     auto w = NoOpSink();
 
     import core.memory;
-    auto stats = GC.stats;
+    auto stats = () @trusted { return GC.stats; } ();
 
     auto f = FormatSpec!dchar("");
     f.spec = 'a';
@@ -2923,5 +2923,5 @@ if (is(T == float) || is(T == double)
     f.precision = 1000;
     printFloat(w, 1.0, f);
 
-    assert(GC.stats.usedSize == stats.usedSize);
+    assert(() @trusted { return GC.stats.usedSize; } () == stats.usedSize);
 }
