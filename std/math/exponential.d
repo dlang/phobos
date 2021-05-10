@@ -2427,22 +2427,21 @@ if (isFloatingPoint!T)
 
     static foreach (T; AliasSeq!(real, double, float))
     {{
-        Tuple!(T, T, int)[] vals =     // x,frexp,exp
-            [
-             tuple(T(0.0),  T( 0.0 ), 0),
-             tuple(T(-0.0), T( -0.0), 0),
-             tuple(T(1.0),  T( .5  ), 1),
-             tuple(T(-1.0), T( -.5 ), 1),
-             tuple(T(2.0),  T( .5  ), 2),
-             tuple(T(float.min_normal/2.0f), T(.5), -126),
-             tuple(T.infinity, T.infinity, int.max),
-             tuple(-T.infinity, -T.infinity, int.min),
-             tuple(T.nan, T.nan, int.min),
-             tuple(-T.nan, -T.nan, int.min),
+        Tuple!(T, T, int)[] vals = [   // x,frexp,exp
+            tuple(T(0.0),  T( 0.0 ), 0),
+            tuple(T(-0.0), T( -0.0), 0),
+            tuple(T(1.0),  T( .5  ), 1),
+            tuple(T(-1.0), T( -.5 ), 1),
+            tuple(T(2.0),  T( .5  ), 2),
+            tuple(T(float.min_normal/2.0f), T(.5), -126),
+            tuple(T.infinity, T.infinity, int.max),
+            tuple(-T.infinity, -T.infinity, int.min),
+            tuple(T.nan, T.nan, int.min),
+            tuple(-T.nan, -T.nan, int.min),
 
-             // https://issues.dlang.org/show_bug.cgi?id=16026:
-             tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
-             ];
+            // https://issues.dlang.org/show_bug.cgi?id=16026:
+            tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
+        ];
 
         foreach (elem; vals)
         {
@@ -2453,7 +2452,6 @@ if (isFloatingPoint!T)
             T v = frexp(x, eptr);
             assert(isIdentical(e, v));
             assert(exp == eptr);
-
         }
 
         static if (floatTraits!(T).realFormat == RealFormat.ieeeExtended)
@@ -2473,7 +2471,6 @@ if (isFloatingPoint!T)
                 T v = frexp(x, eptr);
                 assert(isIdentical(e, v));
                 assert(exp == eptr);
-
             }
         }
     }}
@@ -2488,22 +2485,21 @@ if (isFloatingPoint!T)
     }
     static foreach (T; AliasSeq!(real, double, float))
     {{
-        enum Tuple!(T, T, int)[] vals =     // x,frexp,exp
-            [
-             tuple(T(0.0),  T( 0.0 ), 0),
-             tuple(T(-0.0), T( -0.0), 0),
-             tuple(T(1.0),  T( .5  ), 1),
-             tuple(T(-1.0), T( -.5 ), 1),
-             tuple(T(2.0),  T( .5  ), 2),
-             tuple(T(float.min_normal/2.0f), T(.5), -126),
-             tuple(T.infinity, T.infinity, int.max),
-             tuple(-T.infinity, -T.infinity, int.min),
-             tuple(T.nan, T.nan, int.min),
-             tuple(-T.nan, -T.nan, int.min),
+        enum Tuple!(T, T, int)[] vals = [   // x,frexp,exp
+            tuple(T(0.0),  T( 0.0 ), 0),
+            tuple(T(-0.0), T( -0.0), 0),
+            tuple(T(1.0),  T( .5  ), 1),
+            tuple(T(-1.0), T( -.5 ), 1),
+            tuple(T(2.0),  T( .5  ), 2),
+            tuple(T(float.min_normal/2.0f), T(.5), -126),
+            tuple(T.infinity, T.infinity, int.max),
+            tuple(-T.infinity, -T.infinity, int.min),
+            tuple(T.nan, T.nan, int.min),
+            tuple(-T.nan, -T.nan, int.min),
 
-             // https://issues.dlang.org/show_bug.cgi?id=16026:
-             tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
-             ];
+            // https://issues.dlang.org/show_bug.cgi?id=16026:
+            tuple(3 * (T.min_normal * T.epsilon), T( .75), (T.min_exp - T.mant_dig) + 2)
+        ];
 
         static foreach (elem; vals)
         {
