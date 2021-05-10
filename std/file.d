@@ -748,7 +748,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
 }
 
 ///
-@system unittest
+@safe unittest
 {
    scope(exit)
    {
@@ -758,7 +758,9 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
 
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
    write(deleteme, a); // deleteme is the name of a temporary file
-   assert(cast(int[]) read(deleteme) == a);
+   const bytes = read(deleteme);
+   const fileInts = () @trusted { return cast(int[]) bytes; }();
+   assert(fileInts == a);
 }
 
 /// ditto
