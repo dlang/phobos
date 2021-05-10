@@ -3192,7 +3192,7 @@ if (isConvertibleToString!R)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto dir = deleteme ~ "dir";
 
