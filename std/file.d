@@ -2407,7 +2407,7 @@ if (isConvertibleToString!R)
     }
 }
 
-@system unittest
+@safe unittest
 {
     version (Windows)
         enum dir = "C:\\Program Files\\";
