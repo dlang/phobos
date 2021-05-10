@@ -1889,7 +1889,7 @@ else version (Posix)
 version (FreeBSD) {} else
 version (DragonFlyBSD) {} else
 version (OSX) {} else
-@system unittest
+@safe unittest
 {
     import core.thread;
 
@@ -1904,7 +1904,7 @@ version (OSX) {} else
         remove(deleteme);
         assert(time != lastTime);
         lastTime = time;
-        Thread.sleep(20.msecs);
+        () @trusted { Thread.sleep(20.msecs); }();
     }
 }
 
