@@ -827,7 +827,7 @@ if (isSomeChar!Char)
     assert("%02d"d.format(1) == "01"d);
 }
 
-@system unittest
+@safe unittest
 {
     int i;
     string s;
@@ -848,7 +848,7 @@ if (isSomeChar!Char)
     assert(s == "1193135 2947526575");
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : octal;
 
@@ -1013,7 +1013,7 @@ if (isSomeChar!Char)
     const dchar[0] dempty;
     assert(format("test%spath", dempty) == "testpath");
 
-    void* p = cast(void*) 0xDEADBEEF;
+    void* p = () @trusted { return cast(void*) 0xDEADBEEF; } ();
     r = format("%s", p);
     assert(r == "DEADBEEF");
 
@@ -1089,7 +1089,7 @@ if (isSomeChar!Char)
     assert(r == "F");
 
     Object c = null;
-    r = format("%s", c);
+    r = () @trusted { return format("%s", c); } ();
     assert(r == "null");
 
     enum TestEnum
@@ -1100,7 +1100,7 @@ if (isSomeChar!Char)
     assert(r == "Value2");
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    r = format("%s", aa.values);
+    r = () @trusted { return format("%s", aa.values); } ();
     assert(r == `["hello", "betty"]` || r == `["betty", "hello"]`);
     r = format("%s", aa);
     assert(r == `[3:"hello", 4:"betty"]` || r == `[4:"betty", 3:"hello"]`);
@@ -1338,7 +1338,7 @@ if (isSomeChar!Char)
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
 
-@system unittest
+@safe unittest
 {
     struct S
     {
@@ -1352,7 +1352,8 @@ if (isSomeChar!Char)
     }
 
     S s = S(1);
-    assert(format!"%5,3d"(s) == "    1");
+    auto result = () @trusted { return format!"%5,3d"(s); } ();
+    assert(result == "    1");
 }
 
 /// ditto
@@ -1613,7 +1614,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 // checking, what is implicitly and explicitly stated in the public unittest
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
 
@@ -1622,7 +1623,7 @@ if (isSomeString!(typeof(fmt)))
     assert(!__traits(compiles, sformat!"Here are %d %s."(buf[], 3.14, "apples")));
 }
 
-@system unittest
+@safe unittest
 {
     import core.exception : RangeError;
     import std.exception : assertCTFEable, assertThrown;
@@ -1635,7 +1636,9 @@ if (isSomeString!(typeof(fmt)))
         assert(sformat(buf[], "foo%%") == "foo%");
         assert(sformat(buf[], "foo%s", 'C') == "fooC");
         assert(sformat(buf[], "%s foo", "bar") == "bar foo");
-        assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+        () @trusted {
+            assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+        } ();
         assert(sformat(buf[], "foo %d", -123) == "foo -123");
         assert(sformat(buf[], "foo %d", 123) == "foo 123");
 
@@ -1646,17 +1649,18 @@ if (isSomeString!(typeof(fmt)))
     });
 }
 
-@system unittest // ensure that sformat avoids the GC
+@safe unittest // ensure that sformat avoids the GC
 {
     import core.memory : GC;
 
     const a = ["foo", "bar"];
-    const u = GC.stats().usedSize;
+    const u = () @trusted { return GC.stats().usedSize; } ();
     char[20] buf;
     sformat(buf, "%d", 123);
     sformat(buf, "%s", a);
     sformat(buf, "%s", 'c');
-    assert(u == GC.stats().usedSize);
+    const v = () @trusted { return GC.stats().usedSize; } ();
+    assert(u == v);
 }
 
 version (StdUnittest)
@@ -1689,7 +1693,7 @@ private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, str
         enforce!AssertError(val == val2, input, fn, ln);
 }
 
-@system unittest
+@safe unittest
 {
     void booleanTest()
     {
