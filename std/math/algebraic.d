@@ -300,17 +300,12 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 {
     // Scale x and y to avoid underflow and overflow.
     // If one is huge and the other tiny, return the larger.
-    // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
-    // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).
+    // If both are huge, avoid overflow by scaling by 2^^-N.
+    // If both are tiny, avoid underflow by scaling by 2^^N.
     import core.math : fabs, sqrt;
+    import std.math : floatTraits, RealFormat;
 
-    enum real SQRTMIN = 0.5 * sqrt(real.min_normal); // This is a power of 2.
-    enum real SQRTMAX = 1.0L / SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(real.max))
-
-    static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= real.max);
-
-    // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min_normal)
-    static assert(real.min_normal*real.max > 2 && real.min_normal*real.max <= 4);
+    alias F = floatTraits!real;
 
     real u = fabs(x);
     real v = fabs(y);
@@ -322,23 +317,43 @@ real hypot(real x, real y) @safe pure nothrow @nogc
         if (v == real.infinity) return v; // hypot(nan, inf) == inf
     }
 
-    // Now u >= v, or else one is NaN.
-    if (v >= SQRTMAX*0.5)
+    static if (F.realFormat == RealFormat.ieeeDouble ||
+               F.realFormat == RealFormat.ieeeExtended53 ||
+               F.realFormat == RealFormat.ibmExtended)
     {
-            // hypot(huge, huge) -- avoid overflow
-        u *= SQRTMIN*0.5;
-        v *= SQRTMIN*0.5;
-        return sqrt(u*u + v*v) * SQRTMAX * 2.0;
+        enum SQRTMIN = 0x1p-450L;
+        enum SQRTMAX = 0x1p+500L;
+        enum SCALE_UNDERFLOW = 0x1p+600L;
+        enum SCALE_OVERFLOW = 0x1p-600L;
     }
+    else static if (F.realFormat == RealFormat.ieeeExtended ||
+                    F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        enum SQRTMIN = 0x1p-8000L;
+        enum SQRTMAX = 0x1p+8000L;
+        enum SCALE_UNDERFLOW = 0x1p+10000L;
+        enum SCALE_OVERFLOW = 0x1p-10000L;
+    }
+    else
+        assert(0, "hypot not implemented");
 
-    if (u <= SQRTMIN)
+    // Now u >= v, or else one is NaN.
+    real ratio = 1.0;
+    if (v >= SQRTMAX)
+    {
+        // hypot(huge, huge) -- avoid overflow
+        ratio = SCALE_UNDERFLOW;
+        u *= SCALE_OVERFLOW;
+        v *= SCALE_OVERFLOW;
+    }
+    else if (u <= SQRTMIN)
     {
         // hypot (tiny, tiny) -- avoid underflow
         // This is only necessary to avoid setting the underflow
         // flag.
-        u *= SQRTMAX / real.epsilon;
-        v *= SQRTMAX / real.epsilon;
-        return sqrt(u*u + v*v) * SQRTMIN * real.epsilon;
+        ratio = SCALE_OVERFLOW;
+        u *= SCALE_UNDERFLOW;
+        v *= SCALE_UNDERFLOW;
     }
 
     if (u * real.epsilon > v)
@@ -348,7 +363,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
     }
 
     // both are in the normal range
-    return sqrt(u*u + v*v);
+    return ratio * sqrt(u*u + v*v);
 }
 
 ///
