@@ -368,33 +368,33 @@ real hypot(real x, real y) @safe pure nothrow @nogc
     import std.math.traits : isIdentical;
 
     static real[3][] vals =     // x,y,hypot
-        [
-            [ 0.0,     0.0,   0.0],
-            [ 0.0,    -0.0,   0.0],
-            [ -0.0,   -0.0,   0.0],
-            [ 3.0,     4.0,   5.0],
-            [ -300,   -400,   500],
-            [0.0,      7.0,   7.0],
-            [9.0,   9*real.epsilon,   9.0],
-            [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
-            [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
-            [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
-            [ real.min_normal, real.min_normal, sqrt(2.0L)*real.min_normal],
-            [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
-            [ real.infinity, real.nan, real.infinity],
-            [ real.nan, real.infinity, real.infinity],
-            [ real.nan, real.nan, real.nan],
-            [ real.nan, real.max, real.nan],
-            [ real.max, real.nan, real.nan],
-        ];
-        for (int i = 0; i < vals.length; i++)
-        {
-            real x = vals[i][0];
-            real y = vals[i][1];
-            real z = vals[i][2];
-            real h = hypot(x, y);
-            assert(isIdentical(z,h) || feqrel(z, h) >= real.mant_dig - 1);
-        }
+    [
+        [ 0.0,     0.0,   0.0],
+        [ 0.0,    -0.0,   0.0],
+        [ -0.0,   -0.0,   0.0],
+        [ 3.0,     4.0,   5.0],
+        [ -300,   -400,   500],
+        [0.0,      7.0,   7.0],
+        [9.0,   9*real.epsilon,   9.0],
+        [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
+        [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
+        [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
+        [ real.min_normal, real.min_normal, sqrt(2.0L)*real.min_normal],
+        [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
+        [ real.infinity, real.nan, real.infinity],
+        [ real.nan, real.infinity, real.infinity],
+        [ real.nan, real.nan, real.nan],
+        [ real.nan, real.max, real.nan],
+        [ real.max, real.nan, real.nan],
+    ];
+    for (int i = 0; i < vals.length; i++)
+    {
+        real x = vals[i][0];
+        real y = vals[i][1];
+        real z = vals[i][2];
+        real h = hypot(x, y);
+        assert(isIdentical(z,h) || feqrel(z, h) >= real.mant_dig - 1);
+    }
 }
 
 /***********************************************************************
