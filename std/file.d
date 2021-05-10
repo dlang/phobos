@@ -3067,7 +3067,7 @@ void mkdirRecurse(scope const(char)[] pathname) @safe
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.path : buildPath;
 
