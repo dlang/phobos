@@ -1307,7 +1307,7 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, getTimes(TestAliasedString("foo"), atime, mtime)));
 }
 
-@system unittest
+@safe unittest
 {
     import std.stdio : writefln;
 
@@ -1316,8 +1316,8 @@ if (isConvertibleToString!R)
     write(deleteme, "a");
     scope(exit) assert(deleteme.exists), deleteme.remove;
 
-    SysTime accessTime1 = void;
-    SysTime modificationTime1 = void;
+    SysTime accessTime1;
+    SysTime modificationTime1;
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
