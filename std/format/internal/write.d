@@ -564,6 +564,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(format!"%.0g"(1500) == "2e+03");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21900#
+@safe pure unittest
+{
+    assert(format!"%.1a"(472) == "0x1.ep+08");
+}
+
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
@@ -3729,7 +3735,7 @@ in (max == '9' || max == 'f' || max == 'F')
                 // Round to nearest, ties to even
                 auto last = sequence[right - 1];
                 if (last == '.') last = sequence[right - 2];
-                roundUp = last % 2 != 0;
+                roundUp = (last <= '9' && last % 2 != 0) || (last > '9' && last % 2 == 0);
             }
         }
     }
