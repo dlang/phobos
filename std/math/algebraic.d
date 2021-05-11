@@ -296,7 +296,8 @@ real cbrt(real x) @trusted nothrow @nogc
  *  $(TR $(TD $(PLUSMNINF)) $(TD $(NAN))       $(TD +$(INFIN))   $(TD no))
  *  )
  */
-real hypot(real x, real y) @safe pure nothrow @nogc
+T hypot(T)(const T x, const T y) @safe pure nothrow @nogc
+if (isFloatingPoint!T)
 {
     // Scale x and y to avoid underflow and overflow.
     // If one is huge and the other tiny, return the larger.
@@ -305,21 +306,28 @@ real hypot(real x, real y) @safe pure nothrow @nogc
     import core.math : fabs, sqrt;
     import std.math : floatTraits, RealFormat;
 
-    alias F = floatTraits!real;
+    alias F = floatTraits!T;
 
-    real u = fabs(x);
-    real v = fabs(y);
+    T u = fabs(x);
+    T v = fabs(y);
     if (!(u >= v))  // check for NaN as well.
     {
         v = u;
         u = fabs(y);
-        if (u == real.infinity) return u; // hypot(inf, nan) == inf
-        if (v == real.infinity) return v; // hypot(nan, inf) == inf
+        if (u == T.infinity) return u; // hypot(inf, nan) == inf
+        if (v == T.infinity) return v; // hypot(nan, inf) == inf
     }
 
-    static if (F.realFormat == RealFormat.ieeeDouble ||
-               F.realFormat == RealFormat.ieeeExtended53 ||
-               F.realFormat == RealFormat.ibmExtended)
+    static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        enum SQRTMIN = 0x1p-60f;
+        enum SQRTMAX = 0x1p+60f;
+        enum SCALE_UNDERFLOW = 0x1p+90f;
+        enum SCALE_OVERFLOW = 0x1p-90f;
+    }
+    else static if (F.realFormat == RealFormat.ieeeDouble ||
+                    F.realFormat == RealFormat.ieeeExtended53 ||
+                    F.realFormat == RealFormat.ibmExtended)
     {
         enum SQRTMIN = 0x1p-450L;
         enum SQRTMAX = 0x1p+500L;
@@ -338,7 +346,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
         assert(0, "hypot not implemented");
 
     // Now u >= v, or else one is NaN.
-    real ratio = 1.0;
+    T ratio = 1.0;
     if (v >= SQRTMAX)
     {
         // hypot(huge, huge) -- avoid overflow
@@ -356,7 +364,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
         v *= SCALE_UNDERFLOW;
     }
 
-    if (u * real.epsilon > v)
+    if (u * T.epsilon > v)
     {
         // hypot (huge, tiny) = huge
         return u;
@@ -373,43 +381,62 @@ real hypot(real x, real y) @safe pure nothrow @nogc
 
     assert(hypot(1.0, 1.0).feqrel(1.4142) > 16);
     assert(hypot(3.0, 4.0).feqrel(5.0) > 16);
-    assert(hypot(real.infinity, 1.0) == real.infinity);
+    assert(hypot(real.infinity, 1.0L) == real.infinity);
     assert(hypot(real.infinity, real.nan) == real.infinity);
 }
 
 @safe unittest
 {
     import std.math.operations : feqrel;
-    import std.math.traits : isIdentical;
 
-    static real[3][] vals =     // x,y,hypot
-    [
-        [ 0.0,     0.0,   0.0],
-        [ 0.0,    -0.0,   0.0],
-        [ -0.0,   -0.0,   0.0],
-        [ 3.0,     4.0,   5.0],
-        [ -300,   -400,   500],
-        [0.0,      7.0,   7.0],
-        [9.0,   9*real.epsilon,   9.0],
-        [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
-        [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
-        [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
-        [ real.min_normal, real.min_normal, sqrt(2.0L)*real.min_normal],
-        [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
-        [ real.infinity, real.nan, real.infinity],
-        [ real.nan, real.infinity, real.infinity],
-        [ real.nan, real.nan, real.nan],
-        [ real.nan, real.max, real.nan],
-        [ real.max, real.nan, real.nan],
-    ];
-    for (int i = 0; i < vals.length; i++)
-    {
-        real x = vals[i][0];
-        real y = vals[i][1];
-        real z = vals[i][2];
-        real h = hypot(x, y);
-        assert(isIdentical(z,h) || feqrel(z, h) >= real.mant_dig - 1);
-    }
+    assert(hypot(1.0f, 1.0f).feqrel(1.4142f) > 16);
+    assert(hypot(3.0f, 4.0f).feqrel(5.0f) > 16);
+    assert(hypot(float.infinity, 1.0f) == float.infinity);
+    assert(hypot(float.infinity, float.nan) == float.infinity);
+
+    assert(hypot(1.0L, 1.0L).feqrel(1.4142L) > 16);
+    assert(hypot(3.0L, 4.0L).feqrel(5.0L) > 16);
+    assert(hypot(double.infinity, 1.0) == double.infinity);
+    assert(hypot(double.infinity, double.nan) == double.infinity);
+}
+
+@safe unittest
+{
+    import std.math.operations : feqrel;
+    import std.math.traits : isIdentical;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        static T[3][] vals =     // x,y,hypot
+        [
+            [ 0.0,     0.0,   0.0],
+            [ 0.0,    -0.0,   0.0],
+            [ -0.0,   -0.0,   0.0],
+            [ 3.0,     4.0,   5.0],
+            [ -300,   -400,   500],
+            [0.0,      7.0,   7.0],
+            [9.0,   9*T.epsilon,   9.0],
+            [88/(64*sqrt(T.min_normal)), 105/(64*sqrt(T.min_normal)), 137/(64*sqrt(T.min_normal))],
+            [88/(128*sqrt(T.min_normal)), 105/(128*sqrt(T.min_normal)), 137/(128*sqrt(T.min_normal))],
+            [3*T.min_normal*T.epsilon, 4*T.min_normal*T.epsilon, 5*T.min_normal*T.epsilon],
+            [ T.min_normal, T.min_normal, sqrt(2.0L)*T.min_normal],
+            [ T.max/sqrt(2.0L), T.max/sqrt(2.0L), T.max],
+            [ T.infinity, T.nan, T.infinity],
+            [ T.nan, T.infinity, T.infinity],
+            [ T.nan, T.nan, T.nan],
+            [ T.nan, T.max, T.nan],
+            [ T.max, T.nan, T.nan],
+        ];
+        for (int i = 0; i < vals.length; i++)
+        {
+            T x = vals[i][0];
+            T y = vals[i][1];
+            T z = vals[i][2];
+            T h = hypot(x, y);
+            assert(isIdentical(z,h) || feqrel(z, h) >= T.mant_dig - 1);
+        }
+     }}
 }
 
 /***********************************************************************
