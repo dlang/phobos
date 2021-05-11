@@ -10843,12 +10843,28 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
     mixin ImplementLength!_input;
 
 /**
-   Releases the controlled range and returns it.
+    Releases the controlled range and returns it.
+
+    This does the opposite of $(LREF assumeSorted): instead of turning a range
+    into a `SortedRange`, it extracts the original range back out of the `SortedRange`
+    using $(REF, move, std,algorithm,mutation).
 */
     auto release()
     {
         import std.algorithm.mutation : move;
         return move(_input);
+    }
+
+    ///
+    static if (is(Range : int[]))
+    @safe unittest
+    {
+        import std.algorithm.sorting : sort;
+        int[3] data = [ 1, 2, 3 ];
+        auto a = assumeSorted(data[]);
+        assert(a == sort!"a < b"(data[]));
+        int[] p = a.release();
+        assert(p == [ 1, 2, 3 ]);
     }
 
     // Assuming a predicate "test" that returns 0 for a left portion
