@@ -4319,7 +4319,7 @@ version (Windows)
 
     pragma(lib,"shell32.lib");
 
-    void browse(scope const(char)[] url)
+    void browse(scope const(char)[] url) nothrow @nogc @trusted
     {
         ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
@@ -4330,25 +4330,28 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(scope const(char)[] url) nothrow @nogc
+    void browse(scope const(char)[] url) nothrow @nogc @safe
     {
         const(char)*[3] args;
 
-        const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
+        // Trusted because it's called with a zero-terminated literal
+        const(char)* browser = (() @trusted => core.stdc.stdlib.getenv("BROWSER"))();
         if (browser)
-        {   browser = strdup(browser);
+        {
+            // String already zero-terminated
+            browser = (() @trusted => strdup(browser))();
             args[0] = browser;
         }
         else
         {
             version (OSX)
             {
-                args[0] = "open".ptr;
+                args[0] = "open";
             }
             else
             {
-                //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
-                args[0] = "xdg-open".ptr;
+                //args[0] = "x-www-browser";  // doesn't work on some systems
+                args[0] = "xdg-open";
             }
         }
 
@@ -4359,18 +4362,22 @@ else version (Posix)
         auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
-            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
-            perror(args[0]);                // failed to execute
+            // Trusted because args and all entries are always zero-terminated
+            (() @trusted =>
+                core.sys.posix.unistd.execvp(args[0], &args[0]) ||
+                perror(args[0]) // failed to execute
+            )();
             return;
         }
         if (browser)
-            free(cast(void*) browser);
+            // Trusted because it's allocated via strdup above
+            (() @trusted => free(cast(void*) browser))();
 
         version (StdUnittest)
         {
             // Verify that the test script actually suceeds
             int status;
-            const check = waitpid(childpid, &status, 0);
+            const check = (() @trusted => waitpid(childpid, &status, 0))();
             assert(check != -1);
             assert(status == 0);
         }
@@ -4378,6 +4385,13 @@ else version (Posix)
 }
 else
     static assert(0, "os not supported");
+
+// Verify attributes are consistent between all implementations
+@safe @nogc nothrow unittest
+{
+    if (false)
+        browse("");
+}
 
 version (Windows) { /* Doesn't use BROWSER */ }
 else
