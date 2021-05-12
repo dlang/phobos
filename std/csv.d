@@ -556,7 +556,7 @@ The header from the input can always be accessed from the `header` field.
 // Test structure conversion interface with unicode.
 @safe pure unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     wstring str = "\U00010143Hello,65,63.63\nWorld,123,3673.562"w;
     struct Layout
@@ -604,7 +604,7 @@ The header from the input can always be accessed from the `header` field.
 // Test struct & header interface and same unicode
 @safe unittest
 {
-    import std.math : abs;
+    import std.math.algebraic : abs;
 
     string str = "a,b,c\nHello,65,63.63\n➊➋➂❹,123,3673.562";
     struct Layout

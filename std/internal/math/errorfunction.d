@@ -24,6 +24,7 @@
  */
 module std.internal.math.errorfunction;
 import std.math;
+import core.math : fabs, sqrt;
 
 pure:
 nothrow:
@@ -835,7 +836,7 @@ real erf(real x)
         return -1.0;
     if (x == real.infinity)
         return 1.0;
-    immutable ax = abs(x);
+    immutable ax = fabs(x);
     if (ax > 1.0L)
         return 1.0L - erfc(x);
 
@@ -931,7 +932,7 @@ real expx2(real x, int sign)
     const real M = 32_768.0;
     const real MINV = 3.0517578125e-5L;
 
-    x = abs(x);
+    x = fabs(x);
     if (sign < 0)
         x = -x;
 
@@ -984,7 +985,7 @@ Journal of Statistical Software <b>11</b>, (July 2004).
 real normalDistributionImpl(real a)
 {
     real x = a * SQRT1_2;
-    real z = abs(x);
+    real z = fabs(x);
 
     if ( z < 1.0 )
         return 0.5L + 0.5L * erf(x);

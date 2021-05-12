@@ -376,7 +376,7 @@ struct Group(DataIndex)
         if (begin < end)
             return "(unmatched)";
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
@@ -387,7 +387,7 @@ struct Group(DataIndex)
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
     import std.array : appender;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
     switch (irb[pc].code)
@@ -567,13 +567,11 @@ private auto defaultFactoryImpl(Char)(const ref Regex!Char re)
 
 // Used to generate a pure wrapper for defaultFactoryImpl. Based on the example in
 // the std.traits.SetFunctionAttributes documentation.
-private auto assumePureFunction(T)(T t)
+auto assumePureFunction(T)(T t)
+if (isFunctionPointer!T)
 {
-    if (isFunctionPointer!T)
-    {
-        enum attrs = functionAttributes!T | FunctionAttribute.pure_;
-        return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
-    }
+    enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+    return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
 }
 
 // A workaround for R-T enum re = regex(...)

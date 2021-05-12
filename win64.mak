@@ -44,13 +44,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -m$(MODEL) -O -release -w -de -preview=dip1000 -preview=dtorfields -transition=complex -I$(DRUNTIME)\import
+DFLAGS=-conf= -m$(MODEL) -O -release -w -de -preview=dip1000 -preview=dtorfields -I$(DRUNTIME)\import
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -transition=complex -I$(DRUNTIME)\import -unittest -version=StdUnittest -version=CoreUnittest
+UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -I$(DRUNTIME)\import -unittest -version=StdUnittest -version=CoreUnittest
 
 ## C compiler, linker, librarian
 
@@ -119,9 +119,6 @@ SRC_STD_3= \
 	std\numeric.d \
 	std\bigint.d
 
-SRC_STD_3a= \
-	std\math.d
-
 SRC_STD_3b= \
 	std\base64.d \
 	std\ascii.d \
@@ -164,6 +161,9 @@ SRC_STD_7= \
 	std\process.d \
 	std\package.d
 
+SRC_STD_7a= \
+	std\sumtype.d
+
 SRC_STD= \
 	$(SRC_STD_1) \
 	$(SRC_STD_2a) \
@@ -178,7 +178,8 @@ SRC_STD= \
 	$(SRC_STD_6e) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
-	$(SRC_STD_7)
+	$(SRC_STD_7) \
+	$(SRC_STD_7a)
 
 SRC_STD_ALGO_1= \
 	std\algorithm\package.d \
@@ -201,9 +202,24 @@ SRC_STD_ALGO= \
 
 SRC_STD_FORMAT= \
     std\format\package.d \
+    std\format\read.d \
+    std\format\spec.d \
+    std\format\write.d \
     std\format\internal\floats.d \
     std\format\internal\read.d \
     std\format\internal\write.d
+
+SRC_STD_MATH = \
+    std\math\algebraic.d \
+    std\math\constants.d \
+    std\math\exponential.d \
+    std\math\operations.d \
+    std\math\hardware.d \
+    std\math\package.d \
+    std\math\remainder.d \
+    std\math\rounding.d \
+    std\math\traits.d \
+    std\math\trigonometry.d
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
@@ -340,6 +356,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
 	$(SRC_STD_FORMAT) \
+	$(SRC_STD_MATH) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
@@ -405,7 +422,6 @@ UNITTEST_OBJS= \
 		unittest2.obj \
 		unittest2a.obj \
 		unittest3.obj \
-		unittest3a.obj \
 		unittest3b.obj \
 		unittest3c.obj \
 		unittest3d.obj \
@@ -414,6 +430,7 @@ UNITTEST_OBJS= \
 		unittest5b.obj \
 		unittest5c.obj \
 		unittest5d.obj \
+		unittest5e.obj \
 		unittest6a.obj \
 		unittest6c.obj \
 		unittest6e.obj \
@@ -421,6 +438,7 @@ UNITTEST_OBJS= \
 		unittest6h.obj \
 		unittest6i.obj \
 		unittest7.obj \
+		unittest7a.obj \
 		unittest8a.obj \
 		unittest8b.obj \
 		unittest8c.obj \
@@ -434,7 +452,6 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2.obj $(SRC_STD_RANGE)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest2a.obj $(SRC_STD_2a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3.obj $(SRC_STD_3)
-	"$(DMD)" $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_3a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3b.obj $(SRC_STD_3b)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3c.obj $(SRC_STD_3c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
@@ -443,6 +460,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5b.obj $(SRC_STD_ALGO_2)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5c.obj $(SRC_STD_ALGO_3)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest5d.obj $(SRC_STD_FORMAT)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest5e.obj $(SRC_STD_MATH)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6a.obj $(SRC_STD_6a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6c.obj $(SRC_STD_6c)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6e.obj $(SRC_STD_6e)
@@ -450,6 +468,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest7a.obj $(SRC_STD_7a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)

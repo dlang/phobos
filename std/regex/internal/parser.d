@@ -1011,7 +1011,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     @trusted void error(string msg)
     {
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         auto app = appender!string();
         formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
                        msg, origin[0..$-pat.length], pat);

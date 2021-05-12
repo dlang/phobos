@@ -392,7 +392,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         // If shared, this is protected by a lock inside 'alignedAllocate'
         private void[] alignedAllocateImpl(size_t n, uint a)
         {
-            import std.math : isPowerOf2;
+            import std.math.traits : isPowerOf2;
             assert(a.isPowerOf2);
             if (a <= alignment) return allocate(n);
 

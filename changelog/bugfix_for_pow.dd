@@ -1,0 +1,13 @@
+Implementation of `pow(f, -2)` and `f ^^ -2` changed
+
+We noticed that the implementation of `pow(f, -2)` and `f ^^ -2` with
+`f` being a floating point value, was buggy for some values of `f`.
+Unfortunately the fix implies small changes for other values for `f`
+(with exponent `-2`) too: The least significant bits of the result might
+differ from the current implementation. (This is due to the
+peculiarities of floating point numbers and cannot be avoided with
+reasonable means.)
+
+To avoid problems, make sure, that your algorithms do not rely on the
+least significant bits of floating point calculations, for example by
+using `isClose` instead of `==`.

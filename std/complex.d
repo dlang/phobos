@@ -108,7 +108,7 @@ if (is(R : double) && is(I : double))
 struct Complex(T)
 if (isFloatingPoint!T)
 {
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
     import std.range.primitives : isOutputRange;
 
     /** The real part of the number. */
@@ -158,8 +158,8 @@ if (isFloatingPoint!T)
     void toString(Writer, Char)(scope Writer w, scope const ref FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
-        import std.format : formatValue;
-        import std.math : signbit;
+        import std.format.write : formatValue;
+        import std.math.traits : signbit;
         import std.range.primitives : put;
         formatValue(w, re, formatSpec);
         if (signbit(im) == 0)
@@ -280,33 +280,51 @@ if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const
         if (op == "/" && isNumeric!R)
     {
-        import std.math : fabs;
-        typeof(return) w = void;
-        if (fabs(re) < fabs(im))
+        version (FastMath)
         {
-            immutable ratio = re/im;
-            immutable rdivd = r/(re*ratio + im);
-
-            w.re = rdivd*ratio;
-            w.im = -rdivd;
+            // Compute norm(this)
+            immutable norm = re * re + im * im;
+            // Compute r * conj(this)
+            immutable prod_re = r * re;
+            immutable prod_im = r * -im;
+            // Divide the product by the norm
+            typeof(return) w = void;
+            w.re = prod_re / norm;
+            w.im = prod_im / norm;
+            return w;
         }
         else
         {
-            immutable ratio = im/re;
-            immutable rdivd = r/(re + im*ratio);
+            import core.math : fabs;
+            typeof(return) w = void;
+            if (fabs(re) < fabs(im))
+            {
+                immutable ratio = re/im;
+                immutable rdivd = r/(re*ratio + im);
 
-            w.re = rdivd;
-            w.im = -rdivd*ratio;
+                w.re = rdivd*ratio;
+                w.im = -rdivd;
+            }
+            else
+            {
+                immutable ratio = im/re;
+                immutable rdivd = r/(re + im*ratio);
+
+                w.re = rdivd;
+                w.im = -rdivd*ratio;
+            }
+
+            return w;
         }
-
-        return w;
     }
 
     // numeric ^^ complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(const R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        import std.math : cos, exp, log, sin, PI;
+        import core.math : cos, sin;
+        import std.math.exponential : exp, log;
+        import std.math.constants : PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -352,33 +370,49 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(const C z)
         if (op == "/" && is(C R == Complex!R))
     {
-        import std.math : fabs;
-        if (fabs(z.re) < fabs(z.im))
+        version (FastMath)
         {
-            immutable ratio = z.re/z.im;
-            immutable denom = z.re*ratio + z.im;
-
-            immutable temp = (re*ratio + im)/denom;
-            im = (im*ratio - re)/denom;
-            re = temp;
+            // Compute norm(z)
+            immutable norm = z.re * z.re + z.im * z.im;
+            // Compute this * conj(z)
+            immutable prod_re = re * z.re - im * -z.im;
+            immutable prod_im = im * z.re + re * -z.im;
+            // Divide the product by the norm
+            re = prod_re / norm;
+            im = prod_im / norm;
+            return this;
         }
         else
         {
-            immutable ratio = z.im/z.re;
-            immutable denom = z.re + z.im*ratio;
+            import core.math : fabs;
+            if (fabs(z.re) < fabs(z.im))
+            {
+                immutable ratio = z.re/z.im;
+                immutable denom = z.re*ratio + z.im;
 
-            immutable temp = (re + im*ratio)/denom;
-            im = (im - re*ratio)/denom;
-            re = temp;
+                immutable temp = (re*ratio + im)/denom;
+                im = (im*ratio - re)/denom;
+                re = temp;
+            }
+            else
+            {
+                immutable ratio = z.im/z.re;
+                immutable denom = z.re + z.im*ratio;
+
+                immutable temp = (re + im*ratio)/denom;
+                im = (im - re*ratio)/denom;
+                re = temp;
+            }
+            return this;
         }
-        return this;
     }
 
     // complex ^^= complex
     ref Complex opOpAssign(string op, C)(const C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math : exp, log, cos, sin;
+        import core.math : cos, sin;
+        import std.math.exponential : exp, log;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
@@ -410,7 +444,7 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(const R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        import std.math : cos, sin;
+        import core.math : cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
         re = ab*cos(ar);
@@ -449,6 +483,7 @@ if (isFloatingPoint!T)
 @safe pure nothrow unittest
 {
     import std.complex;
+    static import core.math;
     import std.math;
 
     enum EPS = double.epsilon;
@@ -587,7 +622,7 @@ if (isFloatingPoint!T)
         assert(isClose(abs(cei), abs(c1)^^i, 1e-14));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert(isClose(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), 1e-14));
+        assert(isClose(core.math.cos(arg(cei)), core.math.cos(arg(c1)*i), 1e-14));
     }
 
     // Check operations between different complex types.
@@ -705,25 +740,25 @@ if (is(T R == Complex!R))
 */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-    import std.math : hypot;
+    import std.math.algebraic : hypot;
     return hypot(z.re, z.im);
 }
 
 ///
 @safe pure nothrow unittest
 {
-    static import std.math;
+    static import core.math;
     assert(abs(complex(1.0)) == 1.0);
     assert(abs(complex(0.0, 1.0)) == 1.0);
-    assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
+    assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
 }
 
 @safe pure nothrow @nogc unittest
 {
-    static import std.math;
+    static import core.math;
     assert(abs(complex(0.0L, -3.2L)) == 3.2L);
     assert(abs(complex(0.0L, 71.6L)) == 71.6L);
-    assert(abs(complex(-1.0L, 1.0L)) == std.math.sqrt(2.0L));
+    assert(abs(complex(-1.0L, 1.0L)) == core.math.sqrt(2.0L));
 }
 
 @safe pure nothrow @nogc unittest
@@ -754,7 +789,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.math;
+    import std.math.operations : isClose;
     assert(sqAbs(complex(0.0)) == 0.0);
     assert(sqAbs(complex(1.0)) == 1.0);
     assert(sqAbs(complex(0.0, 1.0)) == 1.0);
@@ -772,7 +807,7 @@ if (isFloatingPoint!T)
 
 @safe pure nothrow unittest
 {
-    import std.math;
+    import std.math.operations : isClose;
     assert(sqAbs(0.0) == 0.0);
     assert(sqAbs(-1.0) == 1.0);
     assert(isClose(sqAbs(-3.0L), 9.0L));
@@ -786,14 +821,14 @@ if (isFloatingPoint!T)
  */
 T arg(T)(Complex!T z) @safe pure nothrow @nogc
 {
-    import std.math : atan2;
+    import std.math.trigonometry : atan2;
     return atan2(z.im, z.re);
 }
 
 ///
 @safe pure nothrow unittest
 {
-    import std.math;
+    import std.math.constants : PI_2, PI_4;
     assert(arg(complex(1.0)) == 0.0);
     assert(arg(complex(0.0L, 1.0L)) == PI_2);
     assert(arg(complex(1.0L, 1.0L)) == PI_4);
@@ -815,7 +850,8 @@ T norm(T)(Complex!T z) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, PI;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
     assert(norm(complex(3.0, 4.0)) == 25.0);
     assert(norm(fromPolar(5.0, 0.0)) == 25.0);
     assert(isClose(norm(fromPolar(5.0L, PI / 6)), 25.0L));
@@ -887,7 +923,7 @@ Complex!T proj(T)(Complex!T z)
 Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     @safe pure nothrow @nogc
 {
-    import std.math : sin, cos;
+    import core.math : sin, cos;
     return Complex!(CommonType!(T,U))
         (modulus*cos(argument), modulus*sin(argument));
 }
@@ -895,8 +931,11 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
 ///
 @safe pure nothrow unittest
 {
-    import std.math;
-    auto z = fromPolar(std.math.sqrt(2.0), PI_4);
+    import core.math;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
+    import std.math.constants : PI_4;
+    auto z = fromPolar(core.math.sqrt(2.0), PI_4);
     assert(isClose(z.re, 1.0L));
     assert(isClose(z.im, 1.0L));
 }
@@ -906,7 +945,7 @@ version (StdUnittest)
     // Helper function for comparing two Complex numbers.
     int ceqrel(T)(const Complex!T x, const Complex!T y) @safe pure nothrow @nogc
     {
-        import std.math : feqrel;
+        import std.math.operations : feqrel;
         const r = feqrel(x.re, y.re);
         const i = feqrel(x.im, y.im);
         return r < i ? r : i;
@@ -929,15 +968,15 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    static import std.math;
+    static import core.math;
     assert(sin(complex(0.0)) == 0.0);
-    assert(sin(complex(2.0, 0)) == std.math.sin(2.0));
+    assert(sin(complex(2.0, 0)) == core.math.sin(2.0));
 }
 
 @safe pure nothrow unittest
 {
-    static import std.math;
-    assert(ceqrel(sin(complex(2.0L, 0)), complex(std.math.sin(2.0L))) >= real.mant_dig - 1);
+    static import core.math;
+    assert(ceqrel(sin(complex(2.0L, 0)), complex(core.math.sin(2.0L))) >= real.mant_dig - 1);
 }
 
 /// ditto
@@ -951,17 +990,19 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
+    static import core.math;
     static import std.math;
     assert(cos(complex(0.0)) == 1.0);
-    assert(cos(complex(1.3, 0.0)) == std.math.cos(1.3));
+    assert(cos(complex(1.3, 0.0)) == core.math.cos(1.3));
     assert(cos(complex(0.0, 5.2)) == std.math.cosh(5.2));
 }
 
 @safe pure nothrow unittest
 {
+    static import core.math;
     static import std.math;
     assert(ceqrel(cos(complex(0, 5.2L)), complex(std.math.cosh(5.2L), 0.0L)) >= real.mant_dig - 1);
-    assert(ceqrel(cos(complex(1.3L)), complex(std.math.cos(1.3L))) >= real.mant_dig - 1);
+    assert(ceqrel(cos(complex(1.3L)), complex(core.math.cos(1.3L))) >= real.mant_dig - 1);
 }
 
 /// ditto
@@ -979,6 +1020,208 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 /**
+    Inverse trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The arcsine, arccosine and arctangent of `z`, respectively.
+*/
+Complex!T asin(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    auto ash = asinh(Complex!T(-z.im, z.re));
+    return Complex!T(ash.im, -ash.re);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    assert(asin(complex(0.0)) == 0.0);
+    assert(isClose(asin(complex(0.5L)), PI / 6));
+}
+
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    version (DigitalMars) {} else // Disabled because of issue 21376
+    assert(isClose(asin(complex(0.5f)), float(PI) / 6));
+}
+
+/// ditto
+Complex!T acos(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import std.math;
+    auto as = asin(z);
+    return Complex!T(T(std.math.PI_2) - as.re, as.im);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    import std.math.trigonometry : std_math_acos = acos;
+    assert(acos(complex(0.0)) == std_math_acos(0.0));
+    assert(isClose(acos(complex(0.5L)), PI / 3));
+}
+
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    version (DigitalMars) {} else // Disabled because of issue 21376
+    assert(isClose(acos(complex(0.5f)), float(PI) / 3));
+}
+
+/// ditto
+Complex!T atan(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    static import std.math;
+    const T re2 = z.re * z.re;
+    const T x = 1 - re2 - z.im * z.im;
+
+    T num = z.im + 1;
+    T den = z.im - 1;
+
+    num = re2 + num * num;
+    den = re2 + den * den;
+
+    return Complex!T(T(0.5) * std.math.atan2(2 * z.re, x),
+                     T(0.25) * std.math.log(num / den));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
+    assert(atan(complex(0.0)) == 0.0);
+    assert(isClose(atan(sqrt(complex(3.0L))), PI / 3));
+    assert(isClose(atan(sqrt(complex(3.0f))), float(PI) / 3));
+}
+
+/**
+    Hyperbolic trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The hyperbolic sine, cosine and tangent of `z`, respectively.
+*/
+Complex!T sinh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import core.math, std.math;
+    return Complex!T(std.math.sinh(z.re) * core.math.cos(z.im),
+                     std.math.cosh(z.re) * core.math.sin(z.im));
+}
+
+///
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(sinh(complex(0.0)) == 0.0);
+    assert(sinh(complex(1.0L)) == std.math.sinh(1.0L));
+    assert(sinh(complex(1.0f)) == std.math.sinh(1.0f));
+}
+
+/// ditto
+Complex!T cosh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    static import core.math, std.math;
+    return Complex!T(std.math.cosh(z.re) * core.math.cos(z.im),
+                     std.math.sinh(z.re) * core.math.sin(z.im));
+}
+
+///
+@safe pure nothrow unittest
+{
+    static import std.math;
+    assert(cosh(complex(0.0)) == 1.0);
+    assert(cosh(complex(1.0L)) == std.math.cosh(1.0L));
+    assert(cosh(complex(1.0f)) == std.math.cosh(1.0f));
+}
+
+/// ditto
+Complex!T tanh(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    return sinh(z) / cosh(z);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math.operations : isClose;
+    import std.math.trigonometry : std_math_tanh = tanh;
+    assert(tanh(complex(0.0)) == 0.0);
+    assert(isClose(tanh(complex(1.0L)), std_math_tanh(1.0L)));
+    assert(isClose(tanh(complex(1.0f)), std_math_tanh(1.0f)));
+}
+
+/**
+    Inverse hyperbolic trigonometric functions on complex numbers.
+
+    Params: z = A complex number.
+    Returns: The hyperbolic arcsine, arccosine and arctangent of `z`, respectively.
+*/
+Complex!T asinh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    auto t = Complex!T((z.re - z.im) * (z.re + z.im) + 1, 2 * z.re * z.im);
+    return log(sqrt(t) + z);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.trigonometry : std_math_asinh = asinh;
+    assert(asinh(complex(0.0)) == 0.0);
+    assert(isClose(asinh(complex(1.0L)), std_math_asinh(1.0L)));
+    assert(isClose(asinh(complex(1.0f)), std_math_asinh(1.0f)));
+}
+
+/// ditto
+Complex!T acosh(T)(Complex!T z)  @safe pure nothrow @nogc
+{
+    return 2 * log(sqrt(T(0.5) * (z + 1)) + sqrt(T(0.5) * (z - 1)));
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.math.trigonometry : std_math_acosh = acosh;
+    assert(acosh(complex(1.0)) == 0.0);
+    assert(isClose(acosh(complex(3.0L)), std_math_acosh(3.0L)));
+    assert(isClose(acosh(complex(3.0f)), std_math_acosh(3.0f)));
+}
+
+/// ditto
+Complex!T atanh(T)(Complex!T z) @safe pure nothrow @nogc
+{
+    static import std.math;
+    const T im2 = z.im * z.im;
+    const T x = 1 - im2 - z.re * z.re;
+
+    T num = 1 + z.re;
+    T den = 1 - z.re;
+
+    num = im2 + num * num;
+    den = im2 + den * den;
+
+    return Complex!T(T(0.25) * (std.math.log(num) - std.math.log(den)),
+                     T(0.5) * std.math.atan2(2 * z.im, x));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    import std.math.operations : isClose;
+    import std.math.trigonometry : std_math_atanh = atanh;
+    assert(atanh(complex(0.0)) == 0.0);
+    assert(isClose(atanh(complex(0.5L)), std_math_atanh(0.5L)));
+    assert(isClose(atanh(complex(0.5f)), std_math_atanh(0.5f)));
+}
+
+/**
     Params: y = A real number.
     Returns: The value of cos(y) + i sin(y).
 
@@ -987,14 +1230,14 @@ Complex!T tan(T)(Complex!T z) @safe pure nothrow @nogc
 */
 Complex!real expi(real y)  @trusted pure nothrow @nogc
 {
-    import std.math : cos, sin;
+    import core.math : cos, sin;
     return Complex!real(cos(y), sin(y));
 }
 
 ///
 @safe pure nothrow unittest
 {
-    import std.math : cos, sin;
+    import core.math : cos, sin;
     assert(expi(0.0L) == 1.0L);
     assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
 }
@@ -1008,8 +1251,9 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 */
 Complex!real coshisinh(real y) @safe pure nothrow @nogc
 {
+    static import core.math;
     static import std.math;
-    if (std.math.fabs(y) <= 0.5)
+    if (core.math.fabs(y) <= 0.5)
         return Complex!real(std.math.cosh(y), std.math.sinh(y));
     else
     {
@@ -1023,7 +1267,7 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : cosh, sinh;
+    import std.math.trigonometry : cosh, sinh;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
 }
 
@@ -1033,7 +1277,7 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 */
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    static import std.math;
+    static import core.math;
     typeof(return) c;
     real x,y,w,r;
 
@@ -1046,19 +1290,19 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
         real z_re = z.re;
         real z_im = z.im;
 
-        x = std.math.fabs(z_re);
-        y = std.math.fabs(z_im);
+        x = core.math.fabs(z_re);
+        y = core.math.fabs(z_im);
         if (x >= y)
         {
             r = y / x;
-            w = std.math.sqrt(x)
-                * std.math.sqrt(0.5 * (1 + std.math.sqrt(1 + r * r)));
+            w = core.math.sqrt(x)
+                * core.math.sqrt(0.5 * (1 + core.math.sqrt(1 + r * r)));
         }
         else
         {
             r = x / y;
-            w = std.math.sqrt(y)
-                * std.math.sqrt(0.5 * (r + std.math.sqrt(1 + r * r)));
+            w = core.math.sqrt(y)
+                * core.math.sqrt(0.5 * (r + core.math.sqrt(1 + r * r)));
         }
 
         if (z_re >= 0)
@@ -1078,16 +1322,16 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    static import std.math;
+    static import core.math;
     assert(sqrt(complex(0.0)) == 0.0);
-    assert(sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
+    assert(sqrt(complex(1.0L, 0)) == core.math.sqrt(1.0L));
     assert(sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
     assert(sqrt(complex(-8.0, -6.0)) == complex(1.0, -3.0));
 }
 
 @safe pure nothrow unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto c1 = complex(1.0, 1.0);
     auto c2 = Complex!double(0.5, 2.0);
@@ -1117,7 +1361,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 @safe unittest
 {
     // Test wide string formatting
-    import std.format;
+    import std.format.write : formattedWrite;
     wstring wformat(T)(string format, Complex!T c)
     {
         import std.array : appender;
@@ -1219,7 +1463,8 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, PI;
+    import std.math.operations : isClose;
+    import std.math.constants : PI;
 
     assert(exp(complex(0.0, 0.0)) == complex(1.0, 0.0));
 
@@ -1232,7 +1477,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN, isInfinity;
+    import std.math.traits : isNaN, isInfinity;
 
     auto a = exp(complex(0.0, double.infinity));
     assert(a.re.isNaN && a.im.isNaN);
@@ -1268,7 +1513,8 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, isClose;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
 
     auto a = exp(complex(0.0, -PI));
     assert(isClose(a, -1.0, 0.0, 1e-15));
@@ -1360,7 +1606,9 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : sqrt, PI, isClose;
+    import core.math : sqrt;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
 
     auto a = complex(2.0, 1.0);
     assert(log(conj(a)) == conj(log(a)));
@@ -1375,7 +1623,8 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isNaN, isInfinity, PI, PI_2, PI_4;
+    import std.math.traits : isNaN, isInfinity;
+    import std.math.constants : PI, PI_2, PI_4;
 
     auto a = log(complex(-0.0L, 0.0L));
     assert(a == complex(-real.infinity, PI));
@@ -1407,7 +1656,8 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, isClose;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
 
     auto a = log(fromPolar(1.0, PI / 6.0));
     assert(isClose(a, complex(0.0L, 0.523598775598298873077L), 0.0, 1e-15));
@@ -1445,7 +1695,9 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : LN10, PI, isClose, sqrt;
+    import core.math : sqrt;
+    import std.math.constants : LN10, PI;
+    import std.math.operations : isClose;
 
     auto a = complex(2.0, 1.0);
     assert(log10(a) == log(a) / log(complex(10.0)));
@@ -1460,7 +1712,8 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, isClose;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
 
     auto a = log10(fromPolar(1.0, PI / 6.0));
     assert(isClose(a, complex(0.0L, 0.227396058973640224580L), 0.0, 1e-15));
@@ -1511,7 +1764,7 @@ if (isIntegral!Int)
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto a = complex(1.0, 2.0);
     assert(pow(a, 2) == a * a);
@@ -1541,7 +1794,7 @@ Complex!T pow(T)(Complex!T x, const T n) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
     assert(pow(complex(0.0), 2.0) == complex(0.0));
     assert(pow(complex(5.0), 2.0) == complex(25.0));
 
@@ -1561,7 +1814,9 @@ Complex!T pow(T)(Complex!T x, Complex!T y) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose, exp, PI;
+    import std.math.operations : isClose;
+    import std.math.exponential : exp;
+    import std.math.constants : PI;
     auto a = complex(0.0);
     auto b = complex(2.0);
     assert(pow(a, b) == complex(0.0));
@@ -1583,7 +1838,7 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
     assert(pow(2.0, complex(0.0)) == complex(1.0));
     assert(pow(2.0, complex(5.0)) == complex(32.0));
 
@@ -1596,7 +1851,8 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math : PI, isClose;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
 
     auto a = pow(complex(3.0, 4.0), 2);
     assert(isClose(a, complex(-7.0, 24.0)));

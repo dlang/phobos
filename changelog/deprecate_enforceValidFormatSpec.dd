@@ -1,0 +1,4 @@
+Deprecate std.format : enforceValidFormatSpec
+
+`enforceValidFormatSpec` from `std.format` has been accidentally made
+public and will be removed from public view in 2.107.0.

@@ -22,6 +22,7 @@ module std.numeric;
 
 import std.complex;
 import std.math;
+import core.math : fabs, ldexp, sin, sqrt;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
@@ -124,7 +125,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 ///
 @safe unittest
 {
-    import std.math : sin, cos;
+    import std.math.trigonometry : sin, cos;
 
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -604,7 +605,8 @@ public:
     /// ditto
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -861,7 +863,7 @@ public:
 
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     alias cf = CustomFloat!(5, 2);
 
@@ -986,7 +988,7 @@ if (isFloatingPoint!F)
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     // Average numbers in an array
     double avg(in double[] a)
@@ -1031,7 +1033,8 @@ template secantMethod(alias fun)
 ///
 @safe unittest
 {
-    import std.math : isClose, cos;
+    import std.math.operations : isClose;
+    import std.math.trigonometry : cos;
 
     float f(float x)
     {
@@ -1874,7 +1877,7 @@ do
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.isClose(4.0));
@@ -2239,7 +2242,7 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 ///
 @safe unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
@@ -2338,7 +2341,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
@@ -2422,7 +2425,7 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
@@ -2612,7 +2615,8 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
 ///
 @system unittest
 {
-    import std.math : isClose, sqrt;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt;
 
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
@@ -2926,56 +2930,58 @@ an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
 
 Params:
-    T = Any numerical type that supports the modulo operator `%`. If
-        bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
+    a = Integer value of any numerical type that supports the modulo operator `%`.
+        If bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
         be used; otherwise, Euclid's algorithm is used as _a fallback.
+    b = Integer value of any equivalent numerical type.
+
 Returns:
     The greatest common divisor of the given arguments.
  */
-T gcd(T)(T a, T b)
+typeof(Unqual!(T).init % Unqual!(U).init) gcd(T, U)(T a, U b)
+if (isIntegral!T && isIntegral!U)
+{
+    // Operate on a common type between the two arguments.
+    alias UCT = Unsigned!(CommonType!(Unqual!T, Unqual!U));
+
+    // `std.math.abs` doesn't support unsigned integers, and `T.min` is undefined.
+    static if (is(T : immutable short) || is(T : immutable byte))
+        UCT ax = (isUnsigned!T || a >= 0) ? a : cast(UCT) -int(a);
+    else
+        UCT ax = (isUnsigned!T || a >= 0) ? a : -UCT(a);
+
+    static if (is(U : immutable short) || is(U : immutable byte))
+        UCT bx = (isUnsigned!U || b >= 0) ? b : cast(UCT) -int(b);
+    else
+        UCT bx = (isUnsigned!U || b >= 0) ? b : -UCT(b);
+
+    // Special cases.
+    if (ax == 0)
+        return bx;
+    if (bx == 0)
+        return ax;
+
+    return gcdImpl(ax, bx);
+}
+
+private typeof(T.init % T.init) gcdImpl(T)(T a, T b)
 if (isIntegral!T)
 {
-    static if (is(T == const) || is(T == immutable))
+    pragma(inline, true);
+    import core.bitop : bsf;
+    import std.algorithm.mutation : swap;
+
+    immutable uint shift = bsf(a | b);
+    a >>= a.bsf;
+    do
     {
-        return gcd!(Unqual!T)(a, b);
-    }
-    else version (DigitalMars)
-    {
-        static if (T.min < 0)
-        {
-            assert(a >= 0 && b >= 0);
-        }
-        while (b)
-        {
-            immutable t = b;
-            b = a % b;
-            a = t;
-        }
-        return a;
-    }
-    else
-    {
-        if (a == 0)
-            return b;
-        if (b == 0)
-            return a;
+        b >>= b.bsf;
+        if (a > b)
+            swap(a, b);
+        b -= a;
+    } while (b);
 
-        import core.bitop : bsf;
-        import std.algorithm.mutation : swap;
-
-        immutable uint shift = bsf(a | b);
-        a >>= a.bsf;
-
-        do
-        {
-            b >>= b.bsf;
-            if (a > b)
-                swap(a, b);
-            b -= a;
-        } while (b);
-
-        return a << shift;
-    }
+    return a << shift;
 }
 
 ///
@@ -2984,6 +2990,81 @@ if (isIntegral!T)
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
     assert(gcd(a, b) == 13);
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                 const byte, const short, const int, const long,
+                                 immutable ubyte, immutable ushort, immutable uint, immutable ulong))
+    {
+        static foreach (U; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                     const ubyte, const ushort, const uint, const ulong,
+                                     immutable byte, immutable short, immutable int, immutable long))
+        {
+            // Signed and unsigned tests.
+            static if (T.max > byte.max && U.max > byte.max)
+                assert(gcd(T(200), U(200)) == 200);
+            static if (T.max > ubyte.max)
+            {
+                assert(gcd(T(2000), U(20))  == 20);
+                assert(gcd(T(2011), U(17))  == 1);
+            }
+            static if (T.max > ubyte.max && U.max > ubyte.max)
+                assert(gcd(T(1071), U(462)) == 21);
+
+            assert(gcd(T(0),   U(13))  == 13);
+            assert(gcd(T(29),  U(0))   == 29);
+            assert(gcd(T(0),   U(0))   == 0);
+            assert(gcd(T(1),   U(2))   == 1);
+            assert(gcd(T(9),   U(6))   == 3);
+            assert(gcd(T(3),   U(4))   == 1);
+            assert(gcd(T(32),  U(24))  == 8);
+            assert(gcd(T(5),   U(6))   == 1);
+            assert(gcd(T(54),  U(36))  == 18);
+
+            // Int and Long tests.
+            static if (T.max > short.max && U.max > short.max)
+                assert(gcd(T(46391), U(62527)) == 2017);
+            static if (T.max > ushort.max && U.max > ushort.max)
+                assert(gcd(T(63245986), U(39088169)) == 1);
+            static if (T.max > uint.max && U.max > uint.max)
+            {
+                assert(gcd(T(77160074263), U(47687519812)) == 1);
+                assert(gcd(T(77160074264), U(47687519812)) == 4);
+            }
+
+            // Negative tests.
+            static if (T.min < 0)
+            {
+                assert(gcd(T(-21), U(28)) == 7);
+                assert(gcd(T(-3),  U(4))  == 1);
+            }
+            static if (U.min < 0)
+            {
+                assert(gcd(T(1),  U(-2))  == 1);
+                assert(gcd(T(33), U(-44)) == 11);
+            }
+            static if (T.min < 0 && U.min < 0)
+            {
+                assert(gcd(T(-5),  U(-6))  == 1);
+                assert(gcd(T(-50), U(-60)) == 10);
+            }
+        }
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21834
+@safe unittest
+{
+    assert(gcd(-120, 10U) == 10);
+    assert(gcd(120U, -10) == 10);
+    assert(gcd(int.min, 0L) == 1L + int.max);
+    assert(gcd(0L, int.min) == 1L + int.max);
+    assert(gcd(int.min, 0L + int.min) == 1L + int.max);
+    assert(gcd(int.min, 1L + int.max) == 1L + int.max);
+    assert(gcd(short.min, 1U + short.max) == 1U + short.max);
 }
 
 // This overload is for non-builtin numerical types like BigInt or
@@ -3000,17 +3081,9 @@ if (!isIntegral!T &&
     }
     else
     {
-        import std.algorithm.mutation : swap;
-        enum canUseBinaryGcd = is(typeof(() {
-            T t, u;
-            t <<= 1;
-            t >>= 1;
-            t -= u;
-            bool b = (t & 1) == 0;
-            swap(t, u);
-        }));
-
-        assert(a >= 0 && b >= 0);
+        // Ensure arguments are unsigned.
+        a = a >= 0 ? a : -a;
+        b = b >= 0 ? b : -b;
 
         // Special cases.
         if (a == 0)
@@ -3018,41 +3091,58 @@ if (!isIntegral!T &&
         if (b == 0)
             return a;
 
-        static if (canUseBinaryGcd)
+        return gcdImpl(a, b);
+    }
+}
+
+private auto gcdImpl(T)(T a, T b)
+if (!isIntegral!T)
+{
+    pragma(inline, true);
+    import std.algorithm.mutation : swap;
+    enum canUseBinaryGcd = is(typeof(() {
+        T t, u;
+        t <<= 1;
+        t >>= 1;
+        t -= u;
+        bool b = (t & 1) == 0;
+        swap(t, u);
+    }));
+
+    static if (canUseBinaryGcd)
+    {
+        uint shift = 0;
+        while ((a & 1) == 0 && (b & 1) == 0)
         {
-            uint shift = 0;
-            while ((a & 1) == 0 && (b & 1) == 0)
-            {
-                a >>= 1;
+            a >>= 1;
+            b >>= 1;
+            shift++;
+        }
+
+        if ((a & 1) == 0) swap(a, b);
+
+        do
+        {
+            assert((a & 1) != 0);
+            while ((b & 1) == 0)
                 b >>= 1;
-                shift++;
-            }
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
 
-            if ((a & 1) == 0) swap(a, b);
-
-            do
-            {
-                assert((a & 1) != 0);
-                while ((b & 1) == 0)
-                    b >>= 1;
-                if (a > b)
-                    swap(a, b);
-                b -= a;
-            } while (b);
-
-            return a << shift;
-        }
-        else
+        return a << shift;
+    }
+    else
+    {
+        // The only thing we have is %; fallback to Euclidean algorithm.
+        while (b != 0)
         {
-            // The only thing we have is %; fallback to Euclidean algorithm.
-            while (b != 0)
-            {
-                auto t = b;
-                b = a % b;
-                a = t;
-            }
-            return a;
+            auto t = b;
+            b = a % b;
+            a = t;
         }
+        return a;
     }
 }
 
@@ -3079,11 +3169,17 @@ if (!isIntegral!T &&
         {
             return CrippledInt(impl % i.impl);
         }
+        CrippledInt opUnary(string op : "-")()
+        {
+            return CrippledInt(-impl);
+        }
         int opEquals(CrippledInt i) { return impl == i.impl; }
         int opEquals(int i) { return impl == i; }
         int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
     }
     assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+    assert(gcd(CrippledInt(-120), CrippledInt(10U)) == CrippledInt(10));
+    assert(gcd(CrippledInt(120U), CrippledInt(-10)) == CrippledInt(10));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19514
@@ -3100,6 +3196,117 @@ if (!isIntegral!T &&
     const a = BigInt("123143238472389492934020");
     const b = BigInt("902380489324729338420924");
     assert(__traits(compiles, gcd(a, b)));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21834
+@safe unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt(-120), BigInt(10U)) == BigInt(10));
+    assert(gcd(BigInt(120U), BigInt(-10)) == BigInt(10));
+    assert(gcd(BigInt(int.min), BigInt(0L)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(0L), BigInt(int.min)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(int.min), BigInt(0L + int.min)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(int.min), BigInt(1L + int.max)) == BigInt(1L + int.max));
+    assert(gcd(BigInt(short.min), BigInt(1U + short.max)) == BigInt(1U + short.max));
+}
+
+
+/**
+Computes the least common multiple of `a` and `b`.
+Arguments are the same as $(MYREF gcd).
+
+Returns:
+    The least common multiple of the given arguments.
+ */
+typeof(Unqual!(T).init % Unqual!(U).init) lcm(T, U)(T a, U b)
+if (isIntegral!T && isIntegral!U)
+{
+    // Operate on a common type between the two arguments.
+    alias UCT = Unsigned!(CommonType!(Unqual!T, Unqual!U));
+
+    // `std.math.abs` doesn't support unsigned integers, and `T.min` is undefined.
+    static if (is(T : immutable short) || is(T : immutable byte))
+        UCT ax = (isUnsigned!T || a >= 0) ? a : cast(UCT) -int(a);
+    else
+        UCT ax = (isUnsigned!T || a >= 0) ? a : -UCT(a);
+
+    static if (is(U : immutable short) || is(U : immutable byte))
+        UCT bx = (isUnsigned!U || b >= 0) ? b : cast(UCT) -int(b);
+    else
+        UCT bx = (isUnsigned!U || b >= 0) ? b : -UCT(b);
+
+    // Special cases.
+    if (ax == 0)
+        return ax;
+    if (bx == 0)
+        return bx;
+
+    return (ax / gcdImpl(ax, bx)) * bx;
+}
+
+///
+@safe unittest
+{
+    assert(lcm(1, 2) == 2);
+    assert(lcm(3, 4) == 12);
+    assert(lcm(5, 6) == 30);
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                 const byte, const short, const int, const long,
+                                 immutable ubyte, immutable ushort, immutable uint, immutable ulong))
+    {
+        static foreach (U; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                                     const ubyte, const ushort, const uint, const ulong,
+                                     immutable byte, immutable short, immutable int, immutable long))
+        {
+            assert(lcm(T(21), U(6))  == 42);
+            assert(lcm(T(41), U(0))  == 0);
+            assert(lcm(T(0),  U(7))  == 0);
+            assert(lcm(T(0),  U(0))  == 0);
+            assert(lcm(T(1U), U(2))  == 2);
+            assert(lcm(T(3),  U(4U)) == 12);
+            assert(lcm(T(5U), U(6U)) == 30);
+            static if (T.min < 0)
+                assert(lcm(T(-42), U(21U)) == 42);
+        }
+    }
+}
+
+/// ditto
+auto lcm(T)(T a, T b)
+if (!isIntegral!T &&
+        is(typeof(T.init % T.init)) &&
+        is(typeof(T.init == 0 || T.init > 0)))
+{
+    // Ensure arguments are unsigned.
+    a = a >= 0 ? a : -a;
+    b = b >= 0 ? b : -b;
+
+    // Special cases.
+    if (a == 0)
+        return a;
+    if (b == 0)
+        return b;
+
+    return (a / gcdImpl(a, b)) * b;
+}
+
+@safe unittest
+{
+    import std.bigint : BigInt;
+    assert(lcm(BigInt(21),  BigInt(6))   == BigInt(42));
+    assert(lcm(BigInt(41),  BigInt(0))   == BigInt(0));
+    assert(lcm(BigInt(0),   BigInt(7))   == BigInt(0));
+    assert(lcm(BigInt(0),   BigInt(0))   == BigInt(0));
+    assert(lcm(BigInt(1U),  BigInt(2))   == BigInt(2));
+    assert(lcm(BigInt(3),   BigInt(4U))  == BigInt(12));
+    assert(lcm(BigInt(5U),  BigInt(6U))  == BigInt(30));
+    assert(lcm(BigInt(-42), BigInt(21U)) == BigInt(42));
 }
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,

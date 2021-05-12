@@ -398,7 +398,7 @@ public:
     @safe unittest
     {
         import std.format : format;
-        import std.math : abs;
+        import std.math.algebraic : abs;
         import std.meta : AliasSeq;
         enum limit = convert!("seconds", "hnsecs")(2);
 

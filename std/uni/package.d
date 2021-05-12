@@ -960,7 +960,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -1124,7 +1124,7 @@ private:
 
 size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     enum bits = _bits == 1 ? 1 : nextPow2(_bits - 1);// see PackedArrayView
     static if (bits > 8*size_t.sizeof)
     {
@@ -1149,7 +1149,7 @@ template PackedArrayView(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1159,7 +1159,7 @@ template PackedPtr(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1652,7 +1652,7 @@ template sharMethod(alias uniLowerBound)
         if (is(T : ElementType!Range))
     {
         import std.functional : binaryFun;
-        import std.math : nextPow2, truncPow2;
+        import std.math.algebraic : nextPow2, truncPow2;
         alias pred = binaryFun!_pred;
         if (range.length == 0)
             return 0;
@@ -2431,7 +2431,7 @@ public:
         ---
     */
 
-    private import std.format : FormatSpec;
+    private import std.format.spec : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2444,7 +2444,7 @@ public:
      */
     void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -2490,7 +2490,7 @@ public:
     {
         import std.exception : assertThrown;
         import std.format : format, FormatException;
-        assertThrown!FormatException(format("%a", unicode.ASCII));
+        assertThrown!FormatException(format("%z", unicode.ASCII));
     }
 
 

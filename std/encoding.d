@@ -848,7 +848,7 @@ private template GenericEncoder()
 //=============================================================================
 
 /** Defines various character sets. */
-enum AsciiChar : ubyte { init }
+enum AsciiChar : ubyte { _init }
 /// Ditto
 alias AsciiString = immutable(AsciiChar)[];
 
@@ -928,7 +928,7 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-enum Latin1Char : ubyte { init }
+enum Latin1Char : ubyte { _init }
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
@@ -1004,7 +1004,7 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /// Defines a Latin2-encoded character.
-enum Latin2Char : ubyte { init }
+enum Latin2Char : ubyte { _init }
 
 /**
  * Defines an Latin2-encoded string (as an array of $(D
@@ -1084,7 +1084,7 @@ private template EncoderInstance(CharType : Latin2Char)
 //=============================================================================
 
 /// Defines a Windows1250-encoded character.
-enum Windows1250Char : ubyte { init }
+enum Windows1250Char : ubyte { _init }
 
 /**
  * Defines an Windows1250-encoded string (as an array of $(D
@@ -1177,7 +1177,7 @@ private template EncoderInstance(CharType : Windows1250Char)
 //=============================================================================
 
 /// Defines a Windows1251-encoded character.
-enum Windows1251Char : ubyte { init }
+enum Windows1251Char : ubyte { _init }
 
 /**
  * Defines an Windows1251-encoded string (as an array of $(D
@@ -1272,7 +1272,7 @@ private template EncoderInstance(CharType : Windows1251Char)
 //=============================================================================
 
 /// Defines a Windows1252-encoded character.
-enum Windows1252Char : ubyte { init }
+enum Windows1252Char : ubyte { _init }
 
 /**
  * Defines an Windows1252-encoded string (as an array of $(D
@@ -3692,7 +3692,7 @@ enum BOM
     none      = 0,  /// no BOM was found
     utf32be   = 1,  /// [0x00, 0x00, 0xFE, 0xFF]
     utf32le   = 2,  /// [0xFF, 0xFE, 0x00, 0x00]
-    utf7      = 3,  /*  [0x2B, 0x2F, 0x76, 0x38]
+    utf7      = 3,  /** [0x2B, 0x2F, 0x76, 0x38]
                         [0x2B, 0x2F, 0x76, 0x39],
                         [0x2B, 0x2F, 0x76, 0x2B],
                         [0x2B, 0x2F, 0x76, 0x2F],

@@ -57,7 +57,7 @@ $(T2 schwartzSort,
 $(T2 sort,
         Sorts.)
 $(T2 topN,
-        Separates the top elements in a range.)
+        Separates the top elements in a range, akin to $(LINK2 https://en.wikipedia.org/wiki/Quickselect, Quickselect).)
 $(T2 topNCopy,
         Copies out the top elements of a range.)
 $(T2 topNIndex,
@@ -98,12 +98,14 @@ alias SortOutput = Flag!"sortOutput";
 // completeSort
 /**
 Sorts the random-access range `chain(lhs, rhs)` according to
-predicate `less`. The left-hand side of the range `lhs` is
-assumed to be already sorted; `rhs` is assumed to be unsorted. The
-exact strategy chosen depends on the relative sizes of `lhs` and
+predicate `less`.
+
+The left-hand side of the range `lhs` is assumed to be already sorted;
+`rhs` is assumed to be unsorted.
+The exact strategy chosen depends on the relative sizes of `lhs` and
 `rhs`.  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
 (best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
-rhs.length)) (worst-case) evaluations of `swap`.
+rhs.length)) (worst-case) evaluations of $(REF_ALTTEXT swap, swap, std,algorithm,mutation).
 
 Params:
     less = The predicate to sort by.
@@ -369,15 +371,15 @@ if (is(typeof(ordered!less(values))))
 // partition
 /**
 Partitions a range in two using the given `predicate`.
-Specifically, reorders the range `r = [left, right$(RPAREN)` using `swap`
+
+Specifically, reorders the range `r = [left, right$(RPAREN)` using $(REF_ALTTEXT swap, swap, std,algorithm,mutation)
 such that all elements `i` for which `predicate(i)` is `true` come
 before all elements `j` for which `predicate(j)` returns `false`.
 
 Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
-r.length * log(r.length)) (if stable) evaluations of `less` and $(D
-swap). The unstable version computes the minimum possible evaluations
-of `swap` (roughly half of those performed by the semistable
-version).
+r.length * log(r.length)) (if stable) evaluations of `less` and $(REF_ALTTEXT swap, swap, std,algorithm,mutation).
+The unstable version computes the minimum possible evaluations of `swap`
+(roughly half of those performed by the semistable version).
 
 Params:
     predicate = The predicate to partition by.
@@ -572,10 +574,11 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
 
 // pivotPartition
 /**
-
 Partitions `r` around `pivot` using comparison function `less`, algorithm akin
 to $(LINK2 https://en.wikipedia.org/wiki/Quicksort#Hoare_partition_scheme,
-Hoare partition). Specifically, permutes elements of `r` and returns
+Hoare partition).
+
+Specifically, permutes elements of `r` and returns
 an index `k < r.length` such that:
 
 $(UL
@@ -805,7 +808,9 @@ if (isForwardRange!(Range))
 // partition3
 /**
 Rearranges elements in `r` in three adjacent ranges and returns
-them. The first and leftmost range only contains elements in `r`
+them.
+
+The first and leftmost range only contains elements in `r`
 less than `pivot`. The second and middle range only contains
 elements in `r` that are equal to `pivot`. Finally, the third
 and rightmost range only contains elements in `r` that are greater
@@ -921,8 +926,9 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 // makeIndex
 /**
-Computes an index for `r` based on the comparison `less`. The
-index is a sorted array of pointers or indices into the original
+Computes an index for `r` based on the comparison `less`.
+
+The index is a sorted array of pointers or indices into the original
 range. This technique is similar to sorting, but it is more flexible
 because (1) it allows "sorting" of immutable collections, (2) allows
 binary search even if the original collection does not offer random
@@ -1165,8 +1171,7 @@ if (Rs.length >= 2 &&
                 {
                     if (!source[i].empty)
                     {
-                        assert(previousFront == source[i].front ||
-                               comp(previousFront, source[i].front),
+                        assert(!comp(source[i].front, previousFront),
                                "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                     }
                 }
@@ -1232,8 +1237,7 @@ if (Rs.length >= 2 &&
                     {
                         if (!source[i].empty)
                         {
-                            assert(previousBack == source[i].back ||
-                                   comp(source[i].back, previousBack),
+                            assert(!comp(previousBack, source[i].back),
                                    "Input " ~ i.stringof ~ " is unsorted"); // @nogc
                         }
                     }
@@ -1280,7 +1284,9 @@ if (Rs.length >= 2 &&
 /**
    Merge multiple sorted ranges `rs` with less-than predicate function `pred`
    into one single sorted output range containing the sorted union of the
-   elements of inputs. Duplicates are not eliminated, meaning that the total
+   elements of inputs.
+
+   Duplicates are not eliminated, meaning that the total
    number of elements in the output is the sum of all elements in the ranges
    passed to it; the `length` member is offered if all inputs also have
    `length`. The element types of all the inputs must have a common type
@@ -1437,6 +1443,37 @@ if (Rs.length >= 2 &&
     assert(m.empty);
 }
 
+// Issue 21810: Check for sortedness must not use `==`
+@nogc @safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    static immutable a = [
+        tuple(1, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(5, 1),
+    ];
+    static immutable b = [
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
+    ];
+    static immutable r = [
+        tuple(1, 1),
+        tuple(2, 1),
+        tuple(3, 1),
+        tuple(3, 2),
+        tuple(3, 1),
+        tuple(4, 1),
+        tuple(4, 2),
+        tuple(5, 1),
+    ];
+    assert(merge!"a[0] < b[0]"(a, b).equal(r));
+}
+
 private template validPredicates(E, less...)
 {
     static if (less.length == 0)
@@ -1450,7 +1487,9 @@ private template validPredicates(E, less...)
 }
 
 /**
-Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
+Sorts a range by multiple keys.
+
+The call $(D multiSort!("a.id < b.id",
 "a.date > b.date")(r)) sorts the range `r` by `id` ascending,
 and sorts elements that have the same `id` by `date`
 descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
@@ -1833,8 +1872,9 @@ private void sort5(alias lt, Range)(Range r)
 
 // sort
 /**
-Sorts a random-access range according to the predicate `less`. Performs
-$(BIGOH r.length * log(r.length)) evaluations of `less`. If `less` involves
+Sorts a random-access range according to the predicate `less`.
+
+Performs $(BIGOH r.length * log(r.length)) evaluations of `less`. If `less` involves
 expensive computations on the _sort key, it may be worthwhile to use
 $(LREF schwartzSort) instead.
 
@@ -1950,7 +1990,8 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
 
     import std.algorithm.comparison : equal;
-    import std.math : cmp, isIdentical;
+    import std.math.operations : cmp;
+    import std.math.traits : isIdentical;
 
     sort!((a, b) => cmp(a, b) < 0)(numbers);
 
@@ -2999,7 +3040,9 @@ private template TimSortImpl(alias pred, R)
 // schwartzSort
 /**
 Alternative sorting method that should be used when comparing keys involves an
-expensive computation. Instead of using `less(a, b)` for comparing elements,
+expensive computation.
+
+Instead of using `less(a, b)` for comparing elements,
 `schwartzSort` uses `less(transform(a), transform(b))`. The values of the
 `transform` function are precomputed in a temporary array, thus saving on
 repeatedly computing it. Conversely, if the cost of `transform` is small
@@ -3286,8 +3329,9 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R)
 /**
 Reorders the random-access range `r` such that the range `r[0 .. mid]`
 is the same as if the entire `r` were sorted, and leaves
-the range `r[mid .. r.length]` in no particular order. Performs
-$(BIGOH r.length * log(mid)) evaluations of `pred`. The
+the range `r[mid .. r.length]` in no particular order.
+
+Performs $(BIGOH r.length * log(mid)) evaluations of `pred`. The
 implementation simply calls `topN!(less, ss)(r, n)` and then $(D
 sort!(less, ss)(r[0 .. n])).
 
@@ -3343,15 +3387,18 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 
 // topN
 /**
-Reorders the range `r` using `swap` such that `r[nth]` refers
-to the element that would fall there if the range were fully
-sorted. In addition, it also partitions `r` such that all elements
+Reorders the range `r` using $(REF_ALTTEXT swap, swap, std,algorithm,mutation)
+such that `r[nth]` refers to the element that would fall there if the range
+were fully sorted.
+
+It is akin to $(LINK2 https://en.wikipedia.org/wiki/Quickselect, Quickselect),
+and partitions `r` such that all elements
 `e1` from `r[0]` to `r[nth]` satisfy `!less(r[nth], e1)`,
 and all elements `e2` from `r[nth]` to `r[r.length]` satisfy
-`!less(e2, r[nth])`. Effectively, it finds the nth smallest
+`!less(e2, r[nth])`. Effectively, it finds the `nth + 1` smallest
 (according to `less`) elements in `r`. Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
-(if stable) evaluations of `less` and `swap`.
+(if stable) evaluations of `less` and $(REF_ALTTEXT swap, swap, std,algorithm,mutation).
 
 If `n >= r.length`, the algorithm has no effect and returns
 `r[0 .. r.length]`.
@@ -3362,6 +3409,8 @@ Params:
     r = The random-access range to reorder.
     nth = The index of the element that should be in sorted position after the
         function is done.
+
+Returns: a slice from `r[0]` to `r[nth]`, excluding `r[nth]` itself.
 
 See_Also:
     $(LREF topNIndex),
@@ -3962,6 +4011,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 Copies the top `n` elements of the
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) `source` into the
 random-access range `target`, where `n = target.length`.
+
 Elements of `source` are not touched. If $(D
 sorted) is `true`, the target is sorted. Otherwise, the target
 respects the $(HTTP en.wikipedia.org/wiki/Binary_heap, heap property).
@@ -4730,7 +4780,7 @@ shapes. Here's a non-trivial example:
 */
 @safe unittest
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
@@ -4766,7 +4816,9 @@ shapes. Here's a non-trivial example:
     assert(n == 60);
 }
 
-/** Permutes `range` into the `perm` permutation.
+/**
+Permutes `range` into the `perm` permutation.
+
 The algorithm has a constant runtime complexity with respect to the number of
 permutations created.
 Due to the number of unique values of `ulong` only the first 21 elements of

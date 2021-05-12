@@ -86,7 +86,7 @@ else version (Posix)
 
     import core.stdc.errno;
 
-    enum socket_t : int32_t { init = -1 }
+    enum socket_t : int32_t { _init = -1 }
     private const int _SOCKET_ERROR = -1;
 
     private enum : int

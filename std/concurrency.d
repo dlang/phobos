@@ -1,4 +1,49 @@
 /**
+ * $(SCRIPT inhibitQuickIndex = 1;)
+ * $(DIVC quickindex,
+ * $(BOOKTABLE,
+ * $(TR $(TH Category) $(TH Symbols))
+ * $(TR $(TD Tid) $(TD
+ *     $(MYREF locate)
+ *     $(MYREF ownerTid)
+ *     $(MYREF register)
+ *     $(MYREF spawn)
+ *     $(MYREF spawnLinked)
+ *     $(MYREF thisTid)
+ *     $(MYREF Tid)
+ *     $(MYREF TidMissingException)
+ *     $(MYREF unregister)
+ * ))
+ * $(TR $(TD Message passing) $(TD
+ *     $(MYREF prioritySend)
+ *     $(MYREF receive)
+ *     $(MYREF receiveOnly)
+ *     $(MYREF receiveTimeout)
+ *     $(MYREF send)
+ *     $(MYREF setMaxMailboxSize)
+ * ))
+ * $(TR $(TD Message-related types) $(TD
+ *     $(MYREF LinkTerminated)
+ *     $(MYREF MailboxFull)
+ *     $(MYREF MessageMismatch)
+ *     $(MYREF OnCrowding)
+ *     $(MYREF OwnerTerminated)
+ *     $(MYREF PriorityMessageException)
+ * ))
+ * $(TR $(TD Scheduler) $(TD
+ *     $(MYREF FiberScheduler)
+ *     $(MYREF Generator)
+ *     $(MYREF Scheduler)
+ *     $(MYREF scheduler)
+ *     $(MYREF ThreadInfo)
+ *     $(MYREF ThreadScheduler)
+ *     $(MYREF yield)
+ * ))
+ * $(TR $(TD Misc) $(TD
+ *     $(MYREF initOnce)
+ * ))
+ * ))
+ *
  * This is a low-level messaging API upon which more structured or restrictive
  * APIs may be built.  The general idea is that every messageable entity is
  * represented by a common handle type called a Tid, which allows messages to
@@ -342,9 +387,9 @@ public:
      * that a Tid executed in the future will have the same toString() output
      * as another Tid that has already terminated.
      */
-    void toString(scope void delegate(const(char)[]) sink)
+    void toString(scope void delegate(const(char)[]) sink) const
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 
@@ -360,6 +405,15 @@ public:
     assert(text(tid2) != "Tid(0)");
     auto tid3 = tid2;
     assert(text(tid2) == text(tid3));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21512
+@system unittest
+{
+    import std.format : format;
+
+    const(Tid) b = spawn(() {});
+    assert(format!"%s"(b)[0 .. 4] == "Tid(");
 }
 
 /**

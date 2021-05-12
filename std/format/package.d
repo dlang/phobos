@@ -1,82 +1,673 @@
 // Written in the D programming language.
 
 /**
-   This module implements the formatting functionality for strings and
-   I/O. It's comparable to C99's `vsprintf()` and uses a similar
-   _format encoding scheme.
-
-   For an introductory look at $(B std._format)'s capabilities and how to use
-   this module see the dedicated
-   $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
-
-   This module centers around two functions:
+This package provides string formatting functionality using
+`printf` style format strings.
 
 $(BOOKTABLE ,
-$(TR $(TH Function Name) $(TH Description)
+$(TR $(TH Submodule) $(TH Function Name) $(TH Description))
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF format))
+    $(TD Converts its arguments according to a format string into a string.)
 )
-    $(TR $(TD $(LREF formattedRead))
-        $(TD Reads values according to the format string from an InputRange.
-    ))
-    $(TR $(TD $(LREF formattedWrite))
-        $(TD Formats its arguments according to the format string and puts them
-        to an OutputRange.
-    ))
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF sformat))
+    $(TD Converts its arguments according to a format string into a buffer.)
+)
+$(TR
+    $(TD $(I package))
+    $(TD $(LREF FormatException))
+    $(TD Signals a problem while formatting.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D write), std, format, write))
+    $(TD $(REF_ALTTEXT $(D formattedWrite), formattedWrite, std, format, write))
+    $(TD Converts its arguments according to a format string and writes
+         the result to an output range.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D write), std, format, write))
+    $(TD $(REF_ALTTEXT $(D formatValue), formatValue, std, format, write))
+    $(TD Formats a value of any type according to a format specifier and
+         writes the result to an output range.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D read), std, format, read))
+    $(TD $(REF_ALTTEXT $(D formattedRead), formattedRead, std, format, read))
+    $(TD Reads an input range according to a format string and stores the read
+         values into its arguments.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D read), std, format, read))
+    $(TD $(REF_ALTTEXT $(D unformatValue), unformatValue, std, format, read))
+    $(TD Reads a value from the given input range and converts it according to
+         a format specifier.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D spec), std, format, spec))
+    $(TD $(REF_ALTTEXT $(D FormatSpec), FormatSpec, std, format, spec))
+    $(TD A general handler for format strings.)
+)
+$(TR
+    $(TD $(MREF_ALTTEXT $(D spec), std, format, spec))
+    $(TD $(REF_ALTTEXT $(D singleSpec), singleSpec, std, format, spec))
+    $(TD Helper function that returns a `FormatSpec` for a single format specifier.)
+))
+
+Limitation: This package does not support localization, but
+    adheres to the rounding mode of the floating point unit, if
+    available.
+
+$(SECTION3 Format Strings)
+
+The functions contained in this package use $(I format strings). A
+format string describes the layout of another string for reading or
+writing purposes. A format string is composed of normal text
+interspersed with $(I format specifiers). A format specifier starts
+with a percentage sign $(B '%'), optionally followed by one or more
+$(I parameters) and ends with a $(I format indicator). A format
+indicator may be a simple $(I format character) or a $(I compound
+indicator).
+
+$(I Format strings) are composed according to the following grammar:
+
+$(PRE
+$(I FormatString):
+    $(I FormatStringItem) $(I FormatString)
+$(I FormatStringItem):
+    $(I Character)
+    $(I FormatSpecifier)
+$(I FormatSpecifier):
+    $(B '%') $(I Parameters) $(I FormatIndicator)
+
+$(I FormatIndicator):
+    $(I FormatCharacter)
+    $(I CompoundIndicator)
+$(I FormatCharacter):
+    $(I see remark below)
+$(I CompoundIndicator):
+    $(B '$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+    $(B '$(LPAREN)') $(I FormatString) $(B '%|') $(I Delimiter) $(B '%$(RPAREN)')
+$(I Delimiter)
+    $(I empty)
+    $(I Character) $(I Delimiter)
+
+$(I Parameters):
+    $(I Position) $(I Flags) $(I Width) $(I Precision) $(I Separator)
+$(I Position):
+    $(I empty)
+    $(I Integer) $(B '$')
+    $(I Integer) $(B ':') $(I Integer) $(B '$')
+    $(I Integer) $(B ':') $(B '$')
+$(I Flags):
+    $(I empty)
+    $(I Flag) $(I Flags)
+$(I Flag):
+    $(B '-')|$(B '+')|$(B '&nbsp;')|$(B '0')|$(B '#')|$(B '=')
+$(I Width):
+    $(I OptionalPositionalInteger)
+$(I Precision):
+    $(I empty)
+    $(B '.') $(I OptionalPositionalInteger)
+$(I Separator):
+    $(I empty)
+    $(B ',') $(I OptionalInteger)
+    $(B ',') $(I OptionalInteger) $(B '?')
+$(I OptionalInteger):
+    $(I empty)
+    $(I Integer)
+    $(B '*')
+$(I OptionalPositionalInteger):
+    $(I OptionalInteger)
+    $(B '*') $(I Integer) $(B '$')
+
+$(I Character)
+    $(B '%%')
+    $(I AnyCharacterExceptPercent)
+$(I Integer):
+    $(I NonZeroDigit) $(I Digits)
+$(I Digits):
+    $(I empty)
+    $(I Digit) $(I Digits)
+$(I NonZeroDigit):
+    $(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
+$(I Digit):
+    $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
 )
 
-   Please see the documentation of function $(LREF formattedWrite) for a
-   description of the format string.
+Note: $(I FormatCharacter) is unspecified. It can be any character
+that has no other purpose in this grammar, but it is
+recommended to assign (lower- and uppercase) letters.
 
-   Two functions have been added for convenience:
+Note: The $(I Parameters) of a $(I CompoundIndicator) are currently
+limited to a $(B '-') flag.
+
+$(SECTION4 Format Indicator)
+
+The $(I format indicator) can either be a single character or an
+expression surrounded by $(B %\() and $(B %\)). It specifies the
+basic manner in which a value will be formatted and is the minimum
+requirement to format a value.
+
+The following characters can be used as $(I format characters):
 
 $(BOOKTABLE ,
-$(TR $(TH Function Name) $(TH Description)
+   $(TR $(TH FormatCharacter) $(TH Semantics))
+   $(TR $(TD $(B 's'))
+        $(TD To be formatted in a human readable format.
+             Can be used with all types.))
+   $(TR $(TD $(B 'c'))
+        $(TD To be formatted as a character.))
+   $(TR $(TD $(B 'd'))
+        $(TD To be formatted as a signed decimal integer.))
+   $(TR $(TD $(B 'u'))
+        $(TD To be formatted as a decimal image of the underlying bit representation.))
+   $(TR $(TD $(B 'b'))
+        $(TD To be formatted as a binary image of the underlying bit representation.))
+   $(TR $(TD $(B 'o'))
+        $(TD To be formatted as an octal image of the underlying bit representation.))
+   $(TR $(TD $(B 'x') / $(B 'X'))
+        $(TD To be formatted as a hexadecimal image of the underlying bit representation.))
+   $(TR $(TD $(B 'e') / $(B 'E'))
+        $(TD To be formatted as a real number in decimal scientific notation.))
+   $(TR $(TD $(B 'f') / $(B 'F'))
+        $(TD To be formatted as a real number in decimal natural notation.))
+   $(TR $(TD $(B 'g') / $(B 'G'))
+        $(TD To be formatted as a real number in decimal short notation.
+             Depending on the number, a scientific notation or
+             a natural notation is used.))
+   $(TR $(TD $(B 'a') / $(B 'A'))
+        $(TD To be formatted as a real number in hexadezimal scientific notation.))
+   $(TR $(TD $(B 'r'))
+        $(TD To be formatted as raw bytes.
+             The output may not be printable and depends on endianess.))
 )
-    $(TR $(TD $(LREF format))
-        $(TD Returns a GC-allocated string with the formatting result.
-    ))
-    $(TR $(TD $(LREF sformat))
-        $(TD Puts the formatting result into a preallocated array.
-    ))
+
+The $(I compound indicator) can be used to describe compound types
+like arrays or structs in more detail. A compound type is enclosed
+within $(B '%\(') and $(B '%\)'). The enclosed sub-format string is
+applied to individual elements. The trailing portion of the
+sub-format string following the specifier for the element is
+interpreted as the delimiter, and is therefore omitted following the
+last element. The $(B '%|') specifier may be used to explicitly
+indicate the start of the delimiter, so that the preceding portion of
+the string will be included following the last element.
+
+The $(I format string) inside of the $(I compound indicator) should
+contain exactly one $(I format specifier) (two in case of associative
+arrays), which specifies the formatting mode of the elements of the
+compound type. This $(I format specifier) can be a $(I compound
+indicator) itself.
+
+Note: Inside a $(I compound indicator), strings and characters are
+escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
+instead of `"%$(LPAREN)"`.
+
+$(SECTION4 Flags)
+
+There are several flags that affect the outcome of the formatting.
+
+$(BOOKTABLE ,
+   $(TR $(TH Flag) $(TH Semantics))
+   $(TR $(TD $(B '-'))
+        $(TD When the formatted result is shorter then the value
+             given by the width parameter, the output is right
+             justified. With the $(B '-') flag this is changed
+             to left justification.
+
+             There are two exceptions where the $(B '-') flag has a
+             different meaning: (1) with $(B 'r') it denotes to use little
+             endian and (2) in case of a compound indicator it means that
+             no special handling of the members is applied.))
+   $(TR $(TD $(B '='))
+        $(TD When the formatted result is shorter then the value
+             given by the width parameter, the output is centered.
+             If the central position is not possible it is moved slightly
+             to the right. In this case, if $(B '-') flag is present in
+             addition to the $(B '=') flag, it is moved slightly to the left.))
+   $(TR $(TD $(B '+')&nbsp;/&nbsp;$(B '&nbsp;'))
+        $(TD Applies to numerical values. By default, positive numbers are not
+             formatted to include the `+` sign. With one of these two flags present,
+             positive numbers are preceded by a plus sign or a space.
+             When both flags are present, a plus sign is used.
+
+             In case of $(B 'r'), a big endian format is used.))
+   $(TR $(TD $(B '0'))
+        $(TD Is applied to numerical values that are printed right justified.
+             If the zero flag is present, the space left to the number is
+             filled with zeros instead of spaces.))
+   $(TR $(TD $(B '#'))
+        $(TD Denotes that an alternative output must be used. This depends on the type
+             to be formatted and the $(I format character) used. See the
+             sections below for more information.))
 )
 
-   These two functions are publicly imported by $(MREF std, string)
-   to be easily available.
+$(SECTION4 Width$(COMMA) Precision and Separator)
 
-   The functions $(LREF formatValue) and $(LREF unformatValue) are
-   used for the plumbing.
-   Copyright: Copyright The D Language Foundation 2000-2013.
+The $(I width) parameter specifies the minimum width of the result.
 
-   License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+The meaning of $(I precision) depends on the format indicator. For
+integers it denotes the minimum number of digits printed, for
+real numbers it denotes the number of fractional digits and for
+strings and compound types it denotes the maximum number of elements
+that are included in the output.
 
-   Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
-   Andrei Alexandrescu), and Kenji Hara
+A $(I separator) is used for formatting numbers. If it is specified,
+the output is divided into chunks of three digits, separated by a $(B
+','). The number of digits in a chunk can be given explicitly by
+providing a number or a $(B '*') after the $(B ',').
 
-   Source: $(PHOBOSSRC std/format.d)
+In all three cases the number of digits can be replaced by a $(B
+'*'). In this scenario, the next argument is used as the number of
+digits. If the argument is a negative number, the $(I precision) and
+$(I separator) parameters are considered unspecified. For $(I width),
+the absolute value is used and the $(B '-') flag is set.
+
+The $(I separator) can also be followed by a $(B '?'). In that case,
+an additional argument is used to specify the symbol that should be
+used to separate the chunks.
+
+$(SECTION4 Position)
+
+By default, the arguments are processed in the provided order. With
+the $(I position) parameter it is possible to address arguments
+directly. It is also possible to denote a series of arguments with
+two numbers separated by $(B ':'), that are all processed in the same
+way. The second number can be omitted. In that case the series ends
+with the last argument.
+
+It's also possible to use positional arguments for $(I width), $(I
+precision) and $(I separator) by adding a number and a $(B
+'$(DOLLAR)') after the $(B '*').
+
+$(SECTION4 Types)
+
+This section describes the result of combining types with format
+characters. It is organized in 2 subsections: a list of general
+information regarding the formatting of types in the presence of
+format characters and a table that contains details for every
+available combination of type and format character.
+
+When formatting types, the following rules apply:
+
+$(UL
+  $(LI If the format character is upper case, the resulting string will
+       be formatted using upper case letters.)
+  $(LI The default precision for floating point numbers is 6 digits.)
+  $(LI Rounding of floating point numbers adheres to the rounding mode
+       of the floating point unit, if available.)
+  $(LI The floating point values `NaN` and `Infinity` are formatted as
+       `nan` and `inf`, possibly preceded by $(B '+') or $(B '-') sign.)
+  $(LI Formatting reals is only supported for 64 bit reals and 80 bit reals.
+       All other reals are cast to double before they are formatted. This will
+       cause the result to be `inf` for very large numbers.)
+  $(LI Characters and strings formatted with the $(B 's') format character
+       inside of compound types are surrounded by single and double quotes
+       and unprintable characters are escaped. To avoid this, a $(B '-')
+       flag can be specified for the compound specifier
+       $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"` instead of `"%$(LPAREN)%s%$(RPAREN)"` $(RPAREN).)
+  $(LI Structs, unions, classes and interfaces are formatted by calling a
+       `toString` method if available.
+       See $(MREF_ALTTEXT $(D module std.format.write), std, format, write) for more
+       details.)
+  $(LI Only part of these combinations can be used for reading. See
+       $(MREF_ALTTEXT $(D module std.format.read), std, format, read) for more
+       detailed information.)
+)
+
+This table contains descriptions for every possible combination of
+type and format character:
+
+$(BOOKTABLE ,
+   $(TR $(THMINWIDTH Type) $(THMINWIDTH Format Character) $(TH Formatted as...))
+   $(TR $(MULTIROW_CELL 1, `null`)
+        $(TD $(B 's'))
+            $(TD `null`)
+   )
+   $(TR $(MULTIROW_CELL 3, `bool`)
+        $(TD $(B 's'))
+            $(TD `false` or `true`)
+   )
+   $(TR $(TD $(B 'b'), $(B 'd'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD As the integrals 0 or 1 with the same format character.
+
+            $(I Please note, that $(B 'o') and $(B 'x') with $(B '#') flag
+            might produce unexpected results due to special handling of
+            the value 0.))
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD `\0` or `\1`)
+   )
+   $(TR $(MULTIROW_CELL 4, $(I Integral))
+        $(TD $(B 's'), $(B 'd'))
+            $(TD A signed decimal number. The $(B '#') flag is ignored.)
+   )
+   $(TR $(TD $(B 'b'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD An unsigned binary, decimal, octal or hexadecimal number.
+
+                 In case of $(B 'o') and $(B 'x'), the $(B '#') flag
+                 denotes that the number must be preceded by `0` and `0x`, with
+                 the exception of the value 0, where this does not apply. For
+                 $(B 'b') and $(B 'u') the $(B '#') flag has no effect.)
+   )
+   $(TR $(TD $(B 'e'), $(B 'E'), $(B 'f'), $(B 'F'), $(B 'g'), $(B 'G'), $(B 'a'), $(B 'A'))
+            $(TD As a floating point value with the same specifier.
+
+                 Default precision is large enough to add all digits
+                 of the integral value.
+
+                 In case of ($B 'a') and $(B 'A'), the integral digit can be
+                 any hexadecimal digit.
+               )
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 5, $(I Floating Point))
+        $(TD $(B 'e'), $(B 'E'))
+            $(TD Scientific notation: Exactly one integral digit followed by a dot
+                 and fractional digits, followed by the exponent.
+                 The exponent is formatted as $(B 'e') followed by
+                 a $(B '+') or $(B '-') sign, followed by at least
+                 two digits.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.)
+   )
+   $(TR $(TD $(B 'f'), $(B 'F'))
+            $(TD Natural notation: Integral digits followed by a dot and
+                 fractional digits.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.
+
+                 $(I Please note: the difference between $(B 'f') and $(B 'F')
+                 is only visible for `NaN` and `Infinity`.))
+   )
+   $(TR $(TD $(B 's'), $(B 'g'), $(B 'G'))
+            $(TD Short notation: If the absolute value is larger than `10 ^^ precision`
+                 or smaller than `0.0001`, the scientific notation is used.
+                 If not, the natural notation is applied.
+
+                 In both cases $(I precision) denotes the count of all digits, including
+                 the integral digits. Trailing zeros (including a trailing dot) are removed.
+
+                 If $(B '#') flag is present, trailing zeros are not removed.)
+   )
+   $(TR $(TD $(B 'a'), $(B 'A'))
+            $(TD Hexadecimal scientific notation: `0x` followed by `1`
+                 (or `0` in case of value zero or denormalized number)
+                 followed by a dot, fractional digits in hexadecimal
+                 notation and an exponent. The exponent is build by `p`,
+                 followed by a sign and the exponent in $(I decimal) notation.
+
+                 When there are no fractional digits and the $(B '#') flag
+                 is $(I not) present, the dot is omitted.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Character))
+        $(TD $(B 's'), $(B 'c'))
+            $(TD As the character.
+
+                 Inside of a compound indicator $(B 's') is treated differently: The
+                 character is surrounded by single quotes and non printable
+                 characters are escaped. This can be avoided by preceding
+                 the compound indicator with a $(B '-') flag
+                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+   )
+   $(TR $(TD $(B 'b'), $(B 'd'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
+            $(TD As the integral that represents the character.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD Characters taken directly from the binary representation.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I String))
+        $(TD $(B 's'))
+            $(TD The sequence of characters that form the string.
+
+                 Inside of a compound indicator the string is surrounded by double quotes
+                 and non printable characters are escaped. This can be avoided
+                 by preceding the compound indicator with a $(B '-') flag
+                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of characters, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD As an array of characters.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Array))
+        $(TD $(B 's'))
+            $(TD When the elements are characters, the array is formatted as
+                 a string. In all other cases the array is surrounded by square brackets
+                 and the elements are separated by a comma and a space. If the elements
+                 are strings, they are surrounded by double quotes and non
+                 printable characters are escaped.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Associative Array))
+        $(TD $(B 's'))
+            $(TD As a sequence of the elements in unpredictable order. The output is
+                 surrounded by square brackets. The elements are separated by a
+                 comma and a space. The elements are formatted as `key:value`.)
+   )
+   $(TR $(TD compound)
+            $(TD As a sequence of the elements in unpredictable order. Each element
+                 is formatted according to the specifications given inside of the
+                 compound specifier. The first specifier is used for formatting
+                 the key and the second specifier is used for formatting the value.
+                 The order can be changed with positional arguments. For example
+                 `"%(%2$s (%1$s), %)"` will write the value, followed by the key in
+                 parenthesis.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Enum))
+        $(TD $(B 's'))
+            $(TD The name of the value. If the name is not available, the base value
+                 is used, preceeded by a cast.)
+   )
+   $(TR $(TD All, but $(B 's'))
+            $(TD Enums can be formatted with all format characters that can be used
+                 with the base value. In that case they are formatted like the base value.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I Input Range))
+        $(TD $(B 's'))
+            $(TD When the elements of the range are characters, they are written like a string.
+                 In all other cases, the elements are enclosed by square brackets and separated
+                 by a comma and a space.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Struct))
+        $(TD $(B 's'))
+            $(TD When the struct has neither an applicable `toString`
+                 nor is an input range, it is formatted as follows:
+                 `StructType(field1, field2, ...)`.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Class))
+        $(TD $(B 's'))
+            $(TD When the class has neither an applicable `toString`
+                 nor is an input range, it is formatted as the
+                 fully qualified name of the class.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Union))
+        $(TD $(B 's'))
+            $(TD When the union has neither an applicable `toString`
+                 nor is an input range, it is formatted as its base name.)
+   )
+   $(TR $(MULTIROW_CELL 2, $(I Pointer))
+        $(TD $(B 's'))
+            $(TD A null pointer is formatted as 'null'. All other pointers are
+                 formatted as hexadecimal numbers with the format character $(B 'X').)
+   )
+   $(TR $(TD $(B 'x'), $(B 'X'))
+            $(TD Formatted as a hexadecimal number.)
+   )
+   $(TR $(MULTIROW_CELL 3, $(I SIMD vector))
+        $(TD $(B 's'))
+            $(TD The array is surrounded by square brackets
+                 and the elements are separated by a comma and a space.)
+   )
+   $(TR $(TD $(B 'r'))
+            $(TD The sequence of the elements, each formatted with $(B 'r').)
+   )
+   $(TR $(TD compound)
+            $(TD The sequence of the elements, each formatted according to the specifications
+                 given inside of the compound specifier.)
+   )
+   $(TR $(MULTIROW_CELL 1, $(I Delegate))
+        $(TD $(B 's'), $(B 'r'), compound)
+            $(TD As the `.stringof` of this delegate treated as a string.
+
+                 $(I Please note: The implementation is currently buggy
+                 and its use is discouraged.))
+   )
+)
+
+Copyright: Copyright The D Language Foundation 2000-2021.
+
+Macros:
+SUBREF = $(REF_ALTTEXT $2, $2, std, format, $1)$(NBSP)
+MULTIROW_CELL = <td rowspan="$1">$+</td>
+THMINWIDTH = <th scope="col" width="20%">$0</th>
+
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(HTTP walterbright.com, Walter Bright), $(HTTP erdani.com,
+Andrei Alexandrescu), and Kenji Hara
+
+Source: $(PHOBOSSRC std/format.d)
  */
 module std.format;
 
-//debug=format;                // uncomment to turn on debugging printf's
+/// Simple use:
+@safe unittest
+{
+    // Easiest way is to use `%s` everywhere:
+    assert(format("I got %s %s for %s euros.", 30, "eggs", 5.27) == "I got 30 eggs for 5.27 euros.");
 
-import core.vararg;
-import std.exception;
-import std.meta;
-import std.range.primitives;
-import std.traits;
+    // Other format characters provide more control:
+    assert(format("I got %b %(%X%) for %f euros.", 30, "eggs", 5.27) == "I got 11110 65676773 for 5.270000 euros.");
+}
 
-import std.format.internal.read;
-import std.format.internal.write;
+/// Compound specifiers allow formatting arrays and other compound types:
+@safe unittest
+{
+/*
+The trailing end of the sub-format string following the specifier for
+each item is interpreted as the array delimiter, and is therefore
+omitted following the last array item:
+ */
+    assert(format("My items are %(%s %).", [1,2,3]) == "My items are 1 2 3.");
+    assert(format("My items are %(%s, %).", [1,2,3]) == "My items are 1, 2, 3.");
+
+/*
+The "%|" delimiter specifier may be used to indicate where the
+delimiter begins, so that the portion of the format string prior to
+it will be retained in the last array element:
+ */
+    assert(format("My items are %(-%s-%|, %).", [1,2,3]) == "My items are -1-, -2-, -3-.");
+
+/*
+These compound format specifiers may be nested in the case of a
+nested array argument:
+ */
+    auto mat = [[1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]];
+
+    assert(format("%(%(%d %) - %)", mat), "1 2 3 - 4 5 6 - 7 8 9");
+    assert(format("[%(%(%d %) - %)]", mat), "[1 2 3 - 4 5 6 - 7 8 9]");
+    assert(format("[%([%(%d %)]%| - %)]", mat), "[1 2 3] - [4 5 6] - [7 8 9]");
+
+/*
+Strings and characters are escaped automatically inside compound
+format specifiers. To avoid this behavior, use "%-(" instead of "%(":
+ */
+    assert(format("My friends are %s.", ["John", "Nancy"]) == `My friends are ["John", "Nancy"].`);
+    assert(format("My friends are %(%s, %).", ["John", "Nancy"]) == `My friends are "John", "Nancy".`);
+    assert(format("My friends are %-(%s, %).", ["John", "Nancy"]) == `My friends are John, Nancy.`);
+}
+
+/// Using parameters:
+@safe unittest
+{
+    // Flags can be used to influence to outcome:
+    assert(format("%g != %+#g", 3.14, 3.14) == "3.14 != +3.14000");
+
+    // Width and precision help to arrange the formatted result:
+    assert(format(">%10.2f<", 1234.56789) == ">   1234.57<");
+
+    // Numbers can be grouped:
+    assert(format("%,4d", int.max) == "21,4748,3647");
+
+    // It's possible to specify the position of an argument:
+    assert(format("%3$s %1$s", 3, 17, 5) == "5 3");
+}
+
+/// Providing parameters as arguments:
+@safe unittest
+{
+    // Width as argument
+    assert(format(">%*s<", 10, "abc") == ">       abc<");
+
+    // Precision as argument
+    assert(format(">%.*f<", 5, 123.2) == ">123.20000<");
+
+    // Grouping as argument
+    assert(format("%,*d", 1, int.max) == "2,1,4,7,4,8,3,6,4,7");
+
+    // Grouping separator as argument
+    assert(format("%,3?d", '_', int.max) == "2_147_483_647");
+
+    // All at once
+    assert(format("%*.*,*?d", 20, 15, 6, '/', int.max) == "   000/002147/483647");
+}
+
+public import std.format.read;
+public import std.format.spec;
+public import std.format.write;
+
+import std.exception : enforce;
+import std.range.primitives : isInputRange;
+import std.traits : CharTypeOf, isSomeChar, isSomeString, StringTypeOf;
+import std.format.internal.write : hasToString;
 
 /**
-Signals a mismatch between a format and its corresponding argument.
+Signals an issue encountered while formatting.
  */
 class FormatException : Exception
 {
+    /// Generic constructor.
     @safe @nogc pure nothrow
     this()
     {
         super("format error");
     }
 
+    /**
+       Creates a new instance of `FormatException`.
+
+       Params:
+           msg = message of the exception
+           fn = file name of the file where the exception was created (optional)
+           ln = line number of the file where the exception was created (optional)
+           next = for internal use, should always be null (optional)
+     */
     @safe @nogc pure nothrow
     this(string msg, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
@@ -88,2195 +679,40 @@ class FormatException : Exception
 @safe unittest
 {
     import std.exception : assertThrown;
+
     assertThrown!FormatException(format("%d", "foo"));
 }
 
 package alias enforceFmt = enforce!FormatException;
 
-
-/**********************************************************************
-   Interprets variadic argument list `args`, formats them according
-   to `fmt`, and sends the resulting characters to `w`. The
-   encoding of the output is the same as `Char`. The type `Writer`
-   must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
-
-   The variadic arguments are normally consumed in order. POSIX-style
-   $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
-   positional parameter syntax) is also supported. Each argument is
-   formatted into a sequence of chars according to the format
-   specification, and the characters are passed to `w`. As many
-   arguments as specified in the format string are consumed and
-   formatted. If there are fewer arguments than format specifiers, a
-   `FormatException` is thrown. If there are more remaining arguments
-   than needed by the format specification, they are ignored but only
-   if at least one argument was formatted.
-
-   The format string supports the formatting of array and nested array elements
-   via the grouping format specifiers $(B %&#40;) and $(B %&#41;). Each
-   matching pair of $(B %&#40;) and $(B %&#41;) corresponds with a single array
-   argument. The enclosed sub-format string is applied to individual array
-   elements.  The trailing portion of the sub-format string following the
-   conversion specifier for the array element is interpreted as the array
-   delimiter, and is therefore omitted following the last array element. The
-   $(B %|) specifier may be used to explicitly indicate the start of the
-   delimiter, so that the preceding portion of the string will be included
-   following the last array element.  (See below for explicit examples.)
-
-   Params:
-
-   w = Output is sent to this writer. Typical output writers include
-   $(REF Appender!string, std,array) and $(REF LockingTextWriter, std,stdio).
-
-   fmt = Format string.
-
-   args = Variadic argument list.
-
-   Returns: Formatted number of arguments.
-
-   Throws: Mismatched arguments and formats result in a $(D
-   FormatException) being thrown.
-
-   Format_String: <a name="format-string">$(I Format strings)</a>
-   consist of characters interspersed with $(I format
-   specifications). Characters are simply copied to the output (such
-   as putc) after any necessary conversion to the corresponding UTF-8
-   sequence.
-
-   The format string has the following grammar:
-
-$(PRE
-$(I FormatString):
-    $(I FormatStringItem)*
-$(I FormatStringItem):
-    $(B '%%')
-    $(B '%') $(I Position) $(I Flags) $(I Width) $(I Separator) $(I Precision) $(I FormatChar)
-    $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(B '%-$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(I OtherCharacterExceptPercent)
-$(I Position):
-    $(I empty)
-    $(I Integer) $(B '$')
-$(I Flags):
-    $(I empty)
-    $(B '-') $(I Flags)
-    $(B '+') $(I Flags)
-    $(B '#') $(I Flags)
-    $(B '0') $(I Flags)
-    $(B ' ') $(I Flags)
-$(I Width):
-    $(I empty)
-    $(I Integer)
-    $(B '*')
-$(I Separator):
-    $(I empty)
-    $(B ',')
-    $(B ',') $(B '?')
-    $(B ',') $(B '*') $(B '?')
-    $(B ',') $(I Integer) $(B '?')
-    $(B ',') $(B '*')
-    $(B ',') $(I Integer)
-$(I Precision):
-    $(I empty)
-    $(B '.')
-    $(B '.') $(I Integer)
-    $(B '.*')
-$(I Integer):
-    $(I Digit)
-    $(I Digit) $(I Integer)
-$(I Digit):
-    $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
-$(I FormatChar):
-    $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B '|')
-)
-
-    $(BOOKTABLE Flags affect formatting depending on the specifier as
-    follows., $(TR $(TH Flag) $(TH Types&nbsp;affected) $(TH Semantics))
-
-    $(TR $(TD $(B '-')) $(TD numeric, bool, null, char, string, enum, pointer) $(TD Left justify the result in
-        the field.  It overrides any $(B 0) flag.))
-
-    $(TR $(TD $(B '+')) $(TD numeric) $(TD Prefix positive numbers in
-    a signed conversion with a $(B +).  It overrides any $(I space)
-    flag.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'o'))) $(TD Add to
-    precision as necessary so that the first digit of the octal
-    formatting is a '0', even if both the argument and the $(I
-    Precision) are zero.))
-
-    $(TR $(TD $(B '#')) $(TD integral ($(B 'x'), $(B 'X'))) $(TD If
-       non-zero, prefix result with $(B 0x) ($(B 0X)).))
-
-    $(TR $(TD $(B '#')) $(TD floating) $(TD Always insert the decimal
-       point and print trailing zeros.))
-
-    $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
-    zeros to pad rather than spaces (except for the floating point
-    values `nan` and `infinity`).  Ignore if there's a $(I
-    Precision).))
-
-    $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
-    numbers in a signed conversion with a space.)))
-
-    $(DL
-        $(DT $(I Width))
-        $(DD
-        Only used for numeric, bool, null, char, string, enum and pointer types.
-        Specifies the minimum field width.
-        If the width is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the width.
-        If the width is negative, it is as if the $(B -) was given
-        as a $(I Flags) character.)
-
-        $(DT $(I Precision))
-        $(DD Gives the precision for numeric conversions.
-        If the precision is a $(B *), an additional argument of type $(B int),
-        preceding the actual argument, is taken as the precision.
-        If it is negative, it is as if there was no $(I Precision) specifier.)
-
-        $(DT $(I Separator))
-        $(DD Inserts the separator symbols ',' every $(I X) digits, from right
-        to left, into numeric values to increase readability.
-        The fractional part of floating point values inserts the separator
-        from left to right.
-        Entering an integer after the ',' allows to specify $(I X).
-        If a '*' is placed after the ',' then $(I X) is specified by an
-        additional parameter to the format function.
-        Adding a '?' after the ',' or $(I X) specifier allows to specify
-        the separator character as an additional parameter.
-        )
-
-        $(DT $(I FormatChar))
-        $(DD
-        $(DL
-            $(DT $(B 's'))
-            $(DD The corresponding argument is formatted in a manner consistent
-            with its type:
-            $(DL
-                $(DT $(B bool))
-                $(DD The result is `"true"` or `"false"`.)
-                $(DT integral types)
-                $(DD The $(B %d) format is used.)
-                $(DT floating point types)
-                $(DD The $(B %g) format is used.)
-                $(DT string types)
-                $(DD The result is the string converted to UTF-8.
-                A $(I Precision) specifies the maximum number of characters
-                to use in the result.)
-                $(DT structs)
-                $(DD If the struct defines a $(B toString()) method the result is
-                the string returned from this function. Otherwise the result is
-                StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where
-                field<sub>n</sub> is the nth element formatted with the default
-                format.)
-                $(DT classes derived from $(B Object))
-                $(DD The result is the string returned from the class instance's
-                $(B .toString()) method.
-                A $(I Precision) specifies the maximum number of characters
-                to use in the result.)
-                $(DT unions)
-                $(DD If the union defines a $(B toString()) method the result is
-                the string returned from this function. Otherwise the result is
-                the name of the union, without its contents.)
-                $(DT non-string static and dynamic arrays)
-                $(DD The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
-                where s<sub>n</sub> is the nth element
-                formatted with the default format.)
-                $(DT associative arrays)
-                $(DD The result is the equivalent of what the initializer
-                would look like for the contents of the associative array,
-                e.g.: ["red" : 10, "blue" : 20].)
-            ))
-
-            $(DT $(B 'c'))
-            $(DD The corresponding argument must be a character type.)
-
-            $(DT $(B 'b','d','o','x','X'))
-            $(DD The corresponding argument must be an integral type
-            and is formatted as an integer. If the argument is a signed type
-            and the $(I FormatChar) is $(B d) it is converted to
-            a signed string of characters, otherwise it is treated as
-            unsigned. An argument of type $(B bool) is formatted as '1'
-            or '0'. The base used is binary for $(B b), octal for $(B o),
-            decimal
-            for $(B d), and hexadecimal for $(B x) or $(B X).
-            $(B x) formats using lower case letters, $(B X) uppercase.
-            If there are fewer resulting digits than the $(I Precision),
-            leading zeros are used as necessary.
-            If the $(I Precision) is 0 and the number is 0, no digits
-            result.)
-
-            $(DT $(B 'e','E'))
-            $(DD A floating point number is formatted as one digit before
-            the decimal point, $(I Precision) digits after, the $(I FormatChar),
-            &plusmn;, followed by at least a two digit exponent:
-            $(I d.dddddd)e$(I &plusmn;dd).
-            If there is no $(I Precision), six
-            digits are generated after the decimal point.
-            If the $(I Precision) is 0, no decimal point is generated.)
-
-            $(DT $(B 'f','F'))
-            $(DD A floating point number is formatted in decimal notation.
-            The $(I Precision) specifies the number of digits generated
-            after the decimal point. It defaults to six. At least one digit
-            is generated before the decimal point. If the $(I Precision)
-            is zero, no decimal point is generated.)
-
-            $(DT $(B 'g','G'))
-            $(DD A floating point number is formatted in either $(B e) or
-            $(B f) format for $(B g); $(B E) or $(B F) format for
-            $(B G).
-            The $(B f) format is used if the exponent for an $(B e) format
-            is greater than -5 and less than the $(I Precision).
-            The $(I Precision) specifies the number of significant
-            digits, and defaults to six.
-            Trailing zeros are elided after the decimal point, if the fractional
-            part is zero then no decimal point is generated.)
-
-            $(DT $(B 'a','A'))
-            $(DD A floating point number is formatted in hexadecimal
-            exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
-            There is one hexadecimal digit before the decimal point, and as
-            many after as specified by the $(I Precision).
-            If the $(I Precision) is zero, no decimal point is generated.
-            If there is no $(I Precision), as many hexadecimal digits as
-            necessary to exactly represent the mantissa are generated.
-            The exponent is written in as few digits as possible,
-            but at least one, is in decimal, and represents a power of 2 as in
-            $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
-            The exponent for zero is zero.
-            The hexadecimal digits, x and p are in upper case if the
-            $(I FormatChar) is upper case.)
-        ))
-    )
-
-    Floating point NaN's are formatted as $(B nan) if the
-    $(I FormatChar) is lower case, or $(B NAN) if upper.
-    Floating point infinities are formatted as $(B inf) or
-    $(B infinity) if the
-    $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
-
-    The positional and non-positional styles can be mixed in the same
-    format string. (POSIX leaves this behavior undefined.) The internal
-    counter for non-positional parameters tracks the next parameter after
-    the largest positional parameter already used.
-
-    Example using array and nested array formatting:
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My items are %(%s %).", [1,2,3]);
-        writefln("My items are %(%s, %).", [1,2,3]);
-    }
-    -------------------------
-    The output is:
-$(CONSOLE
-My items are 1 2 3.
-My items are 1, 2, 3.
-)
-
-    The trailing end of the sub-format string following the specifier for each
-    item is interpreted as the array delimiter, and is therefore omitted
-    following the last array item. The $(B %|) delimiter specifier may be used
-    to indicate where the delimiter begins, so that the portion of the format
-    string prior to it will be retained in the last array element:
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My items are %(-%s-%|, %).", [1,2,3]);
-    }
-    -------------------------
-    which gives the output:
-$(CONSOLE
-My items are -1-, -2-, -3-.
-)
-
-    These compound format specifiers may be nested in the case of a nested
-    array argument:
-    -------------------------
-    import std.stdio;
-    void main() {
-         auto mat = [[1, 2, 3],
-                     [4, 5, 6],
-                     [7, 8, 9]];
-
-         writefln("%(%(%d %)\n%)", mat);
-         writeln();
-
-         writefln("[%(%(%d %)\n %)]", mat);
-         writeln();
-
-         writefln("[%([%(%d %)]%|\n %)]", mat);
-         writeln();
-    }
-    -------------------------
-    The output is:
-$(CONSOLE
-1 2 3
-4 5 6
-7 8 9
-
-[1 2 3
- 4 5 6
- 7 8 9]
-
-[[1 2 3]
- [4 5 6]
- [7 8 9]]
-)
-
-    Inside a compound format specifier, strings and characters are escaped
-    automatically. To avoid this behavior, add $(B '-') flag to
-    `"%$(LPAREN)"`.
-    -------------------------
-    import std.stdio;
-
-    void main()
-    {
-        writefln("My friends are %s.", ["John", "Nancy"]);
-        writefln("My friends are %(%s, %).", ["John", "Nancy"]);
-        writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
-    }
-    -------------------------
-   which gives the output:
-$(CONSOLE
-My friends are ["John", "Nancy"].
-My friends are "John", "Nancy".
-My friends are John, Nancy.
-)
- */
-uint formattedWrite(alias fmt, Writer, A...)(auto ref Writer w, A args)
-if (isSomeString!(typeof(fmt)))
-{
-    alias e = checkFormatException!(fmt, A);
-    static assert(!e, e.msg);
-    return .formattedWrite(w, fmt, args);
-}
-
-/// The format string can be checked at compile-time (see $(LREF format) for details):
-@safe pure unittest
-{
-    import std.array : appender;
-
-    auto writer = appender!string();
-    writer.formattedWrite!"%s is the ultimate %s."(42, "answer");
-    assert(writer[] == "42 is the ultimate answer.");
-
-    // Clear the writer
-    writer = appender!string();
-    writer.formattedWrite!"Date: %2$s %1$s"("October", 5);
-    assert(writer[] == "Date: 5 October");
-}
-
-/// ditto
-uint formattedWrite(Writer, Char, A...)(auto ref Writer w, const scope Char[] fmt, A args)
-{
-    import std.conv : text;
-
-    auto spec = FormatSpec!Char(fmt);
-
-    // Are we already done with formats? Then just dump each parameter in turn
-    uint currentArg = 0;
-    while (spec.writeUpToNextSpec(w))
-    {
-        if (currentArg == A.length && !spec.indexStart)
-        {
-            // leftover spec?
-            enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", spec.spec));
-            break;
-        }
-
-        if (spec.width == spec.DYNAMIC)
-        {
-            auto width = getNthInt!"integer width"(currentArg, args);
-            if (width < 0)
-            {
-                spec.flDash = true;
-                width = -width;
-            }
-            spec.width = width;
-            ++currentArg;
-        }
-        else if (spec.width < 0)
-        {
-            // means: get width as a positional parameter
-            auto index = cast(uint) -spec.width;
-            assert(index > 0, "The index must be greater than zero");
-            auto width = getNthInt!"integer width"(index - 1, args);
-            if (currentArg < index) currentArg = index;
-            if (width < 0)
-            {
-                spec.flDash = true;
-                width = -width;
-            }
-            spec.width = width;
-        }
-
-        if (spec.precision == spec.DYNAMIC)
-        {
-            auto precision = getNthInt!"integer precision"(currentArg, args);
-            if (precision >= 0) spec.precision = precision;
-            // else negative precision is same as no precision
-            else spec.precision = spec.UNSPECIFIED;
-            ++currentArg;
-        }
-        else if (spec.precision < 0)
-        {
-            // means: get precision as a positional parameter
-            auto index = cast(uint) -spec.precision;
-            assert(index > 0, "The precision must be greater than zero");
-            auto precision = getNthInt!"integer precision"(index- 1, args);
-            if (currentArg < index) currentArg = index;
-            if (precision >= 0) spec.precision = precision;
-            // else negative precision is same as no precision
-            else spec.precision = spec.UNSPECIFIED;
-        }
-
-        if (spec.separators == spec.DYNAMIC)
-        {
-            auto separators = getNthInt!"separator digit width"(currentArg, args);
-            spec.separators = separators;
-            ++currentArg;
-        }
-
-        if (spec.separatorCharPos == spec.DYNAMIC)
-        {
-            auto separatorChar =
-                getNth!("separator character", isSomeChar, dchar)(currentArg, args);
-            spec.separatorChar = separatorChar;
-            ++currentArg;
-        }
-
-        if (currentArg == A.length && !spec.indexStart)
-        {
-            // leftover spec?
-            enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", spec.spec));
-            break;
-        }
-
-        // Format an argument
-        // This switch uses a static foreach to generate a jump table.
-        // Currently `spec.indexStart` use the special value '0' to signal
-        // we should use the current argument. An enhancement would be to
-        // always store the index.
-        size_t index = currentArg;
-        if (spec.indexStart != 0)
-            index = spec.indexStart - 1;
-        else
-            ++currentArg;
-    SWITCH: switch (index)
-        {
-            foreach (i, Tunused; A)
-            {
-            case i:
-                formatValue(w, args[i], spec);
-                if (currentArg < spec.indexEnd)
-                    currentArg = spec.indexEnd;
-                // A little know feature of format is to format a range
-                // of arguments, e.g. `%1:3$` will format the first 3
-                // arguments. Since they have to be consecutive we can
-                // just use explicit fallthrough to cover that case.
-                if (i + 1 < spec.indexEnd)
-                {
-                    // You cannot goto case if the next case is the default
-                    static if (i + 1 < A.length)
-                        goto case;
-                    else
-                        goto default;
-                }
-                else
-                    break SWITCH;
-            }
-        default:
-            throw new FormatException(
-                text("Positional specifier %", spec.indexStart, '$', spec.spec,
-                     " index exceeds ", A.length));
-        }
-    }
-    return currentArg;
-}
-
-///
-@safe unittest
-{
-    assert(format("%,d", 1000) == "1,000");
-    assert(format("%,f", 1234567.891011) == "1,234,567.891011");
-    assert(format("%,?d", '?', 1000) == "1?000");
-    assert(format("%,1d", 1000) == "1,0,0,0", format("%,1d", 1000));
-    assert(format("%,*d", 4, -12345) == "-1,2345");
-    assert(format("%,*?d", 4, '_', -12345) == "-1_2345");
-    assert(format("%,6?d", '_', -12345678) == "-12_345678");
-    assert(format("%12,3.3f", 1234.5678) == "   1,234.568", "'" ~
-            format("%12,3.3f", 1234.5678) ~ "'");
-}
-
-@safe pure unittest
-{
-    import std.array;
-    auto w = appender!string();
-    formattedWrite(w, "%s %d", "@safe/pure", 42);
-    assert(w.data == "@safe/pure 42");
-}
-
-@safe pure unittest
-{
-    char[20] buf;
-    auto w = buf[];
-    formattedWrite(w, "%s %d", "@safe/pure", 42);
-    assert(buf[0 .. $ - w.length] == "@safe/pure 42");
-}
-
-/**
-Reads characters from $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-`r`, converts them according to `fmt`, and writes them to `args`.
-
-Params:
-    r = The range to read from.
-    fmt = The format of the data to read.
-    args = The drain of the data read.
-
-Returns:
-
-On success, the function returns the number of variables filled. This count
-can match the expected number of readings or fewer, even zero, if a
-matching failure happens.
-
-Throws:
-    A `FormatException` if `S.length == 0` and `fmt` has format specifiers.
- */
-uint formattedRead(alias fmt, R, S...)(auto ref R r, auto ref S args)
-if (isSomeString!(typeof(fmt)))
-{
-    alias e = checkFormatException!(fmt, S);
-    static assert(!e, e.msg);
-    return .formattedRead(r, fmt, args);
-}
-
-/// ditto
-uint formattedRead(R, Char, S...)(auto ref R r, const(Char)[] fmt, auto ref S args)
-{
-    import std.typecons : isTuple;
-
-    auto spec = FormatSpec!Char(fmt);
-    static if (!S.length)
-    {
-        spec.readUpToNextSpec(r);
-        enforceFmt(spec.trailing.empty, "Trailing characters in formattedRead format string");
-        return 0;
-    }
-    else
-    {
-        enum hasPointer = isPointer!(typeof(args[0]));
-
-        // The function below accounts for '*' == fields meant to be
-        // read and skipped
-        void skipUnstoredFields()
-        {
-            for (;;)
-            {
-                spec.readUpToNextSpec(r);
-                if (spec.width != spec.DYNAMIC) break;
-                // must skip this field
-                skipData(r, spec);
-            }
-        }
-
-        skipUnstoredFields();
-        if (r.empty)
-        {
-            // Input is empty, nothing to read
-            return 0;
-        }
-        static if (hasPointer)
-            alias A = typeof(*args[0]);
-        else
-            alias A = typeof(args[0]);
-
-        static if (isTuple!A)
-        {
-            foreach (i, T; A.Types)
-            {
-                static if (hasPointer)
-                    (*args[0])[i] = unformatValue!(T)(r, spec);
-                else
-                    args[0][i] = unformatValue!(T)(r, spec);
-                skipUnstoredFields();
-            }
-        }
-        else
-        {
-            static if (hasPointer)
-                *args[0] = unformatValue!(A)(r, spec);
-            else
-                args[0] = unformatValue!(A)(r, spec);
-        }
-        return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
-    }
-}
-
-/// The format string can be checked at compile-time (see $(LREF format) for details):
-@safe pure unittest
-{
-    string s = "hello!124:34.5";
-    string a;
-    int b;
-    double c;
-    s.formattedRead!"%s!%s:%s"(a, b, c);
-    assert(a == "hello" && b == 124 && c == 34.5);
-}
-
-@safe unittest
-{
-    import std.math;
-    string s = " 1.2 3.4 ";
-    double x, y, z;
-    assert(formattedRead(s, " %s %s %s ", x, y, z) == 2);
-    assert(s.empty);
-    assert(isClose(x, 1.2));
-    assert(isClose(y, 3.4));
-    assert(isNaN(z));
-}
-
-// for backwards compatibility
-@system pure unittest
-{
-    string s = "hello!124:34.5";
-    string a;
-    int b;
-    double c;
-    formattedRead(s, "%s!%s:%s", &a, &b, &c);
-    assert(a == "hello" && b == 124 && c == 34.5);
-
-    // mix pointers and auto-ref
-    s = "world!200:42.25";
-    formattedRead(s, "%s!%s:%s", a, &b, &c);
-    assert(a == "world" && b == 200 && c == 42.25);
-
-    s = "world1!201:42.5";
-    formattedRead(s, "%s!%s:%s", &a, &b, c);
-    assert(a == "world1" && b == 201 && c == 42.5);
-
-    s = "world2!202:42.75";
-    formattedRead(s, "%s!%s:%s", a, b, &c);
-    assert(a == "world2" && b == 202 && c == 42.75);
-}
-
-// for backwards compatibility
-@system pure unittest
-{
-    import std.math;
-    string s = " 1.2 3.4 ";
-    double x, y, z;
-    assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
-    assert(s.empty);
-    assert(isClose(x, 1.2));
-    assert(isClose(y, 3.4));
-    assert(isNaN(z));
-}
-
-@system pure unittest
-{
-    string line;
-
-    bool f1;
-
-    line = "true";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "TrUE";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "false";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-    line = "fALsE";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-    line = "1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "-1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-
-    line = "-0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-}
-
-@system pure unittest
-{
-     union B
-     {
-         char[int.sizeof] untyped;
-         int typed;
-     }
-     B b;
-     b.typed = 5;
-     char[] input = b.untyped[];
-     int witness;
-     formattedRead(input, "%r", &witness);
-     assert(witness == b.typed);
-}
-
-@system pure unittest
-{
-    union A
-    {
-        char[float.sizeof] untyped;
-        float typed;
-    }
-    A a;
-    a.typed = 5.5;
-    char[] input = a.untyped[];
-    float witness;
-    formattedRead(input, "%r", &witness);
-    assert(witness == a.typed);
-}
-
-@system pure unittest
-{
-    import std.typecons;
-    char[] line = "1 2".dup;
-    int a, b;
-    formattedRead(line, "%s %s", &a, &b);
-    assert(a == 1 && b == 2);
-
-    line = "10 2 3".dup;
-    formattedRead(line, "%d ", &a);
-    assert(a == 10);
-    assert(line == "2 3");
-
-    Tuple!(int, float) t;
-    line = "1 2.125".dup;
-    formattedRead(line, "%d %g", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
-
-    line = "1 7643 2.125".dup;
-    formattedRead(line, "%s %*u %s", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
-}
-
-@system pure unittest
-{
-    string line;
-
-    char c1, c2;
-
-    line = "abc";
-    formattedRead(line, "%s%c", &c1, &c2);
-    assert(c1 == 'a' && c2 == 'b');
-    assert(line == "c");
-}
-
-@system pure unittest
-{
-    string line;
-
-    line = "[1,2,3]";
-    int[] s1;
-    formattedRead(line, "%s", &s1);
-    assert(s1 == [1,2,3]);
-}
-
-@system pure unittest
-{
-    string line;
-
-    line = "[1,2,3]";
-    int[] s1;
-    formattedRead(line, "[%(%s,%)]", &s1);
-    assert(s1 == [1,2,3]);
-
-    line = `["hello", "world"]`;
-    string[] s2;
-    formattedRead(line, "[%(%s, %)]", &s2);
-    assert(s2 == ["hello", "world"]);
-
-    line = "123 456";
-    int[] s3;
-    formattedRead(line, "%(%s %)", &s3);
-    assert(s3 == [123, 456]);
-
-    line = "h,e,l,l,o; w,o,r,l,d";
-    string[] s4;
-    formattedRead(line, "%(%(%c,%); %)", &s4);
-    assert(s4 == ["hello", "world"]);
-}
-
-@system pure unittest
-{
-    string line;
-
-    int[4] sa1;
-    line = `[1,2,3,4]`;
-    formattedRead(line, "%s", &sa1);
-    assert(sa1 == [1,2,3,4]);
-
-    int[4] sa2;
-    line = `[1,2,3]`;
-    assertThrown(formattedRead(line, "%s", &sa2));
-
-    int[4] sa3;
-    line = `[1,2,3,4,5]`;
-    assertThrown(formattedRead(line, "%s", &sa3));
-}
-
-@system pure unittest
-{
-    string input;
-
-    int[4] sa1;
-    input = `[1,2,3,4]`;
-    formattedRead(input, "[%(%s,%)]", &sa1);
-    assert(sa1 == [1,2,3,4]);
-
-    int[4] sa2;
-    input = `[1,2,3]`;
-    assertThrown!FormatException(formattedRead(input, "[%(%s,%)]", &sa2));
-}
-
-@system pure unittest
-{
-    string line;
-
-    string s1, s2;
-
-    line = "hello, world";
-    formattedRead(line, "%s", &s1);
-    assert(s1 == "hello, world", s1);
-
-    line = "hello, world;yah";
-    formattedRead(line, "%s;%s", &s1, &s2);
-    assert(s1 == "hello, world", s1);
-    assert(s2 == "yah", s2);
-
-    line = `['h','e','l','l','o']`;
-    string s3;
-    formattedRead(line, "[%(%s,%)]", &s3);
-    assert(s3 == "hello");
-
-    line = `"hello"`;
-    string s4;
-    formattedRead(line, "\"%(%c%)\"", &s4);
-    assert(s4 == "hello");
-}
-
-@system pure unittest
-{
-    string line;
-
-    string[int] aa1;
-    line = `[1:"hello", 2:"world"]`;
-    formattedRead(line, "%s", &aa1);
-    assert(aa1 == [1:"hello", 2:"world"]);
-
-    int[string] aa2;
-    line = `{"hello"=1; "world"=2}`;
-    formattedRead(line, "{%(%s=%s; %)}", &aa2);
-    assert(aa2 == ["hello":1, "world":2]);
-
-    int[string] aa3;
-    line = `{[hello=1]; [world=2]}`;
-    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
-    assert(aa3 == ["hello":1, "world":2]);
-}
-
-// test rvalue using
-@system pure unittest
-{
-    string[int] aa1;
-    formattedRead!("%s")(`[1:"hello", 2:"world"]`, aa1);
-    assert(aa1 == [1:"hello", 2:"world"]);
-
-    int[string] aa2;
-    formattedRead(`{"hello"=1; "world"=2}`, "{%(%s=%s; %)}", aa2);
-    assert(aa2 == ["hello":1, "world":2]);
-}
-
-template FormatSpec(Char)
-if (!is(Unqual!Char == Char))
-{
-    alias FormatSpec = FormatSpec!(Unqual!Char);
-}
-
-/**
- * A General handler for `printf` style format specifiers. Used for building more
- * specific formatting functions.
- */
-struct FormatSpec(Char)
-if (is(Unqual!Char == Char))
-{
-    import std.algorithm.searching : startsWith;
-    import std.ascii : isDigit, isPunctuation, isAlpha;
-    import std.conv : parse, text, to;
-
-    /**
-       Minimum _width, default `0`.
-     */
-    int width = 0;
-
-    /**
-       Precision. Its semantics depends on the argument type. For
-       floating point numbers, _precision dictates the number of
-       decimals printed.
-     */
-    int precision = UNSPECIFIED;
-
-    /**
-       Number of digits printed between _separators.
-    */
-    int separators = UNSPECIFIED;
-
-    /**
-       Set to `DYNAMIC` when the separator character is supplied at runtime.
-    */
-    int separatorCharPos = UNSPECIFIED;
-
-    /**
-       Character to insert between digits.
-    */
-    dchar separatorChar = ',';
-
-    /**
-       Special value for width and precision. `DYNAMIC` width or
-       precision means that they were specified with `'*'` in the
-       format string and are passed at runtime through the varargs.
-     */
-    enum int DYNAMIC = int.max;
-
-    /**
-       Special value for precision, meaning the format specifier
-       contained no explicit precision.
-     */
-    enum int UNSPECIFIED = DYNAMIC - 1;
-
-    /**
-       The actual format specifier, `'s'` by default.
-    */
-    char spec = 's';
-
-    /**
-       Index of the argument for positional parameters, from `1` to
-       `ubyte.max`. (`0` means not used).
-    */
-    ubyte indexStart;
-
-    /**
-       Index of the last argument for positional parameter range, from
-       `1` to `ubyte.max`. (`0` means not used).
-    */
-    ubyte indexEnd;
-
-    version (StdDdoc)
-    {
-        /**
-         The format specifier contained a `'-'` (`printf`
-         compatibility).
-         */
-        bool flDash;
-
-        /**
-         The format specifier contained a `'0'` (`printf`
-         compatibility).
-         */
-        bool flZero;
-
-        /**
-         The format specifier contained a $(D ' ') (`printf`
-         compatibility).
-         */
-        bool flSpace;
-
-        /**
-         The format specifier contained a `'+'` (`printf`
-         compatibility).
-         */
-        bool flPlus;
-
-        /**
-         The format specifier contained a `'#'` (`printf`
-         compatibility).
-         */
-        bool flHash;
-
-        /**
-         The format specifier contained a `','`
-         */
-        bool flSeparator;
-
-        // Fake field to allow compilation
-        ubyte allFlags;
-    }
-    else
-    {
-        union
-        {
-            import std.bitmanip : bitfields;
-            mixin(bitfields!(
-                        bool, "flDash", 1,
-                        bool, "flZero", 1,
-                        bool, "flSpace", 1,
-                        bool, "flPlus", 1,
-                        bool, "flHash", 1,
-                        bool, "flSeparator", 1,
-                        ubyte, "", 2));
-            ubyte allFlags;
-        }
-    }
-
-    /**
-       In case of a compound format specifier starting with $(D
-       "%$(LPAREN)") and ending with `"%$(RPAREN)"`, `_nested`
-       contains the string contained within the two separators.
-     */
-    const(Char)[] nested;
-
-    /**
-       In case of a compound format specifier, `_sep` contains the
-       string positioning after `"%|"`.
-       `sep is null` means no separator else `sep.empty` means 0 length
-        separator.
-     */
-    const(Char)[] sep;
-
-    /**
-       `_trailing` contains the rest of the format string.
-     */
-    const(Char)[] trailing;
-
-    /*
-       This string is inserted before each sequence (e.g. array)
-       formatted (by default `"["`).
-     */
-    enum immutable(Char)[] seqBefore = "[";
-
-    /*
-       This string is inserted after each sequence formatted (by
-       default `"]"`).
-     */
-    enum immutable(Char)[] seqAfter = "]";
-
-    /*
-       This string is inserted after each element keys of a sequence (by
-       default `":"`).
-     */
-    enum immutable(Char)[] keySeparator = ":";
-
-    /*
-       This string is inserted in between elements of a sequence (by
-       default $(D ", ")).
-     */
-    enum immutable(Char)[] seqSeparator = ", ";
-
-    /**
-       Construct a new `FormatSpec` using the format string `fmt`, no
-       processing is done until needed.
-     */
-    this(in Char[] fmt) @safe pure
-    {
-        trailing = fmt;
-    }
-
-    /**
-       Write the format string to an output range until the next format
-       specifier is found and parse that format specifier.
-
-       See $(LREF FormatSpec) for an example, how to use `writeUpToNextSpec`.
-
-       Params:
-           writer = the $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-
-       Returns:
-           True, when a format specifier is found.
-
-       Throws:
-           A $(LREF FormatException) when the found format specifier
-           could not be parsed.
-     */
-    bool writeUpToNextSpec(OutputRange)(ref OutputRange writer) scope
-    {
-        if (trailing.empty)
-            return false;
-        for (size_t i = 0; i < trailing.length; ++i)
-        {
-            if (trailing[i] != '%') continue;
-            put(writer, trailing[0 .. i]);
-            trailing = trailing[i .. $];
-            enforceFmt(trailing.length >= 2, `Unterminated format specifier: "%"`);
-            trailing = trailing[1 .. $];
-
-            if (trailing[0] != '%')
-            {
-                // Spec found. Fill up the spec, and bailout
-                fillUp();
-                return true;
-            }
-            // Doubled! Reset and Keep going
-            i = 0;
-        }
-        // no format spec found
-        put(writer, trailing);
-        trailing = null;
-        return false;
-    }
-
-    private void fillUp() scope
-    {
-        // Reset content
-        if (__ctfe)
-        {
-            flDash = false;
-            flZero = false;
-            flSpace = false;
-            flPlus = false;
-            flHash = false;
-            flSeparator = false;
-        }
-        else
-        {
-            allFlags = 0;
-        }
-
-        width = 0;
-        precision = UNSPECIFIED;
-        nested = null;
-        // Parse the spec (we assume we're past '%' already)
-        for (size_t i = 0; i < trailing.length; )
-        {
-            switch (trailing[i])
-            {
-            case '(':
-                // Embedded format specifier.
-                auto j = i + 1;
-                // Get the matching balanced paren
-                for (uint innerParens;;)
-                {
-                    enforceFmt(j + 1 < trailing.length,
-                        text("Incorrect format specifier: %", trailing[i .. $]));
-                    if (trailing[j++] != '%')
-                    {
-                        // skip, we're waiting for %( and %)
-                        continue;
-                    }
-                    if (trailing[j] == '-') // for %-(
-                    {
-                        ++j;    // skip
-                        enforceFmt(j < trailing.length,
-                            text("Incorrect format specifier: %", trailing[i .. $]));
-                    }
-                    if (trailing[j] == ')')
-                    {
-                        if (innerParens-- == 0) break;
-                    }
-                    else if (trailing[j] == '|')
-                    {
-                        if (innerParens == 0) break;
-                    }
-                    else if (trailing[j] == '(')
-                    {
-                        ++innerParens;
-                    }
-                }
-                if (trailing[j] == '|')
-                {
-                    auto k = j;
-                    for (++j;;)
-                    {
-                        if (trailing[j++] != '%')
-                            continue;
-                        if (trailing[j] == '%')
-                            ++j;
-                        else if (trailing[j] == ')')
-                            break;
-                        else
-                            throw new FormatException(
-                                text("Incorrect format specifier: %",
-                                        trailing[j .. $]));
-                    }
-                    nested = trailing[i + 1 .. k - 1];
-                    sep = trailing[k + 1 .. j - 1];
-                }
-                else
-                {
-                    nested = trailing[i + 1 .. j - 1];
-                    sep = null; // no separator
-                }
-                //this = FormatSpec(innerTrailingSpec);
-                spec = '(';
-                // We practically found the format specifier
-                trailing = trailing[j + 1 .. $];
-                return;
-            case '-': flDash = true; ++i; break;
-            case '+': flPlus = true; ++i; break;
-            case '#': flHash = true; ++i; break;
-            case '0': flZero = true; ++i; break;
-            case ' ': flSpace = true; ++i; break;
-            case '*':
-                if (isDigit(trailing[++i]))
-                {
-                    // a '*' followed by digits and '$' is a
-                    // positional format
-                    trailing = trailing[1 .. $];
-                    width = -parse!(typeof(width))(trailing);
-                    i = 0;
-                    enforceFmt(trailing[i++] == '$',
-                        "$ expected");
-                }
-                else
-                {
-                    // read result
-                    width = DYNAMIC;
-                }
-                break;
-            case '1': .. case '9':
-                auto tmp = trailing[i .. $];
-                const widthOrArgIndex = parse!uint(tmp);
-                enforceFmt(tmp.length,
-                    text("Incorrect format specifier %", trailing[i .. $]));
-                i = arrayPtrDiff(tmp, trailing);
-                if (tmp.startsWith('$'))
-                {
-                    // index of the form %n$
-                    indexEnd = indexStart = to!ubyte(widthOrArgIndex);
-                    ++i;
-                }
-                else if (tmp.startsWith(':'))
-                {
-                    // two indexes of the form %m:n$, or one index of the form %m:$
-                    indexStart = to!ubyte(widthOrArgIndex);
-                    tmp = tmp[1 .. $];
-                    if (tmp.startsWith('$'))
-                    {
-                        indexEnd = indexEnd.max;
-                    }
-                    else
-                    {
-                        indexEnd = parse!(typeof(indexEnd))(tmp);
-                    }
-                    i = arrayPtrDiff(tmp, trailing);
-                    enforceFmt(trailing[i++] == '$',
-                        "$ expected");
-                }
-                else
-                {
-                    // width
-                    width = to!int(widthOrArgIndex);
-                }
-                break;
-            case ',':
-                // Precision
-                ++i;
-                flSeparator = true;
-
-                if (trailing[i] == '*')
-                {
-                    ++i;
-                    // read result
-                    separators = DYNAMIC;
-                }
-                else if (isDigit(trailing[i]))
-                {
-                    auto tmp = trailing[i .. $];
-                    separators = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
-                }
-                else
-                {
-                    // "," was specified, but nothing after it
-                    separators = 3;
-                }
-
-                if (trailing[i] == '?')
-                {
-                    separatorCharPos = DYNAMIC;
-                    ++i;
-                }
-
-                break;
-            case '.':
-                // Precision
-                if (trailing[++i] == '*')
-                {
-                    if (isDigit(trailing[++i]))
-                    {
-                        // a '.*' followed by digits and '$' is a
-                        // positional precision
-                        trailing = trailing[i .. $];
-                        i = 0;
-                        precision = -parse!int(trailing);
-                        enforceFmt(trailing[i++] == '$',
-                            "$ expected");
-                    }
-                    else
-                    {
-                        // read result
-                        precision = DYNAMIC;
-                    }
-                }
-                else if (trailing[i] == '-')
-                {
-                    // negative precision, as good as 0
-                    precision = 0;
-                    auto tmp = trailing[i .. $];
-                    parse!int(tmp); // skip digits
-                    i = arrayPtrDiff(tmp, trailing);
-                }
-                else if (isDigit(trailing[i]))
-                {
-                    auto tmp = trailing[i .. $];
-                    precision = parse!int(tmp);
-                    i = arrayPtrDiff(tmp, trailing);
-                }
-                else
-                {
-                    // "." was specified, but nothing after it
-                    precision = 0;
-                }
-                break;
-            default:
-                // this is the format char
-                spec = cast(char) trailing[i++];
-                trailing = trailing[i .. $];
-                return;
-            } // end switch
-        } // end for
-        throw new FormatException(text("Incorrect format specifier: ", trailing));
-    }
-
-    //--------------------------------------------------------------------------
-    package bool readUpToNextSpec(R)(ref R r) scope
-    {
-        import std.ascii : isLower, isWhite;
-        import std.utf : stride;
-
-        // Reset content
-        if (__ctfe)
-        {
-            flDash = false;
-            flZero = false;
-            flSpace = false;
-            flPlus = false;
-            flHash = false;
-            flSeparator = false;
-        }
-        else
-        {
-            allFlags = 0;
-        }
-        width = 0;
-        precision = UNSPECIFIED;
-        nested = null;
-        // Parse the spec
-        while (trailing.length)
-        {
-            const c = trailing[0];
-            if (c == '%' && trailing.length > 1)
-            {
-                const c2 = trailing[1];
-                if (c2 == '%')
-                {
-                    assert(!r.empty, "Required at least one more input");
-                    // Require a '%'
-                    if (r.front != '%') break;
-                    trailing = trailing[2 .. $];
-                    r.popFront();
-                }
-                else
-                {
-                    enforceFmt(isLower(c2) || c2 == '*' ||
-                            c2 == '(',
-                            text("'%", c2,
-                                    "' not supported with formatted read"));
-                    trailing = trailing[1 .. $];
-                    fillUp();
-                    return true;
-                }
-            }
-            else
-            {
-                if (c == ' ')
-                {
-                    while (!r.empty && isWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(isWhite))(r);
-                }
-                else
-                {
-                    enforceFmt(!r.empty,
-                            text("parseToFormatSpec: Cannot find character '",
-                                    c, "' in the input string."));
-                    if (r.front != trailing.front) break;
-                    r.popFront();
-                }
-                trailing = trailing[stride(trailing, 0) .. $];
-            }
-        }
-        return false;
-    }
-
-    package string getCurFmtStr() const
-    {
-        import std.array : appender;
-        auto w = appender!string();
-        auto f = FormatSpec!Char("%s"); // for stringnize
-
-        put(w, '%');
-        if (indexStart != 0)
-        {
-            formatValue(w, indexStart, f);
-            put(w, '$');
-        }
-        if (flDash)  put(w, '-');
-        if (flZero)  put(w, '0');
-        if (flSpace) put(w, ' ');
-        if (flPlus)  put(w, '+');
-        if (flHash)  put(w, '#');
-        if (flSeparator)  put(w, ',');
-        if (width != 0)
-            formatValue(w, width, f);
-        if (precision != FormatSpec!Char.UNSPECIFIED)
-        {
-            put(w, '.');
-            formatValue(w, precision, f);
-        }
-        put(w, spec);
-        return w.data;
-    }
-
-    private const(Char)[] headUpToNextSpec()
-    {
-        import std.array : appender;
-        auto w = appender!(typeof(return))();
-        auto tr = trailing;
-
-        while (tr.length)
-        {
-            if (tr[0] == '%')
-            {
-                if (tr.length > 1 && tr[1] == '%')
-                {
-                    tr = tr[2 .. $];
-                    w.put('%');
-                }
-                else
-                    break;
-            }
-            else
-            {
-                w.put(tr.front);
-                tr.popFront();
-            }
-        }
-        return w.data;
-    }
-
-    /**
-     * Gives a string containing all of the member variables on their own
-     * line.
-     *
-     * Params:
-     *     writer = A `char` accepting
-     *     $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-     * Returns:
-     *     A `string` when not using an output range; `void` otherwise.
-     */
-    string toString() const @safe pure
-    {
-        import std.array : appender;
-        auto app = appender!string();
-        app.reserve(200 + trailing.length);
-        toString(app);
-        return app.data;
-    }
-
-    /// ditto
-    void toString(OutputRange)(ref OutputRange writer) const
-    if (isOutputRange!(OutputRange, char))
-    {
-        auto s = singleSpec("%s");
-
-        put(writer, "address = ");
-        formatValue(writer, &this, s);
-        put(writer, "\nwidth = ");
-        formatValue(writer, width, s);
-        put(writer, "\nprecision = ");
-        formatValue(writer, precision, s);
-        put(writer, "\nspec = ");
-        formatValue(writer, spec, s);
-        put(writer, "\nindexStart = ");
-        formatValue(writer, indexStart, s);
-        put(writer, "\nindexEnd = ");
-        formatValue(writer, indexEnd, s);
-        put(writer, "\nflDash = ");
-        formatValue(writer, flDash, s);
-        put(writer, "\nflZero = ");
-        formatValue(writer, flZero, s);
-        put(writer, "\nflSpace = ");
-        formatValue(writer, flSpace, s);
-        put(writer, "\nflPlus = ");
-        formatValue(writer, flPlus, s);
-        put(writer, "\nflHash = ");
-        formatValue(writer, flHash, s);
-        put(writer, "\nflSeparator = ");
-        formatValue(writer, flSeparator, s);
-        put(writer, "\nnested = ");
-        formatValue(writer, nested, s);
-        put(writer, "\ntrailing = ");
-        formatValue(writer, trailing, s);
-        put(writer, '\n');
-    }
-}
-
-@safe unittest
-{
-    import std.array;
-    import std.conv : text;
-    auto w = appender!(char[])();
-    auto f = FormatSpec!char("abc%sdef%sghi");
-    f.writeUpToNextSpec(w);
-    assert(w.data == "abc", w.data);
-    assert(f.trailing == "def%sghi", text(f.trailing));
-    f.writeUpToNextSpec(w);
-    assert(w.data == "abcdef", w.data);
-    assert(f.trailing == "ghi");
-    // test with embedded %%s
-    f = FormatSpec!char("ab%%cd%%ef%sg%%h%sij");
-    w.clear();
-    f.writeUpToNextSpec(w);
-    assert(w.data == "ab%cd%ef" && f.trailing == "g%%h%sij", w.data);
-    f.writeUpToNextSpec(w);
-    assert(w.data == "ab%cd%efg%h" && f.trailing == "ij");
-    // https://issues.dlang.org/show_bug.cgi?id=4775
-    f = FormatSpec!char("%%%s");
-    w.clear();
-    f.writeUpToNextSpec(w);
-    assert(w.data == "%" && f.trailing == "");
-    f = FormatSpec!char("%%%%%s%%");
-    w.clear();
-    while (f.writeUpToNextSpec(w)) continue;
-    assert(w.data == "%%%");
-
-    f = FormatSpec!char("a%%b%%c%");
-    w.clear();
-    assertThrown!FormatException(f.writeUpToNextSpec(w));
-    assert(w.data == "a%b%c" && f.trailing == "%");
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=5237
-@safe unittest
-{
-    import std.array;
-    auto w = appender!string();
-    auto f = FormatSpec!char("%.16f");
-    f.writeUpToNextSpec(w); // dummy eating
-    assert(f.spec == 'f');
-    auto fmt = f.getCurFmtStr();
-    assert(fmt == "%.16f");
-}
-
-///
-@safe pure unittest
-{
-    import std.array;
-    auto a = appender!(string)();
-    auto fmt = "Number: %6.4e\nString: %s";
-    auto f = FormatSpec!char(fmt);
-
-    assert(f.writeUpToNextSpec(a) == true);
-
-    assert(a.data == "Number: ");
-    assert(f.trailing == "\nString: %s");
-    assert(f.spec == 'e');
-    assert(f.width == 6);
-    assert(f.precision == 4);
-
-    assert(f.writeUpToNextSpec(a) == true);
-
-    assert(a.data == "Number: \nString: ");
-    assert(f.trailing == "");
-    assert(f.spec == 's');
-
-    assert(f.writeUpToNextSpec(a) == false);
-    assert(a.data == "Number: \nString: ");
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=14059
-@safe unittest
-{
-    import std.array : appender;
-    auto a = appender!(string)();
-
-    auto f = FormatSpec!char("%-(%s%"); // %)")
-    assertThrown!FormatException(f.writeUpToNextSpec(a));
-
-    f = FormatSpec!char("%(%-"); // %)")
-    assertThrown!FormatException(f.writeUpToNextSpec(a));
-}
-
-@safe unittest
-{
-    import std.array : appender;
-    auto a = appender!(string)();
-
-    auto f = FormatSpec!char("%,d");
-    f.writeUpToNextSpec(a);
-
-    assert(f.spec == 'd', format("%s", f.spec));
-    assert(f.precision == FormatSpec!char.UNSPECIFIED);
-    assert(f.separators == 3);
-
-    f = FormatSpec!char("%5,10f");
-    f.writeUpToNextSpec(a);
-    assert(f.spec == 'f', format("%s", f.spec));
-    assert(f.separators == 10);
-    assert(f.width == 5);
-
-    f = FormatSpec!char("%5,10.4f");
-    f.writeUpToNextSpec(a);
-    assert(f.spec == 'f', format("%s", f.spec));
-    assert(f.separators == 10);
-    assert(f.width == 5);
-    assert(f.precision == 4);
-}
-
-@safe pure unittest
-{
-    import std.algorithm.searching : canFind, findSplitBefore;
-    auto expected = "width = 2" ~
-        "\nprecision = 5" ~
-        "\nspec = f" ~
-        "\nindexStart = 0" ~
-        "\nindexEnd = 0" ~
-        "\nflDash = false" ~
-        "\nflZero = false" ~
-        "\nflSpace = false" ~
-        "\nflPlus = false" ~
-        "\nflHash = false" ~
-        "\nflSeparator = false" ~
-        "\nnested = " ~
-        "\ntrailing = \n";
-    auto spec = singleSpec("%2.5f");
-    auto res = spec.toString();
-    // make sure the address exists, then skip it
-    assert(res.canFind("address"));
-    assert(res.findSplitBefore("width")[1] == expected);
-}
-
-/**
-Helper function that returns a `FormatSpec` for a single specifier given
-in `fmt`.
-
-Params:
-    fmt = A format specifier.
-
-Returns:
-    A `FormatSpec` with the specifier parsed.
-Throws:
-    A `FormatException` when more than one specifier is given or the specifier
-    is malformed.
-  */
-FormatSpec!Char singleSpec(Char)(Char[] fmt)
-{
-    import std.conv : text;
-    enforceFmt(fmt.length >= 2, "fmt must be at least 2 characters long");
-    enforceFmt(fmt.front == '%', "fmt must start with a '%' character");
-
-    static struct DummyOutputRange {
-        void put(C)(scope const C[] buf) {} // eat elements
-    }
-    auto a = DummyOutputRange();
-    auto spec = FormatSpec!Char(fmt);
-    //dummy write
-    spec.writeUpToNextSpec(a);
-
-    enforceFmt(spec.trailing.empty,
-            text("Trailing characters in fmt string: '", spec.trailing));
-
-    return spec;
-}
-
-///
-@safe pure unittest
-{
-    import std.exception : assertThrown;
-    auto spec = singleSpec("%2.3e");
-
-    assert(spec.trailing == "");
-    assert(spec.spec == 'e');
-    assert(spec.width == 2);
-    assert(spec.precision == 3);
-
-    assertThrown!FormatException(singleSpec(""));
-    assertThrown!FormatException(singleSpec("2.3e"));
-    assertThrown!FormatException(singleSpec("%2.3eTest"));
-}
-
-/**
- * Formats any value into `Char` accepting `OutputRange`, using the given `FormatSpec`.
- *
- * Aggregates:
- * `struct`, `union`, `class`, and `interface` are formatted by calling `toString`.
- *
- * `toString` should have one of the following signatures:
- *
- * ---
- * void toString(Writer, Char)(ref Writer w, scope const ref FormatSpec!Char fmt)
- * void toString(Writer)(ref Writer w)
- * string toString();
- * ---
- *
- * Where `Writer` is an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
- * which accepts characters. The template type does not have to be called `Writer`.
- *
- * The following overloads are also accepted for legacy reasons or for use in virtual
- * functions. It's recommended that any new code forgo these overloads if possible for
- * speed and attribute acceptance reasons.
- *
- * ---
- * void toString(scope void delegate(const(char)[]) sink, const ref FormatSpec!char fmt);
- * void toString(scope void delegate(const(char)[]) sink, string fmt);
- * void toString(scope void delegate(const(char)[]) sink);
- * ---
- *
- * For the class objects which have input range interface,
- * $(UL
- *     $(LI If the instance `toString` has overridden `Object.toString`, it is used.)
- *     $(LI Otherwise, the objects are formatted as input range.)
- * )
- *
- * For the `struct` and `union` objects which does not have `toString`,
- * $(UL
- *     $(LI If they have range interface, formatted as input range.)
- *     $(LI Otherwise, they are formatted like `Type(field1, filed2, ...)`.)
- * )
- *
- * Otherwise, are formatted just as their type name.
- *
- * Params:
- *     w = The $(REF_ALTTEXT output range, isOutputRange, std,range,primitives) to write to.
- *     val = The value to write.
- *     f = The $(REF FormatSpec, std, format) defining how to write the value.
- */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
-{
-    formatValueImpl(w, val, f);
-}
-
-/++
-   The following code compares the use of `formatValue` and `formattedWrite`.
- +/
-@safe pure unittest
-{
-   import std.array : appender;
-
-   auto writer1 = appender!string();
-   writer1.formattedWrite("%08b", 42);
-
-   auto writer2 = appender!string();
-   auto f = singleSpec("%08b");
-   writer2.formatValue(42, f);
-
-   assert(writer1.data == writer2.data && writer1.data == "00101010");
-}
-
-/**
- * `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
- * `0` with integral-specific format specs.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, true, spec);
-
-    assert(w.data == "true");
-}
-
-/// `null` literal is formatted as `"null"`.
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, null, spec);
-
-    assert(w.data == "null");
-}
-
-/// Integrals are formatted like $(REF printf, core, stdc, stdio).
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%d");
-    formatValue(w, 1337, spec);
-
-    assert(w.data == "1337");
-}
-
-/// Floating-point values are formatted like $(REF printf, core, stdc, stdio)
-@safe unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%.1f");
-    formatValue(w, 1337.7, spec);
-
-    assert(w.data == "1337.7");
-}
-
-/**
- * Individual characters (`char, `wchar`, or `dchar`) are formatted as
- * Unicode characters with `%s` and as integers with integral-specific format
- * specs.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%c");
-    formatValue(w, 'a', spec);
-
-    assert(w.data == "a");
-}
-
-/// Strings are formatted like $(REF printf, core, stdc, stdio)
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatValue(w, "hello", spec);
-
-    assert(w.data == "hello");
-}
-
-/// Static-size arrays are formatted as dynamic arrays.
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    char[2] two = ['a', 'b'];
-    formatValue(w, two, spec);
-
-    assert(w.data == "ab");
-}
-
-/**
- * Dynamic arrays are formatted as input ranges.
- *
- * Specializations:
- *   $(UL
- *      $(LI `void[]` is formatted like `ubyte[]`.)
- *      $(LI Const array is converted to input range by removing its qualifier.)
- *   )
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto two = [1, 2];
-    formatValue(w, two, spec);
-
-    assert(w.data == "[1, 2]");
-}
-
-/**
- * Associative arrays are formatted by using `':'` and `", "` as
- * separators, and enclosed by `'['` and `']'`.
- */
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto aa = ["H":"W"];
-    formatValue(w, aa, spec);
-
-    assert(w.data == "[\"H\":\"W\"]", w.data);
-}
-
-/// `enum`s are formatted like their base value
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    enum A { first, second, third }
-
-    formatValue(w, A.second, spec);
-
-    assert(w.data == "second");
-}
-
-/**
- * Formatting a struct by defining a method `toString`, which takes an output
- * range.
- *
- * It's recommended that any `toString` using $(REF_ALTTEXT output ranges, isOutputRange, std,range,primitives)
- * use $(REF put, std,range,primitives) rather than use the `put` method of the range
- * directly.
- */
-@safe unittest
-{
-    import std.array : appender;
-    import std.range.primitives;
-
-    static struct Point
-    {
-        int x, y;
-
-        void toString(W)(ref W writer, scope const ref FormatSpec!char f)
-        if (isOutputRange!(W, char))
-        {
-            // std.range.primitives.put
-            put(writer, "(");
-            formatValue(writer, x, f);
-            put(writer, ",");
-            formatValue(writer, y, f);
-            put(writer, ")");
-        }
-    }
-
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    auto p = Point(16, 11);
-
-    formatValue(w, p, spec);
-    assert(w.data == "(16,11)");
-}
-
-/**
- * Another example of formatting a `struct` with a defined `toString`,
- * this time using the `scope delegate` method.
- *
- * $(RED This method is now discouraged for non-virtual functions).
- * If possible, please use the output range method instead.
- */
-@safe unittest
-{
-   static struct Point
-   {
-       int x, y;
-
-       void toString(scope void delegate(scope const(char)[]) @safe sink,
-                     scope const FormatSpec!char fmt) const
-       {
-           sink("(");
-           sink.formatValue(x, fmt);
-           sink(",");
-           sink.formatValue(y, fmt);
-           sink(")");
-       }
-   }
-
-   auto p = Point(16,11);
-   assert(format("%03d", p) == "(016,011)");
-   assert(format("%02x", p) == "(10,0b)");
-}
-
-/// Pointers are formatted as hex integers.
-@system pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    auto q = cast(void*) 0xFFEECCAA;
-    formatValue(w, q, spec);
-
-    assert(w.data == "FFEECCAA");
-}
-
-/// SIMD vectors are formatted as arrays.
-@safe unittest
-{
-    import core.simd;
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-
-    static if (is(float4))
-    {
-        version (X86) {}
-        else
-        {
-            float4 f4;
-            f4.array[0] = 1;
-            f4.array[1] = 2;
-            f4.array[2] = 3;
-            f4.array[3] = 4;
-
-            formatValue(w, f4, spec);
-            assert(w.data == "[1, 2, 3, 4]");
-        }
-    }
-}
-
-/**
- * Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
- *
- * Known Bug: Function attributes are not always correct.
- *            See $(BUGZILLA 18269) for more details.
- */
-@safe unittest
-{
-    import std.conv : to;
-
-    int i;
-
-    int foo(short k) @nogc
-    {
-        return i + k;
-    }
-
-    @system int delegate(short) @nogc bar() nothrow pure
-    {
-        int* p = new int(1);
-        i = *p;
-        return &foo;
-    }
-
-    assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
-    assert(() @trusted { return bar()(3); }() == 4);
-}
-
-// undocumented because of deprecation
-// string elements are formatted like UTF-8 string literals.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !hasToString!(T, Char) && !is(T == enum))
 {
-    import std.array : appender;
-    import std.utf : decode, UTFException;
+    import std.format.internal.write : fe = formatElement;
 
-    StringTypeOf!T str = val;   // https://issues.dlang.org/show_bug.cgi?id=8015
-
-    if (f.spec == 's')
-    {
-        try
-        {
-            // ignore other specifications and quote
-            for (size_t i = 0; i < str.length; )
-            {
-                auto c = decode(str, i);
-                // \uFFFE and \uFFFF are considered valid by isValidDchar,
-                // so need checking for interchange.
-                if (c == 0xFFFE || c == 0xFFFF)
-                    goto LinvalidSeq;
-            }
-            put(w, '\"');
-            for (size_t i = 0; i < str.length; )
-            {
-                auto c = decode(str, i);
-                formatChar(w, c, '"');
-            }
-            put(w, '\"');
-            return;
-        }
-        catch (UTFException)
-        {
-        }
-
-        // If val contains invalid UTF sequence, formatted like HexString literal
-    LinvalidSeq:
-        static if (is(typeof(str[0]) : const(char)))
-        {
-            enum postfix = 'c';
-            alias IntArr = const(ubyte)[];
-        }
-        else static if (is(typeof(str[0]) : const(wchar)))
-        {
-            enum postfix = 'w';
-            alias IntArr = const(ushort)[];
-        }
-        else static if (is(typeof(str[0]) : const(dchar)))
-        {
-            enum postfix = 'd';
-            alias IntArr = const(uint)[];
-        }
-        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr) str, postfix);
-    }
-    else
-        formatValue(w, str, f);
+    fe(w, val, f);
 }
 
-@safe pure unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatElement(w, "Hello World", spec);
-
-    assert(w.data == "\"Hello World\"");
-}
-
-@safe unittest
-{
-    // Test for bug 8015
-    import std.typecons;
-
-    struct MyStruct {
-        string str;
-        @property string toStr() {
-            return str;
-        }
-        alias toStr this;
-    }
-
-    Tuple!(MyStruct) t;
-}
-
-// undocumented because of deprecation
-// Character elements are formatted like UTF-8 character literals.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
-    if (f.spec == 's')
-    {
-        put(w, '\'');
-        formatChar(w, val, '\'');
-        put(w, '\'');
-    }
-    else
-        formatValue(w, val, f);
+    import std.format.internal.write : fe = formatElement;
+
+    fe(w, val, f);
 }
 
-///
-@safe unittest
-{
-    import std.array : appender;
-    auto w = appender!string();
-    auto spec = singleSpec("%s");
-    formatElement(w, "H", spec);
-
-    assert(w.data == "\"H\"", w.data);
-}
-
-// undocumented
-// Maybe T is noncopyable struct, so receive it by 'auto ref'.
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("formatElement was accidentally made public and will be removed in 2.107.0")
 void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if ((!is(StringTypeOf!T) || hasToString!(T, Char)) && !is(CharTypeOf!T) || is(T == enum))
 {
-    formatValue(w, val, f);
+    import std.format.internal.write : fe = formatElement;
+
+    fe(w, val, f);
 }
 
 // Like NullSink, but toString() isn't even called at all. Used to test the format string.
@@ -2285,887 +721,116 @@ package struct NoOpSink
     void put(E)(scope const E) pure @safe @nogc nothrow {}
 }
 
-void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
-{
-    enum overload = hasToString!(T, Char);
-    static if (
-            overload != HasToStringResult.constCharSinkFormatSpec &&
-            overload != HasToStringResult.customPutWriterFormatSpec &&
-            !isInputRange!T)
-    {
-        enforceFmt(f.spec == 's',
-            "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
-    }
-}
-
-@safe unittest
-{
-    // width/precision
-    assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
-        == "integer width expected, not double for argument #1");
-    assert(collectExceptionMsg!FormatException(format("%-1*.d", 5.1, 2))
-        == "integer width expected, not double for argument #1");
-
-    assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
-        == "integer precision expected, not char for argument #1");
-    assert(collectExceptionMsg!FormatException(format("%-1.*d", 4.7, 3))
-        == "integer precision expected, not double for argument #1");
-    assert(collectExceptionMsg!FormatException(format("%.*d", 5))
-        == "Orphan format specifier: %d");
-    assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
-        == "Missing integer precision argument");
-
-    // separatorCharPos
-    assert(collectExceptionMsg!FormatException(format("%,?d", 5))
-        == "separator character expected, not int for argument #1");
-    assert(collectExceptionMsg!FormatException(format("%,?d", '?'))
-        == "Orphan format specifier: %d");
-    assert(collectExceptionMsg!FormatException(format("%.*,*?d", 5))
-        == "Missing separator digit width argument");
-}
-
-/* ======================== Unit Tests ====================================== */
-
-version (StdUnittest)
-package void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    FormatSpec!char f;
-    auto w = appender!string();
-    formatValue(w, val, f);
-    enforce!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
-}
-
-version (StdUnittest)
-package void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__) @safe
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-    enforce!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
-}
-
-version (StdUnittest)
-package void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    FormatSpec!char f;
-    auto w = appender!string();
-    formatValue(w, val, f);
-    foreach (cur; expected)
-    {
-        if (w.data == cur) return;
-    }
-    enforce!AssertError(
-            false,
-            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
-}
-
-version (StdUnittest)
-package void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    import std.conv : text;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-    foreach (cur; expected)
-    {
-        if (w.data == cur) return;
-    }
-    enforce!AssertError(
-            false,
-            text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
-}
-
-@safe /*pure*/ unittest     // formatting floating point values is now impure
-{
-    import std.array;
-
-    auto stream = appender!string();
-    formattedWrite(stream, "%s", 1.1);
-    assert(stream.data == "1.1", stream.data);
-}
-
-@safe pure unittest
-{
-    import std.algorithm;
-    import std.array;
-
-    auto stream = appender!string();
-    formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
-    assert(stream.data == "[4, 9, 25]", stream.data);
-
-    // Test shared data.
-    stream = appender!string();
-    shared int s = 6;
-    formattedWrite(stream, "%s", s);
-    assert(stream.data == "6");
-}
-
-@safe pure unittest
-{
-    import std.array;
-    auto stream = appender!string();
-    formattedWrite(stream, "%u", 42);
-    assert(stream.data == "42", stream.data);
-}
-
-@safe pure unittest
-{
-    // testing raw writes
-    import std.array;
-    auto w = appender!(char[])();
-    uint a = 0x02030405;
-    formattedWrite(w, "%+r", a);
-    assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
-        && w.data[2] == 4 && w.data[3] == 5);
-    w.clear();
-    formattedWrite(w, "%-r", a);
-    assert(w.data.length == 4 && w.data[0] == 5 && w.data[1] == 4
-        && w.data[2] == 3 && w.data[3] == 2);
-}
-
-@safe pure unittest
-{
-    // testing positional parameters
-    import std.array;
-    auto w = appender!(char[])();
-    formattedWrite(w,
-            "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
-            42, 0);
-    assert(w.data == "Numbers 0 and 42 are reversed and 420 repeated",
-            w.data);
-    assert(collectExceptionMsg!FormatException(formattedWrite(w, "%1$s, %3$s", 1, 2))
-        == "Positional specifier %3$s index exceeds 2");
-
-    w.clear();
-    formattedWrite(w, "asd%s", 23);
-    assert(w.data == "asd23", w.data);
-    w.clear();
-    formattedWrite(w, "%s%s", 23, 45);
-    assert(w.data == "2345", w.data);
-}
-
-@safe unittest
-{
-    import core.stdc.string : strlen;
-    import std.array : appender;
-    import std.conv : text, octal;
-    import core.stdc.stdio : snprintf;
-
-    debug(format) printf("std.format.format.unittest\n");
-
-    auto stream = appender!(char[])();
-    //goto here;
-
-    formattedWrite(stream,
-            "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
-    assert(stream.data == "hello world! true 57 ",
-        stream.data);
-
-    stream.clear();
-    formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-           stream.data);
-    stream.clear();
-
-    formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "1234af AFAFAFAF");
-    stream.clear();
-
-    formattedWrite(stream, "%b %o", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "100100011010010101111 25753727657");
-    stream.clear();
-
-    formattedWrite(stream, "%d %s", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "1193135 2947526575");
-    stream.clear();
-
-    // formattedWrite(stream, "%s", 1.2 + 3.4i);
-    // assert(stream.data == "1.2+3.4i");
-    // stream.clear();
-
-    formattedWrite(stream, "%a %A", 1.32, 6.78f);
-    //formattedWrite(stream, "%x %X", 1.32);
-    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
-    stream.clear();
-
-    formattedWrite(stream, "%#06.*f",2,12.345);
-    assert(stream.data == "012.35");
-    stream.clear();
-
-    formattedWrite(stream, "%#0*.*f",6,2,12.345);
-    assert(stream.data == "012.35");
-    stream.clear();
-
-    const real constreal = 1;
-    formattedWrite(stream, "%g",constreal);
-    assert(stream.data == "1");
-    stream.clear();
-
-    formattedWrite(stream, "%7.4g:", 12.678);
-    assert(stream.data == "  12.68:");
-    stream.clear();
-
-    formattedWrite(stream, "%7.4g:", 12.678L);
-    assert(stream.data == "  12.68:");
-    stream.clear();
-
-    formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
-    assert(stream.data == "-4.000000|-0010|0x001|  0x1",
-            stream.data);
-    stream.clear();
-
-    int i;
-    string s;
-
-    i = -10;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "-10|-10|-10|-10|-10.0000");
-    stream.clear();
-
-    i = -5;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "-5| -5|-05|-5|-5.0000");
-    stream.clear();
-
-    i = 0;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "0|  0|000|0|0.0000");
-    stream.clear();
-
-    i = 5;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "5|  5|005|5|5.0000");
-    stream.clear();
-
-    i = 10;
-    formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "10| 10|010|10|10.0000");
-    stream.clear();
-
-    formattedWrite(stream, "%.0d", 0);
-    assert(stream.data == "");
-    stream.clear();
-
-    formattedWrite(stream, "%.g", .34);
-    assert(stream.data == "0.3");
-    stream.clear();
-
-    stream.clear(); formattedWrite(stream, "%.0g", .34);
-    assert(stream.data == "0.3");
-
-    stream.clear(); formattedWrite(stream, "%.2g", .34);
-    assert(stream.data == "0.34");
-
-    stream.clear(); formattedWrite(stream, "%0.0008f", 1e-08);
-    assert(stream.data == "0.00000001");
-
-    stream.clear(); formattedWrite(stream, "%0.0008f", 1e-05);
-    assert(stream.data == "0.00001000");
-
-    //return;
-    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
-
-    s = "helloworld";
-    string r;
-    stream.clear(); formattedWrite(stream, "%.2s", s[0 .. 5]);
-    assert(stream.data == "he");
-    stream.clear(); formattedWrite(stream, "%.20s", s[0 .. 5]);
-    assert(stream.data == "hello");
-    stream.clear(); formattedWrite(stream, "%8s", s[0 .. 5]);
-    assert(stream.data == "   hello");
-
-    byte[] arrbyte = new byte[4];
-    arrbyte[0] = 100;
-    arrbyte[1] = -99;
-    arrbyte[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrbyte);
-    assert(stream.data == "[100, -99, 0, 0]", stream.data);
-
-    ubyte[] arrubyte = new ubyte[4];
-    arrubyte[0] = 100;
-    arrubyte[1] = 200;
-    arrubyte[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrubyte);
-    assert(stream.data == "[100, 200, 0, 0]", stream.data);
-
-    short[] arrshort = new short[4];
-    arrshort[0] = 100;
-    arrshort[1] = -999;
-    arrshort[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrshort);
-    assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrshort);
-    assert(stream.data == "[100, -999, 0, 0]");
-
-    ushort[] arrushort = new ushort[4];
-    arrushort[0] = 100;
-    arrushort[1] = 20_000;
-    arrushort[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrushort);
-    assert(stream.data == "[100, 20000, 0, 0]");
-
-    int[] arrint = new int[4];
-    arrint[0] = 100;
-    arrint[1] = -999;
-    arrint[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrint);
-    assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrint);
-    assert(stream.data == "[100, -999, 0, 0]");
-
-    long[] arrlong = new long[4];
-    arrlong[0] = 100;
-    arrlong[1] = -999;
-    arrlong[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrlong);
-    assert(stream.data == "[100, -999, 0, 0]");
-    stream.clear(); formattedWrite(stream, "%s",arrlong);
-    assert(stream.data == "[100, -999, 0, 0]");
-
-    ulong[] arrulong = new ulong[4];
-    arrulong[0] = 100;
-    arrulong[1] = 999;
-    arrulong[3] = 0;
-    stream.clear(); formattedWrite(stream, "%s", arrulong);
-    assert(stream.data == "[100, 999, 0, 0]");
-
-    string[] arr2 = new string[4];
-    arr2[0] = "hello";
-    arr2[1] = "world";
-    arr2[3] = "foo";
-    stream.clear(); formattedWrite(stream, "%s", arr2);
-    assert(stream.data == `["hello", "world", "", "foo"]`, stream.data);
-
-    stream.clear(); formattedWrite(stream, "%.8d", 7);
-    assert(stream.data == "00000007");
-
-    stream.clear(); formattedWrite(stream, "%.8x", 10);
-    assert(stream.data == "0000000a");
-
-    stream.clear(); formattedWrite(stream, "%-3d", 7);
-    assert(stream.data == "7  ");
-
-    stream.clear(); formattedWrite(stream, "%*d", -3, 7);
-    assert(stream.data == "7  ");
-
-    stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
-    //writeln(stream.data);
-    assert(stream.data == "7");
-
-    stream.clear(); formattedWrite(stream, "%s", "abc"c);
-    assert(stream.data == "abc");
-    stream.clear(); formattedWrite(stream, "%s", "def"w);
-    assert(stream.data == "def", text(stream.data.length));
-    stream.clear(); formattedWrite(stream, "%s", "ghi"d);
-    assert(stream.data == "ghi");
-
-here:
-    @trusted void* deadBeef() { return cast(void*) 0xDEADBEEF; }
-    stream.clear(); formattedWrite(stream, "%s", deadBeef());
-    assert(stream.data == "DEADBEEF", stream.data);
-
-    stream.clear(); formattedWrite(stream, "%#x", 0xabcd);
-    assert(stream.data == "0xabcd");
-    stream.clear(); formattedWrite(stream, "%#X", 0xABCD);
-    assert(stream.data == "0XABCD");
-
-    stream.clear(); formattedWrite(stream, "%#o", octal!12345);
-    assert(stream.data == "012345");
-    stream.clear(); formattedWrite(stream, "%o", 9);
-    assert(stream.data == "11");
-
-    stream.clear(); formattedWrite(stream, "%+d", 123);
-    assert(stream.data == "+123");
-    stream.clear(); formattedWrite(stream, "%+d", -123);
-    assert(stream.data == "-123");
-    stream.clear(); formattedWrite(stream, "% d", 123);
-    assert(stream.data == " 123");
-    stream.clear(); formattedWrite(stream, "% d", -123);
-    assert(stream.data == "-123");
-
-    stream.clear(); formattedWrite(stream, "%%");
-    assert(stream.data == "%");
-
-    stream.clear(); formattedWrite(stream, "%d", true);
-    assert(stream.data == "1");
-    stream.clear(); formattedWrite(stream, "%d", false);
-    assert(stream.data == "0");
-
-    stream.clear(); formattedWrite(stream, "%d", 'a');
-    assert(stream.data == "97", stream.data);
-    wchar wc = 'a';
-    stream.clear(); formattedWrite(stream, "%d", wc);
-    assert(stream.data == "97");
-    dchar dc = 'a';
-    stream.clear(); formattedWrite(stream, "%d", dc);
-    assert(stream.data == "97");
-
-    byte b = byte.max;
-    stream.clear(); formattedWrite(stream, "%x", b);
-    assert(stream.data == "7f");
-    stream.clear(); formattedWrite(stream, "%x", ++b);
-    assert(stream.data == "80");
-    stream.clear(); formattedWrite(stream, "%x", ++b);
-    assert(stream.data == "81");
-
-    short sh = short.max;
-    stream.clear(); formattedWrite(stream, "%x", sh);
-    assert(stream.data == "7fff");
-    stream.clear(); formattedWrite(stream, "%x", ++sh);
-    assert(stream.data == "8000");
-    stream.clear(); formattedWrite(stream, "%x", ++sh);
-    assert(stream.data == "8001");
-
-    i = int.max;
-    stream.clear(); formattedWrite(stream, "%x", i);
-    assert(stream.data == "7fffffff");
-    stream.clear(); formattedWrite(stream, "%x", ++i);
-    assert(stream.data == "80000000");
-    stream.clear(); formattedWrite(stream, "%x", ++i);
-    assert(stream.data == "80000001");
-
-    stream.clear(); formattedWrite(stream, "%x", 10);
-    assert(stream.data == "a");
-    stream.clear(); formattedWrite(stream, "%X", 10);
-    assert(stream.data == "A");
-    stream.clear(); formattedWrite(stream, "%x", 15);
-    assert(stream.data == "f");
-    stream.clear(); formattedWrite(stream, "%X", 15);
-    assert(stream.data == "F");
-
-    @trusted void ObjectTest()
-    {
-        Object c = null;
-        stream.clear(); formattedWrite(stream, "%s", c);
-        assert(stream.data == "null");
-    }
-    ObjectTest();
-
-    enum TestEnum
-    {
-        Value1, Value2
-    }
-    stream.clear(); formattedWrite(stream, "%s", TestEnum.Value2);
-    assert(stream.data == "Value2", stream.data);
-    stream.clear(); formattedWrite(stream, "%s", cast(TestEnum) 5);
-    assert(stream.data == "cast(TestEnum)5", stream.data);
-
-    //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    //stream.clear(); formattedWrite(stream, "%s", aa.values);
-    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
-    //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
-    //stream.clear(); formattedWrite(stream, "%s", aa);
-    //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
-
-    static const dchar[] ds = ['a','b'];
-    for (int j = 0; j < ds.length; ++j)
-    {
-        stream.clear(); formattedWrite(stream, " %d", ds[j]);
-        if (j == 0)
-            assert(stream.data == " 97");
-        else
-            assert(stream.data == " 98");
-    }
-
-    stream.clear(); formattedWrite(stream, "%.-3d", 7);
-    assert(stream.data == "7", ">" ~ stream.data ~ "<");
-}
-
-@safe unittest
-{
-    import std.array;
-    import std.stdio;
-
-    immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    assert(aa[3] == "hello");
-    assert(aa[4] == "betty");
-
-    auto stream = appender!(char[])();
-    alias AllNumerics =
-        AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong,
-                  float, double, real);
-    foreach (T; AllNumerics)
-    {
-        T value = 1;
-        stream.clear();
-        formattedWrite(stream, "%s", value);
-        assert(stream.data == "1");
-    }
-
-    stream.clear();
-    formattedWrite(stream, "%s", aa);
-}
-
-@system unittest
-{
-    string s = "hello!124:34.5";
-    string a;
-    int b;
-    double c;
-    formattedRead(s, "%s!%s:%s", &a, &b, &c);
-    assert(a == "hello" && b == 124 && c == 34.5);
-}
-
-version (StdUnittest)
-private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-
-    auto input = w.data;
-    enforce!AssertError(
-            input == formatted,
-            input, fn, ln);
-
-    T val2;
-    formattedRead(input, fmt, &val2);
-    static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
-
-        assert(aa1.length == aa2.length);
-
-        assert(aa1.keys == aa2.keys);
-
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
-
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
-}
-
-version (StdUnittest)
-private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
-{
-    import core.exception : AssertError;
-    import std.array : appender;
-    auto w = appender!string();
-    formattedWrite(w, fmt, val);
-
-    auto input = w.data;
-
-    foreach (cur; formatted)
-    {
-        if (input == cur) return;
-    }
-    enforce!AssertError(
-            false,
-            input,
-            fn,
-            ln);
-
-    T val2;
-    formattedRead(input, fmt, &val2);
-    static if (isAssociativeArray!T)
-    if (__ctfe)
-    {
-        alias aa1 = val;
-        alias aa2 = val2;
-        assert(aa1 == aa2);
-
-        assert(aa1.length == aa2.length);
-
-        assert(aa1.keys == aa2.keys);
-
-        assert(aa1.values == aa2.values);
-        assert(aa1.values.length == aa2.values.length);
-        foreach (i; 0 .. aa1.values.length)
-            assert(aa1.values[i] == aa2.values[i]);
-
-        foreach (i, key; aa1.keys)
-            assert(aa1.values[i] == aa1[key]);
-        foreach (i, key; aa2.keys)
-            assert(aa2.values[i] == aa2[key]);
-        return;
-    }
-    enforce!AssertError(
-            val == val2,
-            input, fn, ln);
-}
-
-@system unittest
-{
-    void booleanTest()
-    {
-        auto b = true;
-        formatReflectTest(b, "%s",  `true`);
-        formatReflectTest(b, "%b",  `1`);
-        formatReflectTest(b, "%o",  `1`);
-        formatReflectTest(b, "%d",  `1`);
-        formatReflectTest(b, "%u",  `1`);
-        formatReflectTest(b, "%x",  `1`);
-    }
-
-    void integerTest()
-    {
-        auto n = 127;
-        formatReflectTest(n, "%s",  `127`);
-        formatReflectTest(n, "%b",  `1111111`);
-        formatReflectTest(n, "%o",  `177`);
-        formatReflectTest(n, "%d",  `127`);
-        formatReflectTest(n, "%u",  `127`);
-        formatReflectTest(n, "%x",  `7f`);
-    }
-
-    void floatingTest()
-    {
-        auto f = 3.14;
-        formatReflectTest(f, "%s",  `3.14`);
-        version (MinGW)
-            formatReflectTest(f, "%e",  `3.140000e+000`);
-        else
-            formatReflectTest(f, "%e",  `3.140000e+00`);
-        formatReflectTest(f, "%f",  `3.140000`);
-        formatReflectTest(f, "%g",  `3.14`);
-    }
-
-    void charTest()
-    {
-        auto c = 'a';
-        formatReflectTest(c, "%s",  `a`);
-        formatReflectTest(c, "%c",  `a`);
-        formatReflectTest(c, "%b",  `1100001`);
-        formatReflectTest(c, "%o",  `141`);
-        formatReflectTest(c, "%d",  `97`);
-        formatReflectTest(c, "%u",  `97`);
-        formatReflectTest(c, "%x",  `61`);
-    }
-
-    void strTest()
-    {
-        auto s = "hello";
-        formatReflectTest(s, "%s",                      `hello`);
-        formatReflectTest(s, "%(%c,%)",                 `h,e,l,l,o`);
-        formatReflectTest(s, "%(%s,%)",                 `'h','e','l','l','o'`);
-        formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
-    }
-
-    void daTest()
-    {
-        auto a = [1,2,3,4];
-        formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
-        formatReflectTest(a, "[%(%s; %)]",              `[1; 2; 3; 4]`);
-        formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
-    }
-
-    void saTest()
-    {
-        int[4] sa = [1,2,3,4];
-        formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
-        formatReflectTest(sa, "[%(%s; %)]",             `[1; 2; 3; 4]`);
-        formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
-    }
-
-    void aaTest()
-    {
-        auto aa = [1:"hello", 2:"world"];
-        formatReflectTest(aa, "%s",                     [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
-        formatReflectTest(aa, "[%(%s->%s, %)]",         [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
-        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
-    }
-
-    import std.exception;
-    assertCTFEable!(
-    {
-        booleanTest();
-        integerTest();
-        if (!__ctfe) floatingTest();    // snprintf
-        charTest();
-        strTest();
-        daTest();
-        saTest();
-        aaTest();
-        return true;
-    });
-}
-
-/**
- * Reads a value from the given _input range according to spec
- * and returns it as type `T`.
- *
- * Params:
- *     T = the type to return
- *     input = the _input range to read from
- *     spec = the `FormatSpec` to use when reading from `input`
- * Returns:
- *     A value from `input` of type `T`
- * Throws:
- *     A `FormatException` if `spec` cannot read a type `T`
- * See_Also:
- *     $(REF parse, std, conv) and $(REF to, std, conv)
- */
-T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
-{
-    return unformatValueImpl!T(input, spec);
-}
-
-/// Booleans
-@safe pure unittest
-{
-    auto str = "false";
-    auto spec = singleSpec("%s");
-    assert(unformatValue!bool(str, spec) == false);
-
-    str = "1";
-    spec = singleSpec("%d");
-    assert(unformatValue!bool(str, spec));
-}
-
-/// Null values
-@safe pure unittest
-{
-    auto str = "null";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(typeof(null))(spec) == null);
-}
-
-/// Integrals
-@safe pure unittest
-{
-    auto str = "123";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!int(spec) == 123);
-
-    str = "ABC";
-    spec = singleSpec("%X");
-    assert(str.unformatValue!int(spec) == 2748);
-
-    str = "11610";
-    spec = singleSpec("%o");
-    assert(str.unformatValue!int(spec) == 5000);
-}
-
-/// Floating point numbers
-@safe pure unittest
-{
-    import std.math : isClose;
-
-    auto str = "123.456";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!double(spec).isClose(123.456));
-}
-
-/// Character input ranges
-@safe pure unittest
-{
-    auto str = "aaa";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!char(spec) == 'a');
-
-    // Using a numerical format spec reads a Unicode value from a string
-    str = "65";
-    spec = singleSpec("%d");
-    assert(str.unformatValue!char(spec) == 'A');
-
-    str = "41";
-    spec = singleSpec("%x");
-    assert(str.unformatValue!char(spec) == 'A');
-
-    str = "10003";
-    spec = singleSpec("%d");
-    assert(str.unformatValue!dchar(spec) == '✓');
-}
-
-/// Arrays and static arrays
-@safe pure unittest
-{
-    string str = "aaa";
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(dchar[])(spec) == "aaa"d);
-
-    str = "aaa";
-    spec = singleSpec("%s");
-    dchar[3] ret = ['a', 'a', 'a'];
-    assert(str.unformatValue!(dchar[3])(spec) == ret);
-
-    str = "[1, 2, 3, 4]";
-    spec = singleSpec("%s");
-    assert(str.unformatValue!(int[])(spec) == [1, 2, 3, 4]);
-
-    str = "[1, 2, 3, 4]";
-    spec = singleSpec("%s");
-    int[4] ret2 = [1, 2, 3, 4];
-    assert(str.unformatValue!(int[4])(spec) == ret2);
-}
-
-/// Associative arrays
-@safe pure unittest
-{
-    auto str = `["one": 1, "two": 2]`;
-    auto spec = singleSpec("%s");
-    assert(str.unformatValue!(int[string])(spec) == ["one": 1, "two": 2]);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=7241
-@safe pure unittest
-{
-    string input = "a";
-    auto spec = FormatSpec!char("%s");
-    spec.readUpToNextSpec(input);
-    auto result = unformatValue!(dchar[1])(input, spec);
-    assert(result[0] == 'a');
-}
-
-// Undocumented
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("unformatElement was accidentally made public and will be removed in 2.107.0")
 T unformatElement(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char spec)
 if (isInputRange!Range)
 {
-    import std.conv : parseElement;
-    static if (isSomeString!T)
-    {
-        if (spec.spec == 's')
-        {
-            return parseElement!T(input);
-        }
-    }
-    else static if (isSomeChar!T)
-    {
-        if (spec.spec == 's')
-        {
-            return parseElement!T(input);
-        }
-    }
+    import std.format.internal.read : ue = unformatElement;
 
-    return unformatValue!T(input, spec);
+    return ue(input, spec);
 }
 
-/* ======================== Unit Tests ====================================== */
-
-@system unittest
+// Used to check format strings are compatible with argument types
+package(std) static const checkFormatException(alias fmt, Args...) =
 {
-    import std.conv : octal;
+    import std.conv : text;
 
+    try
+    {
+        auto n = .formattedWrite(NoOpSink(), fmt, Args.init);
+
+        enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
+    }
+    catch (Exception e)
+        return e;
+    return null;
+}();
+
+/**
+Converts its arguments according to a format string into a string.
+
+The second version of `format` takes the format string as template
+argument. In this case, it is checked for consistency at
+compile-time and produces slightly faster code, because the length of
+the output buffer can be estimated in advance.
+
+Params:
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments to be formatted
+    Char = character type of `fmt`
+    Args = a variadic list of types of the arguments
+
+Returns:
+    The formatted string.
+
+Throws:
+    A $(LREF FormatException) if formatting did not succeed.
+
+See_Also:
+    $(LREF sformat) for a variant, that tries to avoid garbage collection.
+ */
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
+if (isSomeChar!Char)
+{
+    import std.array : appender;
+
+    auto w = appender!(immutable(Char)[]);
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
+    }
+    return w.data;
+}
+
+///
+@safe pure unittest
+{
+    assert(format("Here are %d %s.", 3, "apples") == "Here are 3 apples.");
+
+    assert("Increase: %7.2f %%".format(17.4285) == "Increase:   17.43 %");
+}
+
+@safe pure unittest
+{
+    import std.exception : assertCTFEable, assertThrown;
+
+    assertCTFEable!(
+    {
+        assert(format("foo") == "foo");
+        assert(format("foo%%") == "foo%");
+        assert(format("foo%s", 'C') == "fooC");
+        assert(format("%s foo", "bar") == "bar foo");
+        assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+        assert(format("foo %d", -123) == "foo -123");
+        assert(format("foo %d", 123) == "foo 123");
+
+        assertThrown!FormatException(format("foo %s"));
+        assertThrown!FormatException(format("foo %s", 123, 456));
+
+        assert(format("hel%slo%s%s%s", "world", -138, 'c', true) == "helworldlo-138ctrue");
+    });
+
+    assert(is(typeof(format("happy")) == string));
+    assert(is(typeof(format("happy"w)) == wstring));
+    assert(is(typeof(format("happy"d)) == dstring));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=16661
+@safe pure unittest
+{
+    assert(format("%.2f"d, 0.4) == "0.40");
+    assert("%02d"d.format(1) == "01"d);
+}
+
+@safe unittest
+{
     int i;
     string s;
-
-    debug(format) printf("std.format.format.unittest\n");
 
     s = format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
     assert(s == "hello world! true 57 1000000000x foo");
@@ -3183,17 +848,17 @@ if (isInputRange!Range)
     assert(s == "1193135 2947526575");
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : octal;
 
     string s;
     int i;
 
-    s = format("%#06.*f",2,12.345);
+    s = format("%#06.*f", 2, 12.345);
     assert(s == "012.35");
 
-    s = format("%#0*.*f",6,2,12.345);
+    s = format("%#0*.*f", 6, 2, 12.345);
     assert(s == "012.35");
 
     s = format("%7.4g:", 12.678);
@@ -3202,31 +867,31 @@ if (isInputRange!Range)
     s = format("%7.4g:", 12.678L);
     assert(s == "  12.68:");
 
-    s = format("%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
+    s = format("%04f|%05d|%#05x|%#5x", -4.0, -10, 1, 1);
     assert(s == "-4.000000|-0010|0x001|  0x1");
 
     i = -10;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "-10|-10|-10|-10|-10.0000");
 
     i = -5;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "-5| -5|-05|-5|-5.0000");
 
     i = 0;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "0|  0|000|0|0.0000");
 
     i = 5;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "5|  5|005|5|5.0000");
 
     i = 10;
-    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f", i, i, i, i, cast(double) i);
     assert(s == "10| 10|010|10|10.0000");
 
     s = format("%.0d", 0);
-    assert(s == "");
+    assert(s == "0");
 
     s = format("%.g", .34);
     assert(s == "0.3");
@@ -3348,7 +1013,7 @@ if (isInputRange!Range)
     const dchar[0] dempty;
     assert(format("test%spath", dempty) == "testpath");
 
-    void* p = cast(void*) 0xDEADBEEF;
+    void* p = () @trusted { return cast(void*) 0xDEADBEEF; } ();
     r = format("%s", p);
     assert(r == "DEADBEEF");
 
@@ -3424,7 +1089,7 @@ if (isInputRange!Range)
     assert(r == "F");
 
     Object c = null;
-    r = format("%s", c);
+    r = () @trusted { return format("%s", c); } ();
     assert(r == "null");
 
     enum TestEnum
@@ -3435,7 +1100,7 @@ if (isInputRange!Range)
     assert(r == "Value2");
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    r = format("%s", aa.values);
+    r = () @trusted { return format("%s", aa.values); } ();
     assert(r == `["hello", "betty"]` || r == `["betty", "hello"]`);
     r = format("%s", aa);
     assert(r == `[3:"hello", 4:"betty"]` || r == `[4:"betty", 3:"hello"]`);
@@ -3457,401 +1122,32 @@ if (isInputRange!Range)
     assert(format("%8s", "b\u00e9ll\u00f4") == "   b\u00e9ll\u00f4");
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=18205
-@safe pure unittest
-{
-    assert("|%8s|".format("abc")        == "|     abc|");
-    assert("|%8s|".format("αβγ")        == "|     αβγ|");
-    assert("|%8s|".format("   ")        == "|        |");
-    assert("|%8s|".format("été"d)       == "|     été|");
-    assert("|%8s|".format("été 2018"w)  == "|été 2018|");
-
-    assert("%2s".format("e\u0301"w) == " e\u0301");
-    assert("%2s".format("a\u0310\u0337"d) == " a\u0310\u0337");
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=3479
 @safe unittest
 {
-    import std.array;
-    auto stream = appender!(char[])();
-    formattedWrite(stream, "%2$.*1$d", 12, 10);
-    assert(stream.data == "000000000010", stream.data);
-}
+    import std.exception : assertCTFEable;
 
-// https://issues.dlang.org/show_bug.cgi?id=6893
-@safe unittest
-{
-    import std.array;
-    enum E : ulong { A, B, C }
-    auto stream = appender!(char[])();
-    formattedWrite(stream, "%s", E.C);
-    assert(stream.data == "C");
-}
-
-// Used to check format strings are compatible with argument types
-package(std) static const checkFormatException(alias fmt, Args...) =
-{
-    import std.conv : text;
-    import std.format.internal.floats : ctfpMessage;
-
-    try
-    {
-        auto n = .formattedWrite(NoOpSink(), fmt, Args.init);
-
-        enforceFmt(n == Args.length, text("Orphan format arguments: args[", n, "..", Args.length, "]"));
-    }
-    catch (Exception e)
-        return (e.msg == ctfpMessage) ? null : e;
-    return null;
-}();
-
-/**
- * Format arguments into a string.
- *
- * If the format string is fixed, passing it as a template parameter checks the
- * type correctness of the parameters at compile-time. This also can result in
- * better performance.
- *
- * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
- *         args = Variadic list of arguments to format into returned string.
- *
- * Throws:
- *     $(LREF, FormatException) if the number of arguments doesn't match the number
- *     of format parameters and vice-versa.
- */
-typeof(fmt) format(alias fmt, Args...)(Args args)
-if (isSomeString!(typeof(fmt)))
-{
-    import std.array : appender;
-
-    alias e = checkFormatException!(fmt, Args);
-    alias Char = Unqual!(ElementEncodingType!(typeof(fmt)));
-
-    static assert(!e, e.msg);
-    auto w = appender!(immutable(Char)[]);
-
-    // no need to traverse the string twice during compile time
-    if (!__ctfe)
-    {
-        enum len = guessLength!Char(fmt);
-        w.reserve(len);
-    }
-    else
-    {
-        w.reserve(fmt.length);
-    }
-
-    formattedWrite(w, fmt, args);
-    return w.data;
-}
-
-/// Type checking can be done when fmt is known at compile-time:
-@safe unittest
-{
-    auto s = format!"%s is %s"("Pi", 3.14);
-    assert(s == "Pi is 3.14");
-
-    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
-    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
-    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
-}
-
-// called during compilation to guess the length of the
-// result of format
-private size_t guessLength(Char, S)(S fmtString)
-{
-    import std.array : appender;
-
-    size_t len;
-    auto output = appender!(immutable(Char)[])();
-    auto spec = FormatSpec!Char(fmtString);
-    while (spec.writeUpToNextSpec(output))
-    {
-        // take a guess
-        if (spec.width == 0 && (spec.precision == spec.UNSPECIFIED || spec.precision == spec.DYNAMIC))
-        {
-            switch (spec.spec)
-            {
-                case 'c':
-                    ++len;
-                    break;
-                case 'd':
-                case 'x':
-                case 'X':
-                    len += 3;
-                    break;
-                case 'b':
-                    len += 8;
-                    break;
-                case 'f':
-                case 'F':
-                    len += 10;
-                    break;
-                case 's':
-                case 'e':
-                case 'E':
-                case 'g':
-                case 'G':
-                    len += 12;
-                    break;
-                default: break;
-            }
-
-            continue;
-        }
-
-        if ((spec.spec == 'e' || spec.spec == 'E' || spec.spec == 'g' ||
-             spec.spec == 'G' || spec.spec == 'f' || spec.spec == 'F') &&
-            spec.precision != spec.UNSPECIFIED && spec.precision != spec.DYNAMIC &&
-            spec.width == 0
-        )
-        {
-            len += spec.precision + 5;
-            continue;
-        }
-
-        if (spec.width == spec.precision)
-            len += spec.width;
-        else if (spec.width > 0 && spec.width != spec.DYNAMIC &&
-                 (spec.precision == spec.UNSPECIFIED || spec.width > spec.precision))
-        {
-            len += spec.width;
-        }
-        else if (spec.precision != spec.UNSPECIFIED && spec.precision > spec.width)
-            len += spec.precision;
-    }
-    len += output.data.length;
-    return len;
-}
-
-@safe pure
-unittest
-{
-    assert(guessLength!char("%c") == 1);
-    assert(guessLength!char("%d") == 3);
-    assert(guessLength!char("%x") == 3);
-    assert(guessLength!char("%b") == 8);
-    assert(guessLength!char("%f") == 10);
-    assert(guessLength!char("%s") == 12);
-    assert(guessLength!char("%02d") == 2);
-    assert(guessLength!char("%02d") == 2);
-    assert(guessLength!char("%4.4d") == 4);
-    assert(guessLength!char("%2.4f") == 4);
-    assert(guessLength!char("%02d:%02d:%02d") == 8);
-    assert(guessLength!char("%0.2f") == 7);
-    assert(guessLength!char("%0*d") == 0);
-}
-
-/// ditto
-immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
-if (isSomeChar!Char)
-{
-    import std.array : appender;
-    auto w = appender!(immutable(Char)[]);
-    auto n = formattedWrite(w, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        import std.conv : text;
-        enforceFmt(n == args.length, text("Orphan format arguments: args[", n, "..", args.length, "]"));
-    }
-    return w.data;
-}
-
-@safe pure unittest
-{
-    import core.exception;
-    import std.exception;
     assertCTFEable!(
     {
-//  assert(format(null) == "");
-    assert(format("foo") == "foo");
-    assert(format("foo%%") == "foo%");
-    assert(format("foo%s", 'C') == "fooC");
-    assert(format("%s foo", "bar") == "bar foo");
-    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
-    assert(format("foo %d", -123) == "foo -123");
-    assert(format("foo %d", 123) == "foo 123");
+        auto tmp = format("%,d", 1000);
+        assert(tmp == "1,000", "'" ~ tmp ~ "'");
 
-    assertThrown!FormatException(format("foo %s"));
-    assertThrown!FormatException(format("foo %s", 123, 456));
+        tmp = format("%,?d", 'z', 1234567);
+        assert(tmp == "1z234z567", "'" ~ tmp ~ "'");
 
-    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
-                  "helworldlo-138ctrue");
-    });
+        tmp = format("%10,?d", 'z', 1234567);
+        assert(tmp == " 1z234z567", "'" ~ tmp ~ "'");
 
-    assert(is(typeof(format("happy")) == string));
-    assert(is(typeof(format("happy"w)) == wstring));
-    assert(is(typeof(format("happy"d)) == dstring));
-}
+        tmp = format("%11,2?d", 'z', 1234567);
+        assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
 
-// https://issues.dlang.org/show_bug.cgi?id=16661
-@safe unittest
-{
-    assert(format("%.2f"d, 0.4) == "0.40");
-    assert("%02d"d.format(1) == "01"d);
-}
+        tmp = format("%11,*?d", 2, 'z', 1234567);
+        assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
 
-/*****************************************************
- * Format arguments into buffer $(I buf) which must be large
- * enough to hold the result.
- *
- * Returns:
- *     The slice of `buf` containing the formatted string.
- *
- * Throws:
- *     A `RangeError` if `buf` isn't large enough to hold the
- *     formatted string.
- *
- *     A $(LREF FormatException) if the length of `args` is different
- *     than the number of format specifiers in `fmt`.
- */
-char[] sformat(alias fmt, Args...)(char[] buf, Args args)
-if (isSomeString!(typeof(fmt)))
-{
-    alias e = checkFormatException!(fmt, Args);
-    static assert(!e, e.msg);
-    return .sformat(buf, fmt, args);
-}
+        tmp = format("%11,*d", 2, 1234567);
+        assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
 
-/// ditto
-char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
-{
-    import core.exception : RangeError;
-    import std.utf : encode;
-
-    static struct Sink
-    {
-        char[] buf;
-        size_t i;
-        void put(dchar c)
-        {
-            char[4] enc;
-            auto n = encode(enc, c);
-
-            if (buf.length < i + n)
-                throw new RangeError(__FILE__, __LINE__);
-
-            buf[i .. i + n] = enc[0 .. n];
-            i += n;
-        }
-        void put(scope const(char)[] s)
-        {
-            if (buf.length < i + s.length)
-                throw new RangeError(__FILE__, __LINE__);
-
-            buf[i .. i + s.length] = s[];
-            i += s.length;
-        }
-        void put(scope const(wchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-        void put(scope const(dchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-    }
-    auto sink = Sink(buf);
-    auto n = formattedWrite(sink, fmt, args);
-    version (all)
-    {
-        // In the future, this check will be removed to increase consistency
-        // with formattedWrite
-        import std.conv : text;
-        enforceFmt(
-            n == args.length,
-            text("Orphan format arguments: args[", n, " .. ", args.length, "]")
-        );
-    }
-    return buf[0 .. sink.i];
-}
-
-/// The format string can be checked at compile-time (see $(LREF format) for details):
-@system unittest
-{
-    char[10] buf;
-
-    assert(buf[].sformat!"foo%s"('C') == "fooC");
-    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
-}
-
-@system unittest
-{
-    import core.exception;
-
-    debug(string) trustedPrintf("std.string.sformat.unittest\n");
-
-    import std.exception;
-    assertCTFEable!(
-    {
-    char[10] buf;
-
-    assert(sformat(buf[], "foo") == "foo");
-    assert(sformat(buf[], "foo%%") == "foo%");
-    assert(sformat(buf[], "foo%s", 'C') == "fooC");
-    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
-    assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
-    assert(sformat(buf[], "foo %d", -123) == "foo -123");
-    assert(sformat(buf[], "foo %d", 123) == "foo 123");
-
-    assertThrown!FormatException(sformat(buf[], "foo %s"));
-    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
-
-    assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
-    });
-}
-
-@system unittest // ensure that sformat avoids the GC
-{
-    import core.memory : GC;
-    const a = ["foo", "bar"];
-    const u = GC.stats().usedSize;
-    char[20] buf;
-    sformat(buf, "%d", 123);
-    sformat(buf, "%s", a);
-    sformat(buf, "%s", 'c');
-    assert(u == GC.stats().usedSize);
-}
-
-/*****************************
- * The .ptr is unsafe because it could be dereferenced and the length of the array may be 0.
- * Returns:
- *      the difference between the starts of the arrays
- */
-@trusted private pure nothrow @nogc
-    ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2)
-{
-    return array1.ptr - array2.ptr;
-}
-
-@safe unittest
-{
-    assertCTFEable!({
-    auto tmp = format("%,d", 1000);
-    assert(tmp == "1,000", "'" ~ tmp ~ "'");
-
-    tmp = format("%,?d", 'z', 1234567);
-    assert(tmp == "1z234z567", "'" ~ tmp ~ "'");
-
-    tmp = format("%10,?d", 'z', 1234567);
-    assert(tmp == " 1z234z567", "'" ~ tmp ~ "'");
-
-    tmp = format("%11,2?d", 'z', 1234567);
-    assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
-
-    tmp = format("%11,*?d", 2, 'z', 1234567);
-    assert(tmp == " 1z23z45z67", "'" ~ tmp ~ "'");
-
-    tmp = format("%11,*d", 2, 1234567);
-    assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
-
-    tmp = format("%11,2d", 1234567);
-    assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
+        tmp = format("%11,2d", 1234567);
+        assert(tmp == " 1,23,45,67", "'" ~ tmp ~ "'");
     });
 }
 
@@ -4042,3 +1338,450 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     assert(d == "^-NAN         $", "\ngot:'"~ d ~ "'\nexp:'^-NAN         $'");
 }
 
+@safe unittest
+{
+    struct S
+    {
+        int a;
+
+        void toString(void delegate(const(char)[]) sink, string fmt)
+        {
+            auto spec = singleSpec(fmt);
+            sink.formatValue(a, spec);
+        }
+    }
+
+    S s = S(1);
+    auto result = () @trusted { return format!"%5,3d"(s); } ();
+    assert(result == "    1");
+}
+
+/// ditto
+typeof(fmt) format(alias fmt, Args...)(Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    import std.array : appender;
+    import std.range.primitives : ElementEncodingType;
+    import std.traits : Unqual;
+
+    alias e = checkFormatException!(fmt, Args);
+    alias Char = Unqual!(ElementEncodingType!(typeof(fmt)));
+
+    static assert(!e, e.msg);
+    auto w = appender!(immutable(Char)[]);
+
+    // no need to traverse the string twice during compile time
+    if (!__ctfe)
+    {
+        enum len = guessLength!Char(fmt);
+        w.reserve(len);
+    }
+    else
+    {
+        w.reserve(fmt.length);
+    }
+
+    formattedWrite(w, fmt, args);
+    return w.data;
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    auto s = format!"%s is %s"("Pi", 3.14);
+    assert(s == "Pi is 3.14");
+
+    // This line doesn't compile, because 3.14 cannot be formatted with %d:
+    // s = format!"%s is %d"("Pi", 3.14);
+}
+
+@safe pure unittest
+{
+    string s;
+    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
+    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
+    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17381
+@safe pure unittest
+{
+    static assert(!__traits(compiles, format!"%s"(1.5, 2)));
+    static assert(!__traits(compiles, format!"%f"(1.5, 2)));
+    static assert(!__traits(compiles, format!"%s"(1.5L, 2)));
+    static assert(!__traits(compiles, format!"%f"(1.5L, 2)));
+}
+
+// called during compilation to guess the length of the
+// result of format
+private size_t guessLength(Char, S)(S fmtString)
+{
+    import std.array : appender;
+
+    size_t len;
+    auto output = appender!(immutable(Char)[])();
+    auto spec = FormatSpec!Char(fmtString);
+    while (spec.writeUpToNextSpec(output))
+    {
+        // take a guess
+        if (spec.width == 0 && (spec.precision == spec.UNSPECIFIED || spec.precision == spec.DYNAMIC))
+        {
+            switch (spec.spec)
+            {
+                case 'c':
+                    ++len;
+                    break;
+                case 'd':
+                case 'x':
+                case 'X':
+                    len += 3;
+                    break;
+                case 'b':
+                    len += 8;
+                    break;
+                case 'f':
+                case 'F':
+                    len += 10;
+                    break;
+                case 's':
+                case 'e':
+                case 'E':
+                case 'g':
+                case 'G':
+                    len += 12;
+                    break;
+                default: break;
+            }
+
+            continue;
+        }
+
+        if ((spec.spec == 'e' || spec.spec == 'E' || spec.spec == 'g' ||
+             spec.spec == 'G' || spec.spec == 'f' || spec.spec == 'F') &&
+            spec.precision != spec.UNSPECIFIED && spec.precision != spec.DYNAMIC &&
+            spec.width == 0
+        )
+        {
+            len += spec.precision + 5;
+            continue;
+        }
+
+        if (spec.width == spec.precision)
+            len += spec.width;
+        else if (spec.width > 0 && spec.width != spec.DYNAMIC &&
+                 (spec.precision == spec.UNSPECIFIED || spec.width > spec.precision))
+        {
+            len += spec.width;
+        }
+        else if (spec.precision != spec.UNSPECIFIED && spec.precision > spec.width)
+            len += spec.precision;
+    }
+    len += output.data.length;
+    return len;
+}
+
+@safe pure
+unittest
+{
+    assert(guessLength!char("%c") == 1);
+    assert(guessLength!char("%d") == 3);
+    assert(guessLength!char("%x") == 3);
+    assert(guessLength!char("%b") == 8);
+    assert(guessLength!char("%f") == 10);
+    assert(guessLength!char("%s") == 12);
+    assert(guessLength!char("%02d") == 2);
+    assert(guessLength!char("%02d") == 2);
+    assert(guessLength!char("%4.4d") == 4);
+    assert(guessLength!char("%2.4f") == 4);
+    assert(guessLength!char("%02d:%02d:%02d") == 8);
+    assert(guessLength!char("%0.2f") == 7);
+    assert(guessLength!char("%0*d") == 0);
+}
+
+/**
+Converts its arguments according to a format string into a buffer.
+The buffer has to be large enough to hold the formatted string.
+
+The second version of `sformat` takes the format string as a template
+argument. In this case, it is checked for consistency at
+compile-time.
+
+Params:
+    buf = the buffer where the formatted string should go
+    fmt = a $(MREF_ALTTEXT format string, std,format)
+    args = a variadic list of arguments to be formatted
+    Char = character type of `fmt`
+    Args = a variadic list of types of the arguments
+
+Returns:
+    A slice of `buf` containing the formatted string.
+
+Throws:
+    A $(REF_ALTTEXT RangeError, RangeError, core, exception) if `buf`
+    isn't large enough to hold the formatted string
+    and a $(LREF FormatException) if formatting did not succeed.
+
+Note:
+    In theory this function should be `@nogc`. But with the current
+    implementation there are some cases where allocations occur:
+
+    $(UL
+    $(LI An exception is thrown.)
+    $(LI A custom `toString` function of a compound type allocates.))
+ */
+char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, Args args)
+{
+    import core.exception : RangeError;
+    import std.range.primitives;
+    import std.utf : encode;
+
+    static struct Sink
+    {
+        char[] buf;
+        size_t i;
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
+
+            if (buf.length < i + n)
+                throw new RangeError(__FILE__, __LINE__);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(scope const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                throw new RangeError(__FILE__, __LINE__);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(scope const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(scope const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto sink = Sink(buf);
+    auto n = formattedWrite(sink, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        enforceFmt(
+            n == args.length,
+            text("Orphan format arguments: args[", n, " .. ", args.length, "]")
+        );
+    }
+    return buf[0 .. sink.i];
+}
+
+/// ditto
+char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .sformat(buf, fmt, args);
+}
+
+///
+@safe pure unittest
+{
+    char[20] buf;
+    assert(sformat(buf[], "Here are %d %s.", 3, "apples") == "Here are 3 apples.");
+
+    assert(buf[].sformat("Increase: %7.2f %%", 17.4285) == "Increase:   17.43 %");
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    char[20] buf;
+
+    assert(sformat!"Here are %d %s."(buf[], 3, "apples") == "Here are 3 apples.");
+
+    // This line doesn't compile, because 3.14 cannot be formatted with %d:
+    // writeln(sformat!"Here are %d %s."(buf[], 3.14, "apples"));
+}
+
+// checking, what is implicitly and explicitly stated in the public unittest
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    char[20] buf;
+    assertThrown!FormatException(sformat(buf[], "Here are %d %s.", 3.14, "apples"));
+    assert(!__traits(compiles, sformat!"Here are %d %s."(buf[], 3.14, "apples")));
+}
+
+@safe unittest
+{
+    import core.exception : RangeError;
+    import std.exception : assertCTFEable, assertThrown;
+
+    assertCTFEable!(
+    {
+        char[10] buf;
+
+        assert(sformat(buf[], "foo") == "foo");
+        assert(sformat(buf[], "foo%%") == "foo%");
+        assert(sformat(buf[], "foo%s", 'C') == "fooC");
+        assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+        () @trusted {
+            assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+        } ();
+        assert(sformat(buf[], "foo %d", -123) == "foo -123");
+        assert(sformat(buf[], "foo %d", 123) == "foo 123");
+
+        assertThrown!FormatException(sformat(buf[], "foo %s"));
+        assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
+
+        assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+    });
+}
+
+@safe unittest // ensure that sformat avoids the GC
+{
+    import core.memory : GC;
+
+    const a = ["foo", "bar"];
+    const u = () @trusted { return GC.stats().usedSize; } ();
+    char[20] buf;
+    sformat(buf, "%d", 123);
+    sformat(buf, "%s", a);
+    sformat(buf, "%s", 'c');
+    const v = () @trusted { return GC.stats().usedSize; } ();
+    assert(u == v);
+}
+
+version (StdUnittest)
+private void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
+{
+    formatReflectTest(val, fmt, [formatted], fn, ln);
+}
+
+version (StdUnittest)
+private void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
+{
+    import core.exception : AssertError;
+    import std.algorithm.searching : canFind;
+    import std.array : appender;
+    import std.math.operations : isClose;
+    import std.traits : FloatingPointTypeOf;
+
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+
+    auto input = w.data;
+    enforce!AssertError(formatted.canFind(input), input, fn, ln);
+
+    T val2;
+    formattedRead(input, fmt, val2);
+
+    static if (is(FloatingPointTypeOf!T))
+        enforce!AssertError(isClose(val, val2), input, fn, ln);
+    else
+        enforce!AssertError(val == val2, input, fn, ln);
+}
+
+@safe unittest
+{
+    void booleanTest()
+    {
+        auto b = true;
+        formatReflectTest(b, "%s", `true`);
+        formatReflectTest(b, "%b", `1`);
+        formatReflectTest(b, "%o", `1`);
+        formatReflectTest(b, "%d", `1`);
+        formatReflectTest(b, "%u", `1`);
+        formatReflectTest(b, "%x", `1`);
+    }
+
+    void integerTest()
+    {
+        auto n = 127;
+        formatReflectTest(n, "%s", `127`);
+        formatReflectTest(n, "%b", `1111111`);
+        formatReflectTest(n, "%o", `177`);
+        formatReflectTest(n, "%d", `127`);
+        formatReflectTest(n, "%u", `127`);
+        formatReflectTest(n, "%x", `7f`);
+    }
+
+    void floatingTest()
+    {
+        auto f = 3.14;
+        formatReflectTest(f, "%s", `3.14`);
+        formatReflectTest(f, "%e", `3.140000e+00`);
+        formatReflectTest(f, "%f", `3.140000`);
+        formatReflectTest(f, "%g", `3.14`);
+    }
+
+    void charTest()
+    {
+        auto c = 'a';
+        formatReflectTest(c, "%s", `a`);
+        formatReflectTest(c, "%c", `a`);
+        formatReflectTest(c, "%b", `1100001`);
+        formatReflectTest(c, "%o", `141`);
+        formatReflectTest(c, "%d", `97`);
+        formatReflectTest(c, "%u", `97`);
+        formatReflectTest(c, "%x", `61`);
+    }
+
+    void strTest()
+    {
+        auto s = "hello";
+        formatReflectTest(s, "%s",              `hello`);
+        formatReflectTest(s, "%(%c,%)",         `h,e,l,l,o`);
+        formatReflectTest(s, "%(%s,%)",         `'h','e','l','l','o'`);
+        formatReflectTest(s, "[%(<%c>%| $ %)]", `[<h> $ <e> $ <l> $ <l> $ <o>]`);
+    }
+
+    void daTest()
+    {
+        auto a = [1,2,3,4];
+        formatReflectTest(a, "%s",              `[1, 2, 3, 4]`);
+        formatReflectTest(a, "[%(%s; %)]",      `[1; 2; 3; 4]`);
+        formatReflectTest(a, "[%(<%s>%| $ %)]", `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    void saTest()
+    {
+        int[4] sa = [1,2,3,4];
+        formatReflectTest(sa, "%s",              `[1, 2, 3, 4]`);
+        formatReflectTest(sa, "[%(%s; %)]",      `[1; 2; 3; 4]`);
+        formatReflectTest(sa, "[%(<%s>%| $ %)]", `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    void aaTest()
+    {
+        auto aa = [1:"hello", 2:"world"];
+        formatReflectTest(aa, "%s",                    [`[1:"hello", 2:"world"]`, `[2:"world", 1:"hello"]`]);
+        formatReflectTest(aa, "[%(%s->%s, %)]",        [`[1->"hello", 2->"world"]`, `[2->"world", 1->"hello"]`]);
+        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}", [`{[1=hello]; [2=world]}`, `{[2=world]; [1=hello]}`]);
+    }
+
+    import std.exception : assertCTFEable;
+
+    assertCTFEable!(
+    {
+        booleanTest();
+        integerTest();
+        floatingTest();
+        charTest();
+        strTest();
+        daTest();
+        saTest();
+        aaTest();
+    });
+}

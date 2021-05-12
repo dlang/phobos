@@ -412,7 +412,7 @@ package string urlEncode(scope string[string] values) @safe pure
         return "";
 
     import std.array : Appender;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     Appender!string enc;
     enc.reserve(values.length * 128);

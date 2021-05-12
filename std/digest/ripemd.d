@@ -85,20 +85,13 @@ public import std.digest;
     hash = md.finish();
 }
 
-//rotateLeft rotates x left n bits
-private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
-{
-    // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
-    // No assembler required.
-    return (x << n) | (x >> (32-n));
-}
-
 /**
  * Template API RIPEMD160 implementation.
  * See `std.digest` for differences between template and OOP API.
  */
 struct RIPEMD160
 {
+    import core.bitop : rol;
     private:
         // magic initialization constants
         uint[5] _state = [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0]; // state (ABCDE)
@@ -132,40 +125,40 @@ struct RIPEMD160
             @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void GG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x5a827999UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void HH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6ed9eba1UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void II(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x8f1bbcdcUL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void JJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0xa953fd4eUL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         /*
@@ -177,40 +170,40 @@ struct RIPEMD160
             @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void GGG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x7a6d76e9UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void HHH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6d703ef3UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void III(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x5c4dd124UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         static void JJJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
             @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0x50a28be6UL;
-            a = rotateLeft(a, s) + e;
-            c = rotateLeft(c, 10);
+            a = rol(a, s) + e;
+            c = rol(c, 10);
         }
 
         /*

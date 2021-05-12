@@ -23,6 +23,9 @@ type constructor. Unlike `Variant`, `Algebraic` only allows a finite set of
 types, which are specified in the instantiation (e.g. $(D Algebraic!(int,
 string)) may only hold an `int` or a `string`).
 
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
+code. Instead, use $(REF SumType, std,sumtype).)
+
 Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
 prompting the following improvements: (1) better support for arrays; (2) support
 for associative arrays; (3) friendlier behavior towards the garbage collector.
@@ -74,28 +77,53 @@ import std.meta, std.traits, std.typecons;
 
 /++
     Gives the `sizeof` the largest type given.
+
+    See_Also: https://forum.dlang.org/thread/wbpnncxepehgcswhuazl@forum.dlang.org?page=1
   +/
-template maxSize(T...)
+template maxSize(Ts...)
 {
-    static if (T.length == 1)
+    align(1) union Impl
     {
-        enum size_t maxSize = T[0].sizeof;
+        static foreach (i, T; Ts)
+        {
+            static if (!is(T == void))
+                mixin("T _field_", i, ";");
+        }
     }
-    else
-    {
-        import std.algorithm.comparison : max;
-        enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
-    }
+    enum maxSize = Impl.sizeof;
 }
 
 ///
 @safe unittest
 {
+    struct Cat { int a, b, c; }
+
+    align(1) struct S
+    {
+        long l;
+        ubyte b;
+    }
+
+    align(1) struct T
+    {
+        ubyte b;
+        long l;
+    }
+
     static assert(maxSize!(int, long) == 8);
     static assert(maxSize!(bool, byte) == 1);
-
-    struct Cat { int a, b, c; }
     static assert(maxSize!(bool, Cat) == 12);
+    static assert(maxSize!(char) == 1);
+    static assert(maxSize!(char, short, ubyte) == 2);
+    static assert(maxSize!(char, long, ubyte) == 8);
+    import std.algorithm.comparison : max;
+    static assert(maxSize!(long, S) == max(long.sizeof, S.sizeof));
+    static assert(maxSize!(S, T) == max(S.sizeof, T.sizeof));
+    static assert(maxSize!(int, ubyte[7]) == 7);
+    static assert(maxSize!(int, ubyte[3]) == 4);
+    static assert(maxSize!(int, int, ubyte[3]) == 4);
+    static assert(maxSize!(void, int, ubyte[3]) == 4);
+    static assert(maxSize!(void) == 1);
 }
 
 struct This;
@@ -297,11 +325,11 @@ private:
             alias UA = Unqual!A;
             static if (isStaticArray!A && is(typeof(UA.init[0])))
             {
-                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, typeof(UA.init[0])[], AllImplicitConversionTargets!UA);
             }
             else
             {
-                alias MutaTypes = AliasSeq!(UA, ImplicitConversionTargets!UA);
+                alias MutaTypes = AliasSeq!(UA, AllImplicitConversionTargets!UA);
             }
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
@@ -786,7 +814,7 @@ public:
      * Returns `true` if and only if the `VariantN`
      * object holds an object implicitly convertible to type `T`.
      * Implicit convertibility is defined as per
-     * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
+     * $(REF_ALTTEXT AllImplicitConversionTargets, AllImplicitConversionTargets, std,traits).
      */
 
     @property bool convertsTo(T)() const
@@ -1588,6 +1616,8 @@ useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
 manipulation.
 
+$(RED Warning: $(LREF Algebraic) is outdated and not recommended for use in new
+code. Instead, use $(REF SumType, std,sumtype).)
 */
 template Algebraic(T...)
 {
@@ -1932,7 +1962,7 @@ static class VariantException : Exception
     assert( v.peek!(double) );
     assert( v.convertsTo!(real) );
     //@@@ BUG IN COMPILER: DOUBLE SHOULD NOT IMPLICITLY CONVERT TO FLOAT
-    assert( !v.convertsTo!(float) );
+    assert( v.convertsTo!(float) );
     assert( *v.peek!(double) == 3.1413 );
 
     auto u = Variant(v);
@@ -2286,6 +2316,15 @@ static class VariantException : Exception
 
     testPeekWith!(TestStruct!false)();
     testPeekWith!(TestStruct!true)();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18780
+@system unittest
+{
+    int x = 7;
+    Variant a = x;
+    assert(a.convertsTo!ulong);
+    assert(a.convertsTo!uint);
 }
 
 /**

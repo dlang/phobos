@@ -2104,7 +2104,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
-        import std.math : nextafter;
+        import std.math.operations : nextafter;
         NumberType _a = nextafter(cast(NumberType) a, NumberType.infinity);
     }
     else
@@ -2113,7 +2113,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     }
     static if (boundaries[1] == ')')
     {
-        import std.math : nextafter;
+        import std.math.operations : nextafter;
         NumberType _b = nextafter(cast(NumberType) b, -NumberType.infinity);
     }
     else
@@ -2639,7 +2639,7 @@ do
 ///
 @safe @nogc unittest
 {
-    import std.math : feqrel;
+    import std.math.operations : feqrel;
 
     auto rnd = MinstdRand0(42);
 
@@ -2712,7 +2712,7 @@ if (isFloatingPoint!F)
 @safe unittest
 {
     import std.algorithm.iteration : reduce;
-    import std.math : isClose;
+    import std.math.operations : isClose;
 
     auto a = uniformDistribution(5);
     assert(a.length == 5);
@@ -3768,7 +3768,8 @@ Variable names are chosen to match those in Vitter's paper.
 */
     private size_t skipD()
     {
-        import std.math : isNaN, trunc;
+        import std.math.traits : isNaN;
+        import std.math.rounding : trunc;
         // Confirm that the check in Step D1 is valid and we
         // haven't been sent here by mistake
         assert((_alphaInverse * _toSelect) <= _available);

@@ -7,7 +7,7 @@ that allow construction of new, useful general-purpose types.
 $(SCRIPT inhibitQuickIndex = 1;)
 $(DIVC quickindex,
 $(BOOKTABLE,
-$(TR $(TH Category) $(TH Functions))
+$(TR $(TH Category) $(TH Symbols))
 $(TR $(TD Tuple) $(TD
     $(LREF isTuple)
     $(LREF Tuple)
@@ -69,7 +69,8 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 
-import std.format : singleSpec, FormatSpec, formatValue;
+import std.format.spec : singleSpec, FormatSpec;
+import std.format.write : formatValue;
 import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
@@ -817,7 +818,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -849,7 +850,7 @@ if (distinctFieldNames!(Specs))
             {
                 if (field[i] != rhs.field[i])
                 {
-                    import std.math : isNaN;
+                    import std.math.traits : isNaN;
                     static if (isFloatingPoint!(Types[i]))
                     {
                         if (isNaN(field[i]))
@@ -1268,7 +1269,7 @@ if (distinctFieldNames!(Specs))
             return app.data;
         }
 
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
 
         /**
          * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
@@ -1295,7 +1296,9 @@ if (distinctFieldNames!(Specs))
         /// ditto
         void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
         {
-            import std.format : formatElement, formattedWrite, FormatException;
+            import std.format : format, FormatException;
+            import std.format.write : formattedWrite;
+            import std.range : only;
             if (fmt.nested)
             {
                 if (fmt.sep)
@@ -1334,15 +1337,14 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
-                    // TODO: Change this once formatElement() works for shared objects.
+                    // TODO: Change this once format() works for shared objects.
                     static if (is(Type == class) && is(Type == shared))
                     {
                         sink(Type.stringof);
                     }
                     else
                     {
-                        FormatSpec!Char f;
-                        formatElement(sink, field[i], f);
+                        sink(format!("%(%s%)")(only(field[i])));
                     }
                 }
                 sink(footer);
@@ -1611,6 +1613,22 @@ if (distinctFieldNames!(Specs))
     assert(!(t > t));
     assert(!(t < t));
     assert(!(t == t));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=8015
+@safe unittest
+{
+    struct MyStruct
+    {
+        string str;
+        @property string toStr()
+        {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
 }
 
 /**
@@ -2763,7 +2781,7 @@ struct Nullable(T)
         _isNull = false;
     }
 
-    static if (is(T == struct) && hasElaborateDestructor!T)
+    static if (hasElaborateDestructor!T)
     {
         ~this()
         {
@@ -2779,18 +2797,27 @@ struct Nullable(T)
      * is not, then they are not equal. If they are both non-null, then they are
      * equal if their values are equal.
      */
-    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (!is(CommonType!(This, Rhs) == void))
     {
-        if (_isNull)
-            return rhs._isNull;
-        if (rhs._isNull)
-            return false;
-        return _value.payload == rhs._value.payload;
+        static if (is(This == Rhs))
+        {
+            if (_isNull)
+                return rhs._isNull;
+            if (rhs._isNull)
+                return false;
+            return _value.payload == rhs._value.payload;
+        }
+        else
+        {
+            alias Common = CommonType!(This, Rhs);
+            return cast(Common) this == cast(Common) rhs;
+        }
     }
 
     /// Ditto
-    bool opEquals(U)(auto ref const(U) rhs) const
-    if (!is(U : typeof(this)) && is(typeof(this.get == rhs)))
+    bool opEquals(this This, Rhs)(auto ref Rhs rhs)
+    if (is(CommonType!(This, Rhs) == void) && is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value.payload;
     }
@@ -2936,7 +2963,7 @@ struct Nullable(T)
     @safe unittest
     {
         import std.array : appender;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
 
         auto app = appender!string();
         Nullable!int a = 1;
@@ -3071,54 +3098,6 @@ struct Nullable(T)
     {
         return isNull ? fallback : _value.payload;
     }
-
-    //@@@DEPRECATED_2.096@@@
-    deprecated(
-        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-    @system unittest
-    {
-        import core.exception : AssertError;
-        import std.exception : assertThrown, assertNotThrown;
-
-        Nullable!int ni;
-        int i = 42;
-        //`get` is implicitly called. Will throw
-        //an AssertError in non-release mode
-        assertThrown!AssertError(i = ni);
-        assert(i == 42);
-
-        ni = 5;
-        assertNotThrown!AssertError(i = ni);
-        assert(i == 5);
-    }
-
-    //@@@DEPRECATED_2.096@@@
-    deprecated(
-        "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-    @property ref inout(T) get_() inout @safe pure nothrow
-    {
-        return get;
-    }
-
-    ///
-    @safe pure nothrow unittest
-    {
-        int i = 42;
-        Nullable!int ni;
-        int x = ni.get(i);
-        assert(x == i);
-
-        ni = 7;
-        x = ni.get(i);
-        assert(x == 7);
-    }
-
-    /**
-     * Implicitly converts to `T`.
-     * `this` must not be in the null state.
-     * This feature is deprecated and will be removed after 2.096.
-     */
-    alias get_ this;
 }
 
 /// ditto
@@ -3171,33 +3150,6 @@ auto nullable(T)(T t)
     a.nullify();
     assert(a.isNull);
     assertThrown!Throwable(a.get);
-}
-
-//@@@DEPRECATED_2.096@@@
-deprecated(
-    "Implicit conversion with `alias Nullable.get this` will be removed after 2.096. Please use `.get` explicitly.")
-@system unittest
-{
-    import std.exception : assertThrown;
-
-    Nullable!int a;
-    assert(a.isNull);
-    assertThrown!Throwable(a.get);
-    a = 5;
-    assert(!a.isNull);
-    assert(a == 5);
-    assert(a != 3);
-    assert(a.get != 3);
-    a.nullify();
-    assert(a.isNull);
-    a = 3;
-    assert(a == 3);
-    a *= 6;
-    assert(a == 18);
-    a = a;
-    assert(a == 18);
-    a.nullify();
-    assertThrown!Throwable(a += 2);
 }
 @safe unittest
 {
@@ -3618,6 +3570,41 @@ deprecated(
     assert(typeid(Nullable!S).getHash(&s2) == 0);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21704
+@safe unittest
+{
+    import std.array : staticArray;
+
+    bool destroyed;
+
+    struct Probe
+    {
+        ~this() { destroyed = true; }
+    }
+
+    {
+        Nullable!(Probe[1]) test = [Probe()].staticArray;
+        destroyed = false;
+    }
+    assert(destroyed);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21705
+@safe unittest
+{
+    static struct S
+    {
+        int n;
+        bool opEquals(S rhs) { return n == rhs.n; }
+    }
+
+    Nullable!S test1 = S(1), test2 = S(1);
+    S s = S(1);
+
+    assert(test1 == s);
+    assert(test1 == test2);
+}
+
 /**
 Just like `Nullable!T`, except that the null state is defined as a
 particular value. For example, $(D Nullable!(uint, uint.max)) is an
@@ -3648,7 +3635,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -4157,7 +4145,8 @@ Params:
 
     template toString()
     {
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
         // Needs to be a template because of https://issues.dlang.org/show_bug.cgi?id=13737.
         void toString()(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char fmt)
         {
@@ -4462,7 +4451,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 ///
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static abstract class C
     {
@@ -4485,7 +4474,7 @@ alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFu
 
 @system unittest
 {
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     // return default
     {
@@ -6640,6 +6629,15 @@ refCountedStore.ensureInitialized). Otherwise, just issues $(D
 assert(refCountedStore.isInitialized)).
  */
     alias refCountedPayload this;
+
+    static if (is(T == struct) && !is(typeof((ref T t) => t.toString())))
+    {
+        string toString(this This)()
+        {
+            import std.conv : to;
+            return to!string(refCountedPayload);
+        }
+    }
 }
 
 ///
@@ -6767,6 +6765,24 @@ pure @system unittest
     }
     auto rc = RefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
     assert(rc.x == 5);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20502
+@system unittest
+{
+    import std.conv : to;
+    // Check that string conversion is transparent for refcounted
+    // structs that do not have either toString or alias this.
+    struct A { Object a; }
+    auto a  = A(new Object());
+    auto r = refCounted(a);
+    assert(to!string(r) == to!string(a));
+    assert(to!string(cast(const) r) == to!string(cast(const) a));
+    // Check that string conversion is still transparent for refcounted
+    // structs that have alias this.
+    struct B { int b; alias b this; }
+    struct C { B b; alias b this; }
+    assert(to!string(refCounted(C(B(123)))) == to!string(C(B(123))));
 }
 
 /**
@@ -7021,13 +7037,7 @@ mixin template Proxy(alias a)
             // built-in type field, manifest constant, and static non-mutable field
             enum opDispatch = mixin("a."~name);
         }
-        else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
-        {
-            // field or property function
-            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
-            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
-        }
-        else
+        else static if (__traits(isTemplate, mixin("a."~name)))
         {
             // member template
             template opDispatch(T...)
@@ -7036,6 +7046,13 @@ mixin template Proxy(alias a)
                 auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~targs~"(args)"); }
             }
         }
+        else
+        {
+            // field or property function
+            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
+            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
+        }
+
     }
 
     import std.traits : isArray;
@@ -7125,7 +7142,7 @@ mixin template Proxy(alias a)
  */
 @safe unittest
 {
-    import std.math;
+    import std.math.traits : isInfinity;
 
     float f = 1.0;
     assert(!f.isInfinity);

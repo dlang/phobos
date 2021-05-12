@@ -2890,7 +2890,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toISOString(writer);
         formattedWrite!("T%02d%02d%02d")(
             writer,
@@ -2967,7 +2967,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toISOExtString(writer);
         formattedWrite!("T%02d:%02d:%02d")(
             writer,
@@ -3043,7 +3043,7 @@ public:
     void toSimpleString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toSimpleString(writer);
         formattedWrite!(" %02d:%02d:%02d")(
             writer,
@@ -7365,7 +7365,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -7449,7 +7449,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -7533,7 +7533,7 @@ public:
     void toSimpleString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -9064,7 +9064,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
     }
 
@@ -9111,7 +9111,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
     }
 

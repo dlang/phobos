@@ -357,7 +357,7 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
     }
     else
     {
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
         static assert(isPowerOf2(alignment));
         mixin AlignedBlockListImpl!false;
     }
@@ -517,7 +517,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
     }
     else
     {
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
         static assert(isPowerOf2(alignment));
         mixin AlignedBlockListImpl!true;
     }

@@ -61,6 +61,7 @@ std/socket.d @CyberShadow @klickverbot
 # std/stdint.d
 std/stdio.d @CyberShadow @schveiguy
 std/string.d @burner @JackStouffer
+std/sumtype.d @pbackus
 # std/system.d
 std/traits.d @Biotronic @klickverbot @ZombineDev
 std/typecons.d @Biotronic @MetaLang @ZombineDev

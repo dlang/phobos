@@ -183,20 +183,20 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableStrin
     assert(arr.empty);
 }
 
-@system pure nothrow unittest
+@safe pure nothrow unittest
 {
     immutable int[] a = [1, 2, 3, 4];
     auto b = (&a).array;
     assert(b == a);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
-        void opAssign(Foo)
+        noreturn opAssign(Foo)
         {
             assert(0);
         }
@@ -210,14 +210,14 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableStrin
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12315
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct Bug12315 { immutable int i; }
     enum bug12315 = [Bug12315(123456789)].array();
     static assert(bug12315[0].i == 123456789);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.range;
     static struct S{int* p;}
@@ -225,12 +225,10 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableStrin
     assert(a.length == 5);
 }
 
-version (StdUnittest)
-    private extern(C) void _d_delarray_t(void[] *p, TypeInfo_Struct ti);
-
 // https://issues.dlang.org/show_bug.cgi?id=18995
 @system unittest
 {
+    import core.memory : __delete;
     int nAlive = 0;
     struct S
     {
@@ -247,10 +245,18 @@ version (StdUnittest)
     assert(nAlive == 3);
 
     // No good way to ensure the GC frees this, just call the lifetime function
-    // directly. If delete wasn't deprecated, this is what delete would do.
-    _d_delarray_t(cast(void[]*)&arr, typeid(S));
+    // directly.
+    __delete(arr);
 
     assert(nAlive == 0);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    //Turn down infinity:
+    static assert(!is(typeof(
+        repeat(1).array()
+    )));
 }
 
 /**
@@ -278,7 +284,7 @@ if (isAutodecodableString!String)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.range.primitives : isRandomAccessRange;
     import std.traits : isAutodecodableString;
@@ -361,7 +367,7 @@ if (isAutodecodableString!String)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=8233
-@safe unittest
+@safe pure nothrow unittest
 {
     assert(array("hello world"d) == "hello world"d);
     immutable a = [1, 2, 3, 4, 5];
@@ -389,7 +395,7 @@ if (isAutodecodableString!String)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=9824
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct S
     {
@@ -401,7 +407,7 @@ if (isAutodecodableString!String)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10220
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.exception;
@@ -419,14 +425,6 @@ if (isAutodecodableString!String)
         auto r = S(1).repeat(2).array();
         assert(equal(r, [S(1), S(1)]));
     });
-}
-
-@safe unittest
-{
-    //Turn down infinity:
-    static assert(!is(typeof(
-        repeat(1).array()
-    )));
 }
 
 /**
@@ -573,7 +571,7 @@ if (isInputRange!Values && isInputRange!Keys)
 
 // Cannot be version (StdUnittest) - recursive instantiation error
 // https://issues.dlang.org/show_bug.cgi?id=11053
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.typecons;
     static assert(!__traits(compiles, [ 1, 2, 3 ].assocArray()));
@@ -583,7 +581,7 @@ if (isInputRange!Values && isInputRange!Keys)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13909
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
@@ -594,7 +592,7 @@ if (isInputRange!Values && isInputRange!Keys)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=5502
-@safe unittest
+@safe pure nothrow unittest
 {
     auto a = assocArray([0, 1, 2], ["a", "b", "c"]);
     static assert(is(typeof(a) == string[int]));
@@ -606,7 +604,7 @@ if (isInputRange!Values && isInputRange!Keys)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=5502
-@safe unittest
+@safe pure unittest
 {
     import std.algorithm.iteration : filter, map;
     import std.range : enumerate;
@@ -693,7 +691,7 @@ if (isAssociativeArray!AA)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.sorting : sort;
     import std.typecons : tuple, Tuple;
@@ -720,7 +718,7 @@ if (isAssociativeArray!AA)
     ]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.typecons : tuple, Tuple;
     import std.meta : AliasSeq;
@@ -745,7 +743,7 @@ if (isAssociativeArray!AA)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17711
-@safe unittest
+@safe pure nothrow unittest
 {
     const(int[string]) aa = [ "abc": 123 ];
 
@@ -1018,7 +1016,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10637
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct S
     {
@@ -1052,7 +1050,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(b[0].p == null);
 }
 
-@safe nothrow unittest
+@safe pure nothrow unittest
 {
     static struct S1
     {
@@ -1136,7 +1134,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     static assert(test == "three"d);
 }
 
-@safe nothrow unittest
+@safe pure nothrow unittest
 {
     static void test(L, R)(L l, R r)
     {
@@ -1808,7 +1806,7 @@ if (isSomeString!S)
 @safe unittest
 {
     import std.conv : to;
-    import std.format;
+    import std.format : format;
     import std.typecons;
 
     static auto makeEntry(S)(string l, string[] r)
@@ -3615,7 +3613,7 @@ if (isDynamicArray!A)
      */
     string toString()() const
     {
-        import std.format : singleSpec;
+        import std.format.spec : singleSpec;
 
         auto app = appender!string();
         auto spec = singleSpec("%s");
@@ -3636,7 +3634,7 @@ if (isDynamicArray!A)
         return app.data;
     }
 
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
 
     /// ditto
     template toString(Writer)
@@ -3644,7 +3642,7 @@ if (isDynamicArray!A)
     {
         void toString(ref Writer w, scope const ref FormatSpec!char fmt) const
         {
-            import std.format : formatValue;
+            import std.format.write : formatValue;
             import std.range.primitives : put;
             put(w, Unqual!(typeof(this)).stringof);
             put(w, '(');
@@ -3672,7 +3670,8 @@ if (isDynamicArray!A)
 
 @safe pure unittest
 {
-    import std.format : format, singleSpec;
+    import std.format : format;
+    import std.format.spec : singleSpec;
 
     auto app = appender!(int[])();
     app.put(1);

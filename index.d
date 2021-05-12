@@ -444,11 +444,15 @@ $(BOOKTABLE ,
     )
     $(TR
         $(TDNW $(MREF std,variant))
-        $(TD Discriminated unions and algebraic types.)
+        $(TD Dynamically-typed variable that can hold a value of any type.)
     )
     $(TR
         $(TDNW $(MREF core,bitop))
         $(TD Low level bit manipulation.)
+    )
+    $(TR
+        $(TDNW $(MREF std,sumtype))
+        $(TD Type-safe discriminated union.)
     )
     $(LEADINGROW Vector programming)
     $(TR

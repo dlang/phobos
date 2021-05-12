@@ -126,7 +126,7 @@ private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LIN
 private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
     if (source.empty)
-        throw parseError(text("unexpected end of input when expecting", "\"", c, "\""));
+        throw parseError(text("unexpected end of input when expecting \"", c, "\""));
     if (source.front != c)
         throw parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
@@ -145,7 +145,8 @@ private
         else
         {
             import std.array : appender;
-            import std.format : FormatSpec, formatValue;
+            import std.format.spec : FormatSpec;
+            import std.format.write : formatValue;
 
             auto w = appender!T();
             FormatSpec!(ElementEncodingType!T) f;
@@ -1038,7 +1039,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
         }
 
         import std.array : appender;
-        import std.format : FormatSpec, formatValue;
+        import std.format.spec : FormatSpec;
+        import std.format.write : formatValue;
 
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
@@ -1100,7 +1102,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
     !isInfinite!S && isExactSomeString!T && !isCopyable!S && !isStaticArray!S)
 {
     import std.array : appender;
-    import std.format : FormatSpec, formatValue;
+    import std.format.spec : FormatSpec;
+    import std.format.write : formatValue;
 
     auto w = appender!T();
     FormatSpec!(ElementEncodingType!T) f;
@@ -1490,7 +1493,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 {
     static if (isFloatingPoint!S && isIntegral!T)
     {
-        import std.math : isNaN;
+        import std.math.traits : isNaN;
         if (value.isNaN) throw new ConvException("Input was NaN");
     }
 
@@ -1582,7 +1585,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     double d = double.nan;
     float f = to!float(d);
@@ -2133,7 +2136,9 @@ template roundTo(Target)
 {
     Target roundTo(Source)(Source value)
     {
-        import std.math : abs, log2, trunc;
+        import core.math : abs = fabs;
+        import std.math.exponential : log2;
+        import std.math.rounding : trunc;
 
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
@@ -3335,7 +3340,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         ldval = ldval * msscale + lsdec;
     if (isHex)
     {
-        import std.math : ldexp;
+        import core.math : ldexp;
 
         // Exponent is power of 2, not power of 10
         ldval = ldexp(ldval,exp);
@@ -3386,9 +3391,9 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 ///
 @safe unittest
 {
-    import std.math : isClose;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN, isInfinity;
     import std.typecons : Flag, Yes, No;
-    import std.math : isNaN, isInfinity;
     auto str = "123.456";
     assert(parse!double(str).isClose(123.456));
     auto str2 = "123.456";
@@ -3419,7 +3424,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @safe unittest
 {
     import std.exception;
-    import std.math : isNaN, fabs, isInfinity;
+    import std.math.traits : isNaN, isInfinity;
+    import std.math.algebraic : fabs;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -5045,7 +5051,7 @@ public import core.lifetime : emplace;
 {
     import std.array : array;
     import std.datetime : SysTime, UTC;
-    import std.math : isNaN;
+    import std.math.traits : isNaN;
 
     static struct A
     {

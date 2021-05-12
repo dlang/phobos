@@ -59,6 +59,7 @@
  * ))
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
+ *           $(LREF AllImplicitConversionTargets)
  *           $(LREF ImplicitConversionTargets)
  *           $(LREF CopyTypeQualifiers)
  *           $(LREF CopyConstness)
@@ -779,8 +780,6 @@ private template fqnSym(alias T)
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
-    import std.format : format;
-
     // Convenience tags
     enum {
         _const = 0,
@@ -833,7 +832,7 @@ private template fqnType(T,
             import std.range : zip;
 
             string result = join(
-                map!(a => format("%s%s", a[0], a[1]))(
+                map!(a => (a[0] ~ a[1]))(
                     zip([staticMap!(storageClassesString, parameterStC)],
                         [staticMap!(fullyQualifiedName, parameters)])
                 ),
@@ -851,7 +850,7 @@ private template fqnType(T,
         enum linkage = functionLinkage!T;
 
         if (linkage != "D")
-            return format("extern(%s) ", linkage);
+            return "extern(" ~ linkage ~ ") ";
         else
             return "";
     }
@@ -864,16 +863,15 @@ private template fqnType(T,
         static if (attrs == FA.none)
             return "";
         else
-            return format("%s%s%s%s%s%s%s%s",
-                 attrs & FA.pure_ ? " pure" : "",
-                 attrs & FA.nothrow_ ? " nothrow" : "",
-                 attrs & FA.ref_ ? " ref" : "",
-                 attrs & FA.property ? " @property" : "",
-                 attrs & FA.trusted ? " @trusted" : "",
-                 attrs & FA.safe ? " @safe" : "",
-                 attrs & FA.nogc ? " @nogc" : "",
-                 attrs & FA.return_ ? " return" : ""
-            );
+            return
+                (attrs & FA.pure_ ? " pure" : "")
+                ~ (attrs & FA.nothrow_ ? " nothrow" : "")
+                ~ (attrs & FA.ref_ ? " ref" : "")
+                ~ (attrs & FA.property ? " @property" : "")
+                ~ (attrs & FA.trusted ? " @trusted" : "")
+                ~ (attrs & FA.safe ? " @safe" : "")
+                ~ (attrs & FA.nogc ? " @nogc" : "")
+                ~ (attrs & FA.return_ ? " return" : "");
     }
 
     string addQualifiers(string typeString,
@@ -882,15 +880,12 @@ private template fqnType(T,
         auto result = typeString;
         if (addShared)
         {
-            result = format("shared(%s)", result);
+            result = "shared(" ~ result ~")";
         }
         if (addConst || addImmutable || addInout)
         {
-            result = format("%s(%s)",
-                addConst ? "const" :
-                    addImmutable ? "immutable" : "inout",
-                result
-            );
+            result = (addConst ? "const" : addImmutable ? "immutable" : "inout")
+                ~ "(" ~ result ~ ")";
         }
         return result;
     }
@@ -927,61 +922,62 @@ private template fqnType(T,
     }
     else static if (isStaticArray!T)
     {
+        import std.conv : to;
         enum fqnType = chain!(
-            format("%s[%s]", fqnType!(typeof(T.init[0]), qualifiers), T.length)
+            fqnType!(typeof(T.init[0]), qualifiers) ~ "[" ~ to!string(T.length) ~ "]"
         );
     }
     else static if (isArray!T)
     {
         enum fqnType = chain!(
-            format("%s[]", fqnType!(typeof(T.init[0]), qualifiers))
+            fqnType!(typeof(T.init[0]), qualifiers) ~ "[]"
         );
     }
     else static if (isAssociativeArray!T)
     {
         enum fqnType = chain!(
-            format("%s[%s]", fqnType!(ValueType!T, qualifiers), fqnType!(KeyType!T, noQualifiers))
+            fqnType!(ValueType!T, qualifiers) ~ '[' ~ fqnType!(KeyType!T, noQualifiers) ~ ']'
         );
     }
     else static if (isSomeFunction!T)
     {
         static if (is(T F == delegate))
         {
-            enum qualifierString = format("%s%s",
-                is(F == shared) ? " shared" : "",
-                is(F == inout) ? " inout" :
-                is(F == immutable) ? " immutable" :
-                is(F == const) ? " const" : ""
-            );
-            enum formatStr = "%s%s delegate(%s)%s%s";
+            enum qualifierString =
+                (is(F == shared) ? " shared" : "")
+                ~ (is(F == inout) ? " inout" :
+                    is(F == immutable) ? " immutable" :
+                    is(F == const) ? " const" : "");
             enum fqnType = chain!(
-                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
-                    parametersTypeString!(T), functionAttributeString!T, qualifierString)
+                linkageString!T
+                ~ fqnType!(ReturnType!T, noQualifiers)
+                ~ " delegate(" ~ parametersTypeString!(T) ~ ")"
+                ~ functionAttributeString!T
+                ~ qualifierString
             );
         }
         else
         {
-            static if (isFunctionPointer!T)
-                enum formatStr = "%s%s function(%s)%s";
-            else
-                enum formatStr = "%s%s(%s)%s";
-
             enum fqnType = chain!(
-                format(formatStr, linkageString!T, fqnType!(ReturnType!T, noQualifiers),
-                    parametersTypeString!(T), functionAttributeString!T)
+                linkageString!T
+                ~ fqnType!(ReturnType!T, noQualifiers)
+                ~ (isFunctionPointer!T ? " function(" : "(")
+                ~ parametersTypeString!(T) ~ ")"
+                ~ functionAttributeString!T
             );
         }
     }
     else static if (isPointer!T)
     {
         enum fqnType = chain!(
-            format("%s*", fqnType!(PointerTarget!T, qualifiers))
+            fqnType!(PointerTarget!T, qualifiers) ~ "*"
         );
     }
     else static if (is(T : __vector(V[N]), V, size_t N))
     {
+        import std.conv : to;
         enum fqnType = chain!(
-            format("__vector(%s[%s])", fqnType!(V, qualifiers), N)
+            "__vector(" ~ fqnType!(V, qualifiers) ~ "[" ~ N.to!string ~ "])"
         );
     }
     else
@@ -2739,14 +2735,17 @@ template hasNested(T)
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If `T` isn't a struct, class, or union returns a tuple
+ * If `T` isn't a struct, class, interface or union returns a tuple
  * with one element `T`.
+ *
+ * History:
+ *   - Returned `AliasSeq!(Interface)` for interfaces prior to 2.097
  */
 template Fields(T)
 {
     static if (is(T == struct) || is(T == union))
         alias Fields = typeof(T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias Fields = typeof(T.tupleof);
     else
         alias Fields = AliasSeq!T;
@@ -2785,8 +2784,10 @@ alias FieldTypeTuple = Fields;
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(is(FieldTypeTuple!NestedClass == AliasSeq!int));
-}
 
+    static interface I {}
+    static assert(is(Fields!I == AliasSeq!()));
+}
 
 //Required for FieldNameTuple
 private enum NameOf(alias T) = T.stringof;
@@ -2797,15 +2798,18 @@ private enum NameOf(alias T) = T.stringof;
  * hidden fields like the virtual function table pointer or a context pointer
  * for nested types.
  * Inherited fields (for classes) are not included.
- * If `T` isn't a struct, class, or union, an
+ * If `T` isn't a struct, class, interface or union, an
  * expression tuple with an empty string is returned.
+ *
+ * History:
+ *   - Returned `AliasSeq!""` for interfaces prior to 2.097
  */
 template FieldNameTuple(T)
 {
     import std.meta : staticMap;
     static if (is(T == struct) || is(T == union))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
-    else static if (is(T == class))
+    else static if (is(T == class) || is(T == interface))
         alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
     else
         alias FieldNameTuple = AliasSeq!"";
@@ -2849,6 +2853,9 @@ template FieldNameTuple(T)
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(FieldNameTuple!NestedClass == AliasSeq!"a");
+
+    interface I {}
+    static assert(FieldNameTuple!I == AliasSeq!());
 }
 
 
@@ -5014,11 +5021,154 @@ Returns:
     An $(REF AliasSeq,std,meta) with all possible target types of an implicit
     conversion `T`.
 
-    If `T` is a class derived from `Object`, the the result of
+    If `T` is a class derived from `Object`, the result of
     $(LREF TransitiveBaseTypeTuple) is returned.
 
     If the type is not a built-in value type or a class derived from
-    `Object`, the an empty $(REF AliasSeq,std,meta) is returned.
+    `Object`, an empty $(REF AliasSeq,std,meta) is returned.
+
+See_Also:
+    $(LREF isImplicitlyConvertible)
+ */
+template AllImplicitConversionTargets(T)
+{
+    static if (is(T == bool))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == byte))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == ubyte))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(byte, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real, char, wchar, dchar);
+    else static if (is(T == short))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(ushort, int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == ushort))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(short, int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == int))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == uint))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(int, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == long))
+        alias AllImplicitConversionTargets = AliasSeq!(ulong, float, double, real);
+    else static if (is(T == ulong))
+        alias AllImplicitConversionTargets = AliasSeq!(long, float, double, real);
+    else static if (is(cent) && is(T == cent))
+        alias AllImplicitConversionTargets = AliasSeq!(UnsignedCentTypeList, float, double, real);
+    else static if (is(ucent) && is(T == ucent))
+        alias AllImplicitConversionTargets = AliasSeq!(SignedCentTypeList, float, double, real);
+    else static if (is(T == float))
+        alias AllImplicitConversionTargets = AliasSeq!(double, real);
+    else static if (is(T == double))
+        alias AllImplicitConversionTargets = AliasSeq!(float, real);
+    else static if (is(T == real))
+        alias AllImplicitConversionTargets = AliasSeq!(float, double);
+    else static if (is(T == char))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(wchar, dchar, byte, ubyte, short, ushort,
+                       int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T == wchar))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(dchar, short, ushort, int, uint, long, ulong, CentTypeList,
+                       float, double, real);
+    else static if (is(T == dchar))
+        alias AllImplicitConversionTargets =
+            AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
+    else static if (is(T : typeof(null)))
+        alias AllImplicitConversionTargets = AliasSeq!(typeof(null));
+    else static if (is(T == class))
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
+    else static if (is(T == interface))
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), InterfacesTuple!(T));
+    else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
+    {
+       static if (is(typeof(T.init[0]) == shared))
+           alias AllImplicitConversionTargets =
+           AliasSeq!(const(shared(Unqual!(typeof(T.init[0]))))[]);
+       else
+           alias AllImplicitConversionTargets =
+           AliasSeq!(const(Unqual!(typeof(T.init[0])))[]);
+    }
+    else static if (is(T : void*))
+        alias AllImplicitConversionTargets = AliasSeq!(void*);
+    else
+        alias AllImplicitConversionTargets = AliasSeq!();
+}
+
+///
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    static assert(is(AllImplicitConversionTargets!(ulong) == AliasSeq!(long, float, double, real)));
+    static assert(is(AllImplicitConversionTargets!(int) == AliasSeq!(uint, long, ulong, float, double, real)));
+    static assert(is(AllImplicitConversionTargets!(float) == AliasSeq!(double, real)));
+    static assert(is(AllImplicitConversionTargets!(double) == AliasSeq!(float, real)));
+
+    static assert(is(AllImplicitConversionTargets!(char) == AliasSeq!(
+        wchar, dchar, byte, ubyte, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(AllImplicitConversionTargets!(wchar) == AliasSeq!(
+        dchar, short, ushort, int, uint, long, ulong, float, double, real
+    )));
+    static assert(is(AllImplicitConversionTargets!(dchar) == AliasSeq!(
+        int, uint, long, ulong, float, double, real
+    )));
+
+    static assert(is(AllImplicitConversionTargets!(string) == AliasSeq!(const(char)[])));
+    static assert(is(AllImplicitConversionTargets!(void*) == AliasSeq!(void*)));
+
+    interface A {}
+    interface B {}
+    class C : A, B {}
+
+    static assert(is(AllImplicitConversionTargets!(C) == AliasSeq!(Object, A, B)));
+    static assert(is(AllImplicitConversionTargets!(const C) == AliasSeq!(const Object, const A, const B)));
+    static assert(is(AllImplicitConversionTargets!(immutable C) == AliasSeq!(
+        immutable Object, immutable A, immutable B
+    )));
+
+    interface I : A, B {}
+
+    static assert(is(AllImplicitConversionTargets!(I) == AliasSeq!(A, B)));
+    static assert(is(AllImplicitConversionTargets!(const I) == AliasSeq!(const A, const B)));
+    static assert(is(AllImplicitConversionTargets!(immutable I) == AliasSeq!(
+        immutable A, immutable B
+    )));
+}
+
+@safe unittest
+{
+    static assert(is(AllImplicitConversionTargets!(double)[0] == float));
+    static assert(is(AllImplicitConversionTargets!(double)[1] == real));
+    static assert(is(AllImplicitConversionTargets!(string)[0] == const(char)[]));
+}
+
+
+/**
+Params:
+    T = The type to check
+
+Warning:
+    This template is considered out-dated. It will be removed from
+    Phobos in 2.107.0. Please use $(LREF AllImplicitConversionTargets) instead.
+
+Returns:
+    An $(REF AliasSeq,std,meta) with all possible target types of an implicit
+    conversion `T`.
+
+    If `T` is a class derived from `Object`, the result of
+    $(LREF TransitiveBaseTypeTuple) is returned.
+
+    If the type is not a built-in value type or a class derived from
+    `Object`, an empty $(REF AliasSeq,std,meta) is returned.
 
 Note:
     The possible targets are computed more conservatively than the
@@ -5028,6 +5178,9 @@ Note:
 See_Also:
     $(LREF isImplicitlyConvertible)
  */
+// @@@DEPRECATED_[2.107.0]@@@
+deprecated("ImplicitConversionTargets has been deprecated in favour of AllImplicitConversionTargets "
+   ~ "and will be removed in 2.107.0")
 template ImplicitConversionTargets(T)
 {
     static if (is(T == bool))
@@ -5096,8 +5249,7 @@ template ImplicitConversionTargets(T)
         alias ImplicitConversionTargets = AliasSeq!();
 }
 
-///
-@safe unittest
+deprecated @safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -5130,7 +5282,7 @@ template ImplicitConversionTargets(T)
     )));
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     static assert(is(ImplicitConversionTargets!(double)[0] == real));
     static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
@@ -7263,19 +7415,7 @@ template isTypeTuple(T...)
 /**
 Detect whether symbol or type `T` is a function pointer.
  */
-template isFunctionPointer(T...)
-if (T.length == 1)
-{
-    static if (is(T[0] U) || is(typeof(T[0]) U))
-    {
-        static if (is(U F : F*) && is(F == function))
-            enum bool isFunctionPointer = true;
-        else
-            enum bool isFunctionPointer = false;
-    }
-    else
-        enum bool isFunctionPointer = false;
-}
+enum bool isFunctionPointer(alias T) = is(typeof(*T) == function);
 
 ///
 @safe unittest
@@ -7299,22 +7439,7 @@ if (T.length == 1)
 /**
 Detect whether symbol or type `T` is a delegate.
 */
-template isDelegate(T...)
-if (T.length == 1)
-{
-    static if (is(typeof(& T[0]) U : U*) && is(typeof(& T[0]) U == delegate))
-    {
-        // T is a (nested) function symbol.
-        enum bool isDelegate = true;
-    }
-    else static if (is(T[0] W) || is(typeof(T[0]) W))
-    {
-        // T is an expression or a type.  Take the type of it and examine.
-        enum bool isDelegate = is(W == delegate);
-    }
-    else
-        enum bool isDelegate = false;
-}
+enum bool isDelegate(alias T) = is(typeof(T) == delegate) || is(T == delegate);
 
 ///
 @safe unittest

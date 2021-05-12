@@ -82,6 +82,7 @@ $(TR
         $(SUBREF iteration, mean)
         $(SUBREF iteration, permutations)
         $(SUBREF iteration, reduce)
+        $(SUBREF iteration, splitWhen)
         $(SUBREF iteration, splitter)
         $(SUBREF iteration, substitute)
         $(SUBREF iteration, sum)

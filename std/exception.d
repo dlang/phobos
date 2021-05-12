@@ -509,7 +509,7 @@ T enforce(T)(T value, lazy Throwable ex)
     assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
-private void bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
+private noreturn bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
@@ -637,99 +637,6 @@ alias errnoEnforce = enforce!ErrnoException;
     char[100] buf;
     auto line = fgets(buf.ptr, buf.length, f);
     enforce(line !is null); // expect a non-empty line
-}
-
-// @@@DEPRECATED_2.089@@@
-/++
-    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.089.)
-
-    If `!value` is `false`, `value` is returned. Otherwise,
-    $(D new E(msg, file, line)) is thrown. Or if `E` doesn't take a message
-    and can be constructed with $(D new E(file, line)), then
-    $(D new E(file, line)) will be thrown.
-
-    Example:
-    --------------------
-    auto f = enforceEx!FileMissingException(fopen("data.txt"));
-    auto line = readln(f);
-    enforceEx!DataCorruptionException(line.length);
-    --------------------
- +/
-deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
-template enforceEx(E : Throwable)
-if (is(typeof(new E("", string.init, size_t.init))))
-{
-    /++ Ditto +/
-    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
-    {
-        if (!value) throw new E(msg, file, line);
-        return value;
-    }
-}
-
-/+ Ditto +/
-deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
-template enforceEx(E : Throwable)
-if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.init, size_t.init))))
-{
-    /++ Ditto +/
-    T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
-    {
-        if (!value) throw new E(file, line);
-        return value;
-    }
-}
-
-deprecated
-@system unittest
-{
-    import core.exception : OutOfMemoryError;
-    import std.array : empty;
-    assertNotThrown(enforceEx!Exception(true));
-    assertNotThrown(enforceEx!Exception(true, "blah"));
-    assertNotThrown(enforceEx!OutOfMemoryError(true));
-
-    {
-        auto e = collectException(enforceEx!Exception(false));
-        assert(e !is null);
-        assert(e.msg.empty);
-        assert(e.file == __FILE__);
-        assert(e.line == __LINE__ - 4);
-    }
-
-    {
-        auto e = collectException(enforceEx!Exception(false, "hello", "file", 42));
-        assert(e !is null);
-        assert(e.msg == "hello");
-        assert(e.file == "file");
-        assert(e.line == 42);
-    }
-
-    {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
-        assert(e !is null);
-        assert(e.msg == "Memory allocation failed");
-        assert(e.file == __FILE__);
-        assert(e.line == __LINE__ - 4);
-    }
-
-    {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
-        assert(e !is null);
-        assert(e.msg == "Memory allocation failed");
-        assert(e.file == "file");
-        assert(e.line == 42);
-    }
-
-    static assert(!is(typeof(enforceEx!int(true))));
-}
-
-deprecated
-@safe unittest
-{
-    alias enf = enforceEx!Exception;
-    assertNotThrown(enf(true));
-    assertThrown(enf(false, "blah"));
 }
 
 /++
@@ -1049,7 +956,7 @@ T assumeWontThrow(T)(lazy T expr,
 ///
 @safe unittest
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     // This function may throw.
     int squareRoot(int x)
