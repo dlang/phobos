@@ -104,7 +104,7 @@ if (is(T == float) || is(T == double)
     }
 
     // save integer part
-    char[1] first = '0' + ((mnt >> (T.mant_dig - 1)) & 1);
+    char first = '0' + ((mnt >> (T.mant_dig - 1)) & 1);
     mnt &= (1L << (T.mant_dig - 1)) - 1;
 
     static if (is(T == float) || (is(T == real) && T.mant_dig == 64))
@@ -117,8 +117,8 @@ if (is(T == float) || is(T == double)
     static assert(mant_len % 4 == 0, "mantissa with wrong length");
 
     // print full mantissa
-    char[(mant_len - 1) / 4 + 2] hex_mant;
-    size_t hex_mant_pos = 1;
+    char[(mant_len - 1) / 4 + 3] hex_mant;
+    size_t hex_mant_pos = 2;
     size_t pos = mant_len;
 
     auto gap = 39 - 32 * is_upper;
@@ -131,10 +131,11 @@ if (is(T == float) || is(T == double)
         // has been replaced with an expression without branches, doing the same
         hex_mant[hex_mant_pos++] = cast(char) (tmp + gap * ((tmp + 6) >> 4) + '0');
     }
-    hex_mant[0] = '.';
+    hex_mant[0] = first;
+    hex_mant[1] = '.';
 
     if (f.precision == f.UNSPECIFIED)
-        f.precision = cast(int) hex_mant_pos - 1;
+        f.precision = cast(int) hex_mant_pos - 2;
 
     auto exp_sgn = exp >= 0 ? '+' : '-';
     if (exp < 0) exp = -exp;
@@ -158,88 +159,39 @@ if (is(T == float) || is(T == double)
     exp_str[--exp_pos] = exp_sgn;
     exp_str[--exp_pos] = is_upper ? 'P' : 'p';
 
-    if (f.precision < hex_mant_pos - 1)
+    if (f.precision < hex_mant_pos - 2)
     {
-        enum roundType { ZERO, LOWER, FIVE, UPPER }
-        roundType next;
+        import std.format.internal.write : RoundingClass, round;
 
-        if (hex_mant[f.precision + 1] == '0')
-            next = roundType.ZERO;
-        else if (hex_mant[f.precision + 1] < '8')
-            next = roundType.LOWER;
-        else if (hex_mant[f.precision + 1] > '8')
-            next = roundType.UPPER;
+        RoundingClass rc;
+
+        if (hex_mant[f.precision + 2] == '0')
+            rc = RoundingClass.ZERO;
+        else if (hex_mant[f.precision + 2] < '8')
+            rc = RoundingClass.LOWER;
+        else if (hex_mant[f.precision + 2] > '8')
+            rc = RoundingClass.UPPER;
         else
-            next = roundType.FIVE;
+            rc = RoundingClass.FIVE;
 
-        if (next == roundType.ZERO || next == roundType.FIVE)
+        if (rc == RoundingClass.ZERO || rc == RoundingClass.FIVE)
         {
-            foreach (i;f.precision + 2 .. hex_mant_pos)
+            foreach (i;f.precision + 3 .. hex_mant_pos)
             {
                 if (hex_mant[i] > '0')
                 {
-                    next = next == roundType.ZERO ? roundType.LOWER : roundType.UPPER;
+                    rc = rc == RoundingClass.ZERO ? RoundingClass.LOWER : RoundingClass.UPPER;
                     break;
                 }
             }
         }
 
-        bool roundUp = false;
+        hex_mant_pos = f.precision + 2;
 
-        if (rm == RoundingMode.up)
-            roundUp = next != roundType.ZERO && sgn != "-";
-        else if (rm == RoundingMode.down)
-            roundUp = next != roundType.ZERO && sgn == "-";
-        else if (rm == RoundingMode.toZero)
-            roundUp = false;
-        else
-        {
-            assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero,
-                   "RoundingMode is not toNearest");
-            roundUp = next == roundType.UPPER;
-
-            if (next == roundType.FIVE)
-            {
-                // IEEE754 allows for two different ways of implementing roundToNearest:
-
-                // Round to nearest, ties away from zero
-                if (rm == RoundingMode.toNearestTiesAwayFromZero)
-                    roundUp = true;
-                else
-                {
-                    // Round to nearest, ties to even
-                    auto last = f.precision == 0 ? first[0] : hex_mant[f.precision];
-                    roundUp = (last <= '9' && last % 2 != 0) || (last >= '9' && last % 2 == 0);
-                }
-            }
-        }
-
-        hex_mant_pos = f.precision + 1;
-
-        if (roundUp)
-        {
-            foreach_reverse (i;0 .. hex_mant_pos)
-            {
-                if (hex_mant[i] == '.')
-                {
-                    first[0]++;
-                    break;
-                }
-                if (hex_mant[i] == 'f' || hex_mant[i] == 'F')
-                    hex_mant[i] = '0';
-                else
-                {
-                    if (hex_mant[i] == '9')
-                        hex_mant[i] = is_upper ? 'A' : 'a';
-                    else
-                        hex_mant[i]++;
-                    break;
-                }
-            }
-        }
+        round(hex_mant, 0, hex_mant_pos, rc, sgn == "-", is_upper ? 'F' : 'f');
     }
 
-    writeAligned(w, prefix[1 - sgn.length .. $], first[], hex_mant[0 .. hex_mant_pos],
+    writeAligned(w, prefix[1 - sgn.length .. $], hex_mant[0 .. 1], hex_mant[1 .. hex_mant_pos],
                  exp_str[exp_pos .. $], f, PrecisionType.fractionalDigits);
 }
 
@@ -532,64 +484,82 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'a';
-    f.precision = 1;
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
-    assert(printFloat(0x1.18p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.3p+0");
-    assert(printFloat(0x1.1ap0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.3p+0");
-    assert(printFloat(-0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+    // std.math's FloatingPointControl isn't available on all target platforms
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
 
-    assert(printFloat(0x1.18p0,  f) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0,  f) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0,  f) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0,  f) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0,  f) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f) == "-0x1.1p+0");
+        auto f = FormatSpec!dchar("");
+        f.spec = 'a';
+        f.precision = 1;
 
-    assert(printFloat(0x1.18p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(0x1.28p0,  f, RoundingMode.toZero) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(0x1.16p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0,  f, RoundingMode.toZero) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.28p0, f, RoundingMode.toZero) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.16p0, f, RoundingMode.toZero) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+        fpctrl.rounding = FloatingPointControl.roundToNearest;
 
-    assert(printFloat(0x1.18p0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(0x1.28p0,  f, RoundingMode.up) == "0x1.3p+0");
-    assert(printFloat(0x1.1ap0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(0x1.16p0,  f, RoundingMode.up) == "0x1.2p+0");
-    assert(printFloat(0x1.10p0,  f, RoundingMode.up) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(-0x1.28p0, f, RoundingMode.up) == "-0x1.2p+0");
-    assert(printFloat(-0x1.1ap0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(-0x1.16p0, f, RoundingMode.up) == "-0x1.1p+0");
-    assert(printFloat(-0x1.10p0, f, RoundingMode.up) == "-0x1.1p+0");
+        /* tiesAwayFromZero currently not supported
+         assert(printFloat(0x1.18p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+         assert(printFloat(0x1.28p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.3p+0");
+         assert(printFloat(0x1.1ap0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.2p+0");
+         assert(printFloat(0x1.16p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+         assert(printFloat(0x1.10p0,  f, RoundingMode.toNearestTiesAwayFromZero) == "0x1.1p+0");
+         assert(printFloat(-0x1.18p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+         assert(printFloat(-0x1.28p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.3p+0");
+         assert(printFloat(-0x1.1ap0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.2p+0");
+         assert(printFloat(-0x1.16p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+         assert(printFloat(-0x1.10p0, f, RoundingMode.toNearestTiesAwayFromZero) == "-0x1.1p+0");
+         */
 
-    assert(printFloat(0x1.18p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(0x1.28p0,  f, RoundingMode.down) == "0x1.2p+0");
-    assert(printFloat(0x1.1ap0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(0x1.16p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(0x1.10p0,  f, RoundingMode.down) == "0x1.1p+0");
-    assert(printFloat(-0x1.18p0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(-0x1.28p0, f, RoundingMode.down) == "-0x1.3p+0");
-    assert(printFloat(-0x1.1ap0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(-0x1.16p0, f, RoundingMode.down) == "-0x1.2p+0");
-    assert(printFloat(-0x1.10p0, f, RoundingMode.down) == "-0x1.1p+0");
+        assert(printFloat(0x1.18p0,  f) == "0x1.2p+0");
+        assert(printFloat(0x1.28p0,  f) == "0x1.2p+0");
+        assert(printFloat(0x1.1ap0,  f) == "0x1.2p+0");
+        assert(printFloat(0x1.16p0,  f) == "0x1.1p+0");
+        assert(printFloat(0x1.10p0,  f) == "0x1.1p+0");
+        assert(printFloat(-0x1.18p0, f) == "-0x1.2p+0");
+        assert(printFloat(-0x1.28p0, f) == "-0x1.2p+0");
+        assert(printFloat(-0x1.1ap0, f) == "-0x1.2p+0");
+        assert(printFloat(-0x1.16p0, f) == "-0x1.1p+0");
+        assert(printFloat(-0x1.10p0, f) == "-0x1.1p+0");
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+
+        assert(printFloat(0x1.18p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+        assert(printFloat(0x1.28p0,  f, RoundingMode.toZero) == "0x1.2p+0");
+        assert(printFloat(0x1.1ap0,  f, RoundingMode.toZero) == "0x1.1p+0");
+        assert(printFloat(0x1.16p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+        assert(printFloat(0x1.10p0,  f, RoundingMode.toZero) == "0x1.1p+0");
+        assert(printFloat(-0x1.18p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+        assert(printFloat(-0x1.28p0, f, RoundingMode.toZero) == "-0x1.2p+0");
+        assert(printFloat(-0x1.1ap0, f, RoundingMode.toZero) == "-0x1.1p+0");
+        assert(printFloat(-0x1.16p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+        assert(printFloat(-0x1.10p0, f, RoundingMode.toZero) == "-0x1.1p+0");
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+
+        assert(printFloat(0x1.18p0,  f, RoundingMode.up) == "0x1.2p+0");
+        assert(printFloat(0x1.28p0,  f, RoundingMode.up) == "0x1.3p+0");
+        assert(printFloat(0x1.1ap0,  f, RoundingMode.up) == "0x1.2p+0");
+        assert(printFloat(0x1.16p0,  f, RoundingMode.up) == "0x1.2p+0");
+        assert(printFloat(0x1.10p0,  f, RoundingMode.up) == "0x1.1p+0");
+        assert(printFloat(-0x1.18p0, f, RoundingMode.up) == "-0x1.1p+0");
+        assert(printFloat(-0x1.28p0, f, RoundingMode.up) == "-0x1.2p+0");
+        assert(printFloat(-0x1.1ap0, f, RoundingMode.up) == "-0x1.1p+0");
+        assert(printFloat(-0x1.16p0, f, RoundingMode.up) == "-0x1.1p+0");
+        assert(printFloat(-0x1.10p0, f, RoundingMode.up) == "-0x1.1p+0");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+
+        assert(printFloat(0x1.18p0,  f, RoundingMode.down) == "0x1.1p+0");
+        assert(printFloat(0x1.28p0,  f, RoundingMode.down) == "0x1.2p+0");
+        assert(printFloat(0x1.1ap0,  f, RoundingMode.down) == "0x1.1p+0");
+        assert(printFloat(0x1.16p0,  f, RoundingMode.down) == "0x1.1p+0");
+        assert(printFloat(0x1.10p0,  f, RoundingMode.down) == "0x1.1p+0");
+        assert(printFloat(-0x1.18p0, f, RoundingMode.down) == "-0x1.2p+0");
+        assert(printFloat(-0x1.28p0, f, RoundingMode.down) == "-0x1.3p+0");
+        assert(printFloat(-0x1.1ap0, f, RoundingMode.down) == "-0x1.2p+0");
+        assert(printFloat(-0x1.16p0, f, RoundingMode.down) == "-0x1.2p+0");
+        assert(printFloat(-0x1.10p0, f, RoundingMode.down) == "-0x1.1p+0");
+    }
 }
 
 // for 100% coverage
