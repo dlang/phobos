@@ -1880,6 +1880,7 @@ version (Windows)
 @system unittest
 {
     auto fn = uniqueTempPath();
+    scope(exit) if (exists(fn)) remove(fn);
     std.file.write(fn, "AAAAAAAAAA");
 
     auto f = File(fn, "a");
@@ -1894,11 +1895,12 @@ version (Windows)
 // with indicating a workDir.
 version (Posix) @system unittest
 {
-    import std.file : mkdir, write, setAttributes;
+    import std.file : mkdir, write, setAttributes, rmdirRecurse;
     import std.conv : octal;
 
     auto dir = uniqueTempPath();
     mkdir(dir);
+    scope(exit) rmdirRecurse(dir);
     write(dir ~ "/program", "#!/bin/sh\necho Hello");
     setAttributes(dir ~ "/program", octal!700);
 
@@ -3357,11 +3359,12 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     // Temporarily disable output to stderr so as to not spam the build log.
     import std.stdio : stderr;
     import std.typecons : Tuple;
-    import std.file : readText;
+    import std.file : readText, exists, remove;
     import std.traits : ReturnType;
 
     ReturnType!executeShell r;
     auto tmpname = uniqueTempPath;
+    scope(exit) if (exists(tmpname)) remove(tmpname);
     auto t = stderr;
     // Open a new scope to minimize code ran with stderr redirected.
     {
