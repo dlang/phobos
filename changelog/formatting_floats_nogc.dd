@@ -1,4 +1,4 @@
-Floating point numbers don't allocate with the GC anymore.
+Formatting floating point numbers don't allocate with the GC anymore.
 
 The implementation of formatting floating point numbers has been
 reworked. We made sure that working examples never allocate with the
