@@ -588,7 +588,7 @@ private void printFloatE(bool g, Writer, T, Char)(auto ref Writer w, T val,
 if (is(T == float) || is(T == double)
     || (is(T == real) && (T.mant_dig == double.mant_dig || T.mant_dig == 64)))
 {
-    import std.format.internal.write : writeAligned, PrecisionType;
+    import std.format.internal.write : writeAligned, PrecisionType, RoundingClass, round;
 
     static if (!g)
     {
@@ -611,8 +611,7 @@ if (is(T == float) || is(T == double)
 
     int final_exp = 0;
 
-    enum roundType { ZERO, LOWER, FIVE, UPPER }
-    roundType next;
+    RoundingClass rc;
 
     // Depending on exp, we will use one of three algorithms:
     //
@@ -762,16 +761,16 @@ if (is(T == float) || is(T == double)
 
         // rounding type
         if (start >= right)
-            next = roundType.ZERO;
+            rc = RoundingClass.ZERO;
         else if (dec_buf[start] != '0' && dec_buf[start] != '5')
-            next = dec_buf[start] > '5' ? roundType.UPPER : roundType.LOWER;
+            rc = dec_buf[start] > '5' ? RoundingClass.UPPER : RoundingClass.LOWER;
         else
         {
-            next = dec_buf[start] == '5' ? roundType.FIVE : roundType.ZERO;
+            rc = dec_buf[start] == '5' ? RoundingClass.FIVE : RoundingClass.ZERO;
             foreach (i; start + 1 .. right)
                 if (dec_buf[i] > '0')
                 {
-                    next = next == roundType.FIVE ? roundType.UPPER : roundType.LOWER;
+                    rc = rc == RoundingClass.FIVE ? RoundingClass.UPPER : RoundingClass.LOWER;
                     break;
                 }
         }
@@ -865,9 +864,9 @@ if (is(T == float) || is(T == double)
 
         // rounding type
         if (lsu >= count - 1 && mybig[count - 1] == 0)
-            next = roundType.ZERO;
+            rc = RoundingClass.ZERO;
         else if (lsu == count - 1 && mybig[lsu] == 1L << 59)
-            next = roundType.FIVE;
+            rc = RoundingClass.FIVE;
         else
         {
             ulong over = 0;
@@ -877,7 +876,7 @@ if (is(T == float) || is(T == double)
                 over = mybig[i] >> 60;
                 mybig[i] &= (1L << 60) - 1;
             }
-            next = over >= 5 ? roundType.UPPER : roundType.LOWER;
+            rc = over >= 5 ? RoundingClass.UPPER : RoundingClass.LOWER;
         }
     }
     else
@@ -936,19 +935,19 @@ if (is(T == float) || is(T == double)
 
                 if (dec_buf[right] == '5' || dec_buf[right] == '0')
                 {
-                    next = dec_buf[right] == '5' ? roundType.FIVE : roundType.ZERO;
+                    rc = dec_buf[right] == '5' ? RoundingClass.FIVE : RoundingClass.ZERO;
                     if (frac_part != 0)
-                        next = next == roundType.FIVE ? roundType.UPPER : roundType.LOWER;
+                        rc = rc == RoundingClass.FIVE ? RoundingClass.UPPER : RoundingClass.LOWER;
                     else
                         foreach (i;right + 1 .. old_right)
                             if (dec_buf[i] > '0')
                             {
-                                next = next == roundType.FIVE ? roundType.UPPER : roundType.LOWER;
+                                rc = rc == RoundingClass.FIVE ? RoundingClass.UPPER : RoundingClass.LOWER;
                                 break;
                             }
                 }
                 else
-                    next = dec_buf[right] > '5' ? roundType.UPPER : roundType.LOWER;
+                    rc = dec_buf[right] > '5' ? RoundingClass.UPPER : RoundingClass.LOWER;
                 found = true;
             }
         }
@@ -982,7 +981,7 @@ if (is(T == float) || is(T == double)
                 }
             }
 
-            next = roundType.ZERO;
+            rc = RoundingClass.ZERO;
         }
 
         static if (g)
@@ -1025,67 +1024,21 @@ if (is(T == float) || is(T == double)
             frac_part &= ((1L << (T.mant_dig - 1 - exp)) - 1);
 
             if (nextDigit == 5 && frac_part == 0)
-                next = roundType.FIVE;
+                rc = RoundingClass.FIVE;
             else if (nextDigit >= 5)
-                next = roundType.UPPER;
+                rc = RoundingClass.UPPER;
             else
-                next = roundType.LOWER;
+                rc = RoundingClass.LOWER;
         }
     }
 
-    // rounding
-    bool roundUp = false;
-    if (rm == RoundingMode.up)
-        roundUp = next != roundType.ZERO && sgn != "-";
-    else if (rm == RoundingMode.down)
-        roundUp = next != roundType.ZERO && sgn == "-";
-    else if (rm == RoundingMode.toZero)
-        roundUp = false;
-    else
+    if (round(dec_buf, left, right, rc, sgn == "-"))
     {
-        assert(rm == RoundingMode.toNearestTiesToEven || rm == RoundingMode.toNearestTiesAwayFromZero,
-               "RoundingMode is not toNearest");
-        roundUp = next == roundType.UPPER;
-
-        if (next == roundType.FIVE)
-        {
-            // IEEE754 allows for two different ways of implementing roundToNearest:
-
-            // Round to nearest, ties away from zero
-            if (rm == RoundingMode.toNearestTiesAwayFromZero)
-                roundUp = true;
-            else
-            {
-                // Round to nearest, ties to even
-                auto last = dec_buf[right-1];
-                if (last == '.') last = dec_buf[right-2];
-                roundUp = last % 2 != 0;
-            }
-        }
-    }
-
-    if (roundUp)
-    {
-        foreach_reverse (i;left .. right)
-        {
-            if (dec_buf[i] == '.') continue;
-            if (dec_buf[i] == '9')
-                right--;
-            else
-            {
-                dec_buf[i]++;
-                goto printFloat_done;
-            }
-        }
-
-        // one more digit to the left, so we need to shift everything and increase exponent
-        dec_buf[--left] = '1';
+        left--;
+        right--;
         dec_buf[left + 2] = dec_buf[left + 1];
         dec_buf[left + 1] = '.';
-        right--;
         final_exp++;
-
-printFloat_done:
     }
 
     // printing exponent
@@ -1246,64 +1199,82 @@ printFloat_done:
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'e';
-    f.precision = 1;
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
-    assert(printFloat(11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
-    assert(printFloat(12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.3e+01");
-    assert(printFloat(11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
-    assert(printFloat(11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
-    assert(printFloat(11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
-    assert(printFloat(-11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
-    assert(printFloat(-12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.3e+01");
-    assert(printFloat(-11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
-    assert(printFloat(-11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
-    assert(printFloat(-11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
+    // std.math's FloatingPointControl isn't available on all target platforms
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
 
-    assert(printFloat(11.5f, f) == "1.2e+01");
-    assert(printFloat(12.5f, f) == "1.2e+01");
-    assert(printFloat(11.7f, f) == "1.2e+01");
-    assert(printFloat(11.3f, f) == "1.1e+01");
-    assert(printFloat(11.0f, f) == "1.1e+01");
-    assert(printFloat(-11.5f, f) == "-1.2e+01");
-    assert(printFloat(-12.5f, f) == "-1.2e+01");
-    assert(printFloat(-11.7f, f) == "-1.2e+01");
-    assert(printFloat(-11.3f, f) == "-1.1e+01");
-    assert(printFloat(-11.0f, f) == "-1.1e+01");
+        auto f = FormatSpec!dchar("");
+        f.spec = 'e';
+        f.precision = 1;
 
-    assert(printFloat(11.5f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(12.5f, f, RoundingMode.toZero) == "1.2e+01");
-    assert(printFloat(11.7f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(11.3f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(11.0f, f, RoundingMode.toZero) == "1.1e+01");
-    assert(printFloat(-11.5f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(-12.5f, f, RoundingMode.toZero) == "-1.2e+01");
-    assert(printFloat(-11.7f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(-11.3f, f, RoundingMode.toZero) == "-1.1e+01");
-    assert(printFloat(-11.0f, f, RoundingMode.toZero) == "-1.1e+01");
+        fpctrl.rounding = FloatingPointControl.roundToNearest;
 
-    assert(printFloat(11.5f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(12.5f, f, RoundingMode.up) == "1.3e+01");
-    assert(printFloat(11.7f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(11.3f, f, RoundingMode.up) == "1.2e+01");
-    assert(printFloat(11.0f, f, RoundingMode.up) == "1.1e+01");
-    assert(printFloat(-11.5f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(-12.5f, f, RoundingMode.up) == "-1.2e+01");
-    assert(printFloat(-11.7f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(-11.3f, f, RoundingMode.up) == "-1.1e+01");
-    assert(printFloat(-11.0f, f, RoundingMode.up) == "-1.1e+01");
+        /*
+        assert(printFloat(11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
+        assert(printFloat(12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.3e+01");
+        assert(printFloat(11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.2e+01");
+        assert(printFloat(11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
+        assert(printFloat(11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "1.1e+01");
+        assert(printFloat(-11.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
+        assert(printFloat(-12.5f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.3e+01");
+        assert(printFloat(-11.7f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.2e+01");
+        assert(printFloat(-11.3f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
+        assert(printFloat(-11.0f, f, RoundingMode.toNearestTiesAwayFromZero) == "-1.1e+01");
+         */
 
-    assert(printFloat(11.5f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(12.5f, f, RoundingMode.down) == "1.2e+01");
-    assert(printFloat(11.7f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(11.3f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(11.0f, f, RoundingMode.down) == "1.1e+01");
-    assert(printFloat(-11.5f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(-12.5f, f, RoundingMode.down) == "-1.3e+01");
-    assert(printFloat(-11.7f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(-11.3f, f, RoundingMode.down) == "-1.2e+01");
-    assert(printFloat(-11.0f, f, RoundingMode.down) == "-1.1e+01");
+        assert(printFloat(11.5f, f) == "1.2e+01");
+        assert(printFloat(12.5f, f) == "1.2e+01");
+        assert(printFloat(11.7f, f) == "1.2e+01");
+        assert(printFloat(11.3f, f) == "1.1e+01");
+        assert(printFloat(11.0f, f) == "1.1e+01");
+        assert(printFloat(-11.5f, f) == "-1.2e+01");
+        assert(printFloat(-12.5f, f) == "-1.2e+01");
+        assert(printFloat(-11.7f, f) == "-1.2e+01");
+        assert(printFloat(-11.3f, f) == "-1.1e+01");
+        assert(printFloat(-11.0f, f) == "-1.1e+01");
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+
+        assert(printFloat(11.5f, f, RoundingMode.toZero) == "1.1e+01");
+        assert(printFloat(12.5f, f, RoundingMode.toZero) == "1.2e+01");
+        assert(printFloat(11.7f, f, RoundingMode.toZero) == "1.1e+01");
+        assert(printFloat(11.3f, f, RoundingMode.toZero) == "1.1e+01");
+        assert(printFloat(11.0f, f, RoundingMode.toZero) == "1.1e+01");
+        assert(printFloat(-11.5f, f, RoundingMode.toZero) == "-1.1e+01");
+        assert(printFloat(-12.5f, f, RoundingMode.toZero) == "-1.2e+01");
+        assert(printFloat(-11.7f, f, RoundingMode.toZero) == "-1.1e+01");
+        assert(printFloat(-11.3f, f, RoundingMode.toZero) == "-1.1e+01");
+        assert(printFloat(-11.0f, f, RoundingMode.toZero) == "-1.1e+01");
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+
+        assert(printFloat(11.5f, f, RoundingMode.up) == "1.2e+01");
+        assert(printFloat(12.5f, f, RoundingMode.up) == "1.3e+01");
+        assert(printFloat(11.7f, f, RoundingMode.up) == "1.2e+01");
+        assert(printFloat(11.3f, f, RoundingMode.up) == "1.2e+01");
+        assert(printFloat(11.0f, f, RoundingMode.up) == "1.1e+01");
+        assert(printFloat(-11.5f, f, RoundingMode.up) == "-1.1e+01");
+        assert(printFloat(-12.5f, f, RoundingMode.up) == "-1.2e+01");
+        assert(printFloat(-11.7f, f, RoundingMode.up) == "-1.1e+01");
+        assert(printFloat(-11.3f, f, RoundingMode.up) == "-1.1e+01");
+        assert(printFloat(-11.0f, f, RoundingMode.up) == "-1.1e+01");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+
+        assert(printFloat(11.5f, f, RoundingMode.down) == "1.1e+01");
+        assert(printFloat(12.5f, f, RoundingMode.down) == "1.2e+01");
+        assert(printFloat(11.7f, f, RoundingMode.down) == "1.1e+01");
+        assert(printFloat(11.3f, f, RoundingMode.down) == "1.1e+01");
+        assert(printFloat(11.0f, f, RoundingMode.down) == "1.1e+01");
+        assert(printFloat(-11.5f, f, RoundingMode.down) == "-1.2e+01");
+        assert(printFloat(-12.5f, f, RoundingMode.down) == "-1.3e+01");
+        assert(printFloat(-11.7f, f, RoundingMode.down) == "-1.2e+01");
+        assert(printFloat(-11.3f, f, RoundingMode.down) == "-1.2e+01");
+        assert(printFloat(-11.0f, f, RoundingMode.down) == "-1.1e+01");
+    }
 }
 
 @safe unittest
@@ -1408,6 +1379,8 @@ printFloat_done:
 // for 100% coverage
 @safe unittest
 {
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
+
     auto f = FormatSpec!dchar("");
     f.spec = 'E';
     f.precision = 80;
@@ -1422,11 +1395,18 @@ printFloat_done:
     assert(printFloat(-1.1418613e+07f, f) == "-1.141861E+07");
     assert(printFloat(-1.368281e+07f, f) == "-1.368281E+07");
 
-    f.precision = 0;
-    assert(printFloat(709422.0f, f, RoundingMode.up) == "8E+05");
-
     f.precision = 1;
     assert(printFloat(-245.666f, f) == "-2.5E+02");
+
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+
+        f.precision = 0;
+        assert(printFloat(709422.0f, f, RoundingMode.up) == "8E+05");
+    }
 }
 
 @safe unittest
@@ -2359,6 +2339,7 @@ if (is(T == float) || is(T == double)
     // computers with different reals the results may vary in this gap.
 
     import std.math.operations : nextDown, nextUp;
+    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
 
     auto f = FormatSpec!dchar("");
     f.spec = 'g';
@@ -2373,37 +2354,48 @@ if (is(T == float) || is(T == double)
     val = nextDown(val);
     assert(printFloat(val.nextDown, f) == "9.99999e-05");
 
-    val = 1000000;
-    assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "1e+06");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "999999");
+    static if (is(FloatingPointControl))
+    {
+        FloatingPointControl fpctrl;
 
-    val = 0.0001;
-    assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "0.0001");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "9.99999e-05");
+        fpctrl.rounding = FloatingPointControl.roundToZero;
 
-    val = 999999;
-    assert(printFloat(val.nextUp, f, RoundingMode.up) == "1e+06");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.up) == "999999");
+        val = 1000000;
+        assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "1e+06");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "999999");
 
-    // 0.0000999999 is actually represented as 0.0000999998999..., which is
-    // less than 0.0000999999, so we need to use nextUp to get the corner case here
-    val = nextUp(0.0000999999);
-    assert(printFloat(val.nextUp, f, RoundingMode.up) == "0.0001");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.up) == "9.99999e-05");
+        val = 0.0001;
+        assert(printFloat(val.nextUp, f, RoundingMode.toZero) == "0.0001");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.toZero) == "9.99999e-05");
 
-    val = 1000000;
-    assert(printFloat(val.nextUp, f, RoundingMode.down) == "1e+06");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.down) == "999999");
+        fpctrl.rounding = FloatingPointControl.roundUp;
 
-    val = 0.0001;
-    assert(printFloat(val.nextUp, f, RoundingMode.down) == "0.0001");
-    val = nextDown(val);
-    assert(printFloat(val.nextDown, f, RoundingMode.down) == "9.99999e-05");
+        val = 999999;
+        assert(printFloat(val.nextUp, f, RoundingMode.up) == "1e+06");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.up) == "999999");
+
+        // 0.0000999999 is actually represented as 0.0000999998999..., which is
+        // less than 0.0000999999, so we need to use nextUp to get the corner case here
+        val = nextUp(0.0000999999);
+        assert(printFloat(val.nextUp, f, RoundingMode.up) == "0.0001");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.up) == "9.99999e-05");
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+
+        val = 1000000;
+        assert(printFloat(val.nextUp, f, RoundingMode.down) == "1e+06");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.down) == "999999");
+
+        val = 0.0001;
+        assert(printFloat(val.nextUp, f, RoundingMode.down) == "0.0001");
+        val = nextDown(val);
+        assert(printFloat(val.nextDown, f, RoundingMode.down) == "9.99999e-05");
+    }
 }
 
 @safe unittest
