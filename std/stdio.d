@@ -952,7 +952,7 @@ Throws: `Exception` if the file is not opened.
 
  Returns: The name last used to initialize this this file, or `null` otherwise.
  */
-    @property string name() const @safe pure nothrow
+    @property string name() const @safe pure nothrow return
     {
         return _name;
     }

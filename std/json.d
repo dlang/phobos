@@ -152,14 +152,14 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.string`.
      */
-    @property string str() const pure @trusted
+    @property string str() const pure @trusted return scope
     {
         enforce!JSONException(type == JSONType.string,
                                 "JSONValue is not a string");
         return store.str;
     }
     /// ditto
-    @property string str(string v) pure nothrow @nogc @safe
+    @property string str(return scope string v) pure nothrow @nogc @safe
     {
         assign(v);
         return v;
@@ -282,7 +282,7 @@ struct JSONValue
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(JSONValue[string] v) pure nothrow @nogc @safe
+    @property JSONValue[string] object(return scope JSONValue[string] v) pure nothrow @nogc @safe
     {
         assign(v);
         return v;
@@ -328,7 +328,7 @@ struct JSONValue
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(JSONValue[] v) pure nothrow @nogc @safe
+    @property JSONValue[] array(return scope JSONValue[] v) pure nothrow @nogc @safe
     {
         assign(v);
         return v;
@@ -461,7 +461,7 @@ struct JSONValue
         assertNotThrown(json["h"].get!float);
     }
 
-    private void assign(T)(T arg)
+    private void assign(T)(scope T arg)
     {
         static if (is(T : typeof(null)))
         {
@@ -635,7 +635,7 @@ struct JSONValue
      * Hash syntax for json objects.
      * Throws: `JSONException` if `type` is not `JSONType.object`.
      */
-    ref inout(JSONValue) opIndex(string k) inout pure @safe
+    ref inout(JSONValue) opIndex(return scope string k) inout pure @safe return
     {
         auto o = this.objectNoRef;
         return *enforce!JSONException(k in o,

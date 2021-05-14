@@ -1303,37 +1303,37 @@ struct EmailStatus
     }
 
     /// Returns: If the email address is valid or not.
-    @property bool valid() const @safe @nogc pure nothrow
+    @property bool valid() const @safe @nogc pure nothrow scope
     {
         return valid_;
     }
 
     /// Returns: The local part of the email address, that is, the part before the @ sign.
-    @property string localPart() const @safe @nogc pure nothrow
+    @property string localPart() const @safe @nogc pure nothrow return scope
     {
         return localPart_;
     }
 
     /// Returns: The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart() const @safe @nogc pure nothrow
+    @property string domainPart() const @safe @nogc pure nothrow return scope
     {
         return domainPart_;
     }
 
     /// Returns: The email status code
-    @property EmailStatusCode statusCode() const @safe @nogc pure nothrow
+    @property EmailStatusCode statusCode() const @safe @nogc pure nothrow scope
     {
         return statusCode_;
     }
 
     /// Returns: A describing string of the status code
-    @property string status() const @safe @nogc pure nothrow
+    @property string status() const @safe @nogc pure nothrow scope
     {
         return statusCodeDescription(statusCode_);
     }
 
     /// Returns: A textual representation of the email status
-    string toString() const @safe pure
+    string toString() const @safe pure scope
     {
         import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
