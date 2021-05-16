@@ -3631,7 +3631,7 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
             assert(escapeShellCommand(test.args) == test.posix  );
 }
 
-private string escapeShellCommandString(string command) @safe pure
+private string escapeShellCommandString(return scope string command) @safe pure
 {
     version (Windows)
         return escapeWindowsShellCommand(command);
