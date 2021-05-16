@@ -218,7 +218,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  The slice of $(D_PARAM buffer) that contains the encoded string.
      */
     @trusted
-    pure char[] encode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
+    pure char[] encode(R1, R2)(in R1 source, return scope R2 buffer) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
                                                             is(R2 == char[]))
     in
     {
@@ -981,7 +981,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  base alphabet of the current Base64 encoding scheme.
      */
     @trusted
-    pure ubyte[] decode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : dchar) &&
+    pure ubyte[] decode(R1, R2)(in R1 source, return scope R2 buffer) if (isArray!R1 && is(ElementType!R1 : dchar) &&
                                                              is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
