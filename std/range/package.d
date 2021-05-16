@@ -11718,7 +11718,7 @@ public:
     version (StdDdoc)
     {
         /++
-            Only defined if `isRandomAccesRange!R` is `true`.
+            Only defined if `isRandomAccessRange!R` is `true`.
           +/
         auto ref opIndex(IndexType)(IndexType index) {assert(0);}
 
