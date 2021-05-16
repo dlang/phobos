@@ -2747,7 +2747,7 @@ else version (Posix)
     See_Also:
         $(LREF asAbsolutePath) which does not allocate
 */
-string absolutePath(string path, lazy string base = getcwd())
+string absolutePath(return scope string path, lazy string base = getcwd())
     @safe pure
 {
     import std.array : array;
@@ -2893,7 +2893,7 @@ if (isConvertibleToString!R)
     `Exception` if the specified _base directory is not absolute.
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
-    (string path, lazy string base = getcwd())
+    (scope return string path, lazy string base = getcwd())
 {
     if (!isAbsolute(path))
         return path;
