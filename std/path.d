@@ -115,13 +115,13 @@ version (StdUnittest)
 private:
     struct TestAliasedString
     {
-        string get() @safe @nogc pure nothrow { return _s; }
+        string get() @safe @nogc pure nothrow return scope { return _s; }
         alias get this;
         @disable this(this);
         string _s;
     }
 
-    bool testAliasedString(alias func, Args...)(string s, Args args)
+    bool testAliasedString(alias func, Args...)(scope string s, scope Args args)
     {
         return func(TestAliasedString(s), args) == func(s, args);
     }
@@ -406,14 +406,14 @@ else static assert(0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-auto baseName(R)(R path)
+auto baseName(R)(return scope R path)
 if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
     return _baseName(path);
 }
 
 /// ditto
-auto baseName(C)(C[] path)
+auto baseName(C)(return scope C[] path)
 if (isSomeChar!C)
 {
     return _baseName(path);
@@ -421,7 +421,7 @@ if (isSomeChar!C)
 
 /// ditto
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
-    (inout(C)[] path, in C1[] suffix)
+    (return scope inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
 if (isSomeChar!C && isSomeChar!C1)
 {
@@ -522,7 +522,7 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(sa.baseName == "test");
 }
 
-private R _baseName(R)(R path)
+private R _baseName(R)(return scope R path)
 if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNarrowString!R)
 {
     auto p1 = stripDrive(path);
@@ -1910,7 +1910,7 @@ if (isSomeChar!C)
         normalized path as a forward range
 */
 
-auto asNormalizedPath(R)(R path)
+auto asNormalizedPath(R)(return scope R path)
 if (isSomeChar!(ElementEncodingType!R) &&
     (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
     !isConvertibleToString!R)
@@ -2077,7 +2077,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
-auto asNormalizedPath(R)(auto ref R path)
+auto asNormalizedPath(R)(return scope auto ref R path)
 if (isConvertibleToString!R)
 {
     return asNormalizedPath!(StringTypeOf!R)(path);
