@@ -1598,7 +1598,7 @@ public:
     /**********************************************
      * Reverses the bits of the `BitArray`.
      */
-    @property BitArray reverse() @nogc pure nothrow
+    @property BitArray reverse() @nogc pure nothrow return
     out (result)
     {
         assert(result == this, "the result must be equal to this");
@@ -1638,7 +1638,7 @@ public:
     /**********************************************
      * Sorts the `BitArray`'s elements.
      */
-    @property BitArray sort() @nogc pure nothrow
+    @property BitArray sort() @nogc pure nothrow return
     out (result)
     {
         assert(result == this, "the result must be equal to this");
@@ -2063,7 +2063,7 @@ public:
     /***************************************
      * Support for operator op= for `BitArray`.
      */
-    BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow
+    BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow return scope
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
@@ -2184,7 +2184,7 @@ public:
      * shared between BitArray objects. i.e. D dynamic array
      * concatenation semantics are not followed)
      */
-    BitArray opOpAssign(string op)(bool b) pure nothrow
+    BitArray opOpAssign(string op)(bool b) pure nothrow return scope
         if (op == "~")
     {
         length = _len + 1;
@@ -2214,7 +2214,7 @@ public:
     /***************************************
      * ditto
      */
-    BitArray opOpAssign(string op)(BitArray b) pure nothrow
+    BitArray opOpAssign(string op)(BitArray b) pure nothrow return scope
         if (op == "~")
     {
         auto istart = _len;
