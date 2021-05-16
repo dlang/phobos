@@ -303,7 +303,7 @@ Aligns a pointer down to a specified alignment. The resulting pointer is less
 than or equal to the given pointer.
 */
 @nogc nothrow pure
-package void* alignDownTo(void* ptr, uint alignment)
+package void* alignDownTo(return scope void* ptr, uint alignment)
 {
     import std.math.traits : isPowerOf2;
     assert(alignment.isPowerOf2);
@@ -315,7 +315,7 @@ Aligns a pointer up to a specified alignment. The resulting pointer is greater
 than or equal to the given pointer.
 */
 @nogc nothrow pure
-package void* alignUpTo(void* ptr, uint alignment)
+package void* alignUpTo(return scope void* ptr, uint alignment)
 {
     import std.math.traits : isPowerOf2;
     assert(alignment.isPowerOf2);
