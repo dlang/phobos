@@ -540,7 +540,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         }
 
         pure nothrow @safe @nogc
-        private void[] smallAlloc(uint blocks)
+        private void[] smallAlloc(uint blocks) return scope
         {
             assert(blocks >= 2 && blocks <= 64);
             void[] result;
@@ -596,7 +596,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         }
 
         pure nothrow @trusted @nogc
-        private void[] hugeAlloc(size_t blocks)
+        private void[] hugeAlloc(size_t blocks) return scope
         {
             assert(blocks > 64);
             if (_startIdx == _control._rep.length)
@@ -978,7 +978,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
             }
         }
 
-        void[] allocateAll()
+        void[] allocateAll() return scope
         {
             static if (isShared)
             {
