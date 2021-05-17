@@ -1601,7 +1601,8 @@ if (isInputRange!InputRange &&
             {
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
-                    static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
+                    static inout(R) trustedMemchr(ref return scope inout(R) haystack,
+                                                  ref const scope E needle) @trusted nothrow pure
                     {
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
@@ -1665,7 +1666,7 @@ if (isInputRange!InputRange &&
         {
             import std.algorithm.comparison : max, min;
 
-            R findHelper(ref R haystack, ref E needle) @trusted nothrow pure
+            R findHelper(return scope ref R haystack, ref E needle) @trusted nothrow pure
             {
                 import core.stdc.string : memchr;
 
