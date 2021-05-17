@@ -4356,6 +4356,13 @@ void writeln(T...)(T args)
     useInit(stdout.lockingTextWriter());
 }
 
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=21920
+    void function(string) printer = &writeln!string;
+    if (false) printer("Hello");
+}
+
 
 /***********************************
 Writes formatted data to standard output (without a trailing newline).
