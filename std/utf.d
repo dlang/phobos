@@ -81,7 +81,7 @@ class UTFException : UnicodeException
     size_t  len;
 
     @safe pure nothrow @nogc
-    UTFException setSequence(scope uint[] data...)
+    UTFException setSequence(scope uint[] data...) return
     {
         assert(data.length <= 4);
 
@@ -3104,7 +3104,7 @@ if (isPointer!P && isSomeChar!(typeof(*P.init)))
     auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 }
 
-private P toUTFzImpl(P, S)(S str) @safe pure
+private P toUTFzImpl(P, S)(return scope S str) @safe pure
 if (is(immutable typeof(*P.init) == typeof(str[0])))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
@@ -3147,7 +3147,7 @@ if (is(immutable typeof(*P.init) == typeof(str[0])))
     }
 }
 
-private P toUTFzImpl(P, S)(S str) @safe pure
+private P toUTFzImpl(P, S)(return scope S str) @safe pure
 if (is(typeof(str[0]) C) && is(immutable typeof(*P.init) == immutable C) && !is(C == immutable))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
