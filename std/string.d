@@ -148,13 +148,13 @@ version (StdUnittest)
 private:
     struct TestAliasedString
     {
-        string get() @safe @nogc pure nothrow { return _s; }
+        string get() @safe @nogc pure nothrow return scope { return _s; }
         alias get this;
         @disable this(this);
         string _s;
     }
 
-    bool testAliasedString(alias func, Args...)(string s, Args args)
+    bool testAliasedString(alias func, Args...)(scope string s, scope Args args)
     {
         import std.algorithm.comparison : equal;
         auto a = func(TestAliasedString(s), args);
@@ -6432,7 +6432,7 @@ if (isConvertibleToString!Range)
  * See_Also:
  *  $(LREF soundexer)
  */
-char[] soundex(scope const(char)[] str, char[] buffer = null)
+char[] soundex(scope const(char)[] str, return scope char[] buffer = null)
     @safe pure nothrow
 in
 {
@@ -6937,7 +6937,7 @@ void main() {
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S[] outdent(S)(S[] lines) @safe pure
+S[] outdent(S)(return scope S[] lines) @safe pure
 if (isSomeString!S)
 {
     import std.algorithm.searching : startsWith;
