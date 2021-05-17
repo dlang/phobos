@@ -1700,46 +1700,46 @@ Writes its arguments in text format to the file.
 Throws: `Exception` if the file is not opened.
         `ErrnoException` on an error writing to the file.
 */
-    void write(S...)(auto ref S args)
+    void write(S...)(S args)
     {
         import std.traits : isBoolean, isIntegral, isAggregateType;
         import std.utf : UTFException;
         auto w = lockingTextWriter();
-        static foreach (i; 0 .. args.length)
+        foreach (arg; args)
         {
             try
             {
-                alias A = typeof(args[i]);
+                alias A = typeof(arg);
                 static if (isAggregateType!A || is(A == enum))
                 {
                     import std.format.write : formattedWrite;
 
-                    formattedWrite(w, "%s", args[i]);
+                    formattedWrite(w, "%s", arg);
                 }
                 else static if (isSomeString!A)
                 {
-                    put(w, args[i]);
+                    put(w, arg);
                 }
                 else static if (isIntegral!A)
                 {
                     import std.conv : toTextRange;
 
-                    toTextRange(args[i], w);
+                    toTextRange(arg, w);
                 }
                 else static if (isBoolean!A)
                 {
-                    put(w, args[i] ? "true" : "false");
+                    put(w, arg ? "true" : "false");
                 }
                 else static if (isSomeChar!A)
                 {
-                    put(w, args[i]);
+                    put(w, arg);
                 }
                 else
                 {
                     import std.format.write : formattedWrite;
 
                     // Most general case
-                    formattedWrite(w, "%s", args[i]);
+                    formattedWrite(w, "%s", arg);
                 }
             }
             catch (UTFException e)
@@ -1758,7 +1758,7 @@ Writes its arguments in text format to the file, followed by a newline.
 Throws: `Exception` if the file is not opened.
         `ErrnoException` on an error writing to the file.
 */
-    void writeln(S...)(auto ref S args)
+    void writeln(S...)(S args)
     {
         write(args, '\n');
     }
@@ -1776,7 +1776,7 @@ args = Items to write.
 Throws: `Exception` if the file is not opened.
         `ErrnoException` on an error writing to the file.
 */
-    void writef(alias fmt, A...)(auto ref A args)
+    void writef(alias fmt, A...)(A args)
     if (isSomeString!(typeof(fmt)))
     {
         import std.format : checkFormatException;
@@ -1787,7 +1787,7 @@ Throws: `Exception` if the file is not opened.
     }
 
     /// ditto
-    void writef(Char, A...)(in Char[] fmt, auto ref A args)
+    void writef(Char, A...)(in Char[] fmt, A args)
     {
         import std.format.write : formattedWrite;
 
@@ -1795,7 +1795,7 @@ Throws: `Exception` if the file is not opened.
     }
 
     /// Equivalent to `file.writef(fmt, args, '\n')`.
-    void writefln(alias fmt, A...)(auto ref A args)
+    void writefln(alias fmt, A...)(A args)
     if (isSomeString!(typeof(fmt)))
     {
         import std.format : checkFormatException;
@@ -1806,7 +1806,7 @@ Throws: `Exception` if the file is not opened.
     }
 
     /// ditto
-    void writefln(Char, A...)(in Char[] fmt, auto ref A args)
+    void writefln(Char, A...)(in Char[] fmt, A args)
     {
         import std.format.write : formattedWrite;
 
@@ -4160,7 +4160,7 @@ void main()
 }
 ---
  */
-void write(T...)(auto ref T args)
+void write(T...)(T args)
 if (!is(T[0] : File))
 {
     trustedStdout.write(args);
@@ -4209,7 +4209,7 @@ void main()
 }
 ---
  */
-void writeln(T...)(auto ref T args)
+void writeln(T...)(T args)
 {
     static if (T.length == 0)
     {
@@ -4356,57 +4356,6 @@ void writeln(T...)(auto ref T args)
     useInit(stdout.lockingTextWriter());
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=9489
-@system unittest
-{
-    static import std.file;
-    import std.typecons : scoped;
-
-    auto deleteme = testFilename();
-    auto f = File(deleteme, "w");
-    scope(exit) { std.file.remove(deleteme); }
-
-    class Foo
-    {
-        int x;
-        this(int x_) { this.x = x_; }
-        override string toString() { return "xxx"; }
-    }
-
-    auto foo = scoped!Foo(100);
-    f.writeln(foo.x);
-    f.writeln(foo);
-    f.close();
-
-    version (Windows)
-        assert(cast(char[]) std.file.read(deleteme) == "100\r\nxxx\r\n");
-    else
-        assert(cast(char[]) std.file.read(deleteme) == "100\nxxx\n");
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=9489 (reduced test case)
-@system unittest
-{
-    static import std.file;
-
-    auto deleteme = testFilename();
-    auto f = File(deleteme, "w");
-    scope(exit) { std.file.remove(deleteme); }
-
-    struct S
-    {
-        @disable this(this);
-    }
-
-    S s;
-    f.writeln(s);
-    f.close();
-
-    version (Windows)
-        assert(cast(char[]) std.file.read(deleteme) == "S()\r\n");
-    else
-        assert(cast(char[]) std.file.read(deleteme) == "S()\n");
-}
 
 /***********************************
 Writes formatted data to standard output (without a trailing newline).
@@ -4431,7 +4380,7 @@ stderr.writef("%s", "message");
 ------
 
 */
-void writef(alias fmt, A...)(auto ref A args)
+void writef(alias fmt, A...)(A args)
 if (isSomeString!(typeof(fmt)))
 {
     import std.format : checkFormatException;
@@ -4442,7 +4391,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-void writef(Char, A...)(in Char[] fmt, auto ref A args)
+void writef(Char, A...)(in Char[] fmt, A args)
 {
     trustedStdout.writef(fmt, args);
 }
@@ -4472,7 +4421,7 @@ void writef(Char, A...)(in Char[] fmt, auto ref A args)
 /***********************************
  * Equivalent to $(D writef(fmt, args, '\n')).
  */
-void writefln(alias fmt, A...)(auto ref A args)
+void writefln(alias fmt, A...)(A args)
 if (isSomeString!(typeof(fmt)))
 {
     import std.format : checkFormatException;
@@ -4483,7 +4432,7 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-void writefln(Char, A...)(in Char[] fmt, auto ref A args)
+void writefln(Char, A...)(in Char[] fmt, A args)
 {
     trustedStdout.writefln(fmt, args);
 }
