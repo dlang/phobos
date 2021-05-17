@@ -6424,7 +6424,7 @@ if (!is(T == class) && !(is(T == interface)))
             import std.algorithm.mutation : moveEmplace;
 
             allocateStore();
-            moveEmplace(source, _store._payload);
+            () @trusted { moveEmplace(source, _store._payload); }();
             _store._count = 1;
         }
 
@@ -6434,13 +6434,15 @@ if (!is(T == class) && !(is(T == interface)))
             static if (enableGCScan)
             {
                 import std.internal.memory : enforceCalloc;
-                _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
+                auto ptr = enforceCalloc(1, Impl.sizeof);
+                _store = () @trusted { return cast(Impl*) ptr; }();
                 pureGcAddRange(&_store._payload, T.sizeof);
             }
             else
             {
                 import std.internal.memory : enforceMalloc;
-                _store = cast(Impl*) enforceMalloc(Impl.sizeof);
+                auto ptr = enforceMalloc(Impl.sizeof);
+                _store = () @trusted { return cast(Impl*) ptr; }();
             }
         }
 
@@ -6450,7 +6452,7 @@ if (!is(T == class) && !(is(T == interface)))
             {
                 pureGcRemoveRange(&this._store._payload);
             }
-            pureFree(_store);
+            () @trusted { pureFree(_store); }();
             _store = null;
         }
 
@@ -6641,7 +6643,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@betterC pure @system nothrow @nogc unittest
+@betterC pure @safe nothrow @nogc unittest
 {
     // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
