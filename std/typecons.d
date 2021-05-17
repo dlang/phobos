@@ -6607,8 +6607,9 @@ still be valid during the destructor call.  This allows the `T` to
 deallocate or clean up any non-GC resources immediately after the
 reference count has reached zero.
 
-`RefCounted` is unsafe and should be used with care. No references
-to the payload should be escaped outside the `RefCounted` object.
+If not using -preview=dip1000, `RefCounted` is unsafe and should be
+used with care. No references to the payload should be escaped outside
+the `RefCounted` object.
 
 The `autoInit` option makes the object ensure the store is
 automatically initialized. Leaving $(D autoInit ==
@@ -6658,7 +6659,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.lifetime : emplace, forward;
 
             allocateStore();
-            version (D_Exceptions) scope(failure) deallocateStore();
+            version (D_Exceptions) scope(failure) () @trusted { deallocateStore(); }();
             emplace(&_store._payload, forward!args);
             _store._count = 1;
         }
@@ -6668,7 +6669,7 @@ if (!is(T == class) && !(is(T == interface)))
             import std.algorithm.mutation : moveEmplace;
 
             allocateStore();
-            moveEmplace(source, _store._payload);
+            () @trusted { moveEmplace(source, _store._payload); }();
             _store._count = 1;
         }
 
@@ -6678,13 +6679,15 @@ if (!is(T == class) && !(is(T == interface)))
             static if (enableGCScan)
             {
                 import std.internal.memory : enforceCalloc;
-                _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
-                GC.addRange(&_store._payload, T.sizeof);
+                auto ptr = enforceCalloc(1, Impl.sizeof);
+                _store = () @trusted { return cast(Impl*) ptr; }();
+                () @trusted { GC.addRange(&_store._payload, T.sizeof); }();
             }
             else
             {
                 import std.internal.memory : enforceMalloc;
-                _store = cast(Impl*) enforceMalloc(Impl.sizeof);
+                auto ptr = enforceMalloc(Impl.sizeof);
+                _store = () @trusted { return cast(Impl*) ptr; }();
             }
         }
 
@@ -6792,7 +6795,7 @@ to deallocate the corresponding resource.
             return;
         // Done, destroy and deallocate
         .destroy(_refCounted._store._payload);
-        _refCounted.deallocateStore();
+        () @trusted { _refCounted.deallocateStore(); }();
     }
 
 /**
@@ -6894,7 +6897,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@betterC pure @system nothrow @nogc unittest
+@betterC pure @safe nothrow @nogc unittest
 {
     // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
@@ -6907,6 +6910,14 @@ assert(refCountedStore.isInitialized)).
     assert(rc1 == 42);
     // the pair will be freed when rc1 and rc2 go out of scope
 }
+
+
+@betterC pure @safe nothrow @nogc unittest
+{
+    auto rc1 = RefCounted!(int, RefCountedAutoInitialize.no)(5);
+    rc1._refCounted.initialize();
+}
+
 
 pure @system unittest
 {
