@@ -159,7 +159,7 @@ struct JSONValue
         return store.str;
     }
     /// ditto
-    @property string str(return scope string v) pure nothrow @nogc @safe
+    @property string str(return scope string v) pure nothrow @nogc @safe scope
     {
         assign(v);
         return v;
@@ -189,7 +189,7 @@ struct JSONValue
         return store.integer;
     }
     /// ditto
-    @property long integer(long v) pure nothrow @safe @nogc
+    @property long integer(long v) pure nothrow @safe @nogc scope
     {
         assign(v);
         return store.integer;
@@ -207,7 +207,7 @@ struct JSONValue
         return store.uinteger;
     }
     /// ditto
-    @property ulong uinteger(ulong v) pure nothrow @safe @nogc
+    @property ulong uinteger(ulong v) pure nothrow @safe @nogc scope
     {
         assign(v);
         return store.uinteger;
@@ -226,7 +226,7 @@ struct JSONValue
         return store.floating;
     }
     /// ditto
-    @property double floating(double v) pure nothrow @safe @nogc
+    @property double floating(double v) pure nothrow @safe @nogc scope
     {
         assign(v);
         return store.floating;
@@ -245,7 +245,7 @@ struct JSONValue
         throw new JSONException("JSONValue is not a boolean type");
     }
     /// ditto
-    @property bool boolean(bool v) pure nothrow @safe @nogc
+    @property bool boolean(bool v) pure nothrow @safe @nogc scope
     {
         assign(v);
         return v;
@@ -282,7 +282,7 @@ struct JSONValue
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(return scope JSONValue[string] v) pure nothrow @nogc @safe
+    @property JSONValue[string] object(return scope JSONValue[string] v) pure nothrow @nogc @safe scope
     {
         assign(v);
         return v;
@@ -328,7 +328,7 @@ struct JSONValue
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(return scope JSONValue[] v) pure nothrow @nogc @safe
+    @property JSONValue[] array(return scope JSONValue[] v) pure nothrow @nogc @safe scope
     {
         assign(v);
         return v;
@@ -461,7 +461,7 @@ struct JSONValue
         assertNotThrown(json["h"].get!float);
     }
 
-    private void assign(T)(scope T arg)
+    private void assign(T)(scope T arg) scope
     {
         static if (is(T : typeof(null)))
         {
@@ -602,7 +602,7 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
-    void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
+    void opAssign(T)(T arg) scope if (!isStaticArray!T && !is(T : JSONValue))
     {
         assign(arg);
     }
