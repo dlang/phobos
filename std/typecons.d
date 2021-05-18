@@ -6359,8 +6359,9 @@ still be valid during the destructor call.  This allows the `T` to
 deallocate or clean up any non-GC resources immediately after the
 reference count has reached zero.
 
-`RefCounted` is unsafe and should be used with care. No references
-to the payload should be escaped outside the `RefCounted` object.
+If not using -preview=dip1000, `RefCounted` is unsafe and should be
+used with care. No references to the payload should be escaped outside
+the `RefCounted` object.
 
 The `autoInit` option makes the object ensure the store is
 automatically initialized. Leaving $(D autoInit ==
@@ -6414,7 +6415,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.lifetime : emplace, forward;
 
             allocateStore();
-            version (D_Exceptions) scope(failure) deallocateStore();
+            version (D_Exceptions) scope(failure) () @trusted { deallocateStore(); }();
             emplace(&_store._payload, forward!args);
             _store._count = 1;
         }
@@ -6436,7 +6437,7 @@ if (!is(T == class) && !(is(T == interface)))
                 import std.internal.memory : enforceCalloc;
                 auto ptr = enforceCalloc(1, Impl.sizeof);
                 _store = () @trusted { return cast(Impl*) ptr; }();
-                pureGcAddRange(&_store._payload, T.sizeof);
+                () @trusted { pureGcAddRange(&_store._payload, T.sizeof); }();
             }
             else
             {
@@ -6452,7 +6453,7 @@ if (!is(T == class) && !(is(T == interface)))
             {
                 pureGcRemoveRange(&this._store._payload);
             }
-            () @trusted { pureFree(_store); }();
+            pureFree(_store);
             _store = null;
         }
 
@@ -6550,7 +6551,7 @@ to deallocate the corresponding resource.
             return;
         // Done, destroy and deallocate
         .destroy(_refCounted._store._payload);
-        _refCounted.deallocateStore();
+        () @trusted { _refCounted.deallocateStore(); }();
     }
 
 /**
@@ -6656,6 +6657,14 @@ assert(refCountedStore.isInitialized)).
     assert(rc1 == 42);
     // the pair will be freed when rc1 and rc2 go out of scope
 }
+
+
+@betterC pure @safe nothrow @nogc unittest
+{
+    auto rc1 = RefCounted!(int, RefCountedAutoInitialize.no)(5);
+    rc1._refCounted.initialize();
+}
+
 
 pure @system unittest
 {
