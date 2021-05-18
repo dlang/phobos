@@ -245,12 +245,12 @@ private:
 
     immutable(BigDigit) [] data = ZERO;
 
-    this(immutable(BigDigit) [] x) pure nothrow @nogc @safe
+    this(immutable(BigDigit) [] x) pure nothrow @nogc @trusted scope // TODO @safe when dip1000 understand scope of immutable arrays
     {
        data = x;
     }
   package(std)  // used from: std.bigint
-    this(T)(T x) pure nothrow @safe if (isIntegral!T)
+    this(T)(T x) pure nothrow @safe scope if (isIntegral!T)
     {
         opAssign(x);
     }
@@ -260,7 +260,7 @@ private:
     };
 public:
     // Length in uints
-    @property size_t uintLength() pure nothrow const @safe @nogc
+    @property size_t uintLength() pure nothrow const @safe @nogc scope
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -272,7 +272,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    @property size_t ulongLength() pure nothrow const @safe @nogc
+    @property size_t ulongLength() pure nothrow const @safe @nogc scope
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -285,7 +285,7 @@ public:
     }
 
     // The value at (cast(ulong[]) data)[n]
-    ulong peekUlong(size_t n) pure nothrow const @safe @nogc
+    ulong peekUlong(size_t n) pure nothrow const @safe @nogc scope
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -298,7 +298,7 @@ public:
         }
     }
 
-    uint peekUint(size_t n) pure nothrow const @safe @nogc
+    uint peekUint(size_t n) pure nothrow const @safe @nogc scope
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -312,7 +312,7 @@ public:
     }
 
     ///
-    void opAssign(Tulong)(Tulong u) pure nothrow @safe if (is (Tulong == ulong))
+    void opAssign(Tulong)(Tulong u) pure nothrow @safe scope if (is (Tulong == ulong))
     {
         if (u == 0) data = ZERO;
         else if (u == 1) data = ONE;
@@ -339,13 +339,13 @@ public:
             }
         }
     }
-    void opAssign(Tdummy = void)(BigUint y) pure nothrow @nogc @safe
+    void opAssign(Tdummy = void)(BigUint y) pure nothrow @nogc @safe scope
     {
         this.data = y.data;
     }
 
     ///
-    int opCmp(Tdummy = void)(const BigUint y) pure nothrow @nogc const @safe
+    int opCmp(Tdummy = void)(const BigUint y) pure nothrow @nogc const @safe scope
     {
         if (data.length != y.data.length)
             return (data.length > y.data.length) ?  1 : -1;
@@ -356,7 +356,7 @@ public:
     }
 
     ///
-    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if (is (Tulong == ulong))
+    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe scope if (is (Tulong == ulong))
     {
         if (data.length > maxBigDigits!Tulong)
             return 1;
@@ -382,12 +382,12 @@ public:
         return 0;
     }
 
-    bool opEquals(Tdummy = void)(ref const BigUint y) pure nothrow @nogc const @safe
+    bool opEquals(Tdummy = void)(ref const BigUint y) pure nothrow @nogc const @safe scope
     {
            return y.data[] == data[];
     }
 
-    bool opEquals(Tdummy = void)(ulong y) pure nothrow @nogc const @safe
+    bool opEquals(Tdummy = void)(ulong y) pure nothrow @nogc const @safe scope
     {
         if (data.length > 2)
             return false;
@@ -400,18 +400,18 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const nothrow @safe @nogc
+    bool isZero() pure const nothrow @safe @nogc scope
     {
         return data.length == 1 && data[0] == 0;
     }
 
-    size_t numBytes() pure nothrow const @safe @nogc
+    size_t numBytes() pure nothrow const @safe @nogc scope
     {
         return data.length * BigDigit.sizeof;
     }
 
     // the extra bytes are added to the start of the string
-    char [] toDecimalString(int frontExtraBytes) const pure nothrow @safe
+    char [] toDecimalString(int frontExtraBytes) const pure nothrow @safe scope
     {
         immutable predictlength = 20+20*(data.length/2); // just over 19
         char [] buff = new char[frontExtraBytes + predictlength];
@@ -428,7 +428,7 @@ public:
      */
     char [] toHexString(int frontExtraBytes, char separator = 0,
             int minPadding=0, char padChar = '0',
-            LetterCase letterCase = LetterCase.upper) const pure nothrow @safe
+            LetterCase letterCase = LetterCase.upper) const pure nothrow @safe scope
     {
         // Calculate number of extra padding bytes
         size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
@@ -492,7 +492,7 @@ public:
     /**
      * Convert to an octal string.
      */
-    char[] toOctalString() pure nothrow @safe const
+    char[] toOctalString() pure nothrow @safe const scope
     {
         auto predictLength = 1 + data.length*BigDigitBits / 3;
         char[] buff = new char[predictLength];
@@ -501,7 +501,7 @@ public:
     }
 
     // return false if invalid character found
-    bool fromHexString(Range)(Range s) if (
+    bool fromHexString(Range)(Range s) scope if (
         isBidirectionalRange!Range && isSomeChar!(ElementType!Range))
     {
         import std.range : walkLength;
@@ -570,7 +570,7 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
-    bool fromDecimalString(Range)(Range s) if (
+    bool fromDecimalString(Range)(Range s) scope if (
         isForwardRange!Range && isSomeChar!(ElementType!Range))
     {
         import std.range : walkLength;
@@ -595,7 +595,7 @@ public:
         return true;
     }
 
-    void fromMagnitude(Range)(Range magnitude)
+    void fromMagnitude(Range)(Range magnitude) scope
         if (isInputRange!Range
             && (isForwardRange!Range || hasLength!Range)
             && isUnsigned!(ElementType!Range))
@@ -734,7 +734,7 @@ public:
     }
 
     // return x << y
-    BigUint opBinary(string op, Tulong)(Tulong y) pure nothrow @safe const
+    BigUint opBinary(string op, Tulong)(Tulong y) pure nothrow @safe const scope
         if (op == "<<" && is (Tulong == ulong))
     {
         assert(y > 0, "Can not left shift BigUint by 0");
@@ -813,7 +813,7 @@ public:
 
     // If wantSub is false, return x + y, leaving sign unchanged.
     // If wantSub is true, return abs(x - y), negating sign if x<y
-    static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
+    static BigUint addOrSub(scope BigUint x, scope BigUint y, bool wantSub, bool *sign)
         pure nothrow @safe
     {
         BigUint r;
@@ -858,7 +858,7 @@ public:
 
     /*  return x * y.
      */
-    static BigUint mul(BigUint x, BigUint y) pure nothrow @safe
+    static BigUint mul(scope BigUint x, scope BigUint y) pure nothrow @safe
     {
         if (y == 0 || x == 0)
             return BigUint(ZERO);
@@ -879,7 +879,7 @@ public:
     }
 
     // return x / y
-    static BigUint divInt(T)(BigUint x, T y_) pure nothrow @safe
+    static BigUint divInt(T)(scope return BigUint x, T y_) pure nothrow @safe
     if ( is(immutable T == immutable uint) )
     {
         uint y = y_;
@@ -905,7 +905,7 @@ public:
         return BigUint(removeLeadingZeros(trustedAssumeUnique(result)));
     }
 
-    static BigUint divInt(T)(BigUint x, T y) pure nothrow @safe
+    static BigUint divInt(T)(scope BigUint x, T y) pure nothrow @safe
     if ( is(immutable T == immutable ulong) )
     {
         if (y <= uint.max)
@@ -921,7 +921,7 @@ public:
     }
 
     // return x % y
-    static uint modInt(T)(BigUint x, T y_) pure if ( is(immutable T == immutable uint) )
+    static uint modInt(T)(scope BigUint x, T y_) pure if ( is(immutable T == immutable uint) )
     {
         import core.memory : GC;
         uint y = y_;
@@ -942,7 +942,7 @@ public:
     }
 
     // return x / y
-    static BigUint div(BigUint x, BigUint y) pure nothrow @safe
+    static BigUint div(scope return BigUint x, scope BigUint y) pure nothrow @safe
     {
         if (y.data.length > x.data.length)
             return BigUint(ZERO);
@@ -954,7 +954,7 @@ public:
     }
 
     // return x % y
-    static BigUint mod(BigUint x, BigUint y) pure nothrow @safe
+    static BigUint mod(scope return BigUint x, scope BigUint y) pure nothrow @safe
     {
         if (y.data.length > x.data.length) return x;
         if (y.data.length == 1)
@@ -968,16 +968,20 @@ public:
     }
 
     // Return x / y in quotient, x % y in remainder
-    static void divMod(BigUint x, BigUint y, out BigUint quotient, out BigUint remainder) pure nothrow @safe
+    static void divMod(scope return BigUint x, scope return BigUint y, scope out BigUint quotient, scope out BigUint remainder) pure nothrow @safe
     {
         if (y.data.length > x.data.length)
         {
             quotient = 0uL;
-            remainder = x;
+            () @trusted { // TODO remove when `scope return` understands out parameters
+                remainder = x;
+            } ();
         }
         else if (y.data.length == 1)
         {
-            quotient = divInt(x, y.data[0]);
+            () @trusted { // TODO remove when `scope return` understands out parameters
+                quotient = divInt(x, y.data[0]);
+            } ();
             remainder = BigUint([modInt(x, y.data[0])]);
         }
         else
@@ -991,7 +995,7 @@ public:
     }
 
     // return x op y
-    static BigUint bitwiseOp(string op)(BigUint x, BigUint y, bool xSign, bool ySign, ref bool resultSign)
+    static BigUint bitwiseOp(string op)(scope BigUint x, scope BigUint y, bool xSign, bool ySign, ref bool resultSign)
     pure nothrow @safe if (op == "|" || op == "^" || op == "&")
     {
         auto d1 = includeSign(x.data, y.uintLength, xSign);
@@ -1018,7 +1022,7 @@ public:
      * exponentiation is used.
      * Memory allocation is minimized: at most one temporary BigUint is used.
      */
-    static BigUint pow(BigUint x, ulong y) pure nothrow @safe
+    static BigUint pow(scope return BigUint x, ulong y) pure nothrow @safe
     {
         // Deal with the degenerate cases first.
         if (y == 0) return BigUint(ONE);
@@ -1226,7 +1230,7 @@ public:
     }
 
     // Implement toHash so that BigUint works properly as an AA key.
-    size_t toHash() const @nogc nothrow pure @safe
+    size_t toHash() const @nogc nothrow pure @safe scope
     {
         return .hashOf(data);
     }
@@ -1257,7 +1261,7 @@ public:
 }
 
 // Remove leading zeros from x, to restore the BigUint invariant
-inout(BigDigit) [] removeLeadingZeros(inout(BigDigit) [] x) pure nothrow @safe
+inout(BigDigit) [] removeLeadingZeros(scope return inout(BigDigit) [] x) pure nothrow @safe
 {
     size_t k = x.length;
     while (k>1 && x[k - 1]==0) --k;
@@ -1915,7 +1919,7 @@ private:
 // every 8 digits.
 // buff.length must be data.length*8 if separator is zero,
 // or data.length*9 if separator is non-zero. It will be completely filled.
-char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
+char [] biguintToHex(scope return char [] buff, const scope BigDigit [] data, char separator=0,
         LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
     int x=0;
