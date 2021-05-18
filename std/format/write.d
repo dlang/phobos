@@ -524,7 +524,7 @@ Note:
     implementation there are some cases where allocations occur.
     See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
  */
-uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[] fmt, auto ref Args args)
+uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[] fmt, Args args)
 {
     import std.conv : text;
     import std.format : enforceFmt, FormatException;
