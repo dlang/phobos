@@ -493,13 +493,14 @@ public:
     /**
      * Implements binary operators between `BigInt`'s and built-in integers.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const return scope
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
     {
         BigInt r = this;
-        return r.opOpAssign!(op)(y);
+        r.opOpAssign!(op)(y);
+        return r;
     }
 
     ///
