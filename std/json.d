@@ -152,14 +152,14 @@ struct JSONValue
      * Throws: `JSONException` for read access if `type` is not
      * `JSONType.string`.
      */
-    @property string str() const pure @trusted
+    @property string str() const pure @trusted return scope
     {
         enforce!JSONException(type == JSONType.string,
                                 "JSONValue is not a string");
         return store.str;
     }
     /// ditto
-    @property string str(string v) pure nothrow @nogc @safe
+    @property string str(return string v) pure nothrow @nogc @trusted return // TODO make @safe
     {
         assign(v);
         return v;
@@ -275,14 +275,14 @@ struct JSONValue
        (*a)["hello"] = "world";  // segmentation fault
        ---
      */
-    @property ref inout(JSONValue[string]) object() inout pure @system
+    @property ref inout(JSONValue[string]) object() inout pure @system return
     {
         enforce!JSONException(type == JSONType.object,
                                 "JSONValue is not an object");
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(JSONValue[string] v) pure nothrow @nogc @safe
+    @property JSONValue[string] object(return JSONValue[string] v) pure nothrow @nogc @trusted // TODO make @safe
     {
         assign(v);
         return v;
@@ -328,7 +328,7 @@ struct JSONValue
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(JSONValue[] v) pure nothrow @nogc @safe
+    @property JSONValue[] array(return JSONValue[] v) pure nothrow @nogc @trusted scope // TODO make @safe
     {
         assign(v);
         return v;
@@ -635,7 +635,7 @@ struct JSONValue
      * Hash syntax for json objects.
      * Throws: `JSONException` if `type` is not `JSONType.object`.
      */
-    ref inout(JSONValue) opIndex(string k) inout pure @safe
+    ref inout(JSONValue) opIndex(return string k) inout pure @safe
     {
         auto o = this.objectNoRef;
         return *enforce!JSONException(k in o,
