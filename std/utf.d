@@ -3004,7 +3004,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-dstring toUTF32(S)(S s)
+dstring toUTF32(S)(scope S s)
 if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!dstring(s);
@@ -3023,7 +3023,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
     assert("𐐷"w.toUTF32.equal([0x00010437]));
 }
 
-private T toUTFImpl(T, S)(S s)
+private T toUTFImpl(T, S)(scope S s)
 {
     static if (is(S : T))
     {
