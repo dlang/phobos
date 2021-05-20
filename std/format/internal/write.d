@@ -641,36 +641,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             tval = -doubleLowest;
     }
 
-    import std.format.internal.floats : RoundingMode, printFloat;
-    import std.math.hardware; // cannot be selective, because FloatingPointControl might not be defined
-
-    auto mode = RoundingMode.toNearestTiesToEven;
-
-    if (!__ctfe)
-    {
-        // std.math's FloatingPointControl isn't available on all target platforms
-        static if (is(FloatingPointControl))
-        {
-            switch (FloatingPointControl.rounding)
-            {
-            case FloatingPointControl.roundUp:
-                mode = RoundingMode.up;
-                break;
-            case FloatingPointControl.roundDown:
-                mode = RoundingMode.down;
-                break;
-            case FloatingPointControl.roundToZero:
-                mode = RoundingMode.toZero;
-                break;
-            case FloatingPointControl.roundToNearest:
-                mode = RoundingMode.toNearestTiesToEven;
-                break;
-            default: assert(false, "Unknown floating point rounding mode");
-            }
-        }
-    }
-
-    printFloat(w, tval, fs, mode);
+    import std.format.internal.floats : printFloat;
+    printFloat(w, tval, fs);
 }
 
 @safe unittest
@@ -3691,6 +3663,7 @@ private long getWidth(T)(T s)
 }
 
 enum RoundingClass { ZERO, LOWER, FIVE, UPPER }
+enum RoundingMode { up, down, toZero, toNearestTiesToEven, toNearestTiesAwayFromZero }
 
 bool round(T)(ref T sequence, size_t left, size_t right, RoundingClass type, bool negative, char max = '9')
 in (left >= 0) // should be left > 0, but if you know ahead, that there's no carry, left == 0 is fine
@@ -3700,7 +3673,6 @@ in (right <= sequence.length)
 in (right >= left)
 in (max == '9' || max == 'f' || max == 'F')
 {
-    import std.format.internal.floats : RoundingMode;
     import std.math.hardware;
 
     auto mode = RoundingMode.toNearestTiesToEven;
