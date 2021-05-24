@@ -2313,11 +2313,7 @@ if (is(T == class) && !is(T == enum))
         }
         else
         {
-            // string delegate() dg = &val.toString;
-            Object o = val;     // workaround
-            string delegate() dg = &o.toString;
-            scope Object object = new Object();
-            if (dg.funcptr != (&object.toString).funcptr) // toString is overridden
+            static if (!is(__traits(parent, T.toString) == Object)) // not inherited Object.toString
             {
                 formatObject(w, val, f);
             }
