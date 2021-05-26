@@ -343,12 +343,38 @@ do
      return s;
      +/
 
-    // Need to make a copy
-    auto copy = new char[s.length + 1];
-    copy[0 .. s.length] = s[];
-    copy[s.length] = 0;
+    /+
+    Try use existent memory. Test reserved memory.
+    if reserved 
+      add trailing zero
+      return pointer
+    else
+      allocate new memory block
+      copy string
+      add zero
+      return pointer
+    +/
 
-    return &assumeUnique(copy)[0];
+    // reserve
+    if ( s.capacity > s.length )
+    {
+        char* cptr = cast( char* ) s.ptr; // C ptr
+        char* zptr = cptr + s.length;     // zero ptr
+        *zptr = '\0';        
+
+        return cast( immutable(char)* ) cptr;
+    }
+    else
+
+    // allocate
+    {
+        // Need to make a copy
+        auto copy = new char[s.length + 1];
+        copy[0 .. s.length] = s[];
+        copy[s.length] = 0;
+
+        return &assumeUnique(copy)[0];
+    }
 }
 
 ///
