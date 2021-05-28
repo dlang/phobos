@@ -344,7 +344,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
 
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
