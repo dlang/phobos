@@ -245,7 +245,7 @@ private:
 
     immutable(BigDigit) [] data = ZERO;
 
-    this(immutable(BigDigit) [] x) pure nothrow @nogc @safe scope
+    this(return scope immutable(BigDigit) [] x) pure nothrow @nogc @safe
     {
        data = x;
     }
@@ -710,7 +710,7 @@ public:
     // All of these member functions create a new BigUint.
 
     // return x >> y
-    BigUint opBinary(string op, Tulong)(Tulong y) pure nothrow @safe const
+    BigUint opBinary(string op, Tulong)(Tulong y) pure nothrow @safe const return scope
         if (op == ">>" && is (Tulong == ulong))
     {
         assert(y > 0, "Can not right shift BigUint by 0");
@@ -1498,7 +1498,7 @@ private int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
  * Returns:
  *    unique memory
  */
-BigDigit [] sub(const BigDigit [] x, const BigDigit [] y, bool *negative)
+BigDigit [] sub(const scope BigDigit [] x, const scope BigDigit [] y, bool *negative)
 pure nothrow @safe
 {
     if (x.length == y.length)
@@ -1558,7 +1558,7 @@ pure nothrow @safe
  * Returns:
  *    unique memory
  */
-BigDigit [] add(const BigDigit [] a, const BigDigit [] b) pure nothrow @safe
+BigDigit [] add(const scope BigDigit [] a, const scope BigDigit [] b) pure nothrow @safe
 {
     const(BigDigit) [] x, y;
     if (a.length < b.length)

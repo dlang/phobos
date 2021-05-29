@@ -246,7 +246,7 @@ public:
      * Implements assignment operators from built-in integers of the form
      * `BigInt op= integer`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe return
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe return scope
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -1351,16 +1351,16 @@ public:
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, string formatString) const
+    void toString(scope void delegate(scope const(char)[]) sink, string formatString) const
     {
-        toString!(void delegate(const(char)[]))(sink, formatString);
+        toString!(void delegate(scope const(char)[]))(sink, formatString);
     }
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    void toString(scope void delegate(scope const(char)[]) sink, scope const ref FormatSpec!char f) const
     {
-        toString!(void delegate(const(char)[]))(sink, f);
+        toString!(void delegate(scope const(char)[]))(sink, f);
     }
 
     // Backwards compatibility test
