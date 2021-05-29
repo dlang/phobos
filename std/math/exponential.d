@@ -656,6 +656,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
             static if (maxOdd > ulong.max)
             {
                 // Generic method, for any FP type
+                import std.math.rounding : floor;
                 if (floor(y) != y)
                     return sqrt(x); // Complex result -- create a NaN
 
@@ -2165,7 +2166,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
     import std.math.traits : isSubnormal;
 
     if (__ctfe)
@@ -2553,7 +2554,7 @@ if (isFloatingPoint!T)
 int ilogb(T)(const T x) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
 
     import core.bitop : bsr;
     alias F = floatTraits!T;

@@ -283,7 +283,7 @@ debug(UnitTest)
  */
 real nextUp(real x) @trusted pure nothrow @nogc
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
 
     alias F = floatTraits!(real);
     static if (F.realFormat != RealFormat.ieeeDouble)
