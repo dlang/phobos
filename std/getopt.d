@@ -1106,7 +1106,7 @@ private struct configuration
 private bool optMatch(string arg, scope string optPattern, ref string value,
     configuration cfg) @safe
 {
-    import std.array : split;
+    import std.algorithm.iteration : splitter;
     import std.string : indexOf;
     import std.uni : toUpper;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
@@ -1148,8 +1148,7 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
     }
     //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
-    const variants = split(optPattern, "|");
-    foreach (v ; variants)
+    foreach (v; splitter(optPattern, "|"))
     {
         //writeln("Trying variant: ", v, " against ", arg);
         if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
