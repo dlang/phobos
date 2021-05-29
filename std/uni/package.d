@@ -1819,7 +1819,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         return ptr[0 .. size];
     }
 
-    static T[] realloc(T)(scope T[] arr, size_t size) @trusted
+    static T[] realloc(T)(return scope T[] arr, size_t size) @trusted
     {
         import std.internal.memory : enforceRealloc;
         if (!size)
