@@ -1939,7 +1939,7 @@ Pid spawnShell(scope const(char)[] command,
                Config config = Config.none,
                scope const(char)[] workDir = null,
                scope string shellPath = nativeShell)
-    @safe
+    @trusted // See reason below
 {
     version (Windows)
     {
@@ -1957,6 +1957,11 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
+        /* The passing of args converts the static array, which is initialized with `scope` pointers,
+         * to a dynamic array, which is also a scope parameter. So, it is a scope pointer to a
+         * scope pointer, which although is safely used here, D doesn't allow transitive scope.
+         * See https://github.com/dlang/dmd/pull/10951
+         */
         return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
     else
