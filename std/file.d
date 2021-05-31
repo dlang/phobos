@@ -2917,6 +2917,8 @@ if (isConvertibleToString!R)
 @system unittest
 {
     import std.algorithm.comparison : equal;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
     import std.path : buildPath;
 
     auto cwd = getcwd;
@@ -2927,9 +2929,9 @@ if (isConvertibleToString!R)
     dir.buildPath("a").write(".");
     dir.chdir; // step into dir
     "b".write(".");
-    dirEntries(".", SpanMode.shallow).equal(
-        [".".buildPath("b"), ".".buildPath("a")]
-    );
+    assert(dirEntries(".", SpanMode.shallow).array.sort.equal(
+        [".".buildPath("a"), ".".buildPath("b")]
+    ));
 }
 
 @safe unittest
@@ -4605,6 +4607,8 @@ enum SpanMode
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
     import std.path : buildPath, relativePath;
 
     auto root = deleteme ~ "root";
@@ -4613,19 +4617,19 @@ enum SpanMode
 
     root.buildPath("animals").mkdir;
     root.buildPath("animals", "cat").mkdir;
-    root.buildPath("animals", "dog").mkdir;
-    root.buildPath("plants").mkdir;
 
     alias removeRoot = (return scope e) => e.relativePath(root);
 
-    root.dirEntries(SpanMode.shallow).map!removeRoot.equal(
-        ["plants", "animals"]);
+    assert(root.dirEntries(SpanMode.depth).map!removeRoot.equal(
+        [buildPath("animals", "cat"), "animals"]));
 
-    root.dirEntries(SpanMode.depth).map!removeRoot.equal(
-        ["plants", "animals/dog", "animals/cat", "animals"]);
+    assert(root.dirEntries(SpanMode.breadth).map!removeRoot.equal(
+        ["animals", buildPath("animals", "cat")]));
 
-    root.dirEntries(SpanMode.breadth).map!removeRoot.equal(
-        ["plants", "animals", "animals/dog", "animals/cat"]);
+    root.buildPath("plants").mkdir;
+
+    assert(root.dirEntries(SpanMode.shallow).array.sort.map!removeRoot.equal(
+        ["animals", "plants"]));
 }
 
 private struct DirIteratorImpl
@@ -4897,6 +4901,9 @@ public:
     if additional details are needed. The span _mode dictates how the
     directory is traversed. The name of each iterated directory entry
     contains the absolute or relative _path (depending on _pathname).
+
+    Note: The order of returned directory entries is as it is provided by the
+    operating system / filesystem, and may not follow any particular sorting.
 
     Params:
         path = The directory to iterate over.
