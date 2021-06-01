@@ -65,6 +65,7 @@ Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
     import core.math : fabs;
+    import std.math : floatTraits;
     import std.math.rounding : floor;
     import std.math.traits : isNaN;
     import std.traits : Unsigned;
@@ -112,44 +113,22 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     enum uint bias = F.max_exp - 1;
 
-    static if (is(F == float))
+    ulong ex;
+    if (__ctfe)
     {
-        float f = cast(float) v;
-        uint ival = () @trusted { return *cast(uint*) &f; }();
-        ulong ex = (ival >> 23) & 255;
-    }
-    else static if (is(F == double) || (is(T == real) && T.mant_dig == double.mant_dig))
-    {
-        double d = cast(double) v;
-        ulong ival = () @trusted { return *cast(ulong*) &d; }();
-        ulong ex = (ival >> 52) & 2047;
-    }
-    else static if (is (F == real) && real.mant_dig == 64)
-    {
-        ulong ex = void;
-        if (__ctfe)
-        {
-            // in CTFE we cannot access the bit patterns and have therefore to
-            // fall back to the (slower) general case
-            // skipping subnormals by setting ex = bias
-            ex = fabs(v) == F.infinity ? 2 * bias + 1 :
-                (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
-        }
-        else
-        {
-            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &v; }();
-            ex = ival[1] & 32767;
-        }
+        // in CTFE we cannot access the bit patterns and have therefore to
+        // fall back to the (slower) general case
+        // skipping subnormals by setting ex = bias
+        const av = fabs(v);
+        ex = av == real.infinity ? 2 * bias + 1 :
+             av < F.min_normal ? bias : cast(ulong) (floor(log2(av)) + bias);
     }
     else
     {
-        // ToDo: Add special treatment for other reals too.
-
-        // In the general case we have to fall back to log2, which is slower, but still
-        // a certain speed gain compared to not bailing out early.
-            // skipping subnormals by setting ex = bias
-        ulong ex = fabs(v) == F.infinity ? 2 * bias + 1 :
-            (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
+        alias RT = floatTraits!real;
+        ushort* vu = cast(ushort*) &v;
+        ex = ((vu[RT.EXPPOS_SHORT] & RT.EXPMASK) >> RT.EXPSHIFT)
+             - (cast(long) (RT.EXPBIAS >> RT.EXPSHIFT) + 1) + bias;
     }
 
     // m * (...) can exceed ulong.max, we therefore first check m >= (...).
