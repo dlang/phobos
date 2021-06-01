@@ -878,7 +878,8 @@ struct MultiArray(Types...)
     }
 
     this(const(size_t)[] raw_offsets,
-        const(size_t)[] raw_sizes, const(size_t)[] data)const @safe pure nothrow @nogc
+        const(size_t)[] raw_sizes,
+        return scope const(size_t)[] data) return scope const @safe pure nothrow @nogc
     {
         offsets[] = raw_offsets[];
         sz[] = raw_sizes[];
