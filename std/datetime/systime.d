@@ -8751,6 +8751,7 @@ public:
         auto found = (skipFirst ? str[1..$] : str).byCodeUnit.find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str.byCodeUnit) foundTZ; // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -8758,19 +8759,19 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
                     static if (isNarrowString!S)
                     {
-                        fracSecStr = found[0][0 .. $ - foundTZ[0].length].source;
-                        zoneStr = foundTZ[0].source;
+                        fracSecStr = found[0][0 .. $ - foundTZ.length].source;
+                        zoneStr = foundTZ.source;
                     }
                     else
                     {
-                        fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                        zoneStr = foundTZ[0];
+                        fracSecStr = found[0][0 .. $ - foundTZ.length];
+                        zoneStr = foundTZ;
                     }
                 }
                 else
@@ -9051,6 +9052,7 @@ public:
         auto found = str[tIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str) foundTZ;  // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -9058,12 +9060,12 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
-                    fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                    zoneStr = foundTZ[0];
+                    fracSecStr = found[0][0 .. $ - foundTZ.length];
+                    zoneStr = foundTZ;
                 }
                 else
                     fracSecStr = found[0];
@@ -9299,6 +9301,7 @@ public:
         auto found = str[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str) foundTZ;  // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -9306,12 +9309,12 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
-                    fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                    zoneStr = foundTZ[0];
+                    fracSecStr = found[0][0 .. $ - foundTZ.length];
+                    zoneStr = foundTZ;
                 }
                 else
                     fracSecStr = found[0];
