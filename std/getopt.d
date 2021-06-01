@@ -1108,7 +1108,7 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
 {
     import std.algorithm.iteration : splitter;
     import std.string : indexOf;
-    import std.uni : toUpper;
+    import std.uni : icmp;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (arg.length < 2 || arg[0] != optionChar) return false;
@@ -1151,7 +1151,7 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
     foreach (v; splitter(optPattern, "|"))
     {
         //writeln("Trying variant: ", v, " against ", arg);
-        if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
+        if (arg == v || (!cfg.caseSensitive && icmp(arg, v) == 0))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
                 && indexOf(arg, v) >= 0)
