@@ -454,6 +454,23 @@ template to(T)
     assert(text(null) == "null");
 }
 
+// Test `scope` inference of parameters of `text`
+@safe unittest
+{
+    static struct S
+    {
+        int* x; // make S a type with pointers
+        string toString() const scope
+        {
+            static int g = 0; // force toString to be impure for:
+            g++; // https://issues.dlang.org/show_bug.cgi?id=20150
+            return "S";
+        }
+    }
+    scope S s;
+    assert(text("a", s) == "aS");
+}
+
 // Tests for issue 11390
 @safe pure /+nothrow+/ unittest
 {
@@ -4778,8 +4795,8 @@ private S textImpl(S, U...)(U args)
         // assume that on average, parameters will have less
         // than 20 elements
         app.reserve(U.length * 20);
-
-        foreach (arg; args)
+        // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+        static foreach (arg; args)
         {
             static if (
                 isSomeChar!(typeof(arg)) || isSomeString!(typeof(arg)) ||
