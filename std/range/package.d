@@ -932,7 +932,8 @@ if (Ranges.length > 0 &&
         public:
             this(R input)
             {
-                foreach (i, v; input)
+                // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+                static foreach (i, v; input)
                 {
                     source[i] = v;
                 }
