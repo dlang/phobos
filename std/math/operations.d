@@ -1717,7 +1717,7 @@ if (isFloatingPoint!T)
     bool negative;
 }
 
-FloatingPointBitpattern!T extractBitpattern(T)(T val)
+FloatingPointBitpattern!T extractBitpattern(T)(T val) @trusted
 if (isFloatingPoint!T)
 {
     import std.math : floatTraits, RealFormat;
@@ -1777,14 +1777,13 @@ if (isFloatingPoint!T)
             }
 
             double d = cast(double) val;
-            ulong ival = () @trusted { return *cast(ulong*) &d; }();
+            ulong ival = *cast(ulong*) &d;
             if ((ival >> 63) & 1) ret.negative = true;
         }
         else
         {
-            ulong* vl = () @trusted { return cast(ulong*) &val; }();
-            ushort* vs = () @trusted { return cast(ushort*) &val; }();
-            ret.mantissa = vl[0] & ((1L << 63) - 1);
+            ushort* vs = cast(ushort*) &val;
+            ret.mantissa = (cast(ulong*) vs)[0] & ((1L << 63) - 1);
             ret.exponent = vs[4] & 32767;
             if ((vs[4] >> 15) & 1) ret.negative = true;
         }
@@ -1793,11 +1792,11 @@ if (isFloatingPoint!T)
     {
         static if (F.realFormat == RealFormat.ieeeSingle)
         {
-            ulong ival = () @trusted { return *cast(uint*) &val; }();
+            ulong ival = *cast(uint*) &val;
         }
         else static if (F.realFormat == RealFormat.ieeeDouble)
         {
-            ulong ival = () @trusted { return *cast(ulong*) &val; }();
+            ulong ival = *cast(ulong*) &val;
         }
         else
         {
