@@ -212,7 +212,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    assert(isClose(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25));
+    assert(isClose(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-15));
     assert(isClose(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15));
 
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
