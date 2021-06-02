@@ -1991,8 +1991,8 @@ if (isFloatingPoint!T)
 
         enum r7 = nextDown(0x1p+16383L);
         enum bp7 = extractBitpattern(r7);
-        static assert(bp2.mantissa == 0xffff_ffff_ffff_ffffL);
-        static assert(bp2.exponent == 16383);
-        static assert(bp2.negative == false);
+        static assert(bp7.mantissa == 0xffff_ffff_ffff_ffffL);
+        static assert(bp7.exponent == 16382);
+        static assert(bp7.negative == false);
     }
 }
