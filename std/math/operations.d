@@ -1782,10 +1782,11 @@ if (isFloatingPoint!T)
         }
         else
         {
-            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &val; }();
-            ret.mantissa = ival[0] & ((1L << 63) - 1);
-            ret.exponent = ival[1] & 32767;
-            if ((ival[1] >> 15) & 1) ret.negative = true;
+            ulong* vl = () @trusted { return cast(ulong*) &val; }();
+            ushort* vs = () @trusted { return cast(ushort*) &val; }();
+            ret.mantissa = vl[0] & ((1L << 63) - 1);
+            ret.exponent = vs[4] & 32767;
+            if ((vs[4] >> 15) & 1) ret.negative = true;
         }
     }
     else
