@@ -1729,9 +1729,9 @@ if (isFloatingPoint!T)
     {
         if (__ctfe)
         {
-            import core.math : fabs;
+            import core.math : fabs, ldexp;
             import std.math.rounding : floor;
-            import std.math.traits : isInfinity, isNaN;
+            import std.math.traits : isInfinity, isNaN, signbit;
             import std.math.exponential : log2;
 
             if (isNaN(val) || isInfinity(val))
@@ -1750,19 +1750,9 @@ if (isFloatingPoint!T)
             }
             else
             {
-                if (ret.exponent > 16382 + 64) // bias + bits of ulong
-                    val /= 2.0L ^^ (ret.exponent - (16382 + 64));
-                else
-                {
-                    auto delta = 16382 + 64 - (ret.exponent == 0 ? 1 : ret.exponent); // -1 in case of subnormals
-                    if (delta > 16383)
-                    {
-                        // need two steps to avoid overflow
-                        val *= 2.0L ^^ 16383;
-                        delta -= 16383;
-                    }
-                    val *= 2.0L ^^ delta;
-                }
+                auto delta = 16382 + 64 // bias + bits of ulong
+                             - (ret.exponent == 0 ? 1 : ret.exponent); // -1 in case of subnormals
+                val = ldexp(val, delta); // val *= 2^^delta
 
                 ulong tmp = cast(ulong) fabs(val);
                 if (ret.exponent != 32767 && ret.exponent > 0 && tmp <= ulong.max / 2)
@@ -1773,19 +1763,17 @@ if (isFloatingPoint!T)
                     tmp = cast(ulong) fabs(val);
                 }
 
-                ret.mantissa = tmp & ((1L << 63) - 1);
+                ret.mantissa = tmp & long.max;
             }
 
-            double d = cast(double) val;
-            ulong ival = *cast(ulong*) &d;
-            if ((ival >> 63) & 1) ret.negative = true;
+            ret.negative = (signbit(val) == 1);
         }
         else
         {
             ushort* vs = cast(ushort*) &val;
-            ret.mantissa = (cast(ulong*) vs)[0] & ((1L << 63) - 1);
-            ret.exponent = vs[4] & 32767;
-            if ((vs[4] >> 15) & 1) ret.negative = true;
+            ret.mantissa = (cast(ulong*) vs)[0] & long.max;
+            ret.exponent = vs[4] & short.max;
+            ret.negative = (vs[4] >> 15) & 1;
         }
     }
     else
