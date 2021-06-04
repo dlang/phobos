@@ -1,8 +1,0 @@
-`Fields` (formerly `FieldTypeTuple`) now returns an empty tuple for interfaces
-
-Previously `Fields` returned `AliasSeq!(Interface)` for interfaces as done for
-non-aggregate types like `int`, `char*`, ... . This behaviour was surprising
-because an instance of an interface *may* have members that just are not
-known at compile time.
-
-`Fields` will now return an empty `AliasSeq!()` for interfaces.
