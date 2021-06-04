@@ -1,8 +1,0 @@
-Formatting floating point numbers don't allocate with the GC anymore.
-
-The implementation of formatting floating point numbers has been
-reworked. We made sure that working examples never allocate with the
-GC, however, we are still using exceptions which are GC managed.
-Therefore, code that uses formatting correctly will never allocate,
-but in the case of exceptions, the GC will be used to allocate the
-exception. We are working on DIP 1008 to solve this issue.

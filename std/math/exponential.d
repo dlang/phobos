@@ -64,13 +64,7 @@ version (D_HardFloat)
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
 if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    import core.math : fabs;
-    import std.math.rounding : floor;
-    import std.math.traits : isNaN;
     import std.traits : Unsigned;
-
-    // NaN ^^ 0 is an exception defined by IEEE (yields 1 instead of NaN)
-    if (isNaN(x)) return n ? x : 1.0;
 
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
@@ -90,76 +84,13 @@ if (isFloatingPoint!(F) && isIntegral!(G))
             return 1.0;
         case 1:
             return x;
+        case 2:
+            return x * x;
         default:
         }
 
         v = x;
     }
-
-    // Bail out early, if we can estimate that the result is infinity or 0.0:
-    //
-    // We use the following two conclusions:
-    //
-    //    m * floor(log2(fabs(v))) >= F.max_exp
-    // =>             fabs(v) ^^ m >  F.max == nextDown(F.infinity)
-    //
-    //    m * (bias - ex - 1) >= bias + F.mant_dig - 1
-    // =>         fabs(v) ^^ m <  2 ^^ (-bias - F.mant_dig + 2) == nextUp(0.0)
-    //
-    // floor(log2(fabs(v))) == ex - bias can be directly taken from the
-    // exponent of the floating point represantation, to avoid long
-    // calculations here.
-
-    enum uint bias = F.max_exp - 1;
-
-    static if (is(F == float))
-    {
-        float f = cast(float) v;
-        uint ival = () @trusted { return *cast(uint*) &f; }();
-        ulong ex = (ival >> 23) & 255;
-    }
-    else static if (is(F == double) || (is(T == real) && T.mant_dig == double.mant_dig))
-    {
-        double d = cast(double) v;
-        ulong ival = () @trusted { return *cast(ulong*) &d; }();
-        ulong ex = (ival >> 52) & 2047;
-    }
-    else static if (is (F == real) && real.mant_dig == 64)
-    {
-        ulong ex = void;
-        if (__ctfe)
-        {
-            // in CTFE we cannot access the bit patterns and have therefore to
-            // fall back to the (slower) general case
-            // skipping subnormals by setting ex = bias
-            ex = fabs(v) == F.infinity ? 2 * bias + 1 :
-                (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
-        }
-        else
-        {
-            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &v; }();
-            ex = ival[1] & 32767;
-        }
-    }
-    else
-    {
-        // ToDo: Add special treatment for other reals too.
-
-        // In the general case we have to fall back to log2, which is slower, but still
-        // a certain speed gain compared to not bailing out early.
-            // skipping subnormals by setting ex = bias
-        ulong ex = fabs(v) == F.infinity ? 2 * bias + 1 :
-            (fabs(v) < F.min_normal ? bias : cast(ulong) (floor(log2(fabs(v))) + bias));
-    }
-
-    // m * (...) can exceed ulong.max, we therefore first check m >= (...).
-    // This is sufficient to know that the result will be infinity or 0.0
-    // and at the same time it guards against an overflow.
-    if (ex > bias && (m >= F.max_exp || m * (ex - bias) >= F.max_exp))
-        return (m % 2 == 0 || v > 0) ? F.infinity : -F.infinity;
-    else if (ex < bias - 1
-             && (m >= bias + F.mant_dig - 1 || m * (bias - ex - 1) >= bias + F.mant_dig - 1))
-        return 0.0;
 
     while (1)
     {
@@ -212,7 +143,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 
     assert(pow(x, neg1) == 1 / x);
 
-    assert(isClose(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-25));
+    assert(isClose(pow(xd, neg2), cast(double) (1 / (x * x)), 1e-15));
     assert(isClose(pow(xf, neg8), cast(float) (1 / ((x * x) * (x * x) * (x * x) * (x * x))), 1e-15));
 
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
@@ -656,6 +587,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
             static if (maxOdd > ulong.max)
             {
                 // Generic method, for any FP type
+                import std.math.rounding : floor;
                 if (floor(y) != y)
                     return sqrt(x); // Complex result -- create a NaN
 
@@ -2165,7 +2097,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
     import std.math.traits : isSubnormal;
 
     if (__ctfe)
@@ -2553,7 +2485,7 @@ if (isFloatingPoint!T)
 int ilogb(T)(const T x) @trusted pure nothrow @nogc
 if (isFloatingPoint!T)
 {
-    import std.math : floatTraits, RealFormat;
+    import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
 
     import core.bitop : bsr;
     alias F = floatTraits!T;

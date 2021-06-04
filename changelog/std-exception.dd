@@ -1,3 +1,0 @@
-`std.exception.enforceEx` has been removed.
-
-It had been deprecated in 2.079 in favor of `std.exception.enforce`.

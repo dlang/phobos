@@ -1,7 +1,0 @@
-Deprecate std.format : unformatElement
-
-`unformatElement` from `std.format` has been accidentally made public and
-will be removed from public view in 2.107.0.
-
-Please use instead for strings and characters `parseElement` from
-`std.conv` and for all else `unformatValue` from `std.format.read`.
