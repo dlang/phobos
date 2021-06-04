@@ -34,13 +34,6 @@ version (RISCV64)   version = RISCV_Any;
 version (D_InlineAsm_X86)    version = InlineAsm_X86_Any;
 version (D_InlineAsm_X86_64) version = InlineAsm_X86_Any;
 
-version (InlineAsm_X86_Any) version = InlineAsm_X87;
-version (InlineAsm_X87)
-{
-    static assert(real.mant_dig == 64);
-    version (CRuntime_Microsoft) version = InlineAsm_X87_MSVC;
-}
-
 version (X86_64) version = StaticallyHaveSSE;
 version (X86) version (OSX) version = StaticallyHaveSSE;
 

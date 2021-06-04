@@ -1196,13 +1196,16 @@ Throws: `Exception` if `buffer` is empty.
     // https://issues.dlang.org/show_bug.cgi?id=21728
     @system unittest
     {
-        import std.process : pipe;
-        import std.exception : assertThrown;
+        static if (__traits(compiles, { import std.process : pipe; })) // not available for iOS
+        {
+            import std.process : pipe;
+            import std.exception : assertThrown;
 
-        auto p = pipe();
-        p.readEnd.close;
-        ubyte[1] u;
-        assertThrown(p.readEnd.rawRead(u));
+            auto p = pipe();
+            p.readEnd.close;
+            ubyte[1] u;
+            assertThrown(p.readEnd.rawRead(u));
+        }
     }
 
 /**

@@ -547,7 +547,7 @@ long lrint(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        import std.math : floatTraits, RealFormat;
+        import std.math : floatTraits, RealFormat, MANTISSA_MSB, MANTISSA_LSB;
 
         alias F = floatTraits!(real);
         static if (F.realFormat == RealFormat.ieeeDouble)

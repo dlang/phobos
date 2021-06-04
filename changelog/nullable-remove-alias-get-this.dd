@@ -1,7 +1,0 @@
-`std.typecons.Nullable`: Remove deprecated `alias get this`.
-
-`Nullable` no longer implicitly converts to its member.
-This feature was problematic because a simple use of a value could
-invisibly cause an assertion due to type conversion.
-To restore the previous behavior, replace uses of a `Nullable` value
-`n` with `n.get`.

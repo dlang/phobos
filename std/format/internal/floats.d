@@ -209,12 +209,19 @@ if (is(T == float) || is(T == double)
     assert(printFloat(0.0, f) == "0x0p+0");
     assert(printFloat(-0.0, f) == "-0x0p+0");
 
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
-    assert(printFloat(0.0L, f) == "0x0p+0");
-    assert(printFloat(-0.0L, f) == "-0x0p+0");
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+        assert(printFloat(0.0L, f) == "0x0p+0");
+        assert(printFloat(-0.0L, f) == "-0x0p+0");
+    }
 
     import std.math.operations : nextUp;
 
@@ -1304,12 +1311,19 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'e';
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        auto f = FormatSpec!dchar("");
+        f.spec = 'e';
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+    }
 }
 
 @safe unittest
@@ -1407,14 +1421,21 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'e';
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
-    assert(printFloat(0.0L, f) == "0.000000e+00");
-    assert(printFloat(-0.0L, f) == "-0.000000e+00");
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        auto f = FormatSpec!dchar("");
+        f.spec = 'e';
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+        assert(printFloat(0.0L, f) == "0.000000e+00");
+        assert(printFloat(-0.0L, f) == "-0.000000e+00");
+    }
 
     static if (real.mant_dig == 64)
     {
@@ -2071,14 +2092,21 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'f';
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
-    assert(printFloat(0.0L, f) == "0.000000");
-    assert(printFloat(-0.0L, f) == "-0.000000");
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        auto f = FormatSpec!dchar("");
+        f.spec = 'f';
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+        assert(printFloat(0.0L, f) == "0.000000");
+        assert(printFloat(-0.0L, f) == "-0.000000");
+    }
 
     static if (real.mant_dig == 64)
     {
@@ -2657,14 +2685,21 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    char[256] buf;
-    auto f = FormatSpec!dchar("");
-    f.spec = 'g';
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        char[256] buf;
+        auto f = FormatSpec!dchar("");
+        f.spec = 'g';
 
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+    }
 }
 
 @safe unittest
@@ -2740,14 +2775,21 @@ if (is(T == float) || is(T == double)
 
 @safe unittest
 {
-    auto f = FormatSpec!dchar("");
-    f.spec = 'g';
-    assert(printFloat(real.nan, f) == "nan");
-    assert(printFloat(-real.nan, f) == "-nan");
-    assert(printFloat(real.infinity, f) == "inf");
-    assert(printFloat(-real.infinity, f) == "-inf");
-    assert(printFloat(0.0L, f) == "0");
-    assert(printFloat(-0.0L, f) == "-0");
+    static if (real.mant_dig > 64)
+    {
+        pragma(msg, "printFloat tests disabled because of unsupported `real` format");
+    }
+    else
+    {
+        auto f = FormatSpec!dchar("");
+        f.spec = 'g';
+        assert(printFloat(real.nan, f) == "nan");
+        assert(printFloat(-real.nan, f) == "-nan");
+        assert(printFloat(real.infinity, f) == "inf");
+        assert(printFloat(-real.infinity, f) == "-inf");
+        assert(printFloat(0.0L, f) == "0");
+        assert(printFloat(-0.0L, f) == "-0");
+    }
 
     static if (real.mant_dig == 64)
     {
