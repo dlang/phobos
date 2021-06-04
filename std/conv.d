@@ -5719,7 +5719,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
             char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf = void;
         }
 
-        Result result = void;
+        Result result;
         result.initialize(value);
         return result;
     }
@@ -5806,6 +5806,8 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 {
     import std.array;
     import std.range;
+
+    assert(toChars(123) == toChars(123));
 
     {
         assert(toChars!2(0u).array == "0");
