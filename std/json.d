@@ -542,7 +542,7 @@ struct JSONValue
         }
         else
         {
-            static assert(false, text(`unable to convert type "`, T.Stringof, `" to json`));
+            static assert(false, text(`unable to convert type "`, T.stringof, `" to json`));
         }
     }
 
