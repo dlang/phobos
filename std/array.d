@@ -764,13 +764,14 @@ if (isAssociativeArray!AA)
 
 private template blockAttribute(T)
 {
-    import core.memory;
-    static if (hasIndirections!(T) || is(T == void))
+    import std.typecons : shouldGCScan;
+    static if (shouldGCScan!T || is(T == void))
     {
         enum blockAttribute = 0;
     }
     else
     {
+        import core.memory : GC;
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }

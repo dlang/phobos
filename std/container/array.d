@@ -273,11 +273,22 @@ if (!is(immutable T == immutable bool))
     import core.memory : GC;
 
     import std.exception : enforce;
-    import std.typecons : RefCounted, RefCountedAutoInitialize;
+    import std.typecons : RefCounted, RefCountedAutoInitialize,
+                          shouldGCScan;
 
     // This structure is not copyable.
     private struct Payload
     {
+        static if (!shouldGCScan!T)
+        {
+            // If no pointers to GC-allocated memory are reachable through T
+            // then no pointers to GC-allocated memory are reachable from this
+            // struct even though it contains a pointer as the _payload array is
+            // not GC-allocated. This annotation is so RefCounted!Payload
+            // doesn't call GC.addRange unnecessarily.
+            private enum bool __GC_NO_SCAN = true;
+        }
+
         size_t _capacity;
         T[] _payload;
 
@@ -292,7 +303,7 @@ if (!is(immutable T == immutable bool))
                 foreach (ref e; _payload)
                     .destroy(e);
 
-            static if (hasIndirections!T)
+            static if (shouldGCScan!T)
                 GC.removeRange(_payload.ptr);
 
             free(_payload.ptr);
@@ -339,7 +350,7 @@ if (!is(immutable T == immutable bool))
                         assert(false, "Overflow");
                 }
 
-                static if (hasIndirections!T)
+                static if (shouldGCScan!T)
                 {
                     auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
                     auto newPayload = newPayloadPtr[0 .. newLength];
@@ -385,7 +396,7 @@ if (!is(immutable T == immutable bool))
                 if (overflow)
                     assert(false, "Overflow");
             }
-            static if (hasIndirections!T)
+            static if (shouldGCScan!T)
             {
                 /* Because of the transactional nature of this
                  * relative to the garbage collector, ensure no
@@ -486,7 +497,7 @@ if (!is(immutable T == immutable bool))
         {
             emplace(p + i, e);
         }
-        static if (hasIndirections!T)
+        static if (shouldGCScan!T)
         {
             if (p)
                 GC.addRange(p, T.sizeof * values.length);
@@ -611,7 +622,7 @@ if (!is(immutable T == immutable bool))
                     assert(false, "Overflow");
             }
             auto p = enforceMalloc(sz);
-            static if (hasIndirections!T)
+            static if (shouldGCScan!T)
             {
                 // Zero out unused capacity to prevent gc from seeing false pointers
                 memset(p, 0, sz);
@@ -1101,6 +1112,11 @@ if (!is(immutable T == immutable bool))
     a.length = 10;
     assert(a.length == 10);
     assert(a.capacity >= a.length);
+
+    import std.typecons : shouldGCScan;
+    static assert(!shouldGCScan!(typeof(a)));
+    static assert(!shouldGCScan!(typeof(a._data)));
+    static assert(!shouldGCScan!(typeof(a._data.refCountedStore)));
 }
 
 @system unittest

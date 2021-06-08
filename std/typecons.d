@@ -6378,14 +6378,8 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class) && !(is(T == interface)))
 {
-    version (D_BetterC)
-    {
-        private enum enableGCScan = false;
-    }
-    else
-    {
-        private enum enableGCScan = hasIndirections!T;
-    }
+
+    private enum enableGCScan = shouldGCScan!T;
 
     // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
     extern(C) private pure nothrow @nogc static
@@ -6408,6 +6402,15 @@ if (!is(T == class) && !(is(T == interface)))
         }
 
         private Impl* _store;
+
+        static if (!enableGCScan)
+        {
+            // If no pointers to GC-allocated memory are reachable through the
+            // payload then the same applies to this RefCountedStore since
+            // _store is not GC-allocated. This explicit annotation is for use
+            // by std.typecons.shouldGCScan.
+            private enum bool __GC_NO_SCAN = true;
+        }
 
         private void initialize(A...)(auto ref A args)
         {
@@ -6655,6 +6658,56 @@ assert(refCountedStore.isInitialized)).
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
+version (D_BetterC)
+    package(std) enum bool shouldGCScan(T) = false;
+else
+/+
+Code that manually allocates memory without using the GC is responsible
+for calling GC.addRange if there is the possibility the memory might contain a
+pointer through which GC-allocated memory is reachable. Conservatively
+determining this via std.traits.hasIndirections can lead to false positives when
+nesting multiple types that manage their own memory (for instance a refcounted
+array of refcounted items). This template addresses that problem by acting like
+std.traits.hasIndirections but adding an escape hatch: any struct or union that
+defines `enum bool __GC_NO_SCAN = true` is regarded as having no pointers that
+can be used to reach GC-allocated memory. Names beginning with two underscores
+are reserved for use by the language so there is not a danger of conflicting
+with an enum that is identically-named by coincidence.
++/
+package(std) template shouldGCScan(T)
+{
+    static if (is(T == struct) || is(T == union))
+    {
+        static if (__traits(hasMember, T, "__GC_NO_SCAN") &&
+            // Verify T is the parent to make sure this is not a false positive
+            // from `alias this`.
+           __traits(isSame, T, __traits(parent, __traits(getMember, T, "__GC_NO_SCAN"))))
+        {
+            // Trying to evaluate the truth value of T.__GC_NO_SCAN is intended
+            // to cause compilation failure if it is an instance member or a
+            // mutable static field.
+            static if (__traits(getMember, T, "__GC_NO_SCAN"))
+                enum bool shouldGCScan = false;
+            else
+                static assert(0, "The truth value of __GC_NO_SCAN is not used." ~
+                       " Rather than define it as false do not define it.");
+        }
+        else
+        {
+            import core.internal.traits : anySatisfy;
+            enum bool shouldGCScan = anySatisfy!(.shouldGCScan,
+                typeof(T.tupleof));
+        }
+    }
+    else static if (__traits(isStaticArray, T))
+    {
+        enum bool shouldGCScan = T.sizeof > 0 &&
+            shouldGCScan!(typeof(T.init.ptr[0]));
+    }
+    else
+        enum bool shouldGCScan = hasIndirections!T;
+}
+
 pure @system unittest
 {
     RefCounted!int* p;
@@ -6783,6 +6836,10 @@ pure @system unittest
     struct B { int b; alias b this; }
     struct C { B b; alias b this; }
     assert(to!string(refCounted(C(B(123)))) == to!string(C(B(123))));
+
+    // Test shouldGCScan.
+    static assert(shouldGCScan!(typeof(a)));
+    static assert(!shouldGCScan!(typeof(refCounted(C(B(123))))));
 }
 
 /**
