@@ -47,13 +47,13 @@ $(T2 findSkip,
         leaves `a` unchanged, whereas `findSkip(a, "c")` advances `a`
         to `"de"` and returns `true`.)
 $(T2 findSplit,
-        `findSplit("abcdefg", "de")` returns the three ranges `"abc"`,
+        `findSplit("abcdefg", "de")` returns a tuple of three ranges `"abc"`,
         `"de"`, and `"fg"`.)
 $(T2 findSplitAfter,
-        `findSplitAfter("abcdefg", "de")` returns the two ranges
-        `"abcde"` and `"fg"`.)
+`findSplitAfter("abcdefg", "de")` returns a tuple of two ranges `"abcde"`
+        and `"fg"`.)
 $(T2 findSplitBefore,
-        `findSplitBefore("abcdefg", "de")` returns the two ranges `"abc"`
+        `findSplitBefore("abcdefg", "de")` returns a tuple of two ranges `"abc"`
         and `"defg"`.)
 $(T2 minCount,
         `minCount([2, 1, 1, 4, 1])` returns `tuple(1, 3)`.)
