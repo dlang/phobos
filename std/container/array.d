@@ -114,12 +114,12 @@ private struct RangeT(A)
     }
     alias opDollar = length;
 
-    @property ref inout(E) front() inout
+    @property ref inout(E) front() inout pure nothrow
     {
         assert(!empty, "Attempting to access the front of an empty Array");
         return _outer[_a];
     }
-    @property ref inout(E) back() inout
+    @property ref inout(E) back() inout pure nothrow
     {
         assert(!empty, "Attempting to access the back of an empty Array");
         return _outer[_b - 1];
@@ -167,7 +167,7 @@ private struct RangeT(A)
         }
     }
 
-    ref inout(E) opIndex(size_t i) inout
+    ref inout(E) opIndex(size_t i) inout pure nothrow
     {
         assert(_a + i < _b,
             "Attempting to fetch using an out of bounds index on an Array");
