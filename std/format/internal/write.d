@@ -2141,7 +2141,7 @@ template hasToString(T, Char)
 }
 
 // object formatting with toString
-private void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
+private void formatObject(Writer, T, Char)(ref Writer w, scope ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     import std.format : NoOpSink;
@@ -2506,8 +2506,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 }
 
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val,
-    scope const ref FormatSpec!Char f)
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope auto ref T val, scope const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T))
     && !is(T == enum))
 {
