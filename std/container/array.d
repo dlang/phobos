@@ -322,47 +322,9 @@ if (!is(immutable T == immutable bool))
                 return;
             }
             immutable startEmplace = length;
-            if (_capacity < newLength)
-            {
-                // enlarge
-                static if (T.sizeof == 1)
-                {
-                    const nbytes = newLength;
-                }
-                else
-                {
-                    import core.checkedint : mulu;
-
-                    bool overflow;
-                    const nbytes = mulu(newLength, T.sizeof, overflow);
-                    if (overflow)
-                        assert(false, "Overflow");
-                }
-
-                static if (hasIndirections!T)
-                {
-                    auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
-                    auto newPayload = newPayloadPtr[0 .. newLength];
-                    memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
-                    memset(newPayload.ptr + startEmplace, 0,
-                            (newLength - startEmplace) * T.sizeof);
-                    GC.addRange(newPayload.ptr, nbytes);
-                    GC.removeRange(_payload.ptr);
-                    free(_payload.ptr);
-                    _payload = newPayload;
-                }
-                else
-                {
-                    _payload = (cast(T*) enforceRealloc(_payload.ptr,
-                            nbytes))[0 .. newLength];
-                }
-                _capacity = newLength;
-            }
-            else
-            {
-                _payload = _payload.ptr[0 .. newLength];
-            }
+            reserve(newLength);
             initializeAll(_payload.ptr[startEmplace .. newLength]);
+            _payload = _payload.ptr[0 .. newLength];
         }
 
         @property size_t capacity() const
