@@ -385,9 +385,17 @@ if (!is(immutable T == immutable bool))
         if (isImplicitlyConvertible!(Elem, T))
         {
             import core.lifetime : emplace;
+            assert(_capacity >= length);
             if (_capacity == length)
             {
-                reserve(1 + capacity * 3 / 2);
+                import core.checkedint : addu;
+
+                bool overflow;
+                immutable size_t newCapacity = addu(capacity, capacity / 2 + 1, overflow);
+                if (overflow)
+                    assert(false, "Overflow");
+
+                reserve(newCapacity);
             }
             assert(capacity > length && _payload.ptr,
                 "Failed to reserve memory");
@@ -400,22 +408,27 @@ if (!is(immutable T == immutable bool))
         size_t insertBack(Range)(Range r)
         if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T))
         {
+            immutable size_t oldLength = length;
+
             static if (hasLength!Range)
             {
-                immutable oldLength = length;
-                reserve(oldLength + r.length);
+                immutable size_t rLength = r.length;
+                reserve(oldLength + rLength);
             }
+
             size_t result;
             foreach (item; r)
             {
                 insertBack(item);
                 ++result;
             }
+
             static if (hasLength!Range)
-            {
-                assert(length == oldLength + r.length,
-                    "Failed to insertBack range");
-            }
+                assert(result == rLength, "insertBack: range might have changed length");
+
+            assert(length == oldLength + result,
+                "Failed to insertBack range");
+
             return result;
         }
     }
