@@ -538,7 +538,9 @@ if (is(Unqual!Char == Char))
                 {
                     assert(!r.empty, "Required at least one more input");
                     // Require a '%'
-                    if (r.front != '%') break;
+                    enforceFmt (r.front == '%',
+                        text("parseToFormatSpec: Cannot find character '",
+                             c2, "' in the input string."));
                     trailing = trailing[2 .. $];
                     r.popFront();
                 }
@@ -560,10 +562,9 @@ if (is(Unqual!Char == Char))
                 }
                 else
                 {
-                    enforceFmt(!r.empty,
+                    enforceFmt(!r.empty && r.front == trailing.front,
                         text("parseToFormatSpec: Cannot find character '",
                              c, "' in the input string."));
-                    if (r.front != trailing.front) break;
                     r.popFront();
                 }
                 trailing = trailing[stride(trailing, 0) .. $];
