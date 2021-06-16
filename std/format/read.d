@@ -710,6 +710,7 @@ T unformatValue(T, Range, Char)(ref Range input, scope const ref FormatSpec!Char
     assert(result[0] == 'a');
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=20393
 @safe pure unittest
 {
     import std.exception : assertThrown;
