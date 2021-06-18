@@ -16,6 +16,8 @@ Authors: Paul Backus
 +/
 module std.sumtype;
 
+import std.traits : hasIndirections, hasNested;
+
 /// $(DIVID basic-usage,$(H3 Basic usage))
 version (D_BetterC) {} else
 @safe unittest
@@ -129,7 +131,7 @@ version (D_BetterC) {} else
  * representing simple arithmetic expressions.
  */
 version (D_BetterC) {} else
-@system unittest
+@safe unittest
 {
     import std.functional : partial;
     import std.traits : EnumMembers;
@@ -182,6 +184,7 @@ version (D_BetterC) {} else
     alias quot = partial!(binOp, Op.Div);
 
     // Evaluate expr, looking up variables in env
+    @safe
     double eval(Expr expr, double[string] env)
     {
         return expr.match!(
@@ -204,6 +207,7 @@ version (D_BetterC) {} else
     }
 
     // Return a "pretty-printed" representation of expr
+    @safe
     string pprint(Expr expr)
     {
         import std.format : format;
@@ -328,16 +332,29 @@ private:
      * @safe code in this module, must be manually checked to ensure that it
      * does not violate either of the above requirements.
      */
-    @trusted
-    ref inout(T) get(T)() inout
+    template getRef(T)
     if (IndexOf!(T, Types) >= 0)
     {
-        enum tid = IndexOf!(T, Types);
-        assert(tag == tid,
-            "This `" ~ SumType.stringof ~
-            "` does not contain a(n) `" ~ T.stringof ~ "`"
-        );
-        return __traits(getMember, storage, Storage.memberName!T);
+        ref inout(T) _getRef()() inout {
+            enum tid = IndexOf!(T, Types);
+            assert(tag == tid,
+                "This `" ~ SumType.stringof ~
+                "` does not contain a(n) `" ~ T.stringof ~ "`"
+            );
+            return __traits(getMember, storage, Storage.memberName!T);
+        }
+
+        static if (hasIndirections!T || hasNested!T)
+            @system ref inout(T) getRef() inout { return _getRef!(); }
+        else
+            @trusted ref inout(T) getRef() inout { return _getRef!(); }
+    }
+
+    /// Ditto
+    @trusted
+    inout(T) get(T)() inout
+    {
+        return getRef!T();
     }
 
 public:
@@ -548,16 +565,6 @@ public:
 
         /**
          * Assigns a value to a `SumType`.
-         *
-         * Assigning to a `SumType` is `@system` if any of the
-         * `SumType`'s members contain pointers or references, since
-         * those members may be reachable through external references,
-         * and overwriting them could therefore lead to memory
-         * corruption.
-         *
-         * An individual assignment can be `@trusted` if the caller can
-         * guarantee that there are no outstanding references to $(I any)
-         * of the `SumType`'s members when the assignment occurs.
          */
         ref SumType opAssign(T rhs);
     }
@@ -568,30 +575,12 @@ public:
         {
             /**
              * Assigns a value to a `SumType`.
-             *
-             * Assigning to a `SumType` is `@system` if any of the
-             * `SumType`'s members contain pointers or references, since
-             * those members may be reachable through external references,
-             * and overwriting them could therefore lead to memory
-             * corruption.
-             *
-             * An individual assignment can be `@trusted` if the caller can
-             * guarantee that there are no outstanding references to $(I any)
-             * of the `SumType`'s members when the assignment occurs.
              */
             ref SumType opAssign(T rhs)
             {
                 import core.lifetime : forward;
                 import std.traits : hasIndirections, hasNested;
                 import std.meta : Or = templateOr;
-
-                enum mayContainPointers =
-                    anySatisfy!(Or!(hasIndirections, hasNested), Types);
-
-                static if (mayContainPointers)
-                {
-                    cast(void) () @system {}();
-                }
 
                 this.match!destroyIfOwner;
 
@@ -944,7 +933,7 @@ version (D_BetterC) {} else
 // Doesn't destroy reference types
 // Disabled in BetterC due to use of classes
 version (D_BetterC) {} else
-@system unittest
+@safe unittest
 {
     bool destroyed;
 
@@ -1104,7 +1093,7 @@ version (D_BetterC) {} else
     alias MySum = SumType!(ubyte, void*[2]);
 
     MySum x = [null, cast(void*) 0x12345678];
-    void** p = &x.get!(void*[2])[1];
+    void** p = &x.getRef!(void*[2])[1];
     x = ubyte(123);
 
     assert(*p != cast(void*) 0x12345678);
@@ -1136,8 +1125,8 @@ version (D_BetterC) {} else
     catch (Exception e) {}
 
     assert(
-        (x.tag == 0 && x.get!A.value == 123) ||
-        (x.tag == 1 && x.get!B.value == 456)
+        (x.tag == 0 && x.getRef!A.value == 123) ||
+        (x.tag == 1 && x.getRef!B.value == 456)
     );
 }
 
@@ -1251,22 +1240,40 @@ version (D_BetterC) {} else
     }));
 }
 
-// Doesn't overwrite pointers in @safe code
+// Disabled in BetterC due to use of TypeInfo
+version (D_BetterC) {} else
+@safe unittest
+{
+    alias MySum = SumType!(int*, int);
+
+    bool isInt(MySum x)
+    {
+        return x.match!(
+            (int) => true, (int*) => false
+        );
+    }
+
+    MySum x;
+    x = 123;
+    assert(isInt(x));
+    // same behavior
+    x = MySum(123);
+    assert(isInt(x));
+
+    x = MySum(new int);
+    assert(!isInt(x));
+}
+
+// simplified version of the above for BetterC testing
 @safe unittest
 {
     alias MySum = SumType!(int*, int);
 
     MySum x;
-
-    assert(!__traits(compiles, () @safe
-            {
-        x = 123;
-    }));
-
-    assert(!__traits(compiles, () @safe
-            {
-        x = MySum(123);
-    }));
+    x = MySum(123);
+    assert(x.match!(
+        (int) => true, (int*) => false
+    ));
 }
 
 // Types with invariants
@@ -1881,8 +1888,10 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
         template handlerArgs(size_t caseId)
         {
             enum tags = TagTuple.fromCaseId(caseId);
+
+
             enum argsFrom(size_t i : tags.length) = "";
-            enum argsFrom(size_t i) = "args[" ~ toCtString!i ~ "].get!(SumTypes[" ~ toCtString!i ~ "]" ~
+            enum argsFrom(size_t i) = "args[" ~ toCtString!i ~ "].getRef!(SumTypes[" ~ toCtString!i ~ "]" ~
                 ".Types[" ~ toCtString!(tags[i]) ~ "])(), " ~ argsFrom!(i + 1);
             enum handlerArgs = argsFrom!0;
         }
@@ -1902,7 +1911,8 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             {
                 enum tid = tags[i];
                 alias T = SumTypes[i].Types[tid];
-                alias getType = typeof(args[i].get!T());
+                alias getType = typeof(args[i].getRef!T());
+
             }
 
             alias valueTypes = Map!(getType, Iota!(tags.length));
@@ -1986,7 +1996,26 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
                 case caseId:
                     static if (matches[caseId] != noMatch)
                     {
-                        return mixin(handlerName!(matches[caseId]), "(", handlerArgs!caseId, ")");
+                        alias matchedHandler = handlerName!(matches[caseId]);
+                        static immutable matchedCall = matchedHandler ~ "(" ~ handlerArgs!caseId ~ ")";
+
+                        import std.traits : ParameterStorageClassTuple, ParameterStorageClass, isCallable, isUnsafe;
+                        alias STC = ParameterStorageClass;
+
+                        static if (
+                            isCallable!(mixin(matchedHandler)) &&
+                            (ParameterStorageClassTuple!(mixin(matchedHandler))[0] == STC.ref_ ||
+                                isUnsafe!(mixin(matchedHandler)))
+                            )
+                        {
+                            return mixin(matchedCall);
+                        }
+                        else
+                        {
+                            return () @trusted inout {
+                                return mixin(matchedCall);
+                            }();
+                        }
                     }
                     else
                     {
@@ -2231,7 +2260,7 @@ version (D_BetterC) {} else
 
 // Non-exhaustive matching
 version (D_Exceptions)
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown, assertNotThrown;
 
@@ -2474,4 +2503,23 @@ private void destroyIfOwner(T)(ref T value)
     {
         destroy(value);
     }
+}
+
+@safe unittest
+{
+    int n;
+
+    assert(!__traits(compiles, () @safe {
+        int example() @safe
+        {
+            SumType!(int*, int) x = &n;
+            return x.match!(
+                (int n) => n,
+                (ref int* p) {
+                    x = 123456789;
+                    return *p;
+                }
+            );
+        }
+    }));
 }
