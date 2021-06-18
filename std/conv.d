@@ -1697,6 +1697,77 @@ if (!isImplicitlyConvertible!(S, T) &&
 }
 
 /**
+Struct to Associative array conversion converts each field and it's corresponding
+value.
+*/
+private T toImpl(T, S)(S value)
+if (is(S == struct) && isAssociativeArray!T &&
+    is(KeyType!T == string) && !is(typeof(value.opCast!T()) : T))
+{
+    cast(void) value; // mark as used, although used by the mixin(sym)
+
+    import std.typecons : Tuple, tuple;
+    import std.array : assocArray;
+
+    Tuple!(string, ValueType!T)[] tarr;
+    foreach (m; __traits(allMembers, S))
+    {
+        static immutable sym = "value." ~ m;
+        enum isFunctionOrTemplate = isFunction!(mixin(sym)) || __traits(isTemplate, mixin(sym));
+
+        static if ((isFunction!(mixin(sym)) &&
+                    functionAttributes!(mixin(sym)) & FunctionAttribute.property)
+                  || !isFunctionOrTemplate)
+        {
+            tarr ~= tuple(m, mixin(sym).to!(ValueType!T));
+        }
+    }
+
+    return tarr.assocArray;
+}
+
+///
+@safe pure nothrow unittest
+{
+    struct Foo {
+        int a = 5;
+        int b;
+    }
+
+    Foo a;
+    assert(["a": 5, "b": 0] == a.to!(int[string]));
+    assert(["a": "5", "b": "0"] == a.to!(string[string]));
+}
+
+// test with empty struct
+@safe pure nothrow unittest
+{
+    struct Foo {}
+
+    Foo a;
+    assert((int[string]).init == a.to!(int[string]));
+}
+
+// test with a struct with opCast to string[string]
+@safe pure nothrow unittest
+{
+    struct Foo {
+        string[string] opCast(T)() const
+            if (is(T == string[string]))
+        {
+            return (string[string]).init;
+        }
+
+        int a;
+        int b;
+    }
+
+    Foo a;
+    assert((string[string]).init == a.to!(string[string]));
+    assert(["a": 0, "b": 0] == a.to!(int[string]));
+}
+
+/**
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
