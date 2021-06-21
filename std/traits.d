@@ -5877,9 +5877,8 @@ template IntegralTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (is(immutable X == immutable U, U) && is(U == byte) || is(U == ubyte)
-        || is(U == short) || is(U == ushort) || is(U == int) || is(U == uint)
-        || (__traits(isIntegral, U) && U.sizeof >= ulong.sizeof && !is(U == __vector))) // handle long and cent.
+    static if (__traits(isIntegral, X) && __traits(isZeroInit, X) // Not char, wchar, or dchar.
+        && !is(immutable X == immutable bool) && !is(X == __vector))
     {
         alias IntegralTypeOf = X;
     }
@@ -6238,16 +6237,21 @@ template AssocArrayTypeOf(T)
  */
 template BuiltinTypeOf(T)
 {
-         static if (is(T : void))               alias BuiltinTypeOf = void;
-    else static if (is(BooleanTypeOf!T X))      alias BuiltinTypeOf = X;
-    else static if (is(IntegralTypeOf!T X))     alias BuiltinTypeOf = X;
-    else static if (is(FloatingPointTypeOf!T X))alias BuiltinTypeOf = X;
-    else static if (is(T : const(ireal)))       alias BuiltinTypeOf = ireal;  //TODO
-    else static if (is(T : const(creal)))       alias BuiltinTypeOf = creal;  //TODO
-    else static if (is(CharTypeOf!T X))         alias BuiltinTypeOf = X;
-    else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
-    else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
-    else                                        static assert(0);
+    static if (is(T : void))
+        alias BuiltinTypeOf = void;
+    else
+    {
+        static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+            alias X = BuiltinTypeOf!AT;
+        else
+            alias X = OriginalType!T;
+        static if (__traits(isArithmetic, X) && !is(X == __vector) ||
+                __traits(isStaticArray, X) || is(X == E[], E) ||
+                __traits(isAssociativeArray, X))
+            alias BuiltinTypeOf = X;
+        else
+            static assert(0);
+    }
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
