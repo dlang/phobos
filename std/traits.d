@@ -6282,7 +6282,16 @@ enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
  * Detect whether `T` is a built-in integral type. Types `bool`,
  * `char`, `wchar`, and `dchar` are not considered integral.
  */
-enum bool isIntegral(T) = __traits(isIntegral, T) && is(IntegralTypeOf!T);
+template isIntegral(T)
+{
+    static if (!__traits(isIntegral, T))
+        enum isIntegral = false;
+    else static if (is(T U == enum))
+        enum isIntegral = isIntegral!U;
+    else
+        enum isIntegral = __traits(isZeroInit, T) // Not char, wchar, or dchar.
+            && !is(immutable T == immutable bool) && !is(T == __vector);
+}
 
 ///
 @safe unittest
@@ -6600,7 +6609,15 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
  * The built-in char types are any of `char`, `wchar` or `dchar`, with
  * or without qualifiers.
  */
-enum bool isSomeChar(T) = __traits(isUnsigned, T) && is(CharTypeOf!T);
+template isSomeChar(T)
+{
+    static if (!__traits(isUnsigned, T))
+        enum isSomeChar = false;
+    else static if (is(T U == enum))
+        enum isSomeChar = isSomeChar!U;
+    else
+        enum isSomeChar = !__traits(isZeroInit, T);
+}
 
 ///
 @safe unittest
