@@ -519,6 +519,14 @@ if (!is(immutable T == immutable bool))
         return _data._payload == rhs._data._payload;
     }
 
+    static if (is(typeof((const ref T a) nothrow @safe => .hashOf(a))))
+    size_t toHash() const nothrow
+    {
+        const(T)[] array = _data.refCountedStore.isInitialized ?
+                           (() @trusted => _data._payload)() : null;
+        return .hashOf(array);
+    }
+
     /**
      *  Defines the array's primary range, which is a random-access range.
      *
@@ -2638,4 +2646,29 @@ if (is(immutable T == immutable bool))
     foreach (ref b; arr) b = new ABC;
     GC.collect();
     arr[1].func();
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22065
+@system unittest
+{
+    // Test using Array!T as AA key either works or is disallowed by
+    // the compiler.
+    static void testAAKeyArray(T)()
+    {
+        static if (is(int[Array!T]))
+        {
+            int[Array!T] aa;
+            auto a = Array!T(T.init);
+            aa[a] = 999;
+            assert(a in aa);
+            assert(aa[a] == 999);
+            Array!T b;
+            b.insertBack(a[]);
+            assert(a == b ? aa[b] == 999 : b !in aa);
+        }
+    }
+    testAAKeyArray!int(); // passes
+    //testAAKeyArray!float(); // fails: non-reflexive float equality needs special case
+    //testAAKeyArray!Object(); // fails: https://issues.dlang.org/show_bug.cgi?id=22075
+    testAAKeyArray!bool(); // passes
 }
