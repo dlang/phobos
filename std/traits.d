@@ -6333,7 +6333,7 @@ enum bool isIntegral(T) = __traits(isIntegral, T) && is(IntegralTypeOf!T);
 /**
  * Detect whether `T` is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(T : creal);
+enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
 
 ///
 @safe unittest
@@ -6377,16 +6377,28 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !is(T : ireal) && !is(
             static assert(!isFloatingPoint!(Q!T));
         }
     }
+    static if (is(__vector(float[4])))
+    {
+        static assert(!isFloatingPoint!(__vector(float[4])));
+    }
 }
 
 /**
  * Detect whether `T` is a built-in numeric type (integral or floating
  * point).
  */
-enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(immutable T == immutable bool) ||
-                                                        is(immutable T == immutable char) ||
-                                                        is(immutable T == immutable wchar) ||
-                                                        is(immutable T == immutable dchar));
+template isNumeric(T)
+{
+    static if (!__traits(isArithmetic, T))
+        enum isNumeric = false;
+    else static if (__traits(isFloating, T))
+        enum isNumeric = is(T : real); // Not __vector, imaginary, or complex.
+    else static if (is(T U == enum))
+        enum isNumeric = isNumeric!U;
+    else
+        enum isNumeric = __traits(isZeroInit, T) // Not char, wchar, or dchar.
+            && !is(immutable T == immutable bool) && !is(T == __vector);
+}
 
 ///
 @safe unittest
@@ -6438,6 +6450,21 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(immutable T == immuta
         alias t this;
     }
     static assert(!isNumeric!(S!int));
+
+    enum EChar : char { a = 0, }
+    static assert(!isNumeric!EChar);
+
+    static if (is(__vector(float[4])))
+    {
+        static assert(!isNumeric!(__vector(float[4])));
+    }
+    static if (is(__vector(int[4])))
+    {
+        static assert(!isNumeric!(__vector(int[4])));
+    }
+
+    static assert(!isNumeric!ifloat);
+    static assert(!isNumeric!cfloat);
 }
 
 /**
@@ -6499,10 +6526,16 @@ enum bool isBasicType(T) = isScalarType!T || is(immutable T == immutable void);
 /**
  * Detect whether `T` is a built-in unsigned numeric type.
  */
-enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(immutable T == immutable char) ||
-                                                       is(immutable T == immutable wchar) ||
-                                                       is(immutable T == immutable dchar) ||
-                                                       is(immutable T == immutable bool));
+template isUnsigned(T)
+{
+    static if (!__traits(isUnsigned, T))
+        enum isUnsigned = false;
+    else static if (is(T U == enum))
+        enum isUnsigned = isUnsigned!U;
+    else
+        enum isUnsigned = __traits(isZeroInit, T) // Not char, wchar, or dchar.
+            && !is(immutable T == immutable bool) && !is(T == __vector);
+}
 
 ///
 @safe unittest
@@ -6539,12 +6572,21 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(immutable T == immutab
         alias t this;
     }
     static assert(!isUnsigned!(S!uint));
+
+    enum EChar : char { a = 0, }
+    static assert(!isUnsigned!EChar);
+
+    static if (is(__vector(uint[4])))
+    {
+        static assert(!isUnsigned!(__vector(uint[4])));
+    }
 }
 
 /**
  * Detect whether `T` is a built-in signed numeric type.
  */
-enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
+enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T)
+                                                  && is(T : real);
 
 ///
 @safe unittest
@@ -6583,6 +6625,14 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
         alias t this;
     }
     static assert(!isSigned!(S!uint));
+
+    static if (is(__vector(int[4])))
+    {
+        static assert(!isSigned!(__vector(int[4])));
+    }
+
+    static assert(!isSigned!ifloat);
+    static assert(!isSigned!cfloat);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17196
