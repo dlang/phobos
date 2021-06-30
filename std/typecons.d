@@ -568,7 +568,7 @@ if (distinctFieldNames!(Specs))
             static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
     }));
 
-    /+ Returns `true` iff a `T` can be initialized from a `U`. +/
+    /+ Returns `true` if a `T` can be initialized from a `U`. +/
     enum isBuildable(T, U) =  is(typeof(
     {
         U u = U.init;
@@ -710,7 +710,7 @@ if (distinctFieldNames!(Specs))
 
         /**
          * Constructor taking a compatible `Tuple`. Two `Tuple`s are compatible
-         * $(B iff) they are both of the same length, and, for each type `T` on the
+         * $(B if) they are both of the same length, and, for each type `T` on the
          * left-hand side, the corresponding type `U` on the right-hand side can
          * implicitly convert to `T`.
          *
@@ -740,7 +740,7 @@ if (distinctFieldNames!(Specs))
 
         /**
          * Comparison for equality. Two `Tuple`s are considered equal
-         * $(B iff) they fulfill the following criteria:
+         * $(B if) they fulfill the following criteria:
          *
          * $(UL
          *   $(LI Each `Tuple` is the same length.)
@@ -2942,7 +2942,7 @@ struct Nullable(T)
      * Check if `this` is in the null state.
      *
      * Returns:
-     *     true $(B iff) `this` is in the null state, otherwise false.
+     *     true $(B if) `this` is in the null state, otherwise false.
      */
     @property bool isNull() const @safe pure nothrow
     {
@@ -3655,7 +3655,7 @@ Params:
 Check if `this` is in the null state.
 
 Returns:
-    true $(B iff) `this` is in the null state, otherwise false.
+    true $(B if) `this` is in the null state, otherwise false.
  */
     @property bool isNull() const
     {
