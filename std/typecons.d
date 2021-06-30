@@ -6635,7 +6635,16 @@ assert(refCountedStore.isInitialized)).
         string toString(this This)()
         {
             import std.conv : to;
-            return to!string(refCountedPayload);
+
+            static if (autoInit)
+                return to!string(refCountedPayload);
+            else
+            {
+                if (!_refCounted.isInitialized)
+                    return This.stringof ~ "(RefCountedStore(null))";
+                else
+                    return to!string(_refCounted._store._payload);
+            }
         }
     }
 }
@@ -6773,16 +6782,23 @@ pure @system unittest
     import std.conv : to;
     // Check that string conversion is transparent for refcounted
     // structs that do not have either toString or alias this.
-    struct A { Object a; }
+    static struct A { Object a; }
     auto a  = A(new Object());
     auto r = refCounted(a);
     assert(to!string(r) == to!string(a));
     assert(to!string(cast(const) r) == to!string(cast(const) a));
     // Check that string conversion is still transparent for refcounted
     // structs that have alias this.
-    struct B { int b; alias b this; }
-    struct C { B b; alias b this; }
+    static struct B { int b; alias b this; }
+    static struct C { B b; alias b this; }
     assert(to!string(refCounted(C(B(123)))) == to!string(C(B(123))));
+    // https://issues.dlang.org/show_bug.cgi?id=22093
+    // Check that uninitialized refcounted structs that previously could be
+    // converted to strings still can be.
+    alias R = typeof(r);
+    R r2;
+    cast(void) (((const ref R a) => to!string(a))(r2));
+    cast(void) to!string(RefCounted!(A, RefCountedAutoInitialize.no).init);
 }
 
 /**
