@@ -4123,8 +4123,8 @@ unittest
 // https://issues.dlang.org/show_bug.cgi?id=10690
 @safe pure nothrow unittest
 {
-    import std.algorithm;
-    import std.typecons;
+    import std.algorithm.iteration : filter;
+    import std.typecons : tuple;
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
 }
