@@ -3334,7 +3334,7 @@ if (isDynamicArray!A)
      * Use opSlice() from now on.
      * Returns: The managed array.
      */
-    @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
+    @property inout(T)[] data() inout @trusted pure nothrow
     {
         return this[];
     }
@@ -3342,7 +3342,7 @@ if (isDynamicArray!A)
     /**
      * Returns: The managed array.
      */
-    @property inout(ElementEncodingType!A)[] opSlice() inout @trusted pure nothrow
+    @property inout(T)[] opSlice() inout @trusted pure nothrow
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -3816,6 +3816,8 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 struct RefAppender(A)
 if (isDynamicArray!A)
 {
+    private alias T = ElementEncodingType!A;
+
     private
     {
         Appender!A impl;
@@ -3878,7 +3880,7 @@ if (isDynamicArray!A)
     /* Use opSlice() instead.
      * Returns: the managed array.
      */
-    @property inout(ElementEncodingType!A)[] data() inout
+    @property inout(T)[] data() inout
     {
         return impl[];
     }
