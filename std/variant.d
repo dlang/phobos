@@ -3093,9 +3093,9 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     assert(v == [0,1]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19994
 @safe unittest
 {
-    // Bugzilla 19994
     alias Inner = Algebraic!(This*);
     alias Outer = Algebraic!(Inner, This*);
 
@@ -3122,5 +3122,12 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
     long l = 2;
     const cw = Wrapper(&l);
-    static assert(!__traits(compiles, VariantWrapper(cw)), "Stripping `const` from type with indirection!");
+    static assert(!__traits(compiles, VariantWrapper(cw)), "std.variant.Variant is wrongly allowing stripping const from type with indirection!");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21296
+@system unittest
+{
+    immutable aa = ["0": 0];
+    auto v = Variant(aa); // compile error
 }
