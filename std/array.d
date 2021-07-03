@@ -3276,7 +3276,7 @@ if (isDynamicArray!A)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(A arr) @trusted pure nothrow
+    this(A arr) @trusted
     {
         // initialize to a given array.
         _data = new Data;
@@ -3325,7 +3325,7 @@ if (isDynamicArray!A)
      * managed array can accommodate before triggering a reallocation). If any
      * appending will reallocate, `0` will be returned.
      */
-    @property size_t capacity() const @safe pure nothrow
+    @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
     }
@@ -3334,7 +3334,7 @@ if (isDynamicArray!A)
      * Use opSlice() from now on.
      * Returns: The managed array.
      */
-    @property inout(T)[] data() inout @trusted pure nothrow
+    @property inout(T)[] data() inout @trusted
     {
         return this[];
     }
@@ -3342,7 +3342,7 @@ if (isDynamicArray!A)
     /**
      * Returns: The managed array.
      */
-    @property inout(T)[] opSlice() inout @trusted pure nothrow
+    @property inout(T)[] opSlice() inout @trusted
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -3788,7 +3788,7 @@ if (isDynamicArray!A)
 //arg curLen: The current length
 //arg reqLen: The length as requested by the user
 //ret sugLen: A suggested growth.
-private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
+private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 {
     import core.bitop : bsr;
     import std.algorithm.comparison : max;
