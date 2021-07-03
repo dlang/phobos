@@ -3653,7 +3653,7 @@ if (isDynamicArray!A)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     auto app = appender!string();
     string b = "abcdefg";
@@ -3691,7 +3691,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17251
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct R
     {
@@ -3707,7 +3707,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13300
-@safe unittest
+@safe pure nothrow unittest
 {
     static test(bool isPurePostblit)()
     {
@@ -3743,7 +3743,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19572
-@system unittest
+@safe pure nothrow unittest
 {
     static struct Struct
     {
@@ -3763,7 +3763,7 @@ if (isDynamicArray!A)
     assert(result.value != 23);
 }
 
-@safe unittest
+@safe pure unittest
 {
     import std.conv : to;
     import std.utf : byCodeUnit;
@@ -3774,7 +3774,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21256
-@safe unittest
+@safe pure unittest
 {
     Appender!string app1;
     app1.toString();
@@ -3893,7 +3893,7 @@ if (isDynamicArray!A)
 }
 
 ///
-@system pure nothrow
+@safe pure nothrow
 unittest
 {
     int[] a = [1, 2];
@@ -4101,7 +4101,7 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10690
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm;
     import std.typecons;
@@ -4109,7 +4109,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -4129,7 +4129,7 @@ unittest
     au1.put(sc1.repeat().take(10));
 }
 
-@system unittest
+@system pure unittest
 {
     import std.range;
     struct S2
@@ -4141,7 +4141,7 @@ unittest
     au2.put(sc2.repeat().take(10));
 }
 
-@system unittest
+@system pure nothrow unittest
 {
     struct S
     {
@@ -4175,7 +4175,7 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=9528
-@safe unittest
+@safe pure nothrow unittest
 {
     const(E)[] fastCopy(E)(E[] src) {
             auto app = appender!(const(E)[])();
@@ -4193,7 +4193,7 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10753
-@safe unittest
+@safe pure unittest
 {
     import std.algorithm.iteration : map;
     struct Foo {
@@ -4206,7 +4206,7 @@ unittest
     [1, 2].map!Bar.array;
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4255,7 +4255,7 @@ unittest
     assert(app8[] == null);
 }
 
-@safe unittest //Test large allocations (for GC.extend)
+@safe pure nothrow unittest //Test large allocations (for GC.extend)
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -4266,7 +4266,7 @@ unittest
     assert(equal(app[], 'a'.repeat(100_000)));
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
     auto arr = reference.dup;
@@ -4276,7 +4276,7 @@ unittest
     assert(reference[] == arr[]);
 }
 
-@safe unittest // clear method is supported only for mutable element types
+@safe pure nothrow unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     app.put("foo");
@@ -4284,7 +4284,7 @@ unittest
     assert(app[] == "foo");
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct D//dynamic
     {
@@ -4343,7 +4343,7 @@ RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 }
 
 ///
-@system pure nothrow
+@safe pure nothrow
 unittest
 {
     int[] a = [1, 2];
@@ -4359,7 +4359,7 @@ unittest
     assert(app2.capacity >= 5);
 }
 
-@system unittest
+@safe pure nothrow unittest
 {
     import std.exception;
     {
@@ -4415,13 +4415,13 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=14605
-@safe unittest
+@safe pure nothrow unittest
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
@@ -4429,7 +4429,7 @@ unittest
     assert(app[] == [1, 2, 3]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     string s = "hello".idup;
     char[] a = "hello".dup;
@@ -4471,7 +4471,7 @@ pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a)
 }
 
 /// static array from array literal
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto a = [0, 1].staticArray;
     static assert(is(typeof(a) == int[2]));
@@ -4485,14 +4485,14 @@ if (!is(T == U) && is(T : U))
 }
 
 /// static array from array with implicit casting of elements
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto b = [0, 1].staticArray!long;
     static assert(is(typeof(b) == long[2]));
     assert(b == [0, 1]);
 }
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     int val = 3;
     static immutable gold = [1, 2, 3];
@@ -4589,7 +4589,7 @@ if (isInputRange!T && is(ElementType!T : U))
 }
 
 /// static array from range + size
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 
@@ -4605,8 +4605,7 @@ nothrow pure @safe unittest
 // Tests that code compiles when there is an elaborate destructor and exceptions
 // are thrown. Unfortunately can't test that memory is initialized
 // before having a destructor called on it.
-// @system required because of https://issues.dlang.org/show_bug.cgi?id=18872.
-@system nothrow unittest
+@safe nothrow unittest
 {
     // exists only to allow doing something in the destructor. Not tested
     // at the end because value appears to depend on implementation of the.
@@ -4644,7 +4643,7 @@ nothrow pure @safe unittest
 }
 
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto a = [1, 2].staticArray;
     assert(is(typeof(a) == int[2]) && a == [1, 2]);
@@ -4656,7 +4655,7 @@ nothrow pure @safe unittest
     2.iota.staticArray!(long[2]).checkStaticArray!long([0, 1]);
 }
 
-nothrow pure @system unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
     size_t copiedAmount;
@@ -4681,7 +4680,7 @@ if (isInputRange!(typeof(a)))
 }
 
 /// static array from CT range
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 
@@ -4694,7 +4693,7 @@ nothrow pure @safe unittest
     assert(b == [0, 1]);
 }
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 
