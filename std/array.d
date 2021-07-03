@@ -3929,63 +3929,48 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe pure nothrow unittest
 {
-    import std.exception;
-    {
-        auto app = appender!(char[])();
-        string b = "abcdefg";
-        foreach (char c; b) app.put(c);
-        assert(app[] == "abcdefg");
-    }
-    {
-        auto app = appender!(char[])();
-        string b = "abcdefg";
-        foreach (char c; b) app ~= c;
-        assert(app[] == "abcdefg");
-    }
-    {
-        int[] a = [ 1, 2 ];
-        auto app2 = appender(a);
-        assert(app2[] == [ 1, 2 ]);
-        app2.put(3);
-        app2.put([ 4, 5, 6 ][]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-        app2.put([ 7 ]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
-    }
+    auto app = appender!(char[])();
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app[] == "abcdefg");
+}
 
+@safe pure nothrow unittest
+{
+    auto app = appender!(char[])();
+    string b = "abcdefg";
+    foreach (char c; b) app ~= c;
+    assert(app[] == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     assert(app2[] == [ 1, 2 ]);
-    app2 ~= 3;
-    app2 ~= [ 4, 5, 6 ][];
+    app2.put(3);
+    app2.put([ 4, 5, 6 ][]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-    app2 ~= [ 7 ];
+    app2.put([ 7 ]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
+}
 
-    app2.reserve(5);
-    assert(app2.capacity >= 5);
-
-    try // shrinkTo may throw
-    {
-        app2.shrinkTo(3);
-    }
-    catch (Exception) assert(0);
-    assert(app2[] == [ 1, 2, 3 ]);
-    assertThrown(app2.shrinkTo(5));
-
-    const app3 = app2;
-    assert(app3.capacity >= 3);
-    assert(app3[] == [1, 2, 3]);
-
+@safe pure nothrow unittest
+{
     auto app4 = appender([]);
     try // shrinkTo may throw
     {
         app4.shrinkTo(0);
     }
     catch (Exception) assert(0);
+}
 
-    // https://issues.dlang.org/show_bug.cgi?id=5663
-    // https://issues.dlang.org/show_bug.cgi?id=9725
+// https://issues.dlang.org/show_bug.cgi?id=5663
+// https://issues.dlang.org/show_bug.cgi?id=9725
+@safe pure nothrow unittest
+{
+    import std.exception : assertNotThrown;
+
     static foreach (S; AliasSeq!(char[], const(char)[], string))
     {
         {
@@ -4016,6 +4001,12 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
             assert(app5663m[] == "\xE3");
         }
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=10122
+@safe pure nothrow unittest
+{
+    import std.exception : assertCTFEable;
 
     static struct S10122
     {
@@ -4030,6 +4021,35 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         w.put(S10122(1));
         assert(w[].length == 1 && w[][0].val == 1);
     });
+}
+
+@safe pure nothrow unittest
+{
+    import std.exception : assertThrown;
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(a);
+    assert(app2[] == [ 1, 2 ]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
+    app2 ~= [ 7 ];
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    try // shrinkTo may throw
+    {
+        app2.shrinkTo(3);
+    }
+    catch (Exception) assert(0);
+    assert(app2[] == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
+
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3[] == [1, 2, 3]);
 }
 
 ///
@@ -4053,51 +4073,51 @@ unittest
 
 @safe pure nothrow unittest
 {
+    auto w = appender!string();
+    w.reserve(4);
+    cast(void) w.capacity;
+    cast(void) w[];
+    try
     {
-        auto w = appender!string();
-        w.reserve(4);
-        cast(void) w.capacity;
-        cast(void) w[];
-        try
-        {
-            wchar wc = 'a';
-            dchar dc = 'a';
-            w.put(wc);    // decoding may throw
-            w.put(dc);    // decoding may throw
-        }
-        catch (Exception) assert(0);
+        wchar wc = 'a';
+        dchar dc = 'a';
+        w.put(wc);    // decoding may throw
+        w.put(dc);    // decoding may throw
     }
+    catch (Exception) assert(0);
+}
+
+@safe pure nothrow unittest
+{
+    auto w = appender!(int[])();
+    w.reserve(4);
+    cast(void) w.capacity;
+    cast(void) w[];
+    w.put(10);
+    w.put([10]);
+    w.clear();
+    try
     {
-        auto w = appender!(int[])();
-        w.reserve(4);
-        cast(void) w.capacity;
-        cast(void) w[];
-        w.put(10);
-        w.put([10]);
-        w.clear();
-        try
-        {
-            w.shrinkTo(0);
-        }
-        catch (Exception) assert(0);
-
-        struct N
-        {
-            int payload;
-            alias payload this;
-        }
-        w.put(N(1));
-        w.put([N(2)]);
-
-        struct S(T)
-        {
-            @property bool empty() { return true; }
-            @property T front() { return T.init; }
-            void popFront() {}
-        }
-        S!int r;
-        w.put(r);
+        w.shrinkTo(0);
     }
+    catch (Exception) assert(0);
+
+    struct N
+    {
+        int payload;
+        alias payload this;
+    }
+    w.put(N(1));
+    w.put([N(2)]);
+
+    struct S(T)
+    {
+        @property bool empty() { return true; }
+        @property T front() { return T.init; }
+        void popFront() {}
+    }
+    S!int r;
+    w.put(r);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10690
@@ -4361,33 +4381,39 @@ unittest
 
 @safe pure nothrow unittest
 {
-    import std.exception;
-    {
-        auto arr = new char[0];
-        auto app = appender(&arr);
-        string b = "abcdefg";
-        foreach (char c; b) app.put(c);
-        assert(app[] == "abcdefg");
-        assert(arr == "abcdefg");
-    }
-    {
-        auto arr = new char[0];
-        auto app = appender(&arr);
-        string b = "abcdefg";
-        foreach (char c; b) app ~= c;
-        assert(app[] == "abcdefg");
-        assert(arr == "abcdefg");
-    }
-    {
-        int[] a = [ 1, 2 ];
-        auto app2 = appender(&a);
-        assert(app2[] == [ 1, 2 ]);
-        assert(a == [ 1, 2 ]);
-        app2.put(3);
-        app2.put([ 4, 5, 6 ][]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-        assert(a == [ 1, 2, 3, 4, 5, 6 ]);
-    }
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app[] == "abcdefg");
+    assert(arr == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app ~= c;
+    assert(app[] == "abcdefg");
+    assert(arr == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(&a);
+    assert(app2[] == [ 1, 2 ]);
+    assert(a == [ 1, 2 ]);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ][]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+}
+
+@safe pure nothrow unittest
+{
+    import std.exception : assertThrown;
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
