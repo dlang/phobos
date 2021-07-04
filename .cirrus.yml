@@ -52,14 +52,14 @@ task:
 
 # FreeBSD
 task:
-  name: FreeBSD 12.1 x64
+  name: FreeBSD 13.0 x64
   freebsd_instance:
-    image_family: freebsd-12-1
+    image_family: freebsd-13-0
     cpu: 4
     memory: 8G
   timeout_in: 60m
   environment:
     OS_NAME: freebsd
-    CI_DFLAGS: -version=TARGET_FREEBSD12
+    CI_DFLAGS: -version=TARGET_FREEBSD13
   install_bash_and_git_script: pkg install -y bash git
   << : *COMMON_STEPS_TEMPLATE
