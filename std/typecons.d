@@ -3088,13 +3088,13 @@ struct Nullable(T)
     }
 
     /// ditto
-    @property inout(T) get()(inout(T) fallback) inout @safe pure nothrow
+    @property inout(T) get()(inout(T) fallback) inout
     {
         return isNull ? fallback : _value.payload;
     }
 
     /// ditto
-    @property auto get(U)(inout(U) fallback) inout @safe pure nothrow
+    @property auto get(U)(inout(U) fallback) inout
     {
         return isNull ? fallback : _value.payload;
     }
@@ -3603,6 +3603,20 @@ auto nullable(T)(T t)
 
     assert(test1 == s);
     assert(test1 == test2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22101
+@safe unittest
+{
+    static int impure;
+
+    struct S
+    {
+        ~this() { impure++; }
+    }
+
+    Nullable!S s;
+    s.get(S());
 }
 
 /**
