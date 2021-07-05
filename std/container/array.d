@@ -1597,7 +1597,7 @@ if (!is(immutable T == immutable bool))
     ai.insertBack(arr);
 }
 
-/**
+/*
  * typeof may give wrong result in case of classes defining `opCall` operator
  * https://issues.dlang.org/show_bug.cgi?id=20589
  *
