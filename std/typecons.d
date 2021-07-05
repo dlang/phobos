@@ -3010,7 +3010,7 @@ struct Nullable(T)
      * Params:
      *     value = A value of type `T` to assign to this `Nullable`.
      */
-    void opAssign()(T value)
+    Nullable opAssign()(T value)
     {
         import std.algorithm.mutation : moveEmplace, move;
 
@@ -3028,6 +3028,7 @@ struct Nullable(T)
             move(copy.payload, _value.payload);
         }
         _isNull = false;
+        return this;
     }
 
     /**
@@ -3038,12 +3039,13 @@ struct Nullable(T)
      * Params:
      *     value = A value of type `Nullable!T` to assign to this `Nullable`.
      */
-    void opAssign()(Nullable!T value)
+    Nullable opAssign()(Nullable!T value)
     {
         if (value._isNull)
             nullify();
         else
             opAssign(value.get());
+        return this;
     }
 
     /**
@@ -3617,6 +3619,14 @@ auto nullable(T)(T t)
 
     Nullable!S s;
     s.get(S());
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22100
+@safe unittest
+{
+    Nullable!int a, b, c;
+    a = b = c = 5;
+    a = b = c = nullable(5);
 }
 
 /**
