@@ -24,9 +24,24 @@ environment:
 
 # Linux
 task:
-  name: Ubuntu 16.04 $TASK_NAME_SUFFIX
+  name: Ubuntu 20.04 $TASK_NAME_SUFFIX
   container:
-    image: ubuntu:16.04
+    image: ubuntu:20.04
+    cpu: 4
+    memory: 8G
+  timeout_in: 60m
+  environment:
+    matrix:
+      - TASK_NAME_SUFFIX: x86
+        MODEL: 32
+      - TASK_NAME_SUFFIX: x64
+  install_git_script: apt-get -q update && apt-get install -yq git-core
+  << : *COMMON_STEPS_TEMPLATE
+
+task:
+  name: Ubuntu 18.04 $TASK_NAME_SUFFIX
+  container:
+    image: ubuntu:18.04
     cpu: 4
     memory: 8G
   timeout_in: 60m
