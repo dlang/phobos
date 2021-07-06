@@ -761,7 +761,7 @@ public:
 
     // If wantSub is false, return x + y, leaving sign unchanged
     // If wantSub is true, return abs(x - y), negating sign if x < y
-    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y,
+    static BigUint addOrSubInt(Tulong)(const scope BigUint x, Tulong y,
             bool wantSub, ref bool sign) pure nothrow @safe if (is(Tulong == ulong))
     {
         BigUint r;
@@ -1380,7 +1380,7 @@ pure nothrow @safe
 }
 
 // Encode BigInt as BigDigit array (sign and 2's complement)
-BigDigit[] includeSign(const(BigDigit) [] x, size_t minSize, bool sign)
+BigDigit[] includeSign(scope const(BigDigit) [] x, size_t minSize, bool sign)
 pure nothrow @safe
 {
     size_t length = (x.length > minSize) ? x.length : minSize;

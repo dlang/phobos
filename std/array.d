@@ -1953,7 +1953,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
    See_Also:
         For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
-ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)) &&
     isInputRange!R &&

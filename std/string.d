@@ -154,7 +154,7 @@ private:
         string _s;
     }
 
-    bool testAliasedString(alias func, Args...)(scope string s, scope Args args)
+    bool testAliasedString(alias func, Args...)(string s, Args args)
     {
         import std.algorithm.comparison : equal;
         auto a = func(TestAliasedString(s), args);
@@ -2632,8 +2632,12 @@ if (isSomeChar!C)
 
     enum S : string { a = "hello\nworld" }
     assert(S.a.splitLines() == ["hello", "world"]);
+}
 
-    char[S.a.length] sa = S.a[];
+@system pure nothrow unittest
+{
+    // dip1000 cannot express an array of scope arrays, so this is not @safe
+    char[11] sa = "hello\nworld";
     assert(sa.splitLines() == ["hello", "world"]);
 }
 

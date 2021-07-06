@@ -1702,7 +1702,7 @@ package:
         Params:
             isoExtString = A string which represents a time zone in the ISO format.
       +/
-    static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
+    static immutable(SimpleTimeZone) fromISOExtString(S)(scope S isoExtString) @safe pure
         if (isSomeString!S)
     {
         import std.algorithm.searching : startsWith;
