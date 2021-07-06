@@ -558,14 +558,14 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNar
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-auto dirName(R)(R path)
+auto dirName(R)(return scope R path)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
     return _dirName(path);
 }
 
 /// ditto
-auto dirName(C)(C[] path)
+auto dirName(C)(return scope C[] path)
 if (isSomeChar!C)
 {
     return _dirName(path);
@@ -662,7 +662,7 @@ if (isSomeChar!C)
     //static assert(dirName("dir/file".byChar).array == "dir");
 }
 
-private auto _dirName(R)(R path)
+private auto _dirName(R)(return scope R path)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -1448,7 +1448,7 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
     Returns: The assembled path.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
-    buildPath(Range)(Range segments)
+    buildPath(Range)(scope Range segments)
     if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
@@ -2747,7 +2747,7 @@ else version (Posix)
     See_Also:
         $(LREF asAbsolutePath) which does not allocate
 */
-string absolutePath(return scope string path, lazy string base = getcwd())
+string absolutePath(string path, lazy string base = getcwd())
     @safe pure
 {
     import std.array : array;
@@ -2893,7 +2893,7 @@ if (isConvertibleToString!R)
     `Exception` if the specified _base directory is not absolute.
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
-    (scope return string path, lazy string base = getcwd())
+    (string path, lazy string base = getcwd())
 {
     if (!isAbsolute(path))
         return path;

@@ -276,7 +276,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    inout(char)[] opIndexAssign(inout char[] value, scope const(char)[] name) @trusted
+    inout(char)[] opIndexAssign(return inout char[] value, scope const(char)[] name) @trusted
     {
         version (Posix)
         {

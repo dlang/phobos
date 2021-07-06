@@ -1074,7 +1074,7 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    moveImpl(source, target);
+    moveImpl(target, source);
 }
 
 /// For non-struct types, `move` just performs `target = source`:
@@ -1244,7 +1244,7 @@ pure nothrow @safe @nogc unittest
     static assert(is(typeof({ S s; move(s, s); }) == T));
 }
 
-private void moveImpl(T)(ref T source, ref T target)
+private void moveImpl(T)(ref scope T target, ref return scope T source)
 {
     import std.traits : hasElaborateDestructor;
 
@@ -1257,10 +1257,10 @@ private void moveImpl(T)(ref T source, ref T target)
         static if (hasElaborateDestructor!T) target.__xdtor();
     }
     // move and emplace source into target
-    moveEmplaceImpl(source, target);
+    moveEmplaceImpl(target, source);
 }
 
-private T moveImpl(T)(ref T source)
+private T moveImpl(T)(ref return scope T source)
 {
     // Properly infer safety from moveEmplaceImpl as the implementation below
     // might void-initialize pointers in result and hence needs to be @trusted
@@ -1269,10 +1269,10 @@ private T moveImpl(T)(ref T source)
     return trustedMoveImpl(source);
 }
 
-private T trustedMoveImpl(T)(ref T source) @trusted
+private T trustedMoveImpl(T)(ref return scope T source) @trusted
 {
     T result = void;
-    moveEmplaceImpl(source, result);
+    moveEmplaceImpl(result, source);
     return result;
 }
 
@@ -1415,7 +1415,7 @@ private T trustedMoveImpl(T)(ref T source) @trusted
     move(x, x);
 }
 
-private void moveEmplaceImpl(T)(ref T source, ref T target)
+private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
@@ -1486,7 +1486,7 @@ private void moveEmplaceImpl(T)(ref T source, ref T target)
  */
 void moveEmplace(T)(ref T source, ref T target) pure @system
 {
-    moveEmplaceImpl(source, target);
+    moveEmplaceImpl(target, source);
 }
 
 ///
@@ -2388,7 +2388,7 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range rang
 @nogc @safe unittest
 {
     // @nogc test
-    int[10] arr = [0,1,2,3,4,5,6,7,8,9];
+    static int[] arr = [0,1,2,3,4,5,6,7,8,9];
     alias pred = e => e < 5;
 
     auto r = arr[].remove!(SwapStrategy.unstable)(0);

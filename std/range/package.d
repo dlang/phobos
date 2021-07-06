@@ -7708,7 +7708,7 @@ if (isForwardRange!RangeOfRanges &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    ulong[1] t0 = [ 123 ];
+    ulong[] t0 = [ 123 ];
 
     assert(!hasAssignableElements!(typeof(t0[].chunks(1))));
     assert(!is(typeof(transposed(t0[].chunks(1)))));
@@ -10850,7 +10850,7 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
     into a `SortedRange`, it extracts the original range back out of the `SortedRange`
     using $(REF, move, std,algorithm,mutation).
 */
-    auto release()
+    auto release() return scope
     {
         import std.algorithm.mutation : move;
         return move(_input);
