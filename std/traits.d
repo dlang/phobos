@@ -7563,6 +7563,11 @@ template isCallable(alias callable)
     else static if (is(typeof(&callable.opCall) V : V*) && is(V == function))
         // T is a type which has a static member function opCall().
         enum bool isCallable = true;
+    else static if (is(typeof(&callable.opCall!())))
+    {
+        alias TemplateInstanceType = typeof(&callable.opCall!());
+        enum bool isCallable = isCallable!TemplateInstanceType;
+    }
     else static if (is(typeof(&callable!())))
     {
         alias TemplateInstanceType = typeof(&callable!());
@@ -7602,9 +7607,13 @@ template isCallable(alias callable)
 {
     void f()() { }
     T g(T = int)(T x) { return x; }
+    struct S1 { static void opCall()() { } }
+    struct S2 { static T opCall(T = int)(T x) {return x; } }
 
     static assert( isCallable!f);
     static assert( isCallable!g);
+    static assert( isCallable!S1);
+    static assert( isCallable!S2);
 }
 
 /// Overloaded functions and function templates.
