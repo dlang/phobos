@@ -1564,7 +1564,7 @@ if (T.length >= 2 && !is(CommonType!T == void))
     return cast(Result) (chooseB ? b : a);
 }
 
-///
+/// ditto
 T max(T, U)(T a, U b)
 if (is(T == U) && is(typeof(a < b)))
 {
@@ -1674,7 +1674,7 @@ if (T.length >= 2 && !is(CommonType!T == void))
     return cast(Result) (chooseB ? b : a);
 }
 
-///
+/// ditto
 T min(T, U)(T a, U b)
 if (is(T == U) && is(typeof(a < b)))
 {
