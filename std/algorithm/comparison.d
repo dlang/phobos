@@ -1681,7 +1681,7 @@ if (is(T == U) && is(typeof(a < b)))
    /* Handle the common case without all the template expansions
     * of the general case
     */
-    return a < b ? a : b;
+    return b < a ? b : a;
 }
 
 
