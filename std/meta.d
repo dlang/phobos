@@ -1567,28 +1567,35 @@ template Repeat(size_t n, TList...)
  *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
  *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
- *     Seq = The  $(LREF AliasSeq) to sort
+ *     items = The  $(LREF AliasSeq) to sort
  *
  * Returns: The sorted alias sequence
  */
-template staticSort(alias cmp, Seq...)
+template staticSort(alias cmp, items...)
 {
-    static if (Seq.length < 2)
-    {
-        alias staticSort = Seq;
-    }
+    static if (items.length < 2)
+        alias staticSort = items;
     else
-    {
-        private alias btm = staticSort!(cmp, Seq[0 .. $ / 2]);
-        private alias top = staticSort!(cmp, Seq[$ / 2 .. $]);
+        alias staticSort = staticMerge!(cmp, items.length / 2,
+            staticSort!(cmp, items[0 .. $ / 2]),
+            staticSort!(cmp, items[$ / 2 .. $]));
+}
 
-        static if (isLessEq!(cmp, btm[$ - 1], top[0]))
-            alias staticSort = AliasSeq!(btm, top); // already ascending
-        else static if (isLessEq!(cmp, top[$ - 1], btm[0]))
-            alias staticSort = AliasSeq!(top, btm); // already descending
-        else
-            alias staticSort = staticMerge!(cmp, Seq.length / 2, btm, top);
-    }
+private template staticMerge(alias cmp, uint mid, items...)
+{
+    enum run =
+    {
+        static if (mid < items.length)
+            static foreach (i, item; items[0 .. mid])
+                static if (!isLessEq!(cmp, item, items[mid]))
+                    if (__ctfe) return i;
+        return mid;
+    }();
+    static if (run == mid)
+        alias staticMerge = items;
+    else
+        alias staticMerge = AliasSeq!(items[0 .. run], items[mid],
+            staticMerge!(cmp, mid - run, items[run .. mid], items[mid + 1 .. $]));
 }
 
 ///
@@ -1606,27 +1613,6 @@ template staticSort(alias cmp, Seq...)
     enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
     static assert(is(AliasSeq!(uint, ubyte, ulong, short, long) == staticSort!(Comp,
         Types)));
-}
-
-private template staticMerge(alias cmp, int half, Seq...)
-{
-    static if (half == 0 || half == Seq.length)
-    {
-        alias staticMerge = Seq;
-    }
-    else
-    {
-        static if (isLessEq!(cmp, Seq[0], Seq[half]))
-        {
-            alias staticMerge = AliasSeq!(Seq[0],
-                staticMerge!(cmp, half - 1, Seq[1 .. $]));
-        }
-        else
-        {
-            alias staticMerge = AliasSeq!(Seq[half],
-                staticMerge!(cmp, half, Seq[0 .. half], Seq[half + 1 .. $]));
-        }
-    }
 }
 
 private template isLessEq(alias cmp, Seq...)
