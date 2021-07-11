@@ -34,12 +34,12 @@ struct MmapAllocator
             import core.sys.posix.sys.mman : MAP_ANON, PROT_READ,
                 PROT_WRITE, MAP_PRIVATE, MAP_FAILED;
             if (!bytes) return null;
-            const errnosave = (() @trusted => fakePureErrno())(); // For purity revert changes to errno.
+            const errnosave = fakePureErrno; // For purity revert changes to errno.
             auto p = (() @trusted => fakePureMmap(null, bytes, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANON, -1, 0))();
             if (p is MAP_FAILED)
             {
-                (() @trusted => fakePureErrno() = errnosave)(); // errno only changed on MAP_FAILED.
+                fakePureErrno = errnosave; // errno only changed on MAP_FAILED.
                 return null;
             }
             return (() @trusted => p[0 .. bytes])();
@@ -103,13 +103,46 @@ struct MmapAllocator
     }
 }
 
+// pure wrapper around `errno` used here locally solely to ensure that errno
+// doesn't visibly change due to a function call. See core.memory.fakePureErrno.
+version (Posix)
+{
+    static import core.stdc.errno;
+    static if (__traits(getOverloads, core.stdc.errno, "errno").length == 1
+        && __traits(getLinkage, core.stdc.errno.errno) == "C")
+    {
+        extern(C) pragma(mangle, __traits(identifier, core.stdc.errno.errno))
+        private ref int fakePureErrno() @nogc nothrow pure @trusted;
+    }
+    else
+    {
+        extern(C) @nogc nothrow pure @system
+        {
+            pragma(mangle, __traits(identifier, core.stdc.errno.getErrno))
+            private int fakePureGetErrno();
+
+            pragma(mangle, __traits(identifier, core.stdc.errno.setErrno))
+            private int fakePureSetErrno(int);
+        }
+
+        private @property int fakePureErrno()() @nogc nothrow pure @trusted
+        {
+            return fakePureGetErrno();
+        }
+
+        private @property void fakePureErrno()(int newValue) @nogc nothrow pure @trusted
+        {
+            fakePureSetErrno(newValue);
+        }
+    }
+}
+
 // pure wrappers around `mmap` and `munmap` because they are used here locally
 // solely to perform allocation and deallocation which in this case is `pure`
 version (Posix)
 extern (C) private pure @system @nogc nothrow
 {
     import core.sys.posix.sys.types : off_t;
-    pragma(mangle, "fakePureErrnoImpl") ref int fakePureErrno();
     pragma(mangle, "mmap") void* fakePureMmap(void*, size_t, int, int, int, off_t);
     pragma(mangle, "munmap") int fakePureMunmap(void*, size_t);
 }
