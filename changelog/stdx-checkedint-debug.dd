@@ -1,0 +1,6 @@
+`std.experimental.checkedint.Abort` now only uses `assert`
+
+$(REF Abort, std,experimental,checkedint) no longer calls $(REF writeln, std,stdio) on an exception
+and immediately terminates the program with an `AssertError`.
+
+The old behavior of printing the error message to stdout before aborting the program is available as a new $(REF Debug, std,experimental,checkedint) hook.
