@@ -311,32 +311,35 @@ version (StdUnittest)
         }
     }
 
-    private string httpOK(string msg)
+    private string httpOK(string msg = "")
+    {
+        return "HTTP/1.1 200 OK\r\n"~
+            httpContent(msg);
+    }
+
+    private string httpNotFound(string msg = "")
+    {
+        return "HTTP/1.1 404 Not Found\r\n"~
+            httpContent(msg);
+    }
+
+    private string httpInternalServerError(string msg = "")
+    {
+        return "HTTP/1.1 500 Internal Server Error\r\n"~
+            httpContent(msg);
+    }
+
+    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
+
+    private string httpContent(string msg)
     {
         import std.conv : to;
 
-        return "HTTP/1.1 200 OK\r\n"~
-            "Content-Type: text/plain\r\n"~
+        return "Content-Type: text/plain\r\n"~
             "Content-Length: "~msg.length.to!string~"\r\n"~
             "\r\n"~
             msg;
     }
-
-    private string httpOK()
-    {
-        return "HTTP/1.1 200 OK\r\n"~
-            "Content-Length: 0\r\n"~
-            "\r\n";
-    }
-
-    private string httpNotFound()
-    {
-        return "HTTP/1.1 404 Not Found\r\n"~
-            "Content-Length: 0\r\n"~
-            "\r\n";
-    }
-
-    private enum httpContinue = "HTTP/1.1 100 Continue\r\n\r\n";
 }
 version (StdDdoc) import std.stdio;
 
@@ -430,11 +433,21 @@ if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.exception : enforce;
+        import std.format : format;
         import std.stdio : File;
+
         conn.url = url;
         auto f = File(saveToPath, "wb");
         conn.onReceive = (ubyte[] data) { f.rawWrite(data); return data.length; };
+        static if (is(Conn : HTTP))
+        {
+            HTTP.StatusLine statusLine;
+            conn.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
+        }
         conn.perform();
+        static if (is(Conn : HTTP))
+            enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine));
     }
     else
     {
@@ -448,6 +461,7 @@ if (isCurlConn!Conn)
 @system unittest
 {
     import std.algorithm.searching : canFind;
+    import std.exception : collectException;
     static import std.file;
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
@@ -464,6 +478,27 @@ if (isCurlConn!Conn)
         }
         download(host, fn);
         assert(std.file.readText(fn) == "Hello world");
+    }
+
+    {
+        testServer.handle((s) {
+            s.send(httpNotFound("response content"));
+        });
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        auto e = collectException!HTTPStatusException(download(testServer.addr, fn));
+        assert(e.status == 404);
+        assert(std.file.readText(fn) == "response content");
+    }
+    {
+        testServer.handle((s) {
+            s.send(httpInternalServerError("response content"));
+        });
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        auto e = collectException!HTTPStatusException(download(testServer.addr, fn));
+        assert(e.status == 500);
+        assert(std.file.readText(fn) == "response content");
     }
 }
 
@@ -505,19 +540,30 @@ if (isCurlConn!Conn)
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.exception : enforce;
+        import std.format : format;
         import std.stdio : File;
+
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
         immutable sz = f.size;
         if (sz != ulong.max)
             conn.contentLength = sz;
+        static if (is(Conn : HTTP))
+        {
+            HTTP.StatusLine statusLine;
+            conn.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
+        }
         conn.perform();
+        static if (is(Conn : HTTP))
+            enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine));
     }
 }
 
 @system unittest
 {
     import std.algorithm.searching : canFind;
+    import std.exception : collectException;
     static import std.file;
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
@@ -536,6 +582,27 @@ if (isCurlConn!Conn)
             s.send(httpOK());
         });
         upload(fn, host ~ "/path");
+    }
+
+    {
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            s.send(httpNotFound());
+        });
+        auto e = collectException!HTTPStatusException(upload(fn, testServer.addr));
+        assert(e.status == 404);
+    }
+    {
+        auto fn = std.file.deleteme;
+        scope (exit) std.file.remove(fn);
+        std.file.write(fn, "upload data\n");
+        testServer.handle((s) {
+            s.send(httpInternalServerError());
+        });
+        auto e = collectException!HTTPStatusException(upload(fn, testServer.addr));
+        assert(e.status == 500);
     }
 }
 
@@ -564,6 +631,7 @@ if (isCurlConn!Conn)
  * Throws:
  *
  * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -632,6 +700,11 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -733,6 +806,11 @@ if (is(T == char) || is(T == ubyte))
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
  *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  * See_Also: $(LREF HTTP.Method)
  */
 T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData,
@@ -787,6 +865,11 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  * import std.net.curl;
  * del("https://httpbin.org/delete");
  * ----
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -904,6 +987,11 @@ if (is(T == char) || is(T == ubyte))
  * Returns:
  * A T[] range containing the trace info of the resource pointed to by the URL.
  *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  * See_Also: $(LREF HTTP.Method)
  */
 T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
@@ -944,6 +1032,11 @@ if (is(T == char) || is(T == ubyte))
  *
  * Returns:
  * A T[] range containing the connect info of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -989,6 +1082,11 @@ if (is(T == char) || is(T == ubyte))
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -1094,8 +1192,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
-            format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
+    enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine));
 
     return _decodeContent!T(content.data, client.p.charset);
 }
@@ -1300,6 +1397,11 @@ struct ByLineBuffer(Char)
  *
  * Returns:
  * A range of Char[] with the content of the resource pointer to by the URL
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
            (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
@@ -1409,6 +1511,11 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
  *
  * Returns:
  * A range of ubyte[chunkSize] with the content of the resource pointer to by the URL
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byChunk(Conn = AutoProtocol)
             (const(char)[] url, size_t chunkSize = 1024, Conn conn = Conn())
@@ -1502,7 +1609,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
         import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s",
+               format("Expected %s but got %s",
                       State.gotUnits, state));
         return units;
     }
@@ -1514,7 +1621,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s",
+               format("Expected %s but got %s",
                       State.gotUnits, state));
         state = State.needUnits;
         // Send to worker thread for buffer reuse
@@ -1542,6 +1649,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
             final switch (state)
             {
             case State.needUnits:
+                import std.typecons : Rebindable;
+                Rebindable!(immutable CurlException) ex;
                 receiveTimeout(d,
                         (Tid origin, CurlMessage!(immutable(Unit)[]) _data)
                         {
@@ -1557,8 +1666,14 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
                                 return false;
                             state = state.done;
                             return true;
-                        }
-                        );
+                        },
+                        (immutable CurlException e)
+                        {
+                            ex = e;
+                        },
+                    );
+                if (ex)
+                    throw ex.get;
                 break;
             case State.gotUnits: return true;
             case State.done:
@@ -1586,6 +1701,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
             final switch (state)
             {
             case State.needUnits:
+                import std.typecons : Rebindable;
+                Rebindable!(immutable CurlException) ex;
                 receive(
                         (Tid origin, CurlMessage!(immutable(Unit)[]) _data)
                         {
@@ -1601,8 +1718,14 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
                                 return false;
                             state = state.done;
                             return true;
-                        }
-                        );
+                        },
+                        (immutable CurlException e)
+                        {
+                            ex = e;
+                        },
+                    );
+                if (ex)
+                    throw ex.get;
                 break;
             case State.gotUnits: return;
             case State.done:
@@ -1669,6 +1792,11 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
  * Returns:
  * A range of Char[] with the content of the resource pointer to by the
  * URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
  */
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData,
@@ -1739,6 +1867,57 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     }
 }
 
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.close;
+    });
+    auto e = collectException!CurlException(byLineAsync(testServer.addr).empty);
+    assert(e !is null);
+}
+
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound());
+    });
+    auto e = collectException!HTTPStatusException(byLineAsync(testServer.addr).empty);
+    assert(e.status == 404);
+}
+
+@system unittest
+{
+    import core.time : seconds;
+    import std.algorithm.comparison : equal;
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound("Not\nFound\nPage"));
+    });
+    auto rng = byLineAsync(testServer.addr);
+    auto e = collectException!HTTPStatusException(rng.wait(1.seconds));
+    assert(e.status == 404);
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound("Not\nFound\nPage"));
+    });
+    bool empty;
+    rng = byLineAsync(testServer.addr);
+    // http status exceptions sent early on, but range can still be iterated for content
+    e = collectException!HTTPStatusException(empty = rng.empty);
+    assert(e.status == 404);
+    assert(!empty);
+    assert(rng.equal(["Not", "Found", "Page"]));
+}
+
 /** HTTP/FTP fetch content as a range of chunks asynchronously.
  *
  * A range of chunks is returned immediately and the request that fetches the
@@ -1794,6 +1973,12 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
  * Returns:
  * A range of ubyte[chunkSize] with the content of the resource pointer to by
  * the URL.
+ *
+ * Throws:
+ *
+ * `CurlException` on error.
+ * `HTTPStatusException` when the response has a non-2xx status
+ *
  */
 auto byChunkAsync(Conn = AutoProtocol, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData,
@@ -1861,6 +2046,56 @@ if (isCurlConn!(Conn))
     }
 }
 
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.close;
+    });
+    auto e = collectException!CurlException(byChunkAsync(testServer.addr, 2).empty);
+    assert(e !is null);
+}
+
+@system unittest
+{
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound());
+    });
+    auto e = collectException!HTTPStatusException(byChunkAsync(testServer.addr, 2).empty);
+    assert(e.status == 404);
+}
+
+@system unittest
+{
+    import core.time : seconds;
+    import std.algorithm.comparison : equal;
+    import std.exception : collectException;
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+    });
+    auto rng = byChunkAsync(testServer.addr, 2);
+    auto e = collectException!HTTPStatusException(rng.wait(1.seconds));
+    assert(e.status == 404);
+
+    testServer.handle((s) {
+        auto req = s.recvReq;
+        s.send(httpNotFound(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
+    });
+    rng = byChunkAsync(testServer.addr, 2);
+    bool empty;
+    // http status exceptions sent early on, but range can still be iterated for content
+    e = collectException!HTTPStatusException(empty = rng.empty);
+    assert(e.status == 404);
+    assert(!empty);
+    assert(rng.equal([[0, 1], [2, 3], [4, 5]]));
+}
 
 /*
   Mixin template for all supported curl protocols. This is the commom
@@ -4138,6 +4373,27 @@ class HTTPStatusException : CurlException
         this.status = status;
     }
 
+    /++
+        Params:
+            statusLine = An instance of $(D HTTP.StatusLine) with the HTTP error code.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    @safe pure nothrow
+    this(HTTP.StatusLine statusLine,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        import std.conv : to;
+
+        immutable msg = "HTTP request returned status code " ~ statusLine.code.to!string
+            ~ " (" ~ statusLine.reason ~ ")";
+        super(msg, file, line, next);
+        this.status = statusLine.code;
+    }
+
     immutable int status; /// The HTTP status code
 }
 
@@ -5239,14 +5495,24 @@ static:
                                     fromTid, aborted);
         };
 
-        static if ( is(Conn == HTTP) )
+        static if (is(Conn : HTTP))
         {
+            HTTP.StatusLine statusLine;
             client.method = method;
             // register dummy header handler
             client.onReceiveHeader = (in char[] key, in char[] value)
             {
                 if (key == "content-type")
                     encodingScheme = EncodingScheme.create(client.p.charset);
+            };
+            client.onReceiveStatusLine = (HTTP.StatusLine statusLine)
+            {
+                 // http status exceptions are sent immediately but do not abort sending the response
+                if (statusLine.code / 100 != 2)
+                {
+                    immutable ex = new HTTPStatusException(statusLine);
+                    fromTid.prioritySend(ex);
+                }
             };
         }
         else
@@ -5262,7 +5528,7 @@ static:
         }
         catch (Exception ex)
         {
-            prioritySend(fromTid, cast(immutable(Exception)) ex);
+            fromTid.prioritySend(cast(immutable(Exception)) ex);
             fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
@@ -5275,9 +5541,8 @@ static:
                 fromTid.send(thisTid, curlMessage(true)); // signal done
                 return;
             }
-            prioritySend(fromTid, cast(immutable(CurlException))
-                         new CurlException(client.p.curl.errorString(code)));
-
+            immutable ex = new CurlException(client.p.curl.errorString(code));
+            fromTid.prioritySend(ex);
             fromTid.send(thisTid, curlMessage(true)); // signal done
             return;
         }
