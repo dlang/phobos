@@ -993,6 +993,7 @@ version (D_BetterC) {} else
 }
 
 // const SumTypes
+version (D_BetterC) {} else // not @nogc, https://issues.dlang.org/show_bug.cgi?id=22117
 @safe unittest
 {
     auto _ = const(SumType!(int[]))([1, 2, 3]);
