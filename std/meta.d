@@ -771,29 +771,14 @@ template DerivedToFront(TList...)
     static assert(is(TL == AliasSeq!(C, B, A)));
 }
 
-private enum staticMapExpandFactor = 150;
-private string generateCases()
-{
-    string[staticMapExpandFactor] chunks;
-    chunks[0] = q{};
-    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
-    string ret = `AliasSeq!(`;
-    foreach (chunk; chunks)
-        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
-    return ret ~ `)`;
-}
-private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
-
 /**
-Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to `AliasSeq!(fun!(args[0]), fun!(args[1]), ..., fun!(args[$ - 1]))`.
  */
-template staticMap(alias F, Args ...)
+template staticMap(alias fun, args...)
 {
-    static if (Args.length < staticMapExpandFactor)
-        mixin(staticMapBasicCases[Args.length]);
-    else
-        alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
+    alias staticMap = AliasSeq!();
+    static foreach (arg; args)
+        staticMap = AliasSeq!(staticMap, fun!arg);
 }
 
 ///
