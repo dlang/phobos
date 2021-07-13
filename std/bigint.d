@@ -1407,6 +1407,212 @@ public:
         assert(aa[BigInt(456)] == "def");
     }
 
+    /*
+        Increments an arbitrary-length integer, represented as an array of
+        bytes, using the native endianness.
+
+        This is just used by `toBytes` to convert unsigned bytes of the
+        BigInt to two's complement form.
+    */
+    private static void incrementBytes (ref ubyte[] value) nothrow pure @safe
+    {
+        if (value.length == 0u)
+        {
+            value = [ 0x01u ];
+            return;
+        }
+
+        version (BigEndian)
+        {
+            // This loop adds one to an arbitrary length array of bytes.
+            foreach_reverse (ref b; value)
+            {
+                if (b != 0xFFu)
+                {
+                    b++;
+                    break;
+                }
+
+                b = 0x00u;
+
+                // If the array of bytes is maxed out, append a next byte set to one.
+                if (i == (value.length - 1))
+                {
+                    value = (0x01u ~ value);
+                    return;
+                }
+            }
+        }
+        else version (LittleEndian)
+        {
+            // This loop adds one to an arbitrary length array of bytes.
+            foreach (size_t i, ref b; value)
+            {
+                if (b != 0xFFu)
+                {
+                    b++;
+                    break;
+                }
+
+                b = 0x00u;
+
+                // If the array of bytes is maxed out, append a next byte set to one.
+                if (i == (value.length - 1))
+                {
+                    value ~= 0x01u;
+                    return;
+                }
+            }
+        }
+    }
+
+    @safe
+    unittest
+    {
+        ubyte[] a = [ 0x00u ];
+        incrementBytes(a);
+        assert(a == [ 0x01u ]);
+
+        ubyte[] b = [ 0xFFu ];
+        incrementBytes(b);
+        assert(b == [ 0x00u, 0x01u ]);
+
+        ubyte[] c = [ 0xFDu, 0xFFu, 0xFFu ];
+        incrementBytes(c);
+        assert(c == [ 0xFEu, 0xFFu, 0xFFu ]);
+
+        ubyte[] d = [];
+        incrementBytes(d);
+        assert(d == [ 0x01u ]);
+    }
+
+    /**
+        Converts the `BigInt` to a sequence of bytes that represents the
+        native-endian representation of that number.
+
+        Returns: a `ubyte[]` array that represents the native-endian
+            representation of that number.
+    */
+    ubyte[] toBytes() const pure @system @property nothrow
+    in
+    {
+        assert(this.uintLength > 0u, "A BigInt contained no underlying uints!");
+    }
+    out (ret)
+    {
+        assert(ret.length > 0u, "BigInt.toBytes returned zero bytes!");
+    }
+    do
+    {
+        ubyte[] ret = this.data.toBytes;
+        if (this.sign)
+        {
+            foreach (ref u; ret)
+            {
+                u = cast(ubyte) (~ cast(int) u);
+            }
+            BigInt.incrementBytes(ret);
+        }
+
+        version (BigEndian)
+        {
+            if (this.sign)
+            {
+                if (!(ret[$-1] & 0x80u)) ret = (0xFFu ~ ret);
+            }
+            else
+            {
+                if (ret[$-1] & 0x80u) ret = (0x00u ~ ret);
+            }
+        }
+        else version (LittleEndian)
+        {
+            if (this.sign)
+            {
+                if (!(ret[$-1] & 0x80u)) ret ~= 0xFFu;
+            }
+            else
+            {
+                if (ret[$-1] & 0x80u) ret ~= 0x00u;
+            }
+        }
+        else static assert(0, "Undetermined endianness! Cannot compile!");
+        return ret;
+    }
+
+    @system
+    unittest
+    {
+        BigInt b1 = BigInt("18446744073709551619"); // ulong.max + 4
+        BigInt b2 = BigInt(uint.max);
+        BigInt b3 = BigInt(0);
+        BigInt b4 = BigInt(3);
+        BigInt b5 = BigInt(-3);
+
+        version (LittleEndian)
+        {
+            assert(b1.toBytes == [
+                0x03u, 0x00u, 0x00u, 0x00u,
+                0x00u, 0x00u, 0x00u, 0x00u,
+                0x01u
+            ]);
+
+            assert(b2.toBytes == [
+                0xFFu, 0xFFu, 0xFFu, 0xFFu,
+                0x00u
+            ]);
+
+            assert(b3.toBytes == [
+                0x00u
+            ]);
+
+            assert(b4.toBytes == [
+                0x03u
+            ]);
+
+            assert(b5.toBytes == [
+                0xFDu
+            ]);
+        }
+        else version (BigEndian)
+        {
+            assert(b1.toBytes == [
+                0x01u, 0x00u, 0x00u, 0x00u,
+                0x00u, 0x00u, 0x00u, 0x00u,
+                0x03u
+            ]);
+
+            assert(b2.toBytes == [
+                0x00u, 0xFFu, 0xFFu, 0xFFu,
+                0xFFu
+            ]);
+
+            assert(b3.toBytes == [
+                0x00u
+            ]);
+
+            assert(b4.toBytes == [
+                0x03u
+            ]);
+
+            assert(b5.toBytes == [
+                0xFDu
+            ]);
+        }
+    }
+
+    /**
+        Override for the `cast` operator, so the `BigInt` can be cast to a
+        `ubyte[]`.
+
+        Returns: a `ubyte[]` array, representing the native-endian
+            representation of that number.
+    */
+    T opCast(T : ubyte[])() pure nothrow @system const
+    {
+        return this.toBytes;
+    }
+
     /**
      * Gets the nth number in the underlying representation that makes up the whole
      * `BigInt`.
