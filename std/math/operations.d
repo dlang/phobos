@@ -1717,7 +1717,7 @@ if (isFloatingPoint!T)
     bool negative;
 }
 
-FloatingPointBitpattern!T extractBitpattern(T)(T val)
+FloatingPointBitpattern!T extractBitpattern(T)(T val) @trusted
 if (isFloatingPoint!T)
 {
     import std.math : floatTraits, RealFormat;
@@ -1729,9 +1729,9 @@ if (isFloatingPoint!T)
     {
         if (__ctfe)
         {
-            import core.math : fabs;
+            import core.math : fabs, ldexp;
             import std.math.rounding : floor;
-            import std.math.traits : isInfinity, isNaN;
+            import std.math.traits : isInfinity, isNaN, signbit;
             import std.math.exponential : log2;
 
             if (isNaN(val) || isInfinity(val))
@@ -1750,19 +1750,9 @@ if (isFloatingPoint!T)
             }
             else
             {
-                if (ret.exponent > 16382 + 64) // bias + bits of ulong
-                    val /= 2.0L ^^ (ret.exponent - (16382 + 64));
-                else
-                {
-                    auto delta = 16382 + 64 - (ret.exponent == 0 ? 1 : ret.exponent); // -1 in case of subnormals
-                    if (delta > 16383)
-                    {
-                        // need two steps to avoid overflow
-                        val *= 2.0L ^^ 16383;
-                        delta -= 16383;
-                    }
-                    val *= 2.0L ^^ delta;
-                }
+                auto delta = 16382 + 64 // bias + bits of ulong
+                             - (ret.exponent == 0 ? 1 : ret.exponent); // -1 in case of subnormals
+                val = ldexp(val, delta); // val *= 2^^delta
 
                 ulong tmp = cast(ulong) fabs(val);
                 if (ret.exponent != 32767 && ret.exponent > 0 && tmp <= ulong.max / 2)
@@ -1773,30 +1763,28 @@ if (isFloatingPoint!T)
                     tmp = cast(ulong) fabs(val);
                 }
 
-                ret.mantissa = tmp & ((1L << 63) - 1);
+                ret.mantissa = tmp & long.max;
             }
 
-            double d = cast(double) val;
-            ulong ival = () @trusted { return *cast(ulong*) &d; }();
-            if ((ival >> 63) & 1) ret.negative = true;
+            ret.negative = (signbit(val) == 1);
         }
         else
         {
-            ulong[2] ival = () @trusted { return *cast(ulong[2]*) &val; }();
-            ret.mantissa = ival[0] & ((1L << 63) - 1);
-            ret.exponent = ival[1] & 32767;
-            if ((ival[1] >> 15) & 1) ret.negative = true;
+            ushort* vs = cast(ushort*) &val;
+            ret.mantissa = (cast(ulong*) vs)[0] & long.max;
+            ret.exponent = vs[4] & short.max;
+            ret.negative = (vs[4] >> 15) & 1;
         }
     }
     else
     {
         static if (F.realFormat == RealFormat.ieeeSingle)
         {
-            ulong ival = () @trusted { return *cast(uint*) &val; }();
+            ulong ival = *cast(uint*) &val;
         }
         else static if (F.realFormat == RealFormat.ieeeDouble)
         {
-            ulong ival = () @trusted { return *cast(ulong*) &val; }();
+            ulong ival = *cast(ulong*) &val;
         }
         else
         {
@@ -2003,8 +1991,8 @@ if (isFloatingPoint!T)
 
         enum r7 = nextDown(0x1p+16383L);
         enum bp7 = extractBitpattern(r7);
-        static assert(bp2.mantissa == 0xffff_ffff_ffff_ffffL);
-        static assert(bp2.exponent == 16383);
-        static assert(bp2.negative == false);
+        static assert(bp7.mantissa == 0xffff_ffff_ffff_ffffL);
+        static assert(bp7.exponent == 16382);
+        static assert(bp7.negative == false);
     }
 }
