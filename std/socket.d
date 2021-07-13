@@ -3121,17 +3121,21 @@ public:
         version (Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int) flags, from.name, &nameLen);
-            from.setNameLen(nameLen);
-            assert(from.addressFamily == _family);
-            // if (!read) //connection closed
+            if (read >= 0)
+            {
+                from.setNameLen(nameLen);
+                assert(from.addressFamily == _family);
+            }
             return read;
         }
         else
         {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int) flags, from.name, &nameLen);
-            from.setNameLen(nameLen);
-            assert(from.addressFamily == _family);
-            // if (!read) //connection closed
+            if (read >= 0)
+            {
+                from.setNameLen(nameLen);
+                assert(from.addressFamily == _family);
+            }
             return read;
         }
     }
@@ -3574,6 +3578,17 @@ class UdpSocket: Socket
     {
         this(AddressFamily.INET);
     }
+}
+
+unittest
+{
+    byte[] buf;
+    buf.length = 1;
+    Address addr;
+    auto s = new UdpSocket;
+    s.blocking = false;
+    s.bind(new InternetAddress(InternetAddress.PORT_ANY));
+    s.receiveFrom(buf, addr);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=16514
