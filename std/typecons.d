@@ -2454,11 +2454,11 @@ Convenience function for creating a `Rebindable` using automatic type
 inference.
 
 Params:
-    obj = A reference to an object, interface, associative array, or an array slice
-          to initialize the `Rebindable` with.
+    obj = A reference to an object, interface, associative array, or an array slice.
+    s = Struct instance.
 
 Returns:
-    A newly constructed `Rebindable` initialized with the given reference.
+    A newly constructed `Rebindable` initialized with the given data.
 */
 Rebindable!T rebindable(T)(T obj)
 if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
@@ -2466,6 +2466,17 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
     typeof(return) ret;
     ret = obj;
     return ret;
+}
+
+/// ditto
+Rebindable!S rebindable(S)(S s)
+if (is(S == struct) && !isInstanceOf!(Rebindable, S))
+{
+    // workaround for rebindableS = rebindable(s)
+    static if (isMutable!S)
+        return s;
+    else
+        return Rebindable!S(s);
 }
 
 ///
@@ -2613,6 +2624,404 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     pr3341 = pr3341_aa;
     assert(pr3341[321] == 543);
     assert(rebindable(pr3341_aa)[321] == 543);
+}
+
+/** Models safe reassignment of otherwise constant struct instances.
+ *
+ * A constant struct with a field of reference type cannot be assigned to a mutable
+ * struct of the same type. This protects the constant reference field from being
+ * mutably aliased, potentially allowing mutation of `immutable` data. However, the
+ * assignment could be safe if all reference fields are only exposed as `const`.
+ *
+ * `Rebindable!(const S)` accepts (re)assignment from
+ * a `const S` while enforcing only `const` access to its fields.
+ * It implicitly converts to `ref const S` when possible. Otherwise,
+ * a copy is made on each implicit conversion to `const S`. Copies must be made
+ * e.g. when the struct contains a head-immutable data field.
+ *
+ * `Rebindable!(immutable S)` always makes a copy on implicit conversion to
+ * `immutable S`. This is required to preserve `immutable`'s
+ * guarantees. A copy is currently always made for conversion to `const S`
+ * (due to `alias this` limitations).
+ */
+template Rebindable(S)
+if (is(S == struct))
+{
+    static if (isMutable!S)
+        alias Rebindable = S;
+    else
+    struct Rebindable
+    {
+    private:
+        // mutPayload's pointers must be treated as tail const
+        void[S.sizeof] mutPayload;
+
+        void emplacePayload(ref S s)
+        {
+            import std.conv : emplace;
+            static if (__traits(compiles, () @safe {S tmp = s;}))
+                () @trusted {emplace!S(mutPayload, s);}();
+            else
+                emplace!S(mutPayload, s);
+        }
+
+    public:
+        this()(auto ref S s)
+        {
+            emplacePayload(s);
+        }
+
+        // immutable S cannot be passed to auto ref S above
+        static if (!is(S == immutable))
+        this()(immutable S s)
+        {
+            emplacePayload(s);
+        }
+
+        void opAssign()(auto ref S s)
+        {
+            movePayload;
+            emplacePayload(s);
+        }
+
+        static if (!is(S == immutable))
+        void opAssign()(immutable S s)
+        {
+            movePayload;
+            emplacePayload(s);
+        }
+
+        void opAssign(Rebindable other)
+        {
+            this = other.trustedPayload;
+        }
+
+        import std.traits : Fields, isMutable;
+        private template isConst(T)
+        {
+            static if (is(T == struct) || is(T == union))
+                enum isConst = !isMutable!T || haveConstHead!T;
+            else
+                enum isConst = !isMutable!T;
+        }
+        private enum bool haveConstHead(T) = anySatisfy!(isConst, Fields!T);
+        private enum bool unsafeRef = is(S == immutable) || haveConstHead!(Unqual!S);
+
+        // must not escape when unsafeRef
+        private ref S trustedPayload() @trusted
+        {
+            return *cast(S*) mutPayload.ptr;
+        }
+
+        // expose payload as const ref when members have no head const data
+        static if (!unsafeRef)
+        ref S Rebindable_getRef() @property
+        {
+            return trustedPayload;
+        }
+
+        static if (unsafeRef)
+        S Rebindable_getCopy() @property
+        {
+            return trustedPayload;
+        }
+
+        static if (unsafeRef)
+            alias Rebindable_getCopy this;
+        else
+            alias Rebindable_getRef this;
+
+        private S movePayload() @trusted
+        {
+            import std.algorithm : move;
+            return cast(S) move(*cast(Unqual!S*) mutPayload.ptr);
+        }
+
+        ~this()
+        {
+            // call destructor with proper constness
+            movePayload;
+        }
+    }
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        int* ptr;
+    }
+    S s = S(new int);
+
+    const cs = s;
+    // Can't assign s.ptr to cs.ptr
+    static assert(!__traits(compiles, {s = cs;}));
+
+    Rebindable!(const S) rs = s;
+    assert(rs.ptr is s.ptr);
+    // rs.ptr is const
+    static assert(!__traits(compiles, {rs.ptr = null;}));
+
+    // Can't assign s.ptr to rs.ptr
+    static assert(!__traits(compiles, {s = rs;}));
+
+    const S cs2 = rs;
+    // Rebind rs
+    rs = cs2;
+    rs = S();
+    assert(rs.ptr is null);
+}
+
+/// Using Rebindable in a generic algorithm:
+@safe unittest
+{
+    import std.range.primitives : front, popFront;
+
+    // simple version of std.algorithm.searching.maxElement
+    typeof(R.init.front) maxElement(R)(R r)
+    {
+        auto max = rebindable(r.front);
+        r.popFront;
+        foreach (e; r)
+            if (e > max)
+                max = e; // Rebindable allows const-correct reassignment
+        return max;
+    }
+    struct S
+    {
+        char[] arr;
+        alias arr this; // for comparison
+    }
+    // can't convert to mutable
+    const S cs;
+    static assert(!__traits(compiles, { S s = cs; }));
+
+    alias CS = const S;
+    CS[] arr = [CS("harp"), CS("apple"), CS("pot")];
+    CS ms = maxElement(arr);
+    assert(ms.arr == "pot");
+}
+
+// Test Rebindable!immutable
+@safe unittest
+{
+    static struct S
+    {
+        int* ptr;
+    }
+    S s = S(new int);
+
+    Rebindable!(immutable S) ri = S(new int);
+    assert(ri.ptr !is null);
+    static assert(!__traits(compiles, {ri.ptr = null;}));
+
+    // ri is not compatible with mutable S
+    static assert(!__traits(compiles, {s = ri;}));
+    static assert(!__traits(compiles, {ri = s;}));
+
+    auto ri2 = ri;
+    assert(ri2.ptr == ri.ptr);
+
+    const S cs3 = ri;
+    static assert(!__traits(compiles, {ri = cs3;}));
+
+    immutable S si = ri;
+    // Rebind ri
+    ri = si;
+    ri = S();
+    assert(ri.ptr is null);
+
+    // Test RB!immutable -> RB!const
+    Rebindable!(const S) rc = ri;
+    assert(rc.ptr is null);
+    ri = S(new int);
+    rc = ri;
+    assert(rc.ptr !is null);
+
+    // test rebindable, opAssign
+    rc.destroy;
+    assert(rc.ptr is null);
+    rc = rebindable(cs3);
+    rc = rebindable(si);
+    assert(rc.ptr !is null);
+
+    ri.destroy;
+    assert(ri.ptr is null);
+    ri = rebindable(si);
+    assert(ri.ptr !is null);
+}
+
+// Test Rebindable!mutable
+@safe unittest
+{
+    static struct S
+    {
+        int* ptr;
+    }
+    S s;
+
+    Rebindable!S rs = s;
+    static assert(is(typeof(rs) == S));
+    rs = rebindable(S());
+}
+
+// Test disabled default ctor
+@safe unittest
+{
+    static struct ND
+    {
+        int i;
+        @disable this();
+        this(int i) inout {this.i = i;}
+    }
+    static assert(!__traits(compiles, Rebindable!ND()));
+
+    Rebindable!(const ND) rb = const ND(1);
+    assert(rb.i == 1);
+    rb = immutable ND(2);
+    assert(rb.i == 2);
+    rb = rebindable(const ND(3));
+    assert(rb.i == 3);
+    static assert(!__traits(compiles, rb.i++));
+}
+
+// Test head const fields aren't exposed as ref const S
+@safe unittest
+{
+    struct S(T)
+    {
+        T i;
+    }
+    auto r = rebindable(const S!(immutable int)());
+    // check we can't reference `i`, as it's a field of a temporary S copy
+    // If r.i was an lvalue, it would break immutable when r was rebound
+    static assert(!__traits(compiles, {const ref get(){ return r.i; }}));
+
+    // test when Rebindable!const should make a copy
+    @property rcs(T)(){ return rebindable(const S!T()); }
+    // values
+    static assert(!rcs!(int).unsafeRef);
+    static assert(rcs!(const int).unsafeRef);
+    static assert(rcs!(immutable int).unsafeRef);
+    // arrays
+    static assert(!rcs!(string).unsafeRef);
+    static assert(rcs!(const char[]).unsafeRef);
+    // class refs
+    static assert(!rcs!(Object).unsafeRef);
+    static assert(rcs!(const Object).unsafeRef);
+    // nested structs
+    static assert(!rcs!(S!int).unsafeRef);
+    static assert(!rcs!(S!string).unsafeRef);
+    static assert(!rcs!(S!Object).unsafeRef);
+    static assert(rcs!(const S!int).unsafeRef);
+    static assert(rcs!(const S!string).unsafeRef);
+    static assert(rcs!(S!(const Object)).unsafeRef);
+    static assert(rcs!(const S!Object).unsafeRef);
+}
+
+// Test copying
+@safe unittest
+{
+    int del;
+    int post;
+    struct S
+    {
+        int* ptr;
+        int level;
+        this(this) {
+            post++;
+            level++;
+        }
+        ~this() {
+            del++;
+        }
+    }
+
+    // test const
+    {
+        Rebindable!(const S) rc = S(new int);
+        assert(post == 1);
+        assert(rc.level == 1);
+        assert(post == 1);
+        assert(rc.level == 1); // no copy is created
+    }
+    assert(post == 1);
+    assert(del == 2);
+    del = 0, post = 0;
+
+    // immutable
+    {
+        // on every field access a temporary immutable copy gets created
+        Rebindable!(immutable S) ri = S(new int);
+        assert(post == 1);
+        assert(ri.level == 2);
+        assert(post == 2);
+        assert(ri.level == 2); // however it's a copy of the payload's level
+    }
+    assert(post == 3);
+    assert(del == 4);
+    del = 0, post = 0;
+
+    {
+        // the initial value is copied and destructed
+        Rebindable!(const S) rc = S(new int);
+        assert(post == 1);
+        assert(del == 1);
+        assert(rc.level == 1);
+
+        // on an assignment to another value is simply post-blitted
+        const S cs = rc;
+        assert(del == 1);
+        assert(post == 2);
+        assert(rc.level == 1);
+        assert(cs.level == 2);
+
+        // however on an assignment, the old payload gets destructed
+        rc = cs;
+        assert(del == 2);
+        assert(post == 3);
+        assert(cs.level == 2);
+        assert(rc.level == 3);
+    }
+    assert(post == 3);
+    assert(del == 4);
+    del = 0, post = 0;
+
+    {
+        // the initial value is copied and destructed
+        Rebindable!(immutable S) ri = S(new int);
+        assert(post == 1);
+        assert(del == 1);
+        // creates temporary (gets immediately destroyed), actual level is still 1
+        assert(ri.level == 2);
+        assert(del == 2);
+        assert(post == 2);
+
+        // on an assignment to another value is simply post-blitted
+        const S cs = ri;
+        assert(del == 2);
+        assert(post == 3);
+        // creates temporary (gets immediately destroyed), actual level is still 1
+        assert(ri.level == 2);
+        assert(cs.level == 2);
+        assert(del == 3);
+        assert(post == 4);
+
+        // however, on an assignment to Rebindable the old value gets destructed
+        auto ri2 = ri;
+        static assert(is(typeof(ri2) == Rebindable!(immutable S)));
+        static assert(TemplateOf!(typeof(ri2)).stringof == "Rebindable(S) if (is(S == struct))");
+        assert(del == 3);
+        assert(post == 4);
+        assert(ri2.level == 2); // should be 3??
+        assert(del == 4);
+
+        // similarly an assignment
+        //ri = ri2; // fails to compile due to overload conflicts
+    }
+    assert(post == 5);
+    assert(del == 7);
 }
 
 /**
