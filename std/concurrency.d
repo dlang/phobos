@@ -393,6 +393,14 @@ public:
         formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 
+    /**
+     * Returns whether or not this Tid has concurrency messages waiting to be
+     * received.
+     */
+    bool hasMessages() @safe pure nothrow @nogc
+    {
+        return (mbox.m_localMsgs + mbox.m_sharedBox.length) > 0;
+    }
 }
 
 @system unittest
@@ -405,6 +413,12 @@ public:
     assert(text(tid2) != "Tid(0)");
     auto tid3 = tid2;
     assert(text(tid2) == text(tid3));
+
+    assert(!thisTid.hasMessages);
+    thisTid.send(123);
+    assert(thisTid.hasMessages);
+    int i = receiveOnly!int();
+    assert(!thisTid.hasMessages);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21512
