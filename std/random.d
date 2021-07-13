@@ -1963,6 +1963,434 @@ A singleton instance of the default random number generator
     assert(rnd.take(3).sum > 0);
 }
 
+// OS RND code is based on mir.random, https://github.com/libmir/mir-random/blob/master/source/mir/random/engine/package.d
+
+version (Windows)
+    version = WindowsOSRandom;
+else version (SecureARC4Random)
+    version = ARC4OSRandom;
+else version (FreeBSD)
+    version = FileOSRandom;
+else version (linux)
+    version = FileOSRandom;
+else
+    static assert(false, "Platform not supported");
+
+struct OSRandomRef(T)
+{
+private:
+    T* _impl = null;
+
+    this (T* impl)
+    {
+        _impl = impl;
+    }
+
+public:
+    enum bool isUniformRandom = true;
+    enum empty = false;
+
+    @property ulong front()
+    {
+        return _impl.front;
+    }
+
+    void popFront()
+    {
+        _impl.popFront();
+    }
+}
+
+import core.stdc.stdlib : malloc, free;
+version (WindowsOSRandom)
+{
+    import core.sys.windows.winbase, core.sys.windows.wincrypt,
+        core.sys.windows.windows, core.sys.windows.winerror,
+        std.windows.syserror;
+}
+else version (FileOSRandom)
+{
+    import core.stdc.stdio : fclose, feof, ferror, fopen, fread;
+    alias IOType = typeof(fopen("a", "b"));
+}
+
+struct OSRandomImpl
+{
+private:
+    version (WindowsOSRandom)
+        ULONG_PTR _hProvider;
+    else version (FileOSRandom)
+        IOType _file;
+
+    ulong[] _buf;
+    size_t _bufSize;
+
+    void initialize(size_t bufSize = ulong.sizeof) @trusted @nogc
+        in (bufSize % ulong.sizeof == 0)
+    {
+        version (WindowsOSRandom)
+        {
+            static immutable acquireException = new Exception("Could not acquire crypt context");
+
+            // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
+            // For performance reasons, we recommend that you set the pszContainer
+            // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
+            // in all situations where you do not require a persisted key.
+            // CRYPT_SILENT is intended for use with applications for which the UI cannot be displayed by the CSP.
+            if (!CryptAcquireContextW(&_hProvider, null, null, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
+            {
+                if (GetLastError() == NTE_BAD_KEYSET)
+                {
+                    // Attempt to create default container
+                    if (!CryptAcquireContextA(&_hProvider, null, null, PROV_RSA_FULL,
+                        CRYPT_NEWKEYSET | CRYPT_SILENT))
+                    {
+                        throw acquireException;
+                    }
+                }
+                else
+                {
+                    throw acquireException;
+                }
+            }
+        }
+        else version (FileOSRandom)
+        {
+            static immutable openException = new Exception("Could not open /dev/urandom");
+            _file = fopen("/dev/urandom", "r");
+            if (!_file)
+                throw openException;
+        }
+
+
+        static immutable memException = new Exception("Could not allocate buffer memory");
+        auto ptr = malloc(bufSize);
+        if (!ptr)
+            throw memException;
+
+        // Initialize to 1 element so popFront only has to check for ==1 and not ==0 case
+        _buf = (cast(ulong*)ptr)[0 .. 1];
+        _bufSize = bufSize;
+        popFront();
+    }
+
+public:
+    enum bool isUniformRandom = true;
+    enum empty = false;
+
+    // Avoid copies, as this duplicates some RNG state (front)
+    @disable this(this);
+    @disable this(ref return scope OSRandomImpl rhs);
+
+    @property ulong front() @trusted nothrow @nogc
+        in (_buf.length != 0)
+    {
+        return _buf[$ - 1];
+    }
+
+    void popFront() @trusted nothrow @nogc
+        in (_buf.length != 0)
+    {
+        if (_buf.length == 1)
+        {
+            version (WindowsOSRandom)
+            {
+                if (!CryptGenRandom(_hProvider, cast(DWORD)_bufSize, cast(PBYTE)_buf.ptr))
+                    assert(0, "CryptGenRandom failed");
+            }
+            else version (ARC4OSRandom)
+            {
+                arc4random_buf(_buf.ptr, _bufSize);
+            }
+            else version (FileOSRandom)
+            {
+                const res = fread(_buf.ptr, 1, _bufSize, _file);
+                if (res != _bufSize)
+                    assert(0, "Could not read from /dev/urandom");
+            }
+            _buf = _buf.ptr[0 .. _bufSize / 8];
+        }
+        else
+        {
+            _buf = _buf.ptr[0 .. _buf.length - 1];
+        }
+    }
+
+    ~this()
+    {
+        if (_buf.ptr)
+        {
+            version (WindowsOSRandom)
+                CryptReleaseContext(_hProvider, 0);
+            else version (FileOSRandom)
+                fclose(_file);
+
+            free(_buf.ptr);
+            _buf = null;
+        }
+    }
+}
+
+
+
+alias OSRandom = OSRandomRef!OSRandomImpl;
+
+private static OSRandom _osRandom;
+private static OSRandomImpl _osRandomImpl;
+
+/+
+Interface to the OS cryptographically secure random number generator.
+
+If the OS random number generator has not been initialized previously
+(through `initializeOSRandom` or by a previous call to `openOSRandom`),
+this function will initialize the RNG using default parameters. Due to
+this initialization, this function may throw initialization exceptions.
+See `getOSRandom` for a `nothrow` alternative.
+
+Note:
+This RNG may block initially, if the OS did not yet collect enough entropy
+to return secure random numbers.
+
+Returns:
+A singleton instance of the operating system secure random number generator
++/
+@property ref OSRandom openOSRandom() @safe @nogc
+{
+    if (!osRandomInitialized)
+        initializeOSRandom();
+
+    return _osRandom;
+}
+
+///
+@safe @nogc unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : take;
+
+    // Initialized automatically
+    auto rng = openOSRandom();
+    assert(rng.take(3).sum > 0);
+}
+
+version (unittest)
+{
+    auto fetchOne(R)(ref R range)
+    {
+        const result = range.front;
+        range.popFront();
+        return result;
+    }
+}
+
+@safe unittest
+{
+    import std.range : take;
+    import std.array : array;
+    import std.algorithm : canFind;
+
+    // Very basic sanity test
+    const val = openOSRandom().take(2).array();
+    assert(val[0] != val[1]);
+    const val3 = openOSRandom().fetchOne();
+    assert (!val.canFind(val3));
+
+    auto rcopy = openOSRandom();
+    assert(rcopy.fetchOne() != openOSRandom().fetchOne());
+}
+
+/+
+Interface to the OS cryptographically secure random number generator.
+
+Unlike `openOSRandom`, this function does not initialize the OS random number
+generator and can therefore be `nothrow`.
+
+`initializeOSRandom` must be called before using this function.
+Xalling this function is before initializing the OS RNG is a programmer error
+and will trigger a program abort.
+
+Note:
+This RNG may block initially, if the OS did not yet collect enough entropy
+to return secure random numbers.
+
+Returns:
+A singleton instance of the operating system secure random number generator
++/
+@property ref OSRandom getOSRandom() @safe  @nogc nothrow
+{
+    if (!osRandomInitialized)
+        assert(false, "OS RNG not initialized, see initializeOSRandom");
+
+    return _osRandom;
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : take;
+
+    // For getOSRandom, need to initialize manually
+    try
+    {
+        if (!osRandomInitialized)
+            initializeOSRandom();
+    }
+    catch (Exception e)
+    {
+        // Must handle initialization errors here...
+        return;
+    }
+
+    // The code below can not throw exceptions, but it will abort
+    // if the RNG has not been initilized previously.
+    auto rng = getOSRandom();
+    assert(rng.take(3).sum > 0);
+}
+
+unittest
+{
+    import std.range : take;
+    import std.array : array;
+    import std.algorithm : canFind;
+
+    finalizeOSRandom();
+    initializeOSRandom();
+
+    // Very basic sanity test
+    auto val = getOSRandom().take(10).array();
+    assert(val[0] != val[1]);
+    auto val3 = getOSRandom().fetchOne();
+    assert (!val.canFind(val3));
+
+    auto rcopy = getOSRandom();
+    assert(rcopy.fetchOne() != getOSRandom().fetchOne());
+}
+
+/**
+ * Explicitly initialize the OS random number generator
+ * for this thread.
+ * This function will assert if the OS RNG is already initialized.
+ * If necessary, use `osRandomInitialized` if you need to check that condition.
+ */
+void initializeOSRandom(size_t bufSize) @safe @nogc
+{
+    assert(!osRandomInitialized, "OS RNG already initialized");
+
+    _osRandomImpl.initialize(bufSize);
+    _osRandom = OSRandom(&_osRandomImpl);
+}
+
+/// ditto
+void initializeOSRandom() @safe @nogc
+{
+    assert(!osRandomInitialized, "OS RNG already initialized");
+
+    _osRandomImpl.initialize();
+    _osRandom = OSRandom(&_osRandomImpl);
+}
+
+/**
+ * Check whether the OS RNG has been initialized for the current thread.
+ */
+@property bool osRandomInitialized() @safe @nogc nothrow
+{
+    return _osRandom._impl != null;
+}
+
+
+unittest
+{
+    import core.thread : Thread;
+
+    // New thread, the OS RND will not be initialized yet
+    auto thread = new Thread(() {
+        assert (!osRandomInitialized);
+        initializeOSRandom();
+        assert (osRandomInitialized);
+        openOSRandom().fetchOne();
+        getOSRandom().fetchOne();
+        assert (osRandomInitialized);
+        finalizeOSRandom();
+        assert (!osRandomInitialized);
+        openOSRandom().fetchOne();
+        assert (osRandomInitialized);
+    }).start();
+
+    thread.join();
+}
+
+/*
+ * Destroy all resources related to the OS random number generator
+ * for this thread.
+ * It is safe to call this function multiple times or when the OS
+ * RNG has not been initilized yet.
+ *
+ * Note: It is unsafe to call this function when any references
+ * to the OS RNG are stored somewhere. In general, this function
+ * should only be called when unloading the phobos library.
+ */
+private void finalizeOSRandom() /*nothrow nogc*/
+{
+    destroy(_osRandomImpl);
+    destroy(_osRandom);
+}
+
+unittest
+{
+    finalizeOSRandom();
+    finalizeOSRandom();
+    initializeOSRandom();
+    const t1 = getOSRandom().fetchOne();
+    const t2 = openOSRandom().fetchOne();
+    finalizeOSRandom();
+    const t3 = openOSRandom().fetchOne();
+
+    assert(t1 != t2);
+    assert(t2 != t3);
+    assert(t1 != t3);
+}
+
+/*
+// Cleanup resources on thread termination, library unload, etc.
+static ~this()
+{
+    finalizeOSRandom();
+}
+*/
+
+// Buffer Size benchmarks
+unittest
+{
+    import std.datetime.stopwatch : benchmark;
+    import std.stdio : writefln;
+
+    void benchmarkOSRandom(size_t n)
+    {
+        finalizeOSRandom();
+        initializeOSRandom(n);
+
+        static auto genValue()
+        {
+            getOSRandom().popFront();
+            return getOSRandom().front;
+        }
+
+        const time = benchmark!(genValue)(10_000)[0];
+        writefln("\t%s: %s", n, time.total!"hnsecs");
+    }
+
+    writefln("std.random getOSRandom benchmarks:");
+    writefln("==================================================");
+    benchmarkOSRandom(8);
+    benchmarkOSRandom(16);
+    benchmarkOSRandom(32);
+    benchmarkOSRandom(64);
+    benchmarkOSRandom(128);
+    benchmarkOSRandom(256);
+    writefln("==================================================");
+}
+
 /+
 Initialize a 32-bit MersenneTwisterEngine from 64 bits of entropy.
 This is private and accepts no seed as a parameter, freeing the internal
