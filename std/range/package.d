@@ -8578,6 +8578,385 @@ if (isForwardRange!Source && hasLength!Source)
     assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
+
+/**
+This range splits a `source` range into chunks as specified in the `endIndexes` range,
+starting from the first element of the source and ending the first chunk at the first index in
+endIndexes, not including this last element. Both ranges must be $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives).
+The indexes must be in ascending order.
+
+If the `source` range is shorter than the the provided indexes, the specified Indexes
+are shortened to match the length of the source range.
+
+If the `source` range is longer than the last index provided, all extra elements will
+form one new chunk.
+
+If `Source` and `Indexes` are forward ranges, the resulting range will be a forward range as well.
+Otherwise, the resulting chunks will be input ranges using the same input. The chunk will shrink
+with every `front` call and `popFront` will invalidate the previous `front`.
+
+Params:
+    source = range from which the chunks will be selected
+    endIndexes = range specifying the indexes of the elements that will not be included in the current chunk
+
+Returns: Range of chunks of variable lengths
+*/
+auto chunks(Source, Indexes)(Source source, Indexes endIndexes)
+if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size_t))
+{
+    struct Chunks(Source, Indexes)
+    {
+        static if (isForwardRange!Source && isForwardRange!Indexes)
+        {
+            this(Source source, Indexes endIndexes, size_t offset = 0, UseMaxLength maxLen=UseMaxLength(false))
+            {
+                import std.algorithm.sorting : isStrictlyMonotonic;
+                assert(endIndexes.isStrictlyMonotonic, "The indexes must be in a strictly increasing order");
+
+                _source = source;
+                _endIndexes = endIndexes;
+                _offset = offset;
+                _maxLen = maxLen;
+                if (!_source.empty)
+                    _isEmpty = false;
+                else
+                    _isEmpty = true;
+            }
+
+            /// Input range primitives. Always present.
+            @property bool empty()
+            {
+                return _isEmpty;
+            }
+
+            /// Ditto
+            @property auto front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty range");
+
+                if (_endIndexes.empty && !_source.empty)
+                    return _source.save;
+
+                assert(_endIndexes.front != 0, "Attempting to create a chunk of length 0");
+
+                return _source.save.take(_endIndexes.front()-_offset);
+            }
+
+            /// Ditto
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty range");
+
+                // source range is longer than index
+                if (_endIndexes.empty && !_source.empty)
+                {
+                    _isEmpty = true;
+                    return;
+                }
+
+                _source.popFrontN(_endIndexes.front()-_offset);
+                _offset = _endIndexes.front();
+                _endIndexes.popFront();
+
+                if (_maxLen)
+                {
+                    _maxLen.decrease();
+                    _isEmpty = _maxLen.empty;
+                }
+
+                // length of the source range is smaller than or equal to the index
+                if (_source.empty)
+                    _isEmpty = true;
+            }
+
+            /// Forward range primitives
+            @property typeof(this) save()
+            {
+                return typeof(this)(_source, _endIndexes, _offset);
+            }
+
+            static if (isInfinite!Source && hasLength!Indexes)
+            /// Length is only provided for infinite sources, when hasLength!Indexes is true
+                @property size_t length()
+                {
+                    return _endIndexes.length + 1;
+                }
+
+            static if (hasSlicing!Source && hasSlicing!Indexes && hasLength!Indexes)
+            {
+                /**
+                Indexing and slicing operations are only provided when both Source and Indexes
+                have slicing and hasLength!Indexes is true.
+                */
+                auto opIndex(size_t index)
+                {
+                    assert(index<=_endIndexes.length, "Chunks index out of bounds");
+
+                    const size_t startIndex = (index == 0 ? 0 : _endIndexes[index-1] - _offset);
+
+                    static if (hasLength!Source)
+                        assert(startIndex<=_source.length, "Chunks index out of bounds");
+
+                    if (index == _endIndexes.length)
+                        return _source[startIndex .. $];
+
+                    static if (hasLength!Source)
+                    {
+                        import std.algorithm.comparison : min;
+                        const size_t endIndex = min(_endIndexes[index] - _offset, source.length);
+                    }
+                    else
+                        const size_t endIndex = _endIndexes[index] - _offset;
+
+                    return _source[startIndex .. endIndex];
+                }
+
+                /// Ditto
+                auto opSlice(size_t lower, size_t upper)
+                {
+                    assert(lower <= upper, "Start index must be lower than end index");
+                    assert(lower <= _endIndexes.length+1 && upper <= _endIndexes.length+1,
+                        "Chunks index out of bounds");
+
+                    if (lower == upper || lower == _endIndexes.length+1)
+                        return Chunks(_source[$ .. $], _endIndexes[$ .. $]);
+
+                    const size_t startIndex = (lower == 0 ? 0 : _endIndexes[lower-1] - _offset);
+
+                    if (upper >= _endIndexes.length)
+                        return Chunks(_source[startIndex .. $], _endIndexes[lower .. $], startIndex,
+                            UseMaxLength(true, upper-lower));
+
+                    static if (hasLength!Source)
+                    {
+                        import std.algorithm.comparison : min;
+                        const size_t endIndex = min(_endIndexes[upper-1] - _offset, source.length);
+                    }
+                    else
+                        const size_t endIndex = _endIndexes[upper-1] - _offset;
+
+                    return Chunks(_source[startIndex .. endIndex], _endIndexes[lower .. upper-1], startIndex);
+                }
+            }
+
+            // Used when slicing to avoid taking extra elements
+            private static struct UseMaxLength
+            {
+                this(bool use, size_t len=0)
+                {
+                    _use = use;
+                    _len = len;
+                }
+
+                void decrease() { if (_len != 0) _len--; }
+
+                @property bool empty() { return _len == 0; }
+
+                private:
+                    size_t _len;
+                    bool _use;
+                alias _use this;
+            }
+
+        private:
+            Source _source;
+            Indexes _endIndexes;
+            size_t _offset;
+            UseMaxLength _maxLen;
+            bool _isEmpty;
+        }
+        else
+        {
+            import std.typecons : RefCounted;
+
+            private static struct Chunk
+            {
+                private RefCounted!Impl impl;
+
+                @property bool empty() { return impl.curSizeLeft == 0 || impl.source.empty; }
+                @property auto front() { return impl.source.front; }
+                void popFront()
+                {
+                    impl.curSizeLeft--;
+                    impl.source.popFront();
+                }
+            }
+
+            private static struct Impl
+            {
+                private Source source;
+                private Indexes endIndexes;
+                private size_t curSizeLeft;
+            }
+
+            private RefCounted!Impl impl;
+            // for when there are extra elements in the source range
+            private bool tookLastChunk;
+            private size_t offset;
+
+            private this(Source source, Indexes endIndexes)
+            {
+                tookLastChunk = false;
+                offset = 0;
+                impl = RefCounted!Impl(source, endIndexes,
+                    source.empty ? 0 : (endIndexes.empty ? 0 : endIndexes.front));
+            }
+
+            @property bool empty() { return impl.source.empty || tookLastChunk; }
+            @property Chunk front()
+            {
+                return Chunk(impl);
+            }
+
+            void popFront()
+            {
+                if (impl.endIndexes.empty)
+                {
+                    tookLastChunk = true;
+                    return;
+                }
+
+                impl.curSizeLeft -= impl.source.popFrontN(impl.curSizeLeft) - offset;
+                if (!impl.source.empty && !impl.endIndexes.empty)
+                {
+                    offset = impl.endIndexes.front;
+                    impl.endIndexes.popFront();
+                    if (impl.endIndexes.empty)
+                        impl.curSizeLeft = -1;
+                    else
+                        impl.curSizeLeft = impl.endIndexes.front - offset;
+                }
+            }
+        }
+    }
+
+    return Chunks!(Source, Indexes)(source, endIndexes);
+}
+
+/// index higher than range length
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto Indexes = [1, 3, 6, 10];
+    auto chunks = chunks(source, Indexes);
+    assert(chunks[0] == [1]);
+    assert(chunks[1] == [2, 3]);
+    assert(chunks[2] == [4, 5, 6]);
+    assert(chunks[3] == [7, 8, 9]);
+    assert(chunks.front == [1]);
+    assert(chunks.empty == false);
+    assert(array(chunks[1 .. 3]) == [[2, 3], [4, 5, 6]]);
+    assert(array(chunks[2 .. 4]) == [[4, 5, 6], [7, 8, 9]]);
+}
+
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto Indexes = [1, 3, 6, 10];
+    auto chunks = chunks(source, Indexes);
+    chunks.popFront();
+    assert(chunks.front == [2, 3]);
+    assert(chunks[0] == [2, 3]);
+}
+
+/// Index lower than range length
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto Indexes = [1, 3, 6];
+    auto chunks = chunks(source, Indexes);
+    assert(chunks[0] == [1]);
+    assert(chunks[1] == [2, 3]);
+    assert(chunks[2] == [4, 5, 6]);
+    assert(chunks[3] == [7, 8, 9]);
+    assert(chunks.front == [1]);
+    assert(chunks.empty == false);
+    assert(array(chunks[1 .. 3]) == [[2, 3], [4, 5, 6]]);
+    assert(array(chunks[2 .. 4]) == [[4, 5, 6], [7, 8, 9]]);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto Indexes = [1, 3, 6, 10];
+    auto chunks = chunks(source, Indexes);
+    chunks.popFront();
+    assert(chunks.front == [2, 3]);
+    assert(chunks[0] == [2, 3]);
+    assert(array(chunks[3 .. 3]) == []);
+    chunks.popFrontN(3);
+    assert(chunks.empty == true);
+}
+
+// More forward range tests
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] source = [];
+    size_t[] Indexes = [];
+    assert(chunks(source, Indexes).empty);
+
+    auto chunks = chunks([1, 2, 3, 4], Indexes);
+    assert(!chunks.empty);
+    assert(chunks.front == [1, 2, 3, 4]);
+    assert(array(chunks.save) == [[1, 2, 3, 4]]);
+}
+
+/// Non-forward input ranges are also supported, but with limited semantics.
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(11);
+    import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
+
+    auto chunked = inputRangeSource.chunks(inputRangeIndexes);
+
+    assert(chunked.front.equal([1]));
+    assert(chunked.front.empty);
+    chunked.popFront;
+    assert(chunked.front.equal([2, 3]));
+    chunked.popFront;
+    assert(chunked.front.equal([4, 5, 6]));
+    chunked.popFront;
+    assert(chunked.front.equal([7, 8, 9, 10]));
+    chunked.popFront;
+    assert(chunked.front.equal([11]));
+}
+
+// More input range tests
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(6);
+    import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeIndexes = generate!(() => ++j).take(2).cumulativeFold!("a + b");
+
+    auto chunked = inputRangeSource.chunks(inputRangeIndexes);
+
+    assert(chunked.front.equal([1]));
+    assert(chunked.front.empty);
+    chunked.popFront;
+    assert(chunked.front.equal([2, 3]));
+    assert(!chunked.empty);
+    chunked.popFront;
+    assert(!chunked.empty);
+    assert(chunked.front.equal([4, 5, 6]));
+    chunked.popFront;
+    assert(chunked.empty);
+}
+
 /**
 A fixed-sized sliding window iteration
 of size `windowSize` over a `source` range by a custom `stepSize`.
