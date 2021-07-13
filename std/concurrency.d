@@ -2135,9 +2135,11 @@ private
                 enum timedWait = false;
             }
 
+            static assert(Ops.length);
+
             bool onStandardMsg(ref Message msg)
             {
-                foreach (i, t; Ops)
+                static foreach (i, t; Ops)
                 {
                     alias Args = Parameters!(t);
                     auto op = ops[i];
@@ -2154,8 +2156,15 @@ private
                             return true;
                         }
                     }
+                    else
+                    {
+                        if (i + 1 == Ops.length)
+                        {
+                            return false;
+                        }
+                    }
                 }
-                return false;
+                assert(0, "Received an unknown message type");
             }
 
             bool onLinkDeadMsg(ref Message msg)
