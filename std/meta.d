@@ -581,30 +581,19 @@ if (args.length >= 2)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with all occurrences
- * of T, if found, replaced with U.
+ * Returns an `AliasSeq` created from `args[2 .. $]` with all occurrences
+ * of `args[0]`, if any, replaced with `args[1]`.
  */
-template ReplaceAll(T, U, TList...)
+template ReplaceAll(args...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(alias T, U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(alias T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
+    alias ReplaceAll = AliasSeq!();
+    static foreach (arg; args[2 .. $])
+    {
+        static if (isSame!(args[0], arg))
+            ReplaceAll = AliasSeq!(ReplaceAll, args[1]);
+        else
+            ReplaceAll = AliasSeq!(ReplaceAll, arg);
+    }
 }
 
 ///
@@ -614,31 +603,6 @@ template ReplaceAll(alias T, alias U, TList...)
 
     alias TL = ReplaceAll!(long, char, Types);
     static assert(is(TL == AliasSeq!(int, char, char, int, float)));
-}
-
-// [internal]
-private template GenericReplaceAll(args...)
-if (args.length >= 2)
-{
-    alias from  = OldAlias!(args[0]);
-    alias to    = OldAlias!(args[1]);
-    alias tuple = args[2 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = GenericReplaceAll!(from, to, tail).result;
-
-        static if (isSame!(from, head))
-            alias result = AliasSeq!(to, next);
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
