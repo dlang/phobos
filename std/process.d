@@ -2131,9 +2131,20 @@ struct Config
     enum Config inheritFDs = Config(Flags.inheritFDs); /// ditto
     enum Config detached = Config(Flags.detached); /// ditto
     enum Config stderrPassThrough = Config(Flags.stderrPassThrough); /// ditto
-    Config opBinary(string op : "|")(Config other)
+    Config opUnary(string op)()
+    if (is(typeof(mixin(op ~ q{flags}))))
     {
-        return Config(flags | other.flags);
+        return Config(mixin(op ~ q{flags}));
+    } /// ditto
+    Config opBinary(string op)(Config other)
+    if (is(typeof(mixin(q{flags} ~ op ~ q{other.flags}))))
+    {
+        return Config(mixin(q{flags} ~ op ~ q{other.flags}));
+    } /// ditto
+    Config opOpAssign(string op)(Config other)
+    if (is(typeof(mixin(q{flags} ~ op ~ q{=other.flags}))))
+    {
+        return Config(mixin(q{flags} ~ op ~ q{=other.flags}));
     } /// ditto
 
     version (StdDdoc)
@@ -2149,6 +2160,16 @@ struct Config
     {
         bool function() nothrow @nogc @safe preExecFunction;
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22125
+@safe unittest
+{
+    Config c = Config.retainStdin;
+    c |= Config.retainStdout;
+    c |= Config.retainStderr;
+    c &= ~Config.retainStderr;
+    assert(c == (Config.retainStdin | Config.retainStdout));
 }
 
 /// A handle that corresponds to a spawned process.
