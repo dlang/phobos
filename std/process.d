@@ -2142,6 +2142,10 @@ struct Config
     {
         return Config(flags | other.flags);
     } /// ditto
+    Config opOpAssign(string op : "|")(Config other)
+    {
+        return Config(flags |= other.flags);
+    } /// ditto
 
     version (StdDdoc)
     {
@@ -2156,6 +2160,14 @@ struct Config
     {
         bool function() nothrow @nogc @safe preExecFunction;
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22125
+@safe unittest
+{
+    Config c = Config.retainStdin;
+    c |= Config.retainStdout;
+    assert(c == (Config.retainStdin | Config.retainStdout));
 }
 
 /// A handle that corresponds to a spawned process.
