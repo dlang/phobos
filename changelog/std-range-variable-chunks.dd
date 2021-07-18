@@ -1,20 +1,28 @@
 Split range into variable chunk sizes
 
 Now a range can be split into differently sized chunks by providing a source
-range and a range of indexes specifying where this range should be split.
+range and a range of partitioners specifying where this range should be split.
+The partitioners can either be interpreted as lengths (default) or indexes.
 
 Forward ranges:
 ```
 import std.algorithm.comparison : equal;
 auto source = [1, 2, 3, 4, 5, 6, 7];
-auto sizes = [1, 3, 6];
+auto indexes = [1, 3, 6];
+auto sizes = [1, 2, 3]
 // source has more elements than the highest index
-assert(array(chunks(source, sizes)) == [[1], [2, 3], [4, 5, 6], [7]]);
+assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4, 5, 6], [7]]);
+// source has more elements than sum of lengths
+assert(array(chunks!(ByLength)(source, sizes)) == [[1], [2, 3], [4, 5, 6], [7]]);
 
 source = [1, 2, 3, 4];
-sizes = [1, 3, 6, 10];
+indexes = [1, 3, 6, 10];
+auto sizes = [1, 2, 3, 4]
 // source has fewer elements than the highest index
-assert(array(chunks(source, sizes)) == [[1], [2, 3], [4]]);
+assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4]]);
+// source has fewer elements than sum of lengths
+assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4]]);
+
 ```
 
 Input ranges:
@@ -23,14 +31,21 @@ import std.algorithm.comparison : equal;
 
 int i, j;
 
-auto inputRangeSource = generate!(() => ++i).take(11);
+auto inputRangeSource1 = generate!(() => ++i).take(11);
+auto inputRangeSource2 = generate!(() => ++i).take(11);
 import std.algorithm.iteration : cumulativeFold;
 auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
-auto chunked = inputRangeSource.chunks(inputRangeSizes);
+auto inputRangeLengths = generate!(() => ++j).take(5);
+auto chunkedByIndex = inputRangeSource1.chunks!(ByIndex)(inputRangeIndexes);
+auto chunkedByLength = inputRangeSource2.chunks!(ByLength)(inputRangeLengths);
 
-assert(chunked.front.equal([1]));
-assert(chunked.front.empty);
-chunked.popFront;
-assert(chunked.front.equal([2, 3]));
+assert(chunkedByIndex.front.equal([1]));
+assert(chunkedByIndex.front.empty);
+chunkedByIndex.popFront;
+assert(chunkedByIndex.front.equal([2, 3]));
+
+assert(chunkedByLength.front.equal([1]));
+assert(chunkedByLength.front.empty);
+chunkedByLength.popFront;
+assert(chunkedByLength.front.equal([2, 3]));
 ```
-

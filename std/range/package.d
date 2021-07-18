@@ -8578,12 +8578,35 @@ if (isForwardRange!Source && hasLength!Source)
     assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
+/// `Partitioning` contains the accepted modes of splitting a given range into chunks
+enum Partitioning {
+    /// The `Partitioners` range contains the desired lengths of the chunks
+    ByLength,
+    /// The `Partitioners` range contains the end indexes of each chunk
+    ByIndex
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    size_t[] partitioners = [1, 3, 6, 9, 11];
+
+    assert(array(chunks!(Partitioning.ByLength)(source, partitioners)) ==
+        [[1], [2, 3, 4], [5, 6, 7, 8, 9]]);
+    assert(array(chunks!(Partitioning.ByIndex)(source, partitioners)) ==
+        [[1], [2, 3], [4, 5, 6], [7, 8, 9]]);
+}
 
 /**
-This range splits a `source` range into chunks as specified in the `endIndexes` range,
-starting from the first element of the source and ending the first chunk at the first index in
-endIndexes, not including this last element. Both ranges must be $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives).
-The indexes must be in ascending order.
+This range splits a `source` range into chunks as specified in the `partitioners` range.
+The partitioners are considered to be either the desired lengths of the chunks or the
+indexes where the source range will be cut to create the chunks. The partitioning type can
+be controlled by setting the compile time argument `partitionType` to either `Partitioning.ByLength` or
+`Partitioning.ByIndex`. `Partitioning.ByLength` is the default setting.
+Chunks of size 0 are not allowed in either mode.
+Both the `source` and `partitioners` ranges must be $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives).
 
 If the `source` range is shorter than the the provided indexes, the specified Indexes
 are shortened to match the length of the source range.
@@ -8591,30 +8614,32 @@ are shortened to match the length of the source range.
 If the `source` range is longer than the last index provided, all extra elements will
 form one new chunk.
 
-If `Source` and `Indexes` are forward ranges, the resulting range will be a forward range as well.
+If `Source` and `Partitioners` are forward ranges, the resulting range will be a forward range as well.
 Otherwise, the resulting chunks will be input ranges using the same input. The chunk will shrink
 with every `front` call and `popFront` will invalidate the previous `front`.
 
 Params:
     source = range from which the chunks will be selected
-    endIndexes = range specifying the indexes of the elements that will not be included in the current chunk
+    partitioners = range specifying how the source range will be split into chunks
 
 Returns: Range of chunks of variable lengths
 */
-auto chunks(Source, Indexes)(Source source, Indexes endIndexes)
-if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size_t))
+auto chunks(Partitioning partitionType = Partitioning.ByLength, Source, Partitioners)
+    (Source source, Partitioners partitioners)
+if (isInputRange!Source && isInputRange!Partitioners && is(ElementType!Partitioners : size_t))
 {
-    struct Chunks(Source, Indexes)
+    static struct Chunks
     {
-        static if (isForwardRange!Source && isForwardRange!Indexes)
+        static if (isForwardRange!Source && isForwardRange!Partitioners)
         {
-            this(Source source, Indexes endIndexes, size_t offset = 0, UseMaxLength maxLen=UseMaxLength(false))
+            this(Source source, Partitioners partitioners, size_t offset = 0, UseMaxLength maxLen=UseMaxLength(false))
             {
                 import std.algorithm.sorting : isStrictlyMonotonic;
-                assert(endIndexes.isStrictlyMonotonic, "The indexes must be in a strictly increasing order");
+                static if (partitionType == Partitioning.ByIndex)
+                    assert(partitioners.isStrictlyMonotonic, "The indexes must be in a strictly increasing order");
 
                 _source = source;
-                _endIndexes = endIndexes;
+                _partitioners = partitioners;
                 _offset = offset;
                 _maxLen = maxLen;
                 if (!_source.empty)
@@ -8634,12 +8659,12 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             {
                 assert(!empty, "Attempting to fetch the front of an empty range");
 
-                if (_endIndexes.empty && !_source.empty)
+                if (_partitioners.empty && !_source.empty)
                     return _source.save;
 
-                assert(_endIndexes.front != 0, "Attempting to create a chunk of length 0");
+                assert(_partitioners.front > _offset, "Attempting to create a chunk of length 0");
 
-                return _source.save.take(_endIndexes.front()-_offset);
+                return _source.save.take(_partitioners.front - _offset);
             }
 
             /// Ditto
@@ -8648,15 +8673,17 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
                 assert(!empty, "Attempting to popFront an empty range");
 
                 // source range is longer than index
-                if (_endIndexes.empty && !_source.empty)
+                if (_partitioners.empty && !_source.empty)
                 {
                     _isEmpty = true;
                     return;
                 }
 
-                _source.popFrontN(_endIndexes.front()-_offset);
-                _offset = _endIndexes.front();
-                _endIndexes.popFront();
+                assert(_partitioners.front > _offset);
+                _source.popFrontN(_partitioners.front - _offset);
+                static if (partitionType == Partitioning.ByIndex)
+                    _offset = _partitioners.front;
+                _partitioners.popFront();
 
                 if (_maxLen)
                 {
@@ -8672,41 +8699,42 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             /// Forward range primitives
             @property typeof(this) save()
             {
-                return typeof(this)(_source, _endIndexes, _offset);
+                return typeof(this)(_source, _partitioners, _offset);
             }
 
-            static if (isInfinite!Source && hasLength!Indexes)
-            /// Length is only provided for infinite sources, when hasLength!Indexes is true
+            static if (isInfinite!Source && hasLength!Partitioners)
+            /// Length is only provided for infinite sources, when hasLength!Partitioners is true
                 @property size_t length()
                 {
-                    return _endIndexes.length + 1;
+                    return _partitioners.length + 1;
                 }
 
-            static if (hasSlicing!Source && hasSlicing!Indexes && hasLength!Indexes)
+            static if (hasSlicing!Source && hasSlicing!Partitioners && hasLength!Partitioners
+                && partitionType == Partitioning.ByIndex)
             {
                 /**
-                Indexing and slicing operations are only provided when both Source and Indexes
-                have slicing and hasLength!Indexes is true.
+                Indexing and slicing operations are only provided when both Source and Partitioners
+                have slicing and hasLength!Partitioners is true and partitioning is done by index.
                 */
                 auto opIndex(size_t index)
                 {
-                    assert(index<=_endIndexes.length, "Chunks index out of bounds");
+                    assert(index <= _partitioners.length, "Chunks index out of bounds");
 
-                    const size_t startIndex = (index == 0 ? 0 : _endIndexes[index-1] - _offset);
+                    const size_t startIndex = (index == 0 ? 0 : _partitioners[index - 1] - _offset);
 
                     static if (hasLength!Source)
-                        assert(startIndex<=_source.length, "Chunks index out of bounds");
+                        assert(startIndex <= _source.length, "Chunks index out of bounds");
 
-                    if (index == _endIndexes.length)
+                    if (index == _partitioners.length)
                         return _source[startIndex .. $];
 
                     static if (hasLength!Source)
                     {
                         import std.algorithm.comparison : min;
-                        const size_t endIndex = min(_endIndexes[index] - _offset, source.length);
+                        const size_t endIndex = min(_partitioners[index] - _offset, _source.length);
                     }
-                    else
-                        const size_t endIndex = _endIndexes[index] - _offset;
+                    else // Infinite ranges
+                        const size_t endIndex = _partitioners[index] - _offset;
 
                     return _source[startIndex .. endIndex];
                 }
@@ -8715,27 +8743,27 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
                 auto opSlice(size_t lower, size_t upper)
                 {
                     assert(lower <= upper, "Start index must be lower than end index");
-                    assert(lower <= _endIndexes.length+1 && upper <= _endIndexes.length+1,
+                    assert(lower <= _partitioners.length + 1 && upper <= _partitioners.length + 1,
                         "Chunks index out of bounds");
 
-                    if (lower == upper || lower == _endIndexes.length+1)
-                        return Chunks(_source[$ .. $], _endIndexes[$ .. $]);
+                    if (lower == upper || lower == _partitioners.length + 1)
+                        return Chunks(_source[$ .. $], _partitioners[$ .. $]);
 
-                    const size_t startIndex = (lower == 0 ? 0 : _endIndexes[lower-1] - _offset);
+                    const size_t startIndex = (lower == 0 ? 0 : _partitioners[lower - 1] - _offset);
 
-                    if (upper >= _endIndexes.length)
-                        return Chunks(_source[startIndex .. $], _endIndexes[lower .. $], startIndex,
-                            UseMaxLength(true, upper-lower));
+                    if (upper >= _partitioners.length)
+                        return Chunks(_source[startIndex .. $], _partitioners[lower .. $], startIndex,
+                            UseMaxLength(true, upper - lower));
 
                     static if (hasLength!Source)
                     {
                         import std.algorithm.comparison : min;
-                        const size_t endIndex = min(_endIndexes[upper-1] - _offset, source.length);
+                        const size_t endIndex = min(_partitioners[upper - 1] - _offset, _source.length);
                     }
-                    else
-                        const size_t endIndex = _endIndexes[upper-1] - _offset;
+                    else // Infinite ranges
+                        const size_t endIndex = _partitioners[upper - 1] - _offset;
 
-                    return Chunks(_source[startIndex .. endIndex], _endIndexes[lower .. upper-1], startIndex);
+                    return Chunks(_source[startIndex .. endIndex], _partitioners[lower .. upper - 1], startIndex);
                 }
             }
 
@@ -8760,7 +8788,7 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
 
         private:
             Source _source;
-            Indexes _endIndexes;
+            Partitioners _partitioners;
             size_t _offset;
             UseMaxLength _maxLen;
             bool _isEmpty;
@@ -8785,7 +8813,7 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             private static struct Impl
             {
                 private Source source;
-                private Indexes endIndexes;
+                private Partitioners partitioners;
                 private size_t curSizeLeft;
             }
 
@@ -8794,12 +8822,12 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
             private bool tookLastChunk;
             private size_t offset;
 
-            private this(Source source, Indexes endIndexes)
+            private this(Source source, Partitioners partitioners)
             {
                 tookLastChunk = false;
                 offset = 0;
-                impl = RefCounted!Impl(source, endIndexes,
-                    source.empty ? 0 : (endIndexes.empty ? 0 : endIndexes.front));
+                impl = RefCounted!Impl(source, partitioners,
+                    source.empty ? 0 : (partitioners.empty ? 0 : partitioners.front));
             }
 
             @property bool empty() { return impl.source.empty || tookLastChunk; }
@@ -8810,36 +8838,95 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
 
             void popFront()
             {
-                if (impl.endIndexes.empty)
+                if (impl.partitioners.empty)
                 {
                     tookLastChunk = true;
                     return;
                 }
 
                 impl.curSizeLeft -= impl.source.popFrontN(impl.curSizeLeft) - offset;
-                if (!impl.source.empty && !impl.endIndexes.empty)
+                if (!impl.source.empty && !impl.partitioners.empty)
                 {
-                    offset = impl.endIndexes.front;
-                    impl.endIndexes.popFront();
-                    if (impl.endIndexes.empty)
+                    static if (partitionType == Partitioning.ByIndex)
+                        offset = impl.partitioners.front;
+                    impl.partitioners.popFront();
+                    if (impl.partitioners.empty)
                         impl.curSizeLeft = -1;
                     else
-                        impl.curSizeLeft = impl.endIndexes.front - offset;
+                        impl.curSizeLeft = impl.partitioners.front - offset;
                 }
             }
         }
     }
 
-    return Chunks!(Source, Indexes)(source, endIndexes);
+    return Chunks(source, partitioners);
 }
 
-/// index higher than range length
+/// Sum of lengths higher than range length
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    auto Indexes = [1, 3, 6, 10];
-    auto chunks = chunks(source, Indexes);
+    auto lengths = [1, 2, 3, 4];
+    auto chunks = chunks!(Partitioning.ByLength)(source, lengths);
+    assert(chunks.front == [1]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [2, 3]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [4, 5, 6]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [7, 8, 9]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.empty == true);
+}
+
+/// Sum of lengths lower than range length
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto lengths = [1, 2, 3];
+    auto chunks = chunks!(Partitioning.ByLength)(source, lengths);
+    assert(chunks.front == [1]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [2, 3]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [4, 5, 6]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.front == [7, 8, 9]);
+    assert(chunks.empty == false);
+    chunks.popFront();
+    assert(chunks.empty == true);
+}
+
+// More forward range tests - ByLength
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] source = [];
+    size_t[] lengths = [];
+    assert(chunks!(Partitioning.ByLength)(source, lengths).empty);
+
+    auto chunks = chunks!(Partitioning.ByLength)([1, 2, 3, 4], lengths);
+    assert(!chunks.empty);
+    assert(chunks.front == [1, 2, 3, 4]);
+    assert(array(chunks.save) == [[1, 2, 3, 4]]);
+}
+
+/// Index higher than range length
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto indexes = [1, 3, 6, 10];
+    auto chunks = chunks!(Partitioning.ByIndex)(source, indexes);
     assert(chunks[0] == [1]);
     assert(chunks[1] == [2, 3]);
     assert(chunks[2] == [4, 5, 6]);
@@ -8850,13 +8937,12 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     assert(array(chunks[2 .. 4]) == [[4, 5, 6], [7, 8, 9]]);
 }
 
-
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    auto Indexes = [1, 3, 6, 10];
-    auto chunks = chunks(source, Indexes);
+    auto indexes = [1, 3, 6, 10];
+    auto chunks = chunks!(Partitioning.ByIndex)(source, indexes);
     chunks.popFront();
     assert(chunks.front == [2, 3]);
     assert(chunks[0] == [2, 3]);
@@ -8867,8 +8953,8 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    auto Indexes = [1, 3, 6];
-    auto chunks = chunks(source, Indexes);
+    auto indexes = [1, 3, 6];
+    auto chunks = chunks!(Partitioning.ByIndex)(source, indexes);
     assert(chunks[0] == [1]);
     assert(chunks[1] == [2, 3]);
     assert(chunks[2] == [4, 5, 6]);
@@ -8883,8 +8969,8 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
 {
     import std.algorithm.comparison : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    auto Indexes = [1, 3, 6, 10];
-    auto chunks = chunks(source, Indexes);
+    auto indexes = [1, 3, 6, 10];
+    auto chunks = chunks!(Partitioning.ByIndex)(source, indexes);
     chunks.popFront();
     assert(chunks.front == [2, 3]);
     assert(chunks[0] == [2, 3]);
@@ -8893,15 +8979,24 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     assert(chunks.empty == true);
 }
 
-// More forward range tests
+// More forward range tests - ByIndex
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     int[] source = [];
-    size_t[] Indexes = [];
-    assert(chunks(source, Indexes).empty);
+    size_t[] indexes = [];
+    assert(chunks!(Partitioning.ByIndex)(source, indexes).empty);
 
-    auto chunks = chunks([1, 2, 3, 4], Indexes);
+    source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    indexes = [1, 3, 6, 9, 11];
+    assert(array(chunks!(Partitioning.ByIndex)(source, indexes)[1 .. 5]) ==
+        [[2, 3], [4, 5, 6], [7, 8, 9]]);
+    indexes = [1, 3, 6, 8, 11, 15];
+    assert(array(chunks!(Partitioning.ByIndex)(source, indexes)[1 .. 6]) ==
+        [[2, 3], [4, 5, 6], [7, 8], [9]]);
+
+    indexes = [];
+    auto chunks = chunks!(Partitioning.ByIndex)([1, 2, 3, 4], indexes);
     assert(!chunks.empty);
     assert(chunks.front == [1, 2, 3, 4]);
     assert(array(chunks.save) == [[1, 2, 3, 4]]);
@@ -8916,23 +9011,72 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
 
     auto inputRangeSource = generate!(() => ++i).take(11);
     import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeLengths = generate!(() => ++j).take(5);
+
+    auto chunked_by_length = inputRangeSource.chunks(inputRangeLengths);
+
+    assert(chunked_by_length.front.equal([1]));
+    assert(chunked_by_length.front.empty);
+    chunked_by_length.popFront;
+    assert(chunked_by_length.front.equal([2, 3]));
+    chunked_by_length.popFront;
+    assert(chunked_by_length.front.equal([4, 5, 6]));
+    chunked_by_length.popFront;
+    assert(chunked_by_length.front.equal([7, 8, 9, 10]));
+    chunked_by_length.popFront;
+    assert(chunked_by_length.front.equal([11]));
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(11);
+    import std.algorithm.iteration : cumulativeFold;
     auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
 
-    auto chunked = inputRangeSource.chunks(inputRangeIndexes);
+    auto chunked_by_index = inputRangeSource.chunks!(Partitioning.ByIndex)(inputRangeIndexes);
+
+    assert(chunked_by_index.front.equal([1]));
+    assert(chunked_by_index.front.empty);
+    chunked_by_index.popFront;
+    assert(chunked_by_index.front.equal([2, 3]));
+    chunked_by_index.popFront;
+    assert(chunked_by_index.front.equal([4, 5, 6]));
+    chunked_by_index.popFront;
+    assert(chunked_by_index.front.equal([7, 8, 9, 10]));
+    chunked_by_index.popFront;
+    assert(chunked_by_index.front.equal([11]));
+}
+
+// More input range tests - ByLength
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int i, j;
+
+    auto inputRangeSource = generate!(() => ++i).take(6);
+    import std.algorithm.iteration : cumulativeFold;
+    auto inputRangeLengths = generate!(() => ++j).take(2);
+
+    auto chunked = inputRangeSource.chunks!(Partitioning.ByLength)(inputRangeLengths);
 
     assert(chunked.front.equal([1]));
     assert(chunked.front.empty);
     chunked.popFront;
     assert(chunked.front.equal([2, 3]));
+    assert(!chunked.empty);
     chunked.popFront;
+    assert(!chunked.empty);
     assert(chunked.front.equal([4, 5, 6]));
     chunked.popFront;
-    assert(chunked.front.equal([7, 8, 9, 10]));
-    chunked.popFront;
-    assert(chunked.front.equal([11]));
+    assert(chunked.empty);
 }
 
-// More input range tests
+// More input range tests - ByIndex
 @system unittest
 {
     import std.algorithm.comparison : equal;
@@ -8943,7 +9087,7 @@ if (isInputRange!Source && isInputRange!Indexes && is(ElementType!Indexes : size
     import std.algorithm.iteration : cumulativeFold;
     auto inputRangeIndexes = generate!(() => ++j).take(2).cumulativeFold!("a + b");
 
-    auto chunked = inputRangeSource.chunks(inputRangeIndexes);
+    auto chunked = inputRangeSource.chunks!(Partitioning.ByIndex)(inputRangeIndexes);
 
     assert(chunked.front.equal([1]));
     assert(chunked.front.empty);
