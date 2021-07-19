@@ -1846,7 +1846,7 @@ else version (Posix)
         stat_t statbuf;
         // check that both lvalues and rvalues work
         timeLastAccessed(statbuf);
-        timeLastAccessed(stat_t.init);
+        cast(void) timeLastAccessed(stat_t.init);
     }
 }
 
