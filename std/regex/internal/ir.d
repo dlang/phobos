@@ -629,7 +629,9 @@ struct Regex(Char)
 
 
     @safe @property bool empty() const nothrow {  return ir is null; }
-
+    /++
+    `namedCaptures` returns a range of all named captures in a given regular expression.
+    +/
     @safe @property auto namedCaptures()
     {
         static struct NamedGroupRange
