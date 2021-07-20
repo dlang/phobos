@@ -544,14 +544,14 @@ if (!is(immutable T == immutable bool))
         return _data.refCountedStore.isInitialized ? _data._capacity : 0;
     }
 
-    /**  
+    /**
      * Returns: the internal representation of the array.
      *
      * Complexity: $(BIGOH 1).
      */
 
     T[] data() @system
-    {    
+    {
         return _data._payload;
     }
 
