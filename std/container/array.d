@@ -2612,3 +2612,12 @@ if (is(immutable T == immutable bool))
     GC.collect();
     arr[1].func();
 }
+
+@system unittest
+{
+    Array!int arr = [1, 2, 4, 5];
+    int[] data = arr.data();
+
+    data[0] = 0;
+    assert(arr[0] == 0);
+}
