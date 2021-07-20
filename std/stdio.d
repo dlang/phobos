@@ -2121,6 +2121,9 @@ is recommended if you want to process a complete file.
      * When passed as a compile-time argument, the string will be statically checked
      * against the argument types passed.
      * data = Items to be read.
+     * Returns:
+     *      Same as `formattedRead`: The number of variables filled. If the input range `r` ends early,
+     *      this number will be less than the number of variables provided.
      * Example:
 ----
 // test.d
@@ -4488,6 +4491,9 @@ void writefln(Char, A...)(in Char[] fmt, A args)
  * When passed as a compile-time argument, the string will be statically checked
  * against the argument types passed.
  * args = Items to be read.
+ * Returns:
+ *      Same as `formattedRead`: The number of variables filled. If the input range `r` ends early,
+ *      this number will be less than the number of variables provided.
  * Example:
 ----
 // test.d
