@@ -3265,7 +3265,7 @@ if (isDynamicArray!A)
     {
         size_t capacity;
         Unqual!T[] arr;
-        bool canExtend = false;
+        bool tryExtendBlock = false;
     }
 
     private Data* _data;
@@ -3385,7 +3385,7 @@ if (isDynamicArray!A)
             // have better access to the capacity field.
             auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
             // first, try extending the current block
-            if (_data.canExtend)
+            if (_data.tryExtendBlock)
             {
                 immutable u = (() @trusted => GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof))();
                 if (u)
@@ -3410,7 +3410,7 @@ if (isDynamicArray!A)
             if (len)
                 () @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
             _data.arr = (() @trusted => (cast(Unqual!T*) bi.base)[0 .. len])();
-            _data.canExtend = true;
+            _data.tryExtendBlock = true;
             // leave the old data, for safety reasons
         }
     }
