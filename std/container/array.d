@@ -545,6 +545,17 @@ if (!is(immutable T == immutable bool))
     }
 
     /**
+     * Returns: the internal representation of the array.
+     *
+     * Complexity: $(BIGOH 1).
+     */
+
+    T[] data() @system
+    {
+        return _data._payload;
+    }
+
+    /**
      * Ensures sufficient capacity to accommodate `e` _elements.
      * If `e < capacity`, this method does nothing.
      *
@@ -2600,4 +2611,13 @@ if (is(immutable T == immutable bool))
     foreach (ref b; arr) b = new ABC;
     GC.collect();
     arr[1].func();
+}
+
+@system unittest
+{
+    Array!int arr = [1, 2, 4, 5];
+    int[] data = arr.data();
+
+    data[0] = 0;
+    assert(arr[0] == 0);
 }
