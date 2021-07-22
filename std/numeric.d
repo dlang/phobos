@@ -1121,6 +1121,57 @@ T findRoot(T, DF)(scope DF f, const T a, const T b)
     return findRoot(f, a, b, (T a, T b) => false);
 }
 
+bool isRectangular(T)(T arr)
+if (is(typeof(arr[0])) && is(typeof(arr[0][0])))
+{
+    import std.array: join;
+
+    for (int i = 0; i < arr.length - 1; i++)
+        if(arr[i].length != arr[i + 1].length) return false;
+
+    static if (!is(typeof(arr[0][0][0])))
+        return true;
+    else
+       return isRectangular(join(arr[0..$])); 
+}
+
+unittest
+{
+    auto arr =
+    [
+        [
+            [1, 2],
+            [3, 4]
+        ],
+        [
+            [5, 6, 7],
+            [8, 9, 10]
+        ]
+    ];
+
+    auto arr2 =
+    [
+        [
+            [1, 2],
+            [3, 4]
+        ],
+        [
+            [5, 6],
+            [7, 8]
+        ],
+        [
+            [9, 10],
+            [11, 12]
+        ]
+    ];
+
+    assert(isRectangular(arr) == false);
+    assert(isRectangular(arr2) == true);
+    assert(isRectangular([[1, 2], [3, 4]]) == true);
+    assert(isRectangular([[1, 2], [3]]) == false);
+    assert(isRectangular([[[1, 2], [3, 4]]]) == true);
+    assert(isRectangular([[[1, 2], [3, 4]], []]) == false);
+}
 /** Find root of a real function f(x) by bracketing, allowing the
  * termination condition to be specified.
  *
