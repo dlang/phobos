@@ -1121,21 +1121,33 @@ T findRoot(T, DF)(scope DF f, const T a, const T b)
     return findRoot(f, a, b, (T a, T b) => false);
 }
 
+/** Verifies for a nD array that every row has
+  * the same length on each dimension
+  *
+  * Params:
+  *
+  * arr = nD array, n >= 2
+  *
+  * Returns:
+  *
+  * a boolean
+*/
+
 bool isRectangular(T)(T arr)
 if (is(typeof(arr[0])) && is(typeof(arr[0][0])))
 {
-    import std.array: join;
+    import std.array : join;
 
     for (int i = 0; i < arr.length - 1; i++)
-        if(arr[i].length != arr[i + 1].length) return false;
+        if (arr[i].length != arr[i + 1].length) return false;
 
     static if (!is(typeof(arr[0][0][0])))
         return true;
     else
-       return isRectangular(join(arr[0..$])); 
+       return isRectangular(join(arr[0..$]));
 }
 
-unittest
+@safe unittest
 {
     auto arr =
     [
@@ -1172,6 +1184,7 @@ unittest
     assert(isRectangular([[[1, 2], [3, 4]]]) == true);
     assert(isRectangular([[[1, 2], [3, 4]], []]) == false);
 }
+
 /** Find root of a real function f(x) by bracketing, allowing the
  * termination condition to be specified.
  *
