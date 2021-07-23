@@ -2279,15 +2279,18 @@ usually used for compile-time reflection purposes.
 template FunctionTypeOf(func...)
 if (func.length == 1 && isCallable!func)
 {
-    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function) || is(typeof(& func[0]) Fsym == delegate))
+    static if ((is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function)) || is(typeof(& func[0]) Fsym == delegate))
     {
         alias FunctionTypeOf = Fsym; // HIT: (nested) function symbol
     }
-    else static if (is(typeof(& func[0].opCall) Fobj == delegate))
+    else static if (is(typeof(& func[0].opCall) Fobj == delegate) || is(typeof(& func[0].opCall!()) Fobj == delegate))
     {
         alias FunctionTypeOf = Fobj; // HIT: callable object
     }
-    else static if (is(typeof(& func[0].opCall) Ftyp : Ftyp*) && is(Ftyp == function))
+    else static if (
+            (is(typeof(& func[0].opCall) Ftyp : Ftyp*) && is(Ftyp == function)) ||
+            (is(typeof(& func[0].opCall!()) Ftyp : Ftyp*) && is(Ftyp == function))
+        )
     {
         alias FunctionTypeOf = Ftyp; // HIT: callable type
     }
@@ -2347,6 +2350,13 @@ if (func.length == 1 && isCallable!func)
     StaticCallable* stcall_ptr;
     static assert(is( FunctionTypeOf!stcall_val == typeof(test) ));
     static assert(is( FunctionTypeOf!stcall_ptr == typeof(test) ));
+
+    struct TemplatedOpCallF { int opCall()(int) { return 0; } }
+    static assert(is( FunctionTypeOf!TemplatedOpCallF == typeof(TemplatedOpCallF.opCall!()) ));
+
+    int foovar;
+    struct TemplatedOpCallDg { int opCall()() { return foovar; } }
+    static assert(is( FunctionTypeOf!TemplatedOpCallDg == typeof(TemplatedOpCallDg.opCall!()) ));
 
     interface Overloads
     {
