@@ -37,10 +37,10 @@
  *      $(LINK2 http://www.digitalmars.com/d/archives/16368.html, signals and slots)$(BR)
  *
  * Bugs:
- *      $(RED Slots can only be delegates formed from class objects or
- *      interfaces to class objects. If a delegate to something else
+ *      $(RED Slots can only be delegates referring directly to
+ *      class or interface member functions. If a delegate to something else
  *      is passed to connect(), such as a struct member function,
- *      a nested function, a COM interface or a closure, undefined behavior
+ *      a nested function, a COM interface, a closure, undefined behavior
  *      will result.)
  *
  *      Not safe for multiple threads operating on the same signals
@@ -93,7 +93,8 @@ mixin template Signal(T1...)
      * The delegate must be to an instance of a class or an interface
      * to a class instance.
      * Delegates to struct instances or nested functions must not be
-     * used as slots.
+     * used as slots. This applies even if the nested function does not access
+     * it's parent function variables.
      */
     alias slot_t = void delegate(T1);
 
