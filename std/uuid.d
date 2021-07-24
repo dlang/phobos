@@ -331,7 +331,7 @@ public struct UUID
          *
          * For a less strict parser, see $(LREF parseUUID)
          */
-        this(T)(in T[] uuid) if (isSomeChar!(Unqual!T))
+        this(T)(in T[] uuid) if (isSomeChar!T)
         {
             import std.conv : to, parse;
             if (uuid.length < 36)
