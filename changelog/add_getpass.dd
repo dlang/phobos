@@ -1,0 +1,10 @@
+New module `getpass` in `std`
+
+A new module `getpass` has been added to `std`. It exposes one
+function, `getpass`, which reads a password from the current terminal
+without echoing it, similarly to how Glibc handles passwords:
+https://man7.org/linux/man-pages/man3/getpass.3.html
+
+```
+string password = getpass("Please input your password: ");
+```
