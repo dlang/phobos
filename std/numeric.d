@@ -1134,17 +1134,18 @@ T findRoot(T, DF)(scope DF f, const T a, const T b)
 */
 
 bool isRectangular(T)(T arr)
-if (is(typeof(arr[0])) && is(typeof(arr[0][0])))
+if (isArray!T)
 {
     import std.array : join;
 
-    for (int i = 0; i < arr.length - 1; i++)
-        if (arr[i].length != arr[i + 1].length) return false;
-
-    static if (!is(typeof(arr[0][0][0])))
-        return true;
+    static if (!isArray!(typeof(arr[0]))) return true;
     else
-       return isRectangular(join(arr[0..$]));
+    {
+        for (int i = 0; i < arr.length - 1; i++)
+            if (arr[i].length != arr[i + 1].length) return false;
+
+        return isRectangular(join(arr[0..$]));
+    }
 }
 
 @safe unittest
