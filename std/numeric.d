@@ -1121,6 +1121,51 @@ T findRoot(T, DF)(scope DF f, const T a, const T b)
     return findRoot(f, a, b, (T a, T b) => false);
 }
 
+/** Returns the shape of an array
+  *
+  * Params:
+  *
+  * arr = an array
+  *
+  * Returns:
+  *
+  * acc = a size_t array, where acc[i] = the
+  * number of elemnts on dimension 'i' in arr 
+  */
+
+size_t[] arrayShape(T)(T arr)
+if (isArray!T)
+{
+    if (!isRectangular(arr)) throw new Exception("ArrayShapeException");
+    return arrayShapeUtil(arr, []);
+}
+
+private size_t[] arrayShapeUtil(T)(T arr, size_t[] acc)
+{
+    static if (isArray!(typeof(arr[0])))
+        return arrayShapeUtil(arr[0], acc ~ arr.length);
+    else
+        return acc ~ arr.length;
+}
+
+@safe unittest
+{
+    auto a = new int[][][][](4, 2, 2, 3);
+    auto b = new int[][](2, 1);
+    auto c = new int[][][](321, 5412, 1);
+    auto d = [1, 2];
+
+    ulong[] aShape = [4, 2, 2, 3];
+    ulong[] bShape = [2, 1];
+    ulong[] cShape = [321, 5412, 1];
+    ulong[] dShape = [2];
+
+    assert(a.arrayShape == aShape);
+    assert(b.arrayShape == bShape);
+    assert(c.arrayShape == cShape);
+    assert(d.arrayShape == dShape);
+}
+
 /** Find root of a real function f(x) by bracketing, allowing the
  * termination condition to be specified.
  *
