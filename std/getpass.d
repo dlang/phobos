@@ -10,7 +10,7 @@
 * Authors:   Teodor Dutu
 */
 
-module std.getpass; 
+module std.getpass;
 
 import std.conv : to;
 
@@ -18,7 +18,7 @@ version (Posix)
 {
     version (unittest)
     {
-        import std.stdio : FILE, fclose, fflush, fileno, fprintf, stdin, stdout, _IO_FILE; 
+        import std.stdio : FILE, fclose, fflush, fileno, fprintf, stdin, stdout, _IO_FILE;
         import core.sys.linux.termios : ECHO, termios, TCSAFLUSH;
         import core.sys.posix.sys.types : ssize_t;
 
@@ -179,14 +179,14 @@ else version (Windows)
     import std.array : popBack;
     import std.stdio : printf;
 
-    version(unittest)
+    version (unittest)
     {
         string password;
         size_t cursor;
 
         private int getch()
         {
-            return cast(int)password[cursor++];
+            return cast(int) password[cursor++];
         }
     }
     else
@@ -206,7 +206,7 @@ else version (Windows)
 
         do
         {
-            c = cast(char)getch();
+            c = cast(char) getch();
             if (c == '\b')
             {
                 if (pass.length)
@@ -260,6 +260,8 @@ string getpass(string prompt = "Password: ")
     }
 }
 
+/// The variables below are used for mocking the functions called internally
+/// by getpass
 @system unittest
 {
     version (Posix)
