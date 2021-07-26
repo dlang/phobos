@@ -2630,6 +2630,7 @@ if (isForwardRange!(Range))
     }
     static if (!isInfinite!Range)
         return ahead;
+    assert(0);
 }
 
 ///
