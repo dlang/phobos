@@ -3902,6 +3902,48 @@ if (isConvertibleToString!Range)
     assert(testAliasedString!isValidPath("/foo/bar"));
 }
 
+/** Checks whether `path1` is a subpath of `path2`
+  *
+  * Params:
+  *     path1 = string or Range of characters
+  *     path2 = string or Range of characters
+  *
+  * Returns:
+  *     true if `path` is a subpath of `path2`
+  *     false otherwise
+*/
+bool isSubPath(Range)(Range path1, Range path2)
+if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+    isSomeChar!(ElementEncodingType!Range) || isNarrowString!Range) &&
+    !isConvertibleToString!Range)
+{
+    import std.algorithm.searching : startsWith;
+    if (path1.startsWith("~")) path1 = expandTilde(path1);
+    if (path2.startsWith("~")) path2 = expandTilde(path2);
+    if (!isAbsolute(path1)) path1 = absolutePath(path1);
+    if (!isAbsolute(path2)) path2 = absolutePath(path2);
+    path1 = buildNormalizedPath(path1);
+    path2 = buildNormalizedPath(path2);
+
+    return (path2.startsWith(path1));
+}
+
+@safe unittest
+{
+    version (Posix)
+    {
+        assert(isSubPath("/foo/bar","/foo/bar/some"));
+        assert(!isSubPath("/foo/bar/some/file/..", "/foo/bar"));
+        assert(isSubPath("~/foo", "~/foo/bar/some/file"));
+    }
+
+    version (Windows)
+    {
+        assert(isSubPath("c:/foo", "c:/foo/bar"));
+        assert(isSubPath("c:/foo/..", "c:/foo/bar/../."));
+    }
+}
+
 /** Performs tilde expansion in paths on POSIX systems.
     On Windows, this function does nothing.
 
