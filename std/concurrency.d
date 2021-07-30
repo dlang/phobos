@@ -511,9 +511,8 @@ private template isSpawnable(F, T...)
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
  *
- * Similarly, `fn` cannot be a `delegate`, as the type system can not
- * guarantee that a delegate does not have unshared aliasing.
- */
+ * Similarly, if `fn` is a delegate, it must not have unshared aliases, meaning
+ * `fn` must be either `shared` or `immutable`. */
 Tid spawn(F, T...)(F fn, T args)
 if (isSpawnable!(F, T))
 {
@@ -553,12 +552,6 @@ if (isSpawnable!(F, T))
         ownerTid.send("This is so great!");
     });
     assert(receiveOnly!string == "This is so great!");
-}
-
-void spawn(F, T...)(F fn, T args)
-if (isDelegate!F)
-{
-    static assert(false, "Delegates can hold aliases to mutable state.");
 }
 
 @system unittest
