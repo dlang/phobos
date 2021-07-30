@@ -1364,7 +1364,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 }
 
 ///
-@system unittest
+@safe pure unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     a.insertInPlace(2, [ 1, 2 ]);
@@ -1401,9 +1401,11 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 
     C[] classArr = [c1, c2, c3];
     insertInPlace(classArr, 3, [c2, c3]);
-    assert(classArr == [c1, c2, c3, c2, c3]);
+    C[5] classArr1 = classArr;
+    assert(classArr1 == [c1, c2, c3, c2, c3]);
     insertInPlace(classArr, 0, c3, c1);
-    assert(classArr == [c3, c1, c1, c2, c3, c2, c3]);
+    C[7] classArr2 = classArr;
+    assert(classArr2 == [c3, c1, c1, c2, c3, c2, c3]);
 }
 
 //constraint helpers
