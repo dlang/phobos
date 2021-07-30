@@ -1371,6 +1371,41 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
     assert(a == [ 1, 2, 1, 2, 3, 4 ]);
     a.insertInPlace(3, 10u, 11);
     assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
+
+    union U
+    {
+        float a = 3.0;
+        int b;
+    }
+
+    U u1 = { b : 3 };
+    U u2 = { b : 4 };
+    U u3 = { b : 5 };
+    U[] unionArr = [u2, u3];
+    unionArr.insertInPlace(2, [u1]);
+    assert(unionArr == [u2, u3, u1]);
+    unionArr.insertInPlace(0, [u3, u2]);
+    assert(unionArr == [u3, u2, u2, u3, u1]);
+
+    static class C
+    {
+        int a;
+        float b;
+
+        this(int a, float b) { this.a = a; this.b = b; }
+    }
+
+    C c1 = new C(42, 1.0);
+    C c2 = new C(0, 0.0);
+    C c3 = new C(int.max, float.init);
+
+    C[] classArr = [c1, c2, c3];
+    insertInPlace(classArr, 3, [c2, c3]);
+    C[5] classArr1 = classArr;
+    assert(classArr1 == [c1, c2, c3, c2, c3]);
+    insertInPlace(classArr, 0, c3, c1);
+    C[7] classArr2 = classArr;
+    assert(classArr2 == [c3, c1, c1, c2, c3, c2, c3]);
 }
 
 //constraint helpers
