@@ -3917,7 +3917,13 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
     isSomeChar!(ElementEncodingType!Range) || isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
-    import std.algorithm.searching : startsWith;
+    import std.algorithm.searching : startsWith, endsWith;
+    import std.string : indexOf, chompPrefix, chop;
+
+    if (!isValidPath(path1) || !isValidPath(path2)) return false;
+
+    if (path1.endsWith("/")) path1 = chop(path1);
+    if (path1.endsWith("\\")) path1 = chop(path1);
     if (path1.startsWith("~")) path1 = expandTilde(path1);
     if (path2.startsWith("~")) path2 = expandTilde(path2);
     if (!isAbsolute(path1)) path1 = absolutePath(path1);
@@ -3925,7 +3931,9 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
     path1 = buildNormalizedPath(path1);
     path2 = buildNormalizedPath(path2);
 
-    return (path2.startsWith(path1));
+    return (path2.startsWith(path1) &&
+            indexOf(chompPrefix(path2, path1), '/') == 0 ||
+            indexOf(chompPrefix(path2, path1), '\\') == 0);
 }
 
 @safe unittest
@@ -3935,12 +3943,15 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
         assert(isSubPath("/foo/bar","/foo/bar/some"));
         assert(!isSubPath("/foo/bar/some/file/..", "/foo/bar"));
         assert(isSubPath("~/foo", "~/foo/bar/some/file"));
+        assert(!isSubPath("/foo/bar", "/foo/bars"));
     }
 
     version (Windows)
     {
+        assert(isSubPath("c:/foo/", "c:/foo/bar"));
         assert(isSubPath("c:/foo", "c:/foo/bar"));
         assert(isSubPath("c:/foo/..", "c:/foo/bar/../."));
+        assert(!isSubPath("c:/foo", "c:/foobar"));
     }
 }
 
