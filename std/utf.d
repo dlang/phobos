@@ -4278,9 +4278,9 @@ private int impureVariable;
  *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.no`
  *
  * Returns:
- *      A forward range if `R` is a range and not auto-decodable, as defined by
+ *      A bidirectional range if `R` is a range and not auto-decodable, as defined by
  *      $(REF isAutodecodableString, std, traits), and if the base range is
- *      also a forward range.
+ *      also a bidirectional range.
  *
  *      Or, if `R` is a range and it is auto-decodable and
  *      `is(ElementEncodingType!typeof(r) == C)`, then the range is passed
@@ -4325,10 +4325,22 @@ if (isSomeChar!C)
                     this.buff = buff;
                 }
 
+                static if (isBidirectionalRange!R)
+                {
+                    this(return R r, uint frontBuff, uint backBuff)
+                    {
+                        this.r = r;
+                        this.buff = frontBuff;
+                        this.backBuff = backBuff;
+                    }
+                }
 
                 @property bool empty()
                 {
-                    return buff == Empty && r.empty;
+                    static if (isBidirectionalRange!R)
+                        return buff == Empty && backBuff == Empty && r.empty;
+                    else
+                        return buff == Empty && r.empty;
                 }
 
                 @property dchar front() scope // 'scope' required by call to decodeFront() below
@@ -4369,10 +4381,45 @@ if (isSomeChar!C)
                     }
                 }
 
+                static if (isBidirectionalRange!R)
+                {
+                    @property dchar back() scope // 'scope'' required by call to decodeBack() below
+                    {
+                        if (backBuff == Empty)
+                        {
+                            auto c = r.back;
+                            static if (is(RC == wchar))
+                                enum firstMulti = 0xD800; // First high surrogate.
+                            else
+                                enum firstMulti = 0x80; // First non-ASCII.
+                            if (c < firstMulti)
+                            {
+                                r.popBack;
+                                backBuff = cast(dchar) c;
+                            }
+                            else
+                            {
+                                backBuff = () @trusted { return decodeBack!useReplacementDchar(r); }();
+                            }
+                        }
+                        return cast(dchar) backBuff;
+
+                    }
+
+                    void popBack()
+                    {
+                        if (backBuff == Empty)
+                            back();
+                        backBuff = Empty;
+                    }
+                }
+
             private:
 
                 R r;
                 uint buff = Empty;      // one character lookahead buffer
+                static if (isBidirectionalRange!R)
+                    uint backBuff = Empty;
             }
 
             return Result(r);
@@ -4394,9 +4441,26 @@ if (isSomeChar!C)
                     this.buf = buf;
                 }
 
+                static if (isBidirectionalRange!R)
+                {
+                    this(return R r, ushort frontPos, ushort frontFill,
+                         ushort backPos, ushort backFill, C[4 / C.sizeof] buf)
+                    {
+                        this.r = r;
+                        this.pos = frontPos;
+                        this.fill = frontFill;
+                        this.backPos = backPos;
+                        this.backFill = backFill;
+                        this.buf = buf;
+                    }
+                }
+
                 @property bool empty()
                 {
-                    return pos == fill && r.empty;
+                    static if (isBidirectionalRange!R)
+                        return pos == fill && backPos == backFill && r.empty;
+                    else
+                        return pos == fill && r.empty;
                 }
 
                 @property auto front() scope // 'scope' required by call to decodeFront() below
@@ -4446,10 +4510,53 @@ if (isSomeChar!C)
                     }
                 }
 
+                static if (isBidirectionalRange!R)
+                {
+                    @property auto back() scope // 'scope' required by call to decodeBack() below
+                    {
+                        if (backPos == backFill)
+                        {
+                            backPos = 0;
+                            auto c = r.back;
+                            static if (C.sizeof >= 2 && RC.sizeof >= 2)
+                                enum firstMulti = 0xD800; // First high surrogate.
+                            else
+                                enum firstMulti = 0x80; // First non-ASCII.
+                            if (c < firstMulti)
+                            {
+                                backFill = 1;
+                                r.popBack;
+                                buf[cast(ushort) (backFill - backPos - 1)] = cast(C) c;
+                            }
+                            else
+                            {
+                                static if (is(RC == dchar))
+                                {
+                                    r.popBack;
+                                    dchar dc = c;
+                                }
+                                else
+                                    dchar dc = () @trusted { return decodeBack!(useReplacementDchar)(r); }();
+                                backFill = cast(ushort) encode!(useReplacementDchar)(buf, dc);
+                            }
+                        }
+                        return buf[cast(ushort) (backFill - backPos - 1)];
+                    }
+
+                    void popBack()
+                    {
+                        if (backPos == backFill)
+                            back;
+                        ++backPos;
+                    }
+                }
+
             private:
 
                 R r;
                 ushort pos, fill;
+                static if (isBidirectionalRange!R)
+                    ushort backPos, backFill;
                 C[4 / C.sizeof] buf = void;
             }
 
@@ -4483,4 +4590,106 @@ if (isSomeChar!C)
 
     assert("hello\xF0betty".byChar.byUTF!(dchar, UseReplacementDchar.yes).equal("hello\uFFFDetty"));
     assertThrown!UTFException("hello\xF0betty".byChar.byUTF!(dchar, UseReplacementDchar.no).equal("hello betty"));
+}
+
+@safe unittest
+{
+    {
+        wchar[] s = ['a', 'b', 0x219];
+        auto r = s.byUTF!char;
+        assert(isBidirectionalRange!(typeof(r)));
+        assert(r.back == 0x99);
+        r.popBack;
+        assert(r.back == 0xc8);
+        r.popBack;
+        assert(r.back == 'b');
+
+    }
+
+    {
+        wchar[] s = ['a', 'b', 0x219];
+        auto r = s.byUTF!wchar;
+        uint i;
+        assert(isBidirectionalRange!(typeof(r)));
+        assert(r.back == 0x219);
+        r.popBack;
+        assert(r.back == 'b');
+    }
+
+    {
+        wchar[] s = ['a', 'b', 0x219];
+        auto r = s.byUTF!dchar;
+        assert(isBidirectionalRange!(typeof(r)));
+        assert(r.back == 0x219);
+        r.popBack;
+        assert(r.back == 'b');
+    }
+
+    {
+        dchar[] s = ['𐐷', '😁'];
+        auto r = s.byUTF!wchar;
+        assert(r.back == 0xde01);
+        r.popBack;
+        assert(r.back == 0xd83d);
+        r.popBack;
+        assert(r.back == 0xdc37);
+        r.popBack;
+        assert(r.back == 0xd801);
+    }
+
+    {
+        dchar[] s = ['𐐷', '😁'];
+        auto r = s.byUTF!char;
+        char[] res;
+        while (!r.empty)
+        {
+            res ~= r.back;
+            r.popBack;
+        }
+        import std.algorithm.comparison : equal;
+        assert(res.equal([0x81, 0x98, 0x9f, 0xf0, 0xb7, 0x90, 0x90, 0xf0]));
+    }
+
+    {
+        dchar[] res;
+        auto r = ['a', 'b', 'c', 'd', 'e'].byUTF!dchar;
+        while (!r.empty)
+        {
+            res ~= r.back;
+            r.popBack;
+        }
+        import std.algorithm.comparison : equal;
+        assert(res.equal(['e', 'd', 'c', 'b', 'a']));
+    }
+
+}
+
+
+///
+@safe pure nothrow unittest
+{
+    import std.range.primitives;
+    wchar[] s = ['ă', 'î'];
+
+    auto rc = s.byUTF!char;
+    static assert(isBidirectionalRange!(typeof(rc)));
+    assert(rc.back == 0xae);
+    rc.popBack;
+    assert(rc.back == 0xc3);
+    rc.popBack;
+    assert(rc.back == 0x83);
+    rc.popBack;
+    assert(rc.back == 0xc4);
+
+    auto rw = s.byUTF!wchar;
+    static assert(isBidirectionalRange!(typeof(rw)));
+    assert(rw.back == 'î');
+    rw.popBack;
+    assert(rw.back == 'ă');
+
+    auto rd = s.byUTF!dchar;
+    static assert(isBidirectionalRange!(typeof(rd)));
+    assert(rd.back == 'î');
+    rd.popBack;
+    assert(rd.back == 'ă');
 }
