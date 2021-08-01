@@ -4383,24 +4383,24 @@ if (isSomeChar!C)
 
                 static if (isBidirectionalRange!R)
                 {
-                    @property dchar back() scope // 'scope'' required by call to decodeBack() below
+                    @property dchar back() scope // 'scope' required by call to decodeBack() below
                     {
-                        if (backBuff == Empty)
+                        if (backBuff != Empty)
+                            return cast(dchar) backBuff;
+
+                        auto c = r.back;
+                        static if (is(RC == wchar))
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (c < firstMulti)
                         {
-                            auto c = r.back;
-                            static if (is(RC == wchar))
-                                enum firstMulti = 0xD800; // First high surrogate.
-                            else
-                                enum firstMulti = 0x80; // First non-ASCII.
-                            if (c < firstMulti)
-                            {
-                                r.popBack;
-                                backBuff = cast(dchar) c;
-                            }
-                            else
-                            {
-                                backBuff = () @trusted { return decodeBack!useReplacementDchar(r); }();
-                            }
+                            r.popBack;
+                            backBuff = cast(dchar) c;
+                        }
+                        else
+                        {
+                            backBuff = () @trusted { return decodeBack!useReplacementDchar(r); }();
                         }
                         return cast(dchar) backBuff;
 
@@ -4514,31 +4514,31 @@ if (isSomeChar!C)
                 {
                     @property auto back() scope // 'scope' required by call to decodeBack() below
                     {
-                        if (backPos == backFill)
+                        if (backPos != backFill)
+                            return buf[cast(ushort) (backFill - backPos - 1)];
+
+                        backPos = 0;
+                        auto c = r.back;
+                        static if (C.sizeof >= 2 && RC.sizeof >= 2)
+                            enum firstMulti = 0xD800; // First high surrogate.
+                        else
+                            enum firstMulti = 0x80; // First non-ASCII.
+                        if (c < firstMulti)
                         {
-                            backPos = 0;
-                            auto c = r.back;
-                            static if (C.sizeof >= 2 && RC.sizeof >= 2)
-                                enum firstMulti = 0xD800; // First high surrogate.
-                            else
-                                enum firstMulti = 0x80; // First non-ASCII.
-                            if (c < firstMulti)
+                            backFill = 1;
+                            r.popBack;
+                            buf[cast(ushort) (backFill - backPos - 1)] = cast(C) c;
+                        }
+                        else
+                        {
+                            static if (is(RC == dchar))
                             {
-                                backFill = 1;
                                 r.popBack;
-                                buf[cast(ushort) (backFill - backPos - 1)] = cast(C) c;
+                                dchar dc = c;
                             }
                             else
-                            {
-                                static if (is(RC == dchar))
-                                {
-                                    r.popBack;
-                                    dchar dc = c;
-                                }
-                                else
-                                    dchar dc = () @trusted { return decodeBack!(useReplacementDchar)(r); }();
-                                backFill = cast(ushort) encode!(useReplacementDchar)(buf, dc);
-                            }
+                                dchar dc = () @trusted { return decodeBack!(useReplacementDchar)(r); }();
+                            backFill = cast(ushort) encode!(useReplacementDchar)(buf, dc);
                         }
                         return buf[cast(ushort) (backFill - backPos - 1)];
                     }
