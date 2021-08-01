@@ -2898,9 +2898,10 @@ Params:
         element(s) to serve as separators in the joined range.
 
 Returns:
-A range of elements in the joined range. This will be a forward range if
-both outer and inner ranges of `RoR` are forward ranges; otherwise it will
-be only an input range. The
+A range of elements in the joined range. This will be a bidirectional range if
+both outer and inner ranges of `RoR` are at least bidirectional ranges. Else if
+both outer and inner ranges of `RoR` are forward ranges, the returned range will
+be likewise. Otherwise it will be only an input range. The
 $(REF_ALTTEXT range bidirectionality, isBidirectionalRange, std,range,primitives)
 is propagated if no separator is specified.
 
@@ -2917,6 +2918,14 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     {
         private RoR _items;
         private ElementType!RoR _current;
+        bool startsWithEmpty = false;
+        static if (isBidirectional)
+        {
+            private ElementType!RoR _currentBack;
+            bool endsWithEmpty = false;
+        }
+        enum isBidirectional = isBidirectionalRange!RoR &&
+                               isBidirectionalRange!(ElementType!RoR);
         static if (isRandomAccessRange!Separator)
         {
             static struct CurrentSep
@@ -2974,6 +2983,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         }
 
         private CurrentSep _currentSep;
+        static if (isBidirectional)
+        {
+            private CurrentSep _currentBackSep;
+        }
 
         private void setItem()
         {
@@ -3015,7 +3028,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             else
             {
                 _currentSep.reset;
-                assert(!_currentSep.empty, "seperator must not be empty");
+                assert(!_currentSep.empty, "separator must not be empty");
             }
         }
 
@@ -3023,10 +3036,16 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         {
             _items = items;
             _currentSep.initialize(sep);
+            static if (isBidirectional)
+                _currentBackSep.initialize(sep);
 
             //mixin(useItem); // _current should be initialized in place
             if (_items.empty)
+            {
                 _current = _current.init;   // set invalid state
+                static if (isBidirectional)
+                    _currentBack = _currentBack.init;
+            }
             else
             {
                 // If we're exporting .save, we must not consume any of the
@@ -3038,10 +3057,42 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 else
                     _current = _items.front;
 
+                static if (isBidirectional)
+                    _currentBack = _items.back.save;
+
+                static if (isBidirectional)
+                {
+                    if (_currentBack.empty)
+                    {
+                        endsWithEmpty = true;
+                    }
+                }
+
                 if (_current.empty)
                 {
                     // No data in the current item - toggle to use the separator
-                    useSeparator();
+                    startsWithEmpty = true;
+
+                    //A range with a single element which is empty will always
+                    // return an empty Result
+
+                    import std.range : dropOne;
+                    static if (hasLength!RoR)
+                    {
+                        if (_items.length == 1)
+                            _items.popFront;
+                    }
+                    else static if (isForwardRange!RoR)
+                    {
+                        if (_items.save.dropOne.empty)
+                            _items.popFront;
+                    }
+                    else
+                    {
+                        auto _itemsCopy = _items;
+                        if (_itemsCopy.dropOne.empty)
+                            _items.popFront;
+                    }
                 }
             }
         }
@@ -3053,6 +3104,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         @property ElementType!(ElementType!RoR) front()
         {
+            if (startsWithEmpty)
+            {
+                useSeparator();
+                startsWithEmpty = false;
+            }
             if (!_currentSep.empty) return _currentSep.front;
             assert(!_current.empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
@@ -3092,7 +3148,93 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 copy._items = _items.save;
                 copy._current = _current.save;
                 copy._currentSep = _currentSep.save;
+                static if (isBidirectional)
+                {
+                    copy._currentBack = _currentBack;
+                    copy._currentBackSep = _currentBackSep;
+                }
                 return copy;
+            }
+        }
+
+        static if (isBidirectional)
+        {
+
+            private void setBackItem()
+            {
+                if (!_items.empty)
+                {
+                    // If we're exporting .save, we must not consume any of the
+                    // subranges, since RoR.save does not guarantee that the states
+                    // of the subranges are also saved.
+                        _currentBack = _items.back.save;
+                }
+            }
+
+            private void useBackSeparator()
+            {
+                // Separator must always come after an item.
+                assert(_currentBackSep.empty && !_items.empty,
+                        "joiner: internal error");
+                _items.popBack();
+
+                // If there are no more items, we're done, since separators are not
+                // terminators.
+                if (_items.empty) return;
+
+                if (_currentBackSep._sep.empty)
+                {
+                    // Advance to the next range in the
+                    // input
+                    while (_items.back.empty)
+                    {
+                        _items.popBack();
+                        if (_items.empty) return;
+                    }
+                    setBackItem;
+                }
+                else
+                {
+                    _currentBackSep.reset;
+                    assert(!_currentBackSep.empty, "separator must not be empty");
+                }
+            }
+
+            @property ElementType!(ElementType!RoR) back()
+            {
+                if (endsWithEmpty)
+                {
+                    useBackSeparator;
+                    endsWithEmpty = false;
+                }
+                if (!_currentBackSep.empty) return _currentBackSep.front;
+                assert(!_currentBack.empty, "Attempting to fetch the back of an empty joiner.");
+                return _currentBack.back;
+            }
+
+            void popBack()
+            {
+                assert(!_items.empty, "Attempting to popBack an empty joiner.");
+                if (!_currentBackSep.empty)
+                {
+                    _currentBackSep.popFront();
+                    if (_currentBackSep.empty && !_items.empty)
+                    {
+                        setBackItem;
+                        if (_currentBack.empty)
+                        {
+                            // No data in the current item - toggle to use the separator
+                            useBackSeparator();
+                        }
+                    }
+                }
+                else
+                {
+                    // we're using the range
+                    _currentBack.popBack();
+                    if (_currentBack.empty)
+                        useBackSeparator();
+                }
             }
         }
     }
@@ -3112,6 +3254,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(["", "abc"].joiner("xyz").equal("xyzabc"));
     assert([""].joiner("xyz").equal(""));
     assert(["", ""].joiner("xyz").equal("xyz"));
+}
+
+@safe pure nothrow unittest
+{
+    //joiner with separator can return a bidirectional range
+    assert(isBidirectionalRange!(typeof(["abc", "def"].joiner("..."))));
 }
 
 @system unittest
@@ -3224,6 +3372,46 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 {
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
+}
+
+@safe pure unittest
+{
+    {
+        import std.algorithm.comparison : equal;
+        auto r = joiner(["abc", "def", "ghi"], "?!");
+        char[] res;
+        while (!r.empty)
+        {
+            res ~= r.back;
+            r.popBack;
+        }
+        assert(res.equal("ihg?!fed?!cba"));
+    }
+
+    {
+        wchar[] sep = ['Ș', 'Ț'];
+        auto r = joiner(["","abc",""],sep);
+        wchar[] resFront;
+        wchar[] resBack;
+
+        auto rCopy = r.save;
+        while (!r.empty)
+        {
+            resFront ~= r.front;
+            r.popFront;
+        }
+
+        while (!rCopy.empty)
+        {
+            resBack ~= rCopy.back;
+            rCopy.popBack;
+        }
+
+        import std.algorithm.comparison : equal;
+
+        assert(resFront.equal("ȘȚabcȘȚ"));
+        assert(resBack.equal("ȘȚcbaȘȚ"));
+    }
 }
 
 /// Ditto
