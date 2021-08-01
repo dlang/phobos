@@ -510,7 +510,9 @@ private template isSpawnable(F, T...)
  *  to `fn` must either be `shared` or `immutable` or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- */
+ *
+ * Similarly, if `fn` is a delegate, it must not have unshared aliases, meaning
+ * `fn` must be either `shared` or `immutable`. */
 Tid spawn(F, T...)(F fn, T args)
 if (isSpawnable!(F, T))
 {
