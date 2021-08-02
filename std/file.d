@@ -402,7 +402,7 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
 
 
 version (Windows) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
-                                          size_t upTo = size_t.max) @system
+                                          size_t upTo = size_t.max) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
