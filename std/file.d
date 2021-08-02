@@ -402,24 +402,24 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
 
 
 version (Windows) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
-                                          size_t upTo = size_t.max) @safe
+                                          size_t upTo = size_t.max) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
     static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-                              DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
+                              DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
     {
         return CreateFileW(namez, dwDesiredAccess, dwShareMode,
                            lpSecurityAttributes, dwCreationDisposition,
                            dwFlagsAndAttributes, hTemplateFile);
 
     }
-    static trustedCloseHandle(HANDLE hObject) @trusted
+    static trustedCloseHandle(HANDLE hObject)
     {
         return CloseHandle(hObject);
     }
-    static trustedGetFileSize(HANDLE hFile, out ulong fileSize) @trusted
+    static trustedGetFileSize(HANDLE hFile, out ulong fileSize)
     {
         DWORD sizeHigh;
         DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
@@ -428,7 +428,7 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
     }
-    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead) @trusted
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead)
     {
         // Read by chunks of size < 4GB (Windows API limit)
         ulong totalNumRead = 0;
@@ -456,11 +456,11 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
     ulong fileSize = void;
     cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
-    auto buf = () @trusted { return GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size]; } ();
+    auto buf = () { return GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size]; } ();
 
     scope(failure)
     {
-        () @trusted { GC.free(buf.ptr); } ();
+        () { GC.free(buf.ptr); } ();
     }
 
     if (size)
