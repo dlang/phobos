@@ -4278,9 +4278,10 @@ private int impureVariable;
  *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.no`
  *
  * Returns:
- *      A bidirectional range if `R` is a range and not auto-decodable, as defined by
- *      $(REF isAutodecodableString, std, traits), and if the base range is
- *      also a bidirectional range.
+ *      A bidirectional range if `R` is a bidirectional range and not auto-decodable,
+ *      as defined by $(REF isAutodecodableString, std, traits).
+ *
+ *      A forward range if `R` is a forward range and not auto-decodable.
  *
  *      Or, if `R` is a range and it is auto-decodable and
  *      `is(ElementEncodingType!typeof(r) == C)`, then the range is passed
