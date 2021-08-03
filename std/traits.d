@@ -179,89 +179,11 @@ import std.meta : staticMapMeta = staticMap;
 alias staticMap = staticMapMeta;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Functions
+// Type lists
 ///////////////////////////////////////////////////////////////////////////////
 
-// Petit demangler
-// (this or similar thing will eventually go to std.demangle if necessary
-//  ctfe stuffs are available)
 private
 {
-    struct Demangle(T)
-    {
-        T       value;  // extracted information
-        string  rest;
-    }
-
-    /* Demangles mstr as the storage class part of Argument. */
-    Demangle!uint demangleParameterStorageClass(string mstr)
-    {
-        uint pstc = 0; // parameter storage class
-
-        // Argument --> Argument2 | M Argument2
-        if (mstr.length > 0 && mstr[0] == 'M')
-        {
-            pstc |= ParameterStorageClass.scope_;
-            mstr  = mstr[1 .. $];
-        }
-
-        // Argument2 --> Type | J Type | K Type | L Type
-        ParameterStorageClass stc2;
-
-        switch (mstr.length ? mstr[0] : char.init)
-        {
-            case 'J': stc2 = ParameterStorageClass.out_;  break;
-            case 'K': stc2 = ParameterStorageClass.ref_;  break;
-            case 'L': stc2 = ParameterStorageClass.lazy_; break;
-            case 'N': if (mstr.length >= 2 && mstr[1] == 'k')
-                        stc2 = ParameterStorageClass.return_;
-                      break;
-            default : break;
-        }
-        if (stc2 != ParameterStorageClass.init)
-        {
-            pstc |= stc2;
-            mstr  = mstr[1 .. $];
-            if (stc2 & ParameterStorageClass.return_)
-                mstr  = mstr[1 .. $];
-        }
-
-        return Demangle!uint(pstc, mstr);
-    }
-
-    /* Demangles mstr as FuncAttrs. */
-    Demangle!uint demangleFunctionAttributes(string mstr)
-    {
-        immutable LOOKUP_ATTRIBUTE =
-        [
-            'a': FunctionAttribute.pure_,
-            'b': FunctionAttribute.nothrow_,
-            'c': FunctionAttribute.ref_,
-            'd': FunctionAttribute.property,
-            'e': FunctionAttribute.trusted,
-            'f': FunctionAttribute.safe,
-            'i': FunctionAttribute.nogc,
-            'j': FunctionAttribute.return_,
-            'l': FunctionAttribute.scope_,
-            'm': FunctionAttribute.live,
-        ];
-        uint atts = 0;
-
-        // FuncAttrs --> FuncAttr | FuncAttr FuncAttrs
-        // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf | Ni | Nj | Nm
-        // except 'Ng' == inout, because it is a qualifier of function type
-        while (mstr.length >= 2 && mstr[0] == 'N' && mstr[1] != 'g' && mstr[1] != 'k')
-        {
-            if (FunctionAttribute att = LOOKUP_ATTRIBUTE[ mstr[1] ])
-            {
-                atts |= att;
-                mstr  = mstr[2 .. $];
-            }
-            else assert(0);
-        }
-        return Demangle!uint(atts, mstr);
-    }
-
     static if (is(ucent))
     {
         alias CentTypeList         = AliasSeq!(cent, ucent);
