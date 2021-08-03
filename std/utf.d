@@ -4374,18 +4374,18 @@ if (isSomeChar!C)
                     buff = Empty;
                 }
 
-                static if (isBidirectionalRange!R)
+                static if (isForwardRange!R)
                 {
                     @property auto save()
                     {
-                        return Result(r.save, buff, backBuff);
-                    }
-                }
-                else static if (isForwardRange!R)
-                {
-                    @property auto save()
-                    {
-                        return Result(r.save, buff);
+                        static if (isBidirectionalRange!R)
+                        {
+                            return Result(r.save, buff, backBuff);
+                        }
+                        else
+                        {
+                            return Result(r.save, buff);
+                        }
                     }
                 }
 
@@ -4510,18 +4510,18 @@ if (isSomeChar!C)
                     ++pos;
                 }
 
-                static if (isBidirectionalRange!R)
+                static if (isForwardRange!R)
                 {
                     @property auto save()
                     {
-                        return Result(r.save, pos, fill, backPos, backFill, buf);
-                    }
-                }
-                else static if (isForwardRange!R)
-                {
-                    @property auto save()
-                    {
-                        return Result(r.save, pos, fill, buf);
+                        static if (isBidirectionalRange!R)
+                        {
+                            return Result(r.save, pos, fill, backPos, backFill, buf);
+                        }
+                        else
+                        {
+                            return Result(r.save, pos, fill, buf);
+                        }
                     }
                 }
 
@@ -4677,8 +4677,23 @@ if (isSomeChar!C)
         assert(res.equal(['e', 'd', 'c', 'b', 'a']));
     }
 
-}
+    {
+        //testing the save() function
+        wchar[] s = ['Ă','ț'];
 
+        auto rc = s.byUTF!char;
+        rc.popBack;
+        auto rcCopy = rc.save;
+        assert(rc.back == rcCopy.back);
+        assert(rcCopy.back == 0xc8);
+
+        auto rd = s.byUTF!dchar;
+        rd.popBack;
+        auto rdCopy = rd.save;
+        assert(rd.back == rdCopy.back);
+        assert(rdCopy.back == 'Ă');
+    }
+}
 
 ///
 @safe pure nothrow unittest
