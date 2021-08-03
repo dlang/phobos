@@ -4374,7 +4374,14 @@ if (isSomeChar!C)
                     buff = Empty;
                 }
 
-                static if (isForwardRange!R)
+                static if (isBidirectionalRange!R)
+                {
+                    @property auto save()
+                    {
+                        return Result(r.save, buff, backBuff);
+                    }
+                }
+                else static if (isForwardRange!R)
                 {
                     @property auto save()
                     {
@@ -4503,7 +4510,14 @@ if (isSomeChar!C)
                     ++pos;
                 }
 
-                static if (isForwardRange!R)
+                static if (isBidirectionalRange!R)
+                {
+                    @property auto save()
+                    {
+                        return Result(r.save, pos, fill, backPos, backFill, buf);
+                    }
+                }
+                else static if (isForwardRange!R)
                 {
                     @property auto save()
                     {
