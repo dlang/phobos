@@ -2918,11 +2918,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     {
         private RoR _items;
         private ElementType!RoR _current;
-        bool startsWithEmpty = false;
+        bool inputStartsWithEmpty = false;
         static if (isBidirectional)
         {
             private ElementType!RoR _currentBack;
-            bool endsWithEmpty = false;
+            bool inputEndsWithEmpty = false;
         }
         enum isBidirectional = isBidirectionalRange!RoR &&
                                isBidirectionalRange!(ElementType!RoR);
@@ -3064,14 +3064,14 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 {
                     if (_currentBack.empty)
                     {
-                        endsWithEmpty = true;
+                        inputEndsWithEmpty = true;
                     }
                 }
 
                 if (_current.empty)
                 {
                     // No data in the current item - toggle to use the separator
-                    startsWithEmpty = true;
+                    inputStartsWithEmpty = true;
 
                     //A range with a single element which is empty will always
                     // return an empty Result
@@ -3102,13 +3102,18 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             return _items.empty;
         }
 
-        @property ElementType!(ElementType!RoR) front()
-        {
-            if (startsWithEmpty)
+        //no data in the first item of the initial range - use the separator
+        private enum useSepIfFrontIsEmpty = q{
+            if (inputStartsWithEmpty)
             {
                 useSeparator();
-                startsWithEmpty = false;
+                inputStartsWithEmpty = false;
             }
+        };
+
+        @property ElementType!(ElementType!RoR) front()
+        {
+            mixin(useSepIfFrontIsEmpty);
             if (!_currentSep.empty) return _currentSep.front;
             assert(!_current.empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
@@ -3118,6 +3123,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         {
             assert(!_items.empty, "Attempting to popFront an empty joiner.");
             // Using separator?
+            mixin(useSepIfFrontIsEmpty);
+
             if (!_currentSep.empty)
             {
                 _currentSep.popFront();
@@ -3159,15 +3166,20 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         static if (isBidirectional)
         {
+            //no data in the last item of the initial range - use the separator
+            private enum useSepIfBackIsEmpty = q{
+                if (inputEndsWithEmpty)
+                {
+                    useBackSeparator;
+                    inputEndsWithEmpty = false;
+                }
+            };
 
             private void setBackItem()
             {
                 if (!_items.empty)
                 {
-                    // If we're exporting .save, we must not consume any of the
-                    // subranges, since RoR.save does not guarantee that the states
-                    // of the subranges are also saved.
-                        _currentBack = _items.back.save;
+                    _currentBack = _items.back.save;
                 }
             }
 
@@ -3202,11 +3214,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
             @property ElementType!(ElementType!RoR) back()
             {
-                if (endsWithEmpty)
-                {
-                    useBackSeparator;
-                    endsWithEmpty = false;
-                }
+                mixin(useSepIfBackIsEmpty);
+
                 if (!_currentBackSep.empty) return _currentBackSep.front;
                 assert(!_currentBack.empty, "Attempting to fetch the back of an empty joiner.");
                 return _currentBack.back;
@@ -3215,6 +3224,9 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             void popBack()
             {
                 assert(!_items.empty, "Attempting to popBack an empty joiner.");
+
+                mixin(useSepIfBackIsEmpty);
+
                 if (!_currentBackSep.empty)
                 {
                     _currentBackSep.popFront();
@@ -3443,6 +3455,49 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         assert(resFront.equal("../../../abc../"));
         assert(resBack.equal("../cba../../../"));
+    }
+
+    {
+        auto r = ["", "abc", ""].joiner("./");
+        auto rCopy = r.save;
+        r.popBack;
+        rCopy.popFront;
+
+        auto rRev = r.save;
+        auto rCopyRev = rCopy.save;
+
+        char[] r1, r2, r3, r4;
+
+        while (!r.empty)
+        {
+            r1 ~= r.back;
+            r.popBack;
+        }
+
+        while (!rCopy.empty)
+        {
+            r2 ~= rCopy.front;
+            rCopy.popFront;
+        }
+
+        while (!rRev.empty)
+        {
+            r3 ~= rRev.front;
+            rRev.popFront;
+        }
+
+        while (!rCopyRev.empty)
+        {
+            r4 ~= rCopyRev.back;
+            rCopyRev.popBack;
+        }
+
+        import std.algorithm.comparison : equal;
+
+        assert(r1.equal("/cba./"));
+        assert(r2.equal("/abc./"));
+        assert(r3.equal("./abc"));
+        assert(r4.equal("./cba"));
     }
 }
 
