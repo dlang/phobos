@@ -3412,7 +3412,48 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         assert(resFront.equal("ȘȚabcȘȚ"));
         assert(resBack.equal("ȘȚcbaȘȚ"));
     }
+
+    {
+        import std.algorithm.comparison : equal;
+        auto r = [""];
+        r.popBack;
+        assert(r.joiner("AB").equal(""));
+    }
+
+    {
+        auto r = ["", "", "", "abc", ""].joiner("../");
+        auto rCopy = r.save;
+
+        char[] resFront;
+        char[] resBack;
+
+        while (!r.empty)
+        {
+            resFront ~= r.front;
+            r.popFront;
+        }
+
+        while (!rCopy.empty)
+        {
+            resBack ~= rCopy.back;
+            rCopy.popBack;
+        }
+
+        import std.algorithm.comparison : equal;
+
+        assert(resFront.equal("../../../abc../"));
+        assert(resBack.equal("../cba../../../"));
+    }
 }
+
+@system unittest
+{
+    import std.range;
+    import std.algorithm.comparison : equal;
+
+    assert(inputRangeObject([""]).joiner("lz").equal(""));
+}
+
 
 /// Ditto
 auto joiner(RoR)(RoR r)
