@@ -3509,6 +3509,50 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(inputRangeObject([""]).joiner("lz").equal(""));
 }
 
+@safe pure unittest
+{
+    struct inputRangeStrings
+    {
+        private string[] strings;
+
+        string front()
+        {
+            return strings[0];
+        }
+
+        void popFront()
+        {
+            strings = strings[1..$];
+        }
+
+        bool empty() const
+        {
+           return strings.length == 0;
+        }
+    }
+
+    auto arr = inputRangeStrings([""]);
+
+    import std.algorithm.comparison : equal;
+
+    assert(arr.joiner("./").equal(""));
+}
+
+@safe pure unittest
+{
+    auto r = joiner(["", "", "abc", "", ""], "");
+    char[] res;
+    while (!r.empty)
+    {
+        res ~= r.back;
+        r.popBack;
+    }
+
+    import std.algorithm.comparison : equal;
+
+    assert(res.equal("cba"));
+}
+
 
 /// Ditto
 auto joiner(RoR)(RoR r)
