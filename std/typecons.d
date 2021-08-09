@@ -3032,23 +3032,6 @@ struct Nullable(T)
     }
 
     /**
-     * If value is null, sets this to null, otherwise assigns
-     * `value.get` to the internally-held state. If the assignment
-     * succeeds, `this` becomes non-null.
-     *
-     * Params:
-     *     value = A value of type `Nullable!T` to assign to this `Nullable`.
-     */
-    Nullable opAssign()(Nullable!T value)
-    {
-        if (value._isNull)
-            nullify();
-        else
-            opAssign(value.get());
-        return this;
-    }
-
-    /**
      * If this `Nullable` wraps a type that already has a null value
      * (such as a pointer), then assigning the null value to this
      * `Nullable` is no different than assigning any other value of
@@ -4144,6 +4127,23 @@ unittest
 {
     struct S { int i; }
     assert(S(5).nullable.apply!"a.i" == 5);
+}
+
+// regression test for https://issues.dlang.org/show_bug.cgi?id=22176
+@safe @nogc nothrow pure
+unittest
+{
+    struct S
+    {
+        int i;
+        invariant(i != 0);
+
+        // Nullable shouldn't cause S to generate an
+        // opAssign that would check the invariant.
+        Nullable!int j;
+    }
+    S s;
+    s = S(5);
 }
 
 /**
