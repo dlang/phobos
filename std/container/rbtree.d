@@ -136,9 +136,12 @@ struct RBNode(V)
      * Set the left child.  Also updates the new child's parent node.  This
      * does not update the previous child.
      *
+     * $(RED Warning: If the node this is called on is a local variable, a stack pointer can be
+     * escaped through `newNode.parent`. It's marked `@trusted` only for backwards compatibility.)
+     *
      * Returns newNode
      */
-    @property Node left(Node newNode)
+    @property Node left(return scope Node newNode) @trusted
     {
         _left = newNode;
         if (newNode !is null)
@@ -150,9 +153,12 @@ struct RBNode(V)
      * Set the right child.  Also updates the new child's parent node.  This
      * does not update the previous child.
      *
+     * $(RED Warning: If the node this is called on is a local variable, a stack pointer can be
+     * escaped through `newNode.parent`. It's marked `@trusted` only for backwards compatibility.)
+     *
      * Returns newNode
      */
-    @property Node right(Node newNode)
+    @property Node right(return scope Node newNode) @trusted
     {
         _right = newNode;
         if (newNode !is null)
