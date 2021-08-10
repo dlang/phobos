@@ -2908,6 +2908,11 @@ is propagated if no separator is specified.
 See_also:
 $(REF chain, std,range), which chains a sequence of ranges with compatible elements
 into a single range.
+
+Note:
+When both outer and inner ranges of `RoR` are bidirectional and the joiner is
+iterated from the back to the front, the separator will still be consumed from
+front to back, even if it is a bidirectional range too.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR)
@@ -3006,8 +3011,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         private void useSeparator()
         {
             // Separator must always come after an item.
-            assert(_currentSep.empty && !_items.empty,
-                    "joiner: internal error");
+            assert(_currentSep.empty,
+                    "Attempting to reset a non-empty separator");
+            assert(!_items.empty,
+                    "Attempting to use a separator in an empty joiner");
             _items.popFront();
 
             // If there are no more items, we're done, since separators are not
@@ -3058,12 +3065,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                     _current = _items.front;
 
                 static if (isBidirectional)
+                {
                     _currentBack = _items.back.save;
 
-                static if (isBidirectional)
-                {
                     if (_currentBack.empty)
                     {
+                        // No data in the currentBack item - toggle to use
+                        // the separator
                         inputEndsWithEmpty = true;
                     }
                 }
@@ -3073,9 +3081,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                     // No data in the current item - toggle to use the separator
                     inputStartsWithEmpty = true;
 
-                    //A range with a single element which is empty will always
-                    // return an empty Result
-
+                    // If RoR contains a single empty element,
+                    // the returned Result will always be empty
                     import std.range : dropOne;
                     static if (hasLength!RoR)
                     {
@@ -3186,8 +3193,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
             private void useBackSeparator()
             {
                 // Separator must always come after an item.
-                assert(_currentBackSep.empty && !_items.empty,
-                        "joiner: internal error");
+                assert(_currentBackSep.empty,
+                        "Attempting to reset a non-empty separator");
+                assert(!_items.empty,
+                        "Attempting to use a separator in an empty joiner");
                 _items.popBack();
 
                 // If there are no more items, we're done, since separators are not
