@@ -13,6 +13,7 @@ Serialize data to `ubyte` arrays.
 module std.outbuffer;
 
 import core.stdc.stdarg;
+import std.traits : isSomeString;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out
@@ -323,6 +324,25 @@ class OutBuffer
         assert(b.toString() == "a16b");
     }
 
+    /// ditto
+    void writef(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writef(fmt, args);
+    }
+
+    ///
+    @safe unittest
+    {
+        OutBuffer b = new OutBuffer();
+        b.writef!"a%sb"(16);
+        assert(b.toString() == "a16b");
+    }
+
     /**
      * Formats and writes its arguments in text format to the OutBuffer,
      * followed by a newline.
@@ -347,6 +367,25 @@ class OutBuffer
     {
         OutBuffer b = new OutBuffer();
         b.writefln("a%sb", 16);
+        assert(b.toString() == "a16b\n");
+    }
+
+    /// ditto
+    void writefln(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writefln(fmt, args);
+    }
+
+    ///
+    @safe unittest
+    {
+        OutBuffer b = new OutBuffer();
+        b.writefln!"a%sb"(16);
         assert(b.toString() == "a16b\n");
     }
 
