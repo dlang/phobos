@@ -1202,7 +1202,7 @@ if (isConvertibleToString!R)
 
 // Reads a time field from a stat_t with full precision.
 version (Posix)
-private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf)
+private SysTime statTimeToStdTime(char which)(ref const stat_t statbuf) pure nothrow
 {
     auto unixTime = mixin(`statbuf.st_` ~ which ~ `time`);
     long stdTime = unixTimeToStdTime(unixTime);
@@ -3932,6 +3932,8 @@ else version (Posix)
             _didLStat = false;
             _didStat = false;
             _dTypeSet = false;
+
+            _doStat();
         }
 
         private this(string path, core.sys.posix.dirent.dirent* fd) @safe
@@ -3971,116 +3973,90 @@ else version (Posix)
                 // e.g. Solaris does not have the d_type member
                 _dTypeSet = false;
             }
+
+            _doStat();
         }
 
-        @property string name() const pure nothrow return scope
+        @property string name() const nothrow pure return scope
         {
             return _name;
         }
 
-        @property bool isDir() scope
+        @property bool isDir() const nothrow pure scope
         {
-            _ensureStatOrLStatDone();
+            assert(_didStat || _didLStat);
 
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        @property bool isFile() scope
+        @property bool isFile() const nothrow pure scope
         {
-            _ensureStatOrLStatDone();
+            assert(_didStat || _didLStat);
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
-        @property bool isSymlink() scope
+        @property bool isSymlink() const nothrow pure scope
         {
-            _ensureLStatDone();
-
+            assert(_didLStat);
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
 
-        @property ulong size() scope
+        @property ulong size() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
             return _statBuf.st_size;
         }
 
-        @property SysTime timeStatusChanged() scope
+        @property SysTime timeStatusChanged() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
 
             return statTimeToStdTime!'c'(_statBuf);
         }
 
-        @property SysTime timeLastAccessed() scope
+        @property SysTime timeLastAccessed() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
 
             return statTimeToStdTime!'a'(_statBuf);
         }
 
-        @property SysTime timeLastModified() scope
+        @property SysTime timeLastModified() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
 
             return statTimeToStdTime!'m'(_statBuf);
         }
 
-        @property uint attributes() scope
+        @property uint attributes() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
 
             return _statBuf.st_mode;
         }
 
-        @property uint linkAttributes() scope
+        @property uint linkAttributes() const nothrow pure scope
         {
-            _ensureLStatDone();
+            import std.exception : enforce;
+            assert(_didLStat);
 
             return _lstatMode;
         }
 
-        @property stat_t statBuf() scope
+        @property stat_t statBuf() const nothrow pure scope
         {
-            _ensureStatDone();
+            assert(_didStat);
 
             return _statBuf;
         }
 
     private:
-        /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
-         +/
-        void _ensureStatDone() @trusted scope
+
+        void _doStat() scope @trusted
         {
-            import std.exception : enforce;
-
-            if (_didStat)
-                return;
-
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
-
-            _didStat = true;
-        }
-
-        /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
-
-            Try both stat and lstat for isFile and isDir
-            to detect broken symlinks.
-         +/
-        void _ensureStatOrLStatDone() @trusted scope
-        {
-            if (_didStat)
-                return;
-
             if (stat(_name.tempCString(), &_statBuf) != 0)
             {
-                _ensureLStatDone();
-
                 _statBuf = stat_t.init;
                 _statBuf.st_mode = S_IFLNK;
             }
@@ -4088,27 +4064,13 @@ else version (Posix)
             {
                 _didStat = true;
             }
-        }
 
-        /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
-         +/
-        void _ensureLStatDone() @trusted scope
-        {
-            import std.exception : enforce;
-
-            if (_didLStat)
-                return;
-
-            stat_t statbuf = void;
-            enforce(lstat(_name.tempCString(), &statbuf) == 0,
-                "Failed to stat file `" ~ _name ~ "'");
-
-            _lstatMode = statbuf.st_mode;
-
-            _dTypeSet = true;
-            _didLStat = true;
+            stat_t statBuf = void;
+            if (lstat(_name.tempCString(), &statBuf) == 0)
+            {
+               _lstatMode = statBuf.st_mode;
+                _didLStat = true;
+            }
         }
 
         string _name; /// The file or directory represented by this DirEntry.
@@ -4184,12 +4146,6 @@ else version (Posix)
                 assert(!de.isFile);
                 assert(!de.isDir);
                 assert(de.isSymlink);
-                assertThrown(de.size);
-                assertThrown(de.timeStatusChanged);
-                assertThrown(de.timeLastAccessed);
-                assertThrown(de.timeLastModified);
-                assertThrown(de.attributes);
-                assertThrown(de.statBuf);
                 assert(symfile.exists);
                 symfile.remove();
             }
