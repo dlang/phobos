@@ -1274,6 +1274,16 @@ if (isInputRange!R &&
     }}
 }
 
+@safe pure unittest
+{
+    //example from issue 19727
+    import std.path : asRelativePath;
+    string[] ext = ["abc", "def", "ghi"];
+    string path = "/foo/file.def";
+    assert(ext.any!(e => path.asRelativePath("/foo").endsWith(e)) == true);
+    assert(ext.any!(e => path.asRelativePath("/foo").startsWith(e)) == false);
+}
+
 private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
 
 // Rebindable doesn't work with structs

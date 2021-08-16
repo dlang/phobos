@@ -3063,6 +3063,19 @@ if ((isNarrowString!R1 ||
         static assert(0);
 }
 
+@safe unittest
+{
+    version (Posix)
+    {
+        assert(isBidirectionalRange!(typeof(asRelativePath("foo/bar/baz", "/foo/woo/wee"))));
+    }
+
+    version (Windows)
+    {
+        assert(isBidirectionalRange!(typeof(asRelativePath(`c:\foo\bar`, `c:\foo\baz`))));
+    }
+}
+
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (auto ref R1 path, auto ref R2 base)
 if (isConvertibleToString!R1 || isConvertibleToString!R2)
