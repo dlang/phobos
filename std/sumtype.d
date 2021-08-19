@@ -365,24 +365,15 @@ public:
         {
             import core.lifetime : forward;
 
-            storage = ()
+            static if (isCopyable!T)
             {
-                static if (isCopyable!T)
-                {
-                    mixin("Storage newStorage = { ",
-                        // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                        Storage.memberName!T, ": (__ctfe ? value : forward!value)",
-                    " };");
-                }
-                else
-                {
-                    mixin("Storage newStorage = { ",
-                        Storage.memberName!T, " : forward!value",
-                    " };");
-                }
-
-                return newStorage;
-            }();
+                // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                __traits(getMember, storage, Storage.memberName!T) = __ctfe ? value : forward!value;
+            }
+            else
+            {
+                __traits(getMember, storage, Storage.memberName!T) = forward!value;
+            }
 
             tag = tid;
         }
@@ -394,15 +385,7 @@ public:
                 /// ditto
                 this(const(T) value) const
                 {
-                    storage = ()
-                    {
-                        mixin("const(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
-                        " };");
-
-                        return newStorage;
-                    }();
-
+                    __traits(getMember, storage, Storage.memberName!T) = value;
                     tag = tid;
                 }
             }
@@ -419,15 +402,7 @@ public:
                 /// ditto
                 this(immutable(T) value) immutable
                 {
-                    storage = ()
-                    {
-                        mixin("immutable(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
-                        " };");
-
-                        return newStorage;
-                    }();
-
+                    __traits(getMember, storage, Storage.memberName!T) = value;
                     tag = tid;
                 }
             }
@@ -1503,6 +1478,18 @@ version (D_BetterC) {} else
 {
     SumType!(string, int) sm = 123;
     sm = "this should be @safe";
+}
+
+// Pointers to local variables
+// https://issues.dlang.org/show_bug.cgi?id=22117
+@safe unittest
+{
+    int n = 123;
+    immutable int ni = 456;
+
+    SumType!(int*) s = &n;
+    const SumType!(int*) sc = &n;
+    immutable SumType!(int*) si = &ni;
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
