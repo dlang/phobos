@@ -575,26 +575,27 @@ public:
             /**
              * Assigns a value to a `SumType`.
              *
-             * Assigning to a `SumType` is `@system` if any of the
-             * `SumType`'s members contain pointers or references, since
-             * those members may be reachable through external references,
-             * and overwriting them could therefore lead to memory
-             * corruption.
+             * Assigning to a `SumType` is `@system` if any of the `SumType`'s
+             * $(I other) members contain pointers or references, since those
+             * members may be reachable through external references, and
+             * overwriting them could therefore lead to memory corruption.
              *
              * An individual assignment can be `@trusted` if the caller can
-             * guarantee that there are no outstanding references to $(I any)
-             * of the `SumType`'s members when the assignment occurs.
+             * guarantee that, when the assignment occurs, there are no
+             * outstanding references to any such members.
              */
             ref SumType opAssign(T rhs)
             {
                 import core.lifetime : forward;
                 import std.traits : hasIndirections, hasNested;
-                import std.meta : Or = templateOr;
+                import std.meta : AliasSeq, Or = templateOr;
 
-                enum mayContainPointers =
-                    anySatisfy!(Or!(hasIndirections, hasNested), Types);
+                alias OtherTypes =
+                    AliasSeq!(Types[0 .. tid], Types[tid + 1 .. $]);
+                enum unsafeToOverwrite =
+                    anySatisfy!(Or!(hasIndirections, hasNested), OtherTypes);
 
-                static if (mayContainPointers)
+                static if (unsafeToOverwrite)
                 {
                     cast(void) () @system {}();
                 }
@@ -1495,6 +1496,13 @@ version (D_BetterC) {} else
 
     MySum x = b;
     MySum y; y = b;
+}
+
+// @safe assignment to the only pointer type in a SumType
+@safe unittest
+{
+    SumType!(string, int) sm = 123;
+    sm = "this should be @safe";
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
