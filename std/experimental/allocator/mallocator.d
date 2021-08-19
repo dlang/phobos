@@ -28,7 +28,7 @@ struct Mallocator
     programs that can afford to leak memory allocated.
     */
     @trusted @nogc nothrow pure
-    void[] allocate(size_t bytes) shared
+    void[] allocate(size_t bytes) shared const
     {
         import core.memory : pureMalloc;
         if (!bytes) return null;
@@ -38,7 +38,7 @@ struct Mallocator
 
     /// Ditto
     @system @nogc nothrow pure
-    bool deallocate(void[] b) shared
+    bool deallocate(void[] b) shared const
     {
         import core.memory : pureFree;
         pureFree(b.ptr);
@@ -47,7 +47,7 @@ struct Mallocator
 
     /// Ditto
     @system @nogc nothrow pure
-    bool reallocate(ref void[] b, size_t s) shared
+    bool reallocate(ref void[] b, size_t s) shared const
     {
         import core.memory : pureRealloc;
         if (!s)
@@ -65,7 +65,7 @@ struct Mallocator
     }
 
     @trusted @nogc nothrow pure
-    package void[] allocateZeroed()(size_t bytes) shared
+    package void[] allocateZeroed()(size_t bytes) shared const
     {
         import core.memory : pureCalloc;
         if (!bytes) return null;
