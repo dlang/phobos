@@ -446,7 +446,7 @@ private:
     calendar-based operations, and getting individual units from it such as
     years or days is going to involve conversions and be less efficient.
 
-    An $(I hnsec) is 100 nanoseconds. There are 10,000,000 hnsecs in a second.
+    An $(I hnsec) (hecto-nanosecond) is 100 nanoseconds. There are 10,000,000 hnsecs in a second.
 
     For calendar-based operations that don't
     care about time zones, then $(REF DateTime,std,datetime,date) would be
