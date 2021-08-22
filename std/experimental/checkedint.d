@@ -1768,9 +1768,11 @@ static:
     auto y = checked!Abort(-1);
 
     // Temporarily redirect output to stderr to make sure we get the right output.
+    import std.file : exists, remove;
     import std.process : uniqueTempPath;
     import std.stdio : stderr;
     auto tmpname = uniqueTempPath;
+    scope(exit) if (exists(tmpname)) remove(tmpname);
     auto t = stderr;
     stderr.open(tmpname, "w");
     // Open a new scope to minimize code ran with stderr redirected.

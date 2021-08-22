@@ -75,6 +75,7 @@
  *           $(LREF SharedOf)
  *           $(LREF SharedInoutOf)
  *           $(LREF SharedConstOf)
+ *           $(LREF SharedConstInoutOf)
  *           $(LREF ImmutableOf)
  *           $(LREF QualifierOf)
  * ))
@@ -178,89 +179,11 @@ import std.meta : staticMapMeta = staticMap;
 alias staticMap = staticMapMeta;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Functions
+// Type lists
 ///////////////////////////////////////////////////////////////////////////////
 
-// Petit demangler
-// (this or similar thing will eventually go to std.demangle if necessary
-//  ctfe stuffs are available)
 private
 {
-    struct Demangle(T)
-    {
-        T       value;  // extracted information
-        string  rest;
-    }
-
-    /* Demangles mstr as the storage class part of Argument. */
-    Demangle!uint demangleParameterStorageClass(string mstr)
-    {
-        uint pstc = 0; // parameter storage class
-
-        // Argument --> Argument2 | M Argument2
-        if (mstr.length > 0 && mstr[0] == 'M')
-        {
-            pstc |= ParameterStorageClass.scope_;
-            mstr  = mstr[1 .. $];
-        }
-
-        // Argument2 --> Type | J Type | K Type | L Type
-        ParameterStorageClass stc2;
-
-        switch (mstr.length ? mstr[0] : char.init)
-        {
-            case 'J': stc2 = ParameterStorageClass.out_;  break;
-            case 'K': stc2 = ParameterStorageClass.ref_;  break;
-            case 'L': stc2 = ParameterStorageClass.lazy_; break;
-            case 'N': if (mstr.length >= 2 && mstr[1] == 'k')
-                        stc2 = ParameterStorageClass.return_;
-                      break;
-            default : break;
-        }
-        if (stc2 != ParameterStorageClass.init)
-        {
-            pstc |= stc2;
-            mstr  = mstr[1 .. $];
-            if (stc2 & ParameterStorageClass.return_)
-                mstr  = mstr[1 .. $];
-        }
-
-        return Demangle!uint(pstc, mstr);
-    }
-
-    /* Demangles mstr as FuncAttrs. */
-    Demangle!uint demangleFunctionAttributes(string mstr)
-    {
-        immutable LOOKUP_ATTRIBUTE =
-        [
-            'a': FunctionAttribute.pure_,
-            'b': FunctionAttribute.nothrow_,
-            'c': FunctionAttribute.ref_,
-            'd': FunctionAttribute.property,
-            'e': FunctionAttribute.trusted,
-            'f': FunctionAttribute.safe,
-            'i': FunctionAttribute.nogc,
-            'j': FunctionAttribute.return_,
-            'l': FunctionAttribute.scope_,
-            'm': FunctionAttribute.live,
-        ];
-        uint atts = 0;
-
-        // FuncAttrs --> FuncAttr | FuncAttr FuncAttrs
-        // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf | Ni | Nj | Nm
-        // except 'Ng' == inout, because it is a qualifier of function type
-        while (mstr.length >= 2 && mstr[0] == 'N' && mstr[1] != 'g' && mstr[1] != 'k')
-        {
-            if (FunctionAttribute att = LOOKUP_ATTRIBUTE[ mstr[1] ])
-            {
-                atts |= att;
-                mstr  = mstr[2 .. $];
-            }
-            else assert(0);
-        }
-        return Demangle!uint(atts, mstr);
-    }
-
     static if (is(ucent))
     {
         alias CentTypeList         = AliasSeq!(cent, ucent);
@@ -284,22 +207,13 @@ private
     alias CharTypeList          = AliasSeq!(char, wchar, dchar);
 }
 
-package
-{
-    // Add the mutable qualifier to the given type T.
-    template MutableOf(T)     { alias MutableOf     =              T  ; }
-}
-
 /**
  * Params:
  *     T = The type to qualify
  * Returns:
  *     `T` with the `inout` qualifier added.
  */
-template InoutOf(T)
-{
-    alias InoutOf = inout(T);
-}
+alias InoutOf(T) = inout(T);
 
 ///
 @safe unittest
@@ -316,10 +230,7 @@ template InoutOf(T)
  * Returns:
  *     `T` with the `const` qualifier added.
  */
-template ConstOf(T)
-{
-    alias ConstOf = const(T);
-}
+alias ConstOf(T) = const(T);
 
 ///
 @safe unittest
@@ -336,10 +247,7 @@ template ConstOf(T)
  * Returns:
  *     `T` with the `shared` qualifier added.
  */
-template SharedOf(T)
-{
-    alias SharedOf = shared(T);
-}
+alias SharedOf(T) = shared(T);
 
 ///
 @safe unittest
@@ -356,10 +264,7 @@ template SharedOf(T)
  * Returns:
  *     `T` with the `inout` and `shared` qualifiers added.
  */
-template SharedInoutOf(T)
-{
-    alias SharedInoutOf = shared(inout(T));
-}
+alias SharedInoutOf(T) = shared(inout(T));
 
 ///
 @safe unittest
@@ -377,10 +282,7 @@ template SharedInoutOf(T)
  * Returns:
  *     `T` with the `const` and `shared` qualifiers added.
  */
-template SharedConstOf(T)
-{
-    alias SharedConstOf = shared(const(T));
-}
+alias SharedConstOf(T) = shared(const(T));
 
 ///
 @safe unittest
@@ -397,12 +299,27 @@ template SharedConstOf(T)
  * Params:
  *     T = The type to qualify
  * Returns:
+ *     `T` with the `const`, `shared`, and `inout` qualifiers added.
+ */
+alias SharedConstInoutOf(T) = shared(const(inout(T)));
+
+///
+@safe unittest
+{
+    static assert(is(SharedConstInoutOf!(int) == shared const inout int));
+    static assert(is(SharedConstInoutOf!(int) == const shared inout int));
+    static assert(is(SharedConstInoutOf!(inout int) == shared inout const int));
+    // immutable variables are implicitly shared and const
+    static assert(is(SharedConstInoutOf!(immutable int) == immutable int));
+}
+
+/**
+ * Params:
+ *     T = The type to qualify
+ * Returns:
  *     `T` with the `immutable` qualifier added.
  */
-template ImmutableOf(T)
-{
-    alias ImmutableOf = immutable(T);
-}
+alias ImmutableOf(T) = immutable(T);
 
 ///
 @safe unittest
@@ -415,7 +332,6 @@ template ImmutableOf(T)
 
 @safe unittest
 {
-    static assert(is(    MutableOf!int ==              int));
     static assert(is(      InoutOf!int ==        inout int));
     static assert(is(      ConstOf!int ==        const int));
     static assert(is(     SharedOf!int == shared       int));
@@ -436,28 +352,33 @@ template ImmutableOf(T)
  */
 template QualifierOf(T)
 {
-    static if (is(T == shared(const U), U))
-        alias QualifierOf = SharedConstOf;
-    else static if (is(T == const U, U))
-        alias QualifierOf = ConstOf;
-    else static if (is(T == shared(inout U), U))
-        alias QualifierOf = SharedInoutOf;
-    else static if (is(T == inout U, U))
-        alias QualifierOf = InoutOf;
-    else static if (is(T == immutable U, U))
+    static if (is(immutable T == T))
+    {
         alias QualifierOf = ImmutableOf;
-    else static if (is(T == shared U, U))
-        alias QualifierOf = SharedOf;
+    }
     else
-        alias QualifierOf = MutableOf;
+    {
+        private enum quals = is(const T == T) | (is(inout T == T) << 1) | (is(shared T == T) << 2);
+        static if (quals == 0)      { import std.meta : Alias; alias QualifierOf = Alias; }
+        else static if (quals == 1) alias QualifierOf = ConstOf;
+        else static if (quals == 2) alias QualifierOf = InoutOf;
+        else static if (quals == 3) alias QualifierOf = ConstInoutOf;
+        else static if (quals == 4) alias QualifierOf = SharedOf;
+        else static if (quals == 5) alias QualifierOf = SharedConstOf;
+        else static if (quals == 6) alias QualifierOf = SharedInoutOf;
+        else                        alias QualifierOf = SharedConstInoutOf;
+    }
 }
 
 ///
 @safe unittest
 {
+    static assert(__traits(isSame, QualifierOf!(shared const inout int), SharedConstInoutOf));
     static assert(__traits(isSame, QualifierOf!(immutable int), ImmutableOf));
     static assert(__traits(isSame, QualifierOf!(shared int), SharedOf));
     static assert(__traits(isSame, QualifierOf!(shared inout int), SharedInoutOf));
+    import std.meta : Alias;
+    static assert(__traits(isSame, QualifierOf!(int), Alias));
 }
 
 @safe unittest
@@ -473,7 +394,8 @@ template QualifierOf(T)
 
 version (StdUnittest)
 {
-    alias TypeQualifierList = AliasSeq!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
+    import std.meta : Alias;
+    alias TypeQualifierList = AliasSeq!(Alias, ConstOf, SharedOf, SharedConstOf, ImmutableOf);
 
     struct SubTypeOf(T)
     {
@@ -2279,15 +2201,18 @@ usually used for compile-time reflection purposes.
 template FunctionTypeOf(func...)
 if (func.length == 1 && isCallable!func)
 {
-    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function) || is(typeof(& func[0]) Fsym == delegate))
+    static if ((is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function)) || is(typeof(& func[0]) Fsym == delegate))
     {
         alias FunctionTypeOf = Fsym; // HIT: (nested) function symbol
     }
-    else static if (is(typeof(& func[0].opCall) Fobj == delegate))
+    else static if (is(typeof(& func[0].opCall) Fobj == delegate) || is(typeof(& func[0].opCall!()) Fobj == delegate))
     {
         alias FunctionTypeOf = Fobj; // HIT: callable object
     }
-    else static if (is(typeof(& func[0].opCall) Ftyp : Ftyp*) && is(Ftyp == function))
+    else static if (
+            (is(typeof(& func[0].opCall) Ftyp : Ftyp*) && is(Ftyp == function)) ||
+            (is(typeof(& func[0].opCall!()) Ftyp : Ftyp*) && is(Ftyp == function))
+        )
     {
         alias FunctionTypeOf = Ftyp; // HIT: callable type
     }
@@ -2347,6 +2272,13 @@ if (func.length == 1 && isCallable!func)
     StaticCallable* stcall_ptr;
     static assert(is( FunctionTypeOf!stcall_val == typeof(test) ));
     static assert(is( FunctionTypeOf!stcall_ptr == typeof(test) ));
+
+    struct TemplatedOpCallF { int opCall()(int) { return 0; } }
+    static assert(is( FunctionTypeOf!TemplatedOpCallF == typeof(TemplatedOpCallF.opCall!()) ));
+
+    int foovar;
+    struct TemplatedOpCallDg { int opCall()() { return foovar; } }
+    static assert(is( FunctionTypeOf!TemplatedOpCallDg == typeof(TemplatedOpCallDg.opCall!()) ));
 
     interface Overloads
     {
@@ -5877,9 +5809,8 @@ template IntegralTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (is(immutable X == immutable U, U) && is(U == byte) || is(U == ubyte)
-        || is(U == short) || is(U == ushort) || is(U == int) || is(U == uint)
-        || (__traits(isIntegral, U) && U.sizeof >= ulong.sizeof && !is(U == __vector))) // handle long and cent.
+    static if (__traits(isIntegral, X) && __traits(isZeroInit, X) // Not char, wchar, or dchar.
+        && !is(immutable X == immutable bool) && !is(X == __vector))
     {
         alias IntegralTypeOf = X;
     }
@@ -6085,13 +6016,14 @@ template DynamicArrayTypeOf(T)
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
         static foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
             static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
             static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-            static foreach (P; AliasSeq!(MutableOf, ConstOf, ImmutableOf))
+            static foreach (P; AliasSeq!(Alias, ConstOf, ImmutableOf))
             {
                 static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
                 static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -6153,8 +6085,9 @@ template StringTypeOf(T)
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; CharTypeList)
-        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf, InoutOf))
+        static foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, InoutOf))
         {
             static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
@@ -6236,16 +6169,21 @@ template AssocArrayTypeOf(T)
  */
 template BuiltinTypeOf(T)
 {
-         static if (is(T : void))               alias BuiltinTypeOf = void;
-    else static if (is(BooleanTypeOf!T X))      alias BuiltinTypeOf = X;
-    else static if (is(IntegralTypeOf!T X))     alias BuiltinTypeOf = X;
-    else static if (is(FloatingPointTypeOf!T X))alias BuiltinTypeOf = X;
-    else static if (is(T : const(ireal)))       alias BuiltinTypeOf = ireal;  //TODO
-    else static if (is(T : const(creal)))       alias BuiltinTypeOf = creal;  //TODO
-    else static if (is(CharTypeOf!T X))         alias BuiltinTypeOf = X;
-    else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
-    else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
-    else                                        static assert(0);
+    static if (is(T : void))
+        alias BuiltinTypeOf = void;
+    else
+    {
+        static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+            alias X = BuiltinTypeOf!AT;
+        else
+            alias X = OriginalType!T;
+        static if (__traits(isArithmetic, X) && !is(X == __vector) ||
+                __traits(isStaticArray, X) || is(X == E[], E) ||
+                __traits(isAssociativeArray, X))
+            alias BuiltinTypeOf = X;
+        else
+            static assert(0);
+    }
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -6280,7 +6218,16 @@ enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
  * Detect whether `T` is a built-in integral type. Types `bool`,
  * `char`, `wchar`, and `dchar` are not considered integral.
  */
-enum bool isIntegral(T) = __traits(isIntegral, T) && is(IntegralTypeOf!T);
+template isIntegral(T)
+{
+    static if (!__traits(isIntegral, T))
+        enum isIntegral = false;
+    else static if (is(T U == enum))
+        enum isIntegral = isIntegral!U;
+    else
+        enum isIntegral = __traits(isZeroInit, T) // Not char, wchar, or dchar.
+            && !is(immutable T == immutable bool) && !is(T == __vector);
+}
 
 ///
 @safe unittest
@@ -6430,7 +6377,7 @@ template isNumeric(T)
         alias val this;
     }
 
-    static assert(!isIntegral!S);
+    static assert(!isNumeric!S);
 }
 
 @safe unittest
@@ -6648,7 +6595,15 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T)
  * The built-in char types are any of `char`, `wchar` or `dchar`, with
  * or without qualifiers.
  */
-enum bool isSomeChar(T) = __traits(isUnsigned, T) && is(CharTypeOf!T);
+template isSomeChar(T)
+{
+    static if (!__traits(isUnsigned, T))
+        enum isSomeChar = false;
+    else static if (is(T U == enum))
+        enum isSomeChar = isSomeChar!U;
+    else
+        enum isSomeChar = !__traits(isZeroInit, T);
+}
 
 ///
 @safe unittest
@@ -6777,9 +6732,10 @@ enum bool isNarrowString(T) = is(immutable T == immutable C[], C) && (is(C == ch
 
 @safe unittest
 {
+    import std.meta : Alias;
     static foreach (T; AliasSeq!(char[], string, wstring))
     {
-        static foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        static foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf)/*TypeQualifierList*/)
         {
             static assert( isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
@@ -7589,6 +7545,11 @@ template isCallable(alias callable)
     else static if (is(typeof(&callable.opCall) V : V*) && is(V == function))
         // T is a type which has a static member function opCall().
         enum bool isCallable = true;
+    else static if (is(typeof(&callable.opCall!())))
+    {
+        alias TemplateInstanceType = typeof(&callable.opCall!());
+        enum bool isCallable = isCallable!TemplateInstanceType;
+    }
     else static if (is(typeof(&callable!())))
     {
         alias TemplateInstanceType = typeof(&callable!());
@@ -7628,9 +7589,13 @@ template isCallable(alias callable)
 {
     void f()() { }
     T g(T = int)(T x) { return x; }
+    struct S1 { static void opCall()() { } }
+    struct S2 { static T opCall(T = int)(T x) {return x; } }
 
     static assert( isCallable!f);
     static assert( isCallable!g);
+    static assert( isCallable!S1);
+    static assert( isCallable!S2);
 }
 
 /// Overloaded functions and function templates.

@@ -1371,6 +1371,41 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
     assert(a == [ 1, 2, 1, 2, 3, 4 ]);
     a.insertInPlace(3, 10u, 11);
     assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
+
+    union U
+    {
+        float a = 3.0;
+        int b;
+    }
+
+    U u1 = { b : 3 };
+    U u2 = { b : 4 };
+    U u3 = { b : 5 };
+    U[] unionArr = [u2, u3];
+    unionArr.insertInPlace(2, [u1]);
+    assert(unionArr == [u2, u3, u1]);
+    unionArr.insertInPlace(0, [u3, u2]);
+    assert(unionArr == [u3, u2, u2, u3, u1]);
+
+    static class C
+    {
+        int a;
+        float b;
+
+        this(int a, float b) { this.a = a; this.b = b; }
+    }
+
+    C c1 = new C(42, 1.0);
+    C c2 = new C(0, 0.0);
+    C c3 = new C(int.max, float.init);
+
+    C[] classArr = [c1, c2, c3];
+    insertInPlace(classArr, 3, [c2, c3]);
+    C[5] classArr1 = classArr;
+    assert(classArr1 == [c1, c2, c3, c2, c3]);
+    insertInPlace(classArr, 0, c3, c1);
+    C[7] classArr2 = classArr;
+    assert(classArr2 == [c3, c1, c1, c2, c3, c2, c3]);
 }
 
 //constraint helpers
@@ -1953,7 +1988,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
    See_Also:
         For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
-ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 if (isInputRange!RoR &&
     isInputRange!(Unqual!(ElementType!RoR)) &&
     isInputRange!R &&
@@ -3265,7 +3300,7 @@ if (isDynamicArray!A)
     {
         size_t capacity;
         Unqual!T[] arr;
-        bool canExtend = false;
+        bool tryExtendBlock = false;
     }
 
     private Data* _data;
@@ -3276,7 +3311,7 @@ if (isDynamicArray!A)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(A arr) @trusted pure nothrow
+    this(A arr) @trusted
     {
         // initialize to a given array.
         _data = new Data;
@@ -3325,7 +3360,7 @@ if (isDynamicArray!A)
      * managed array can accommodate before triggering a reallocation). If any
      * appending will reallocate, `0` will be returned.
      */
-    @property size_t capacity() const @safe pure nothrow
+    @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
     }
@@ -3334,7 +3369,7 @@ if (isDynamicArray!A)
      * Use opSlice() from now on.
      * Returns: The managed array.
      */
-    @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
+    @property inout(T)[] data() inout @trusted
     {
         return this[];
     }
@@ -3342,7 +3377,7 @@ if (isDynamicArray!A)
     /**
      * Returns: The managed array.
      */
-    @property inout(ElementEncodingType!A)[] opSlice() inout @trusted pure nothrow
+    @property inout(T)[] opSlice() inout @trusted
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -3385,7 +3420,7 @@ if (isDynamicArray!A)
             // have better access to the capacity field.
             auto newlen = appenderNewCapacity!(T.sizeof)(_data.capacity, reqlen);
             // first, try extending the current block
-            if (_data.canExtend)
+            if (_data.tryExtendBlock)
             {
                 immutable u = (() @trusted => GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof))();
                 if (u)
@@ -3410,7 +3445,7 @@ if (isDynamicArray!A)
             if (len)
                 () @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
             _data.arr = (() @trusted => (cast(Unqual!T*) bi.base)[0 .. len])();
-            _data.canExtend = true;
+            _data.tryExtendBlock = true;
             // leave the old data, for safety reasons
         }
     }
@@ -3653,7 +3688,7 @@ if (isDynamicArray!A)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     auto app = appender!string();
     string b = "abcdefg";
@@ -3691,7 +3726,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17251
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct R
     {
@@ -3707,7 +3742,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13300
-@safe unittest
+@safe pure nothrow unittest
 {
     static test(bool isPurePostblit)()
     {
@@ -3743,7 +3778,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19572
-@system unittest
+@safe pure nothrow unittest
 {
     static struct Struct
     {
@@ -3763,7 +3798,7 @@ if (isDynamicArray!A)
     assert(result.value != 23);
 }
 
-@safe unittest
+@safe pure unittest
 {
     import std.conv : to;
     import std.utf : byCodeUnit;
@@ -3774,7 +3809,7 @@ if (isDynamicArray!A)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21256
-@safe unittest
+@safe pure unittest
 {
     Appender!string app1;
     app1.toString();
@@ -3788,7 +3823,7 @@ if (isDynamicArray!A)
 //arg curLen: The current length
 //arg reqLen: The length as requested by the user
 //ret sugLen: A suggested growth.
-private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
+private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 {
     import core.bitop : bsr;
     import std.algorithm.comparison : max;
@@ -3816,6 +3851,8 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 struct RefAppender(A)
 if (isDynamicArray!A)
 {
+    private alias T = ElementEncodingType!A;
+
     private
     {
         Appender!A impl;
@@ -3878,7 +3915,7 @@ if (isDynamicArray!A)
     /* Use opSlice() instead.
      * Returns: the managed array.
      */
-    @property inout(ElementEncodingType!A)[] data() inout
+    @property inout(T)[] data() inout
     {
         return impl[];
     }
@@ -3893,7 +3930,7 @@ if (isDynamicArray!A)
 }
 
 ///
-@system pure nothrow
+@safe pure nothrow
 unittest
 {
     int[] a = [1, 2];
@@ -3929,63 +3966,48 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe pure nothrow unittest
 {
-    import std.exception;
-    {
-        auto app = appender!(char[])();
-        string b = "abcdefg";
-        foreach (char c; b) app.put(c);
-        assert(app[] == "abcdefg");
-    }
-    {
-        auto app = appender!(char[])();
-        string b = "abcdefg";
-        foreach (char c; b) app ~= c;
-        assert(app[] == "abcdefg");
-    }
-    {
-        int[] a = [ 1, 2 ];
-        auto app2 = appender(a);
-        assert(app2[] == [ 1, 2 ]);
-        app2.put(3);
-        app2.put([ 4, 5, 6 ][]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-        app2.put([ 7 ]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
-    }
+    auto app = appender!(char[])();
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app[] == "abcdefg");
+}
 
+@safe pure nothrow unittest
+{
+    auto app = appender!(char[])();
+    string b = "abcdefg";
+    foreach (char c; b) app ~= c;
+    assert(app[] == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     assert(app2[] == [ 1, 2 ]);
-    app2 ~= 3;
-    app2 ~= [ 4, 5, 6 ][];
+    app2.put(3);
+    app2.put([ 4, 5, 6 ][]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-    app2 ~= [ 7 ];
+    app2.put([ 7 ]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
+}
 
-    app2.reserve(5);
-    assert(app2.capacity >= 5);
-
-    try // shrinkTo may throw
-    {
-        app2.shrinkTo(3);
-    }
-    catch (Exception) assert(0);
-    assert(app2[] == [ 1, 2, 3 ]);
-    assertThrown(app2.shrinkTo(5));
-
-    const app3 = app2;
-    assert(app3.capacity >= 3);
-    assert(app3[] == [1, 2, 3]);
-
+@safe pure nothrow unittest
+{
     auto app4 = appender([]);
     try // shrinkTo may throw
     {
         app4.shrinkTo(0);
     }
     catch (Exception) assert(0);
+}
 
-    // https://issues.dlang.org/show_bug.cgi?id=5663
-    // https://issues.dlang.org/show_bug.cgi?id=9725
+// https://issues.dlang.org/show_bug.cgi?id=5663
+// https://issues.dlang.org/show_bug.cgi?id=9725
+@safe pure nothrow unittest
+{
+    import std.exception : assertNotThrown;
+
     static foreach (S; AliasSeq!(char[], const(char)[], string))
     {
         {
@@ -4016,6 +4038,12 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
             assert(app5663m[] == "\xE3");
         }
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=10122
+@safe pure nothrow unittest
+{
+    import std.exception : assertCTFEable;
 
     static struct S10122
     {
@@ -4030,6 +4058,35 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         w.put(S10122(1));
         assert(w[].length == 1 && w[][0].val == 1);
     });
+}
+
+@safe pure nothrow unittest
+{
+    import std.exception : assertThrown;
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(a);
+    assert(app2[] == [ 1, 2 ]);
+    app2 ~= 3;
+    app2 ~= [ 4, 5, 6 ][];
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
+    app2 ~= [ 7 ];
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6, 7 ]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    try // shrinkTo may throw
+    {
+        app2.shrinkTo(3);
+    }
+    catch (Exception) assert(0);
+    assert(app2[] == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
+
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3[] == [1, 2, 3]);
 }
 
 ///
@@ -4053,63 +4110,63 @@ unittest
 
 @safe pure nothrow unittest
 {
+    auto w = appender!string();
+    w.reserve(4);
+    cast(void) w.capacity;
+    cast(void) w[];
+    try
     {
-        auto w = appender!string();
-        w.reserve(4);
-        cast(void) w.capacity;
-        cast(void) w[];
-        try
-        {
-            wchar wc = 'a';
-            dchar dc = 'a';
-            w.put(wc);    // decoding may throw
-            w.put(dc);    // decoding may throw
-        }
-        catch (Exception) assert(0);
+        wchar wc = 'a';
+        dchar dc = 'a';
+        w.put(wc);    // decoding may throw
+        w.put(dc);    // decoding may throw
     }
+    catch (Exception) assert(0);
+}
+
+@safe pure nothrow unittest
+{
+    auto w = appender!(int[])();
+    w.reserve(4);
+    cast(void) w.capacity;
+    cast(void) w[];
+    w.put(10);
+    w.put([10]);
+    w.clear();
+    try
     {
-        auto w = appender!(int[])();
-        w.reserve(4);
-        cast(void) w.capacity;
-        cast(void) w[];
-        w.put(10);
-        w.put([10]);
-        w.clear();
-        try
-        {
-            w.shrinkTo(0);
-        }
-        catch (Exception) assert(0);
-
-        struct N
-        {
-            int payload;
-            alias payload this;
-        }
-        w.put(N(1));
-        w.put([N(2)]);
-
-        struct S(T)
-        {
-            @property bool empty() { return true; }
-            @property T front() { return T.init; }
-            void popFront() {}
-        }
-        S!int r;
-        w.put(r);
+        w.shrinkTo(0);
     }
+    catch (Exception) assert(0);
+
+    struct N
+    {
+        int payload;
+        alias payload this;
+    }
+    w.put(N(1));
+    w.put([N(2)]);
+
+    struct S(T)
+    {
+        @property bool empty() { return true; }
+        @property T front() { return T.init; }
+        void popFront() {}
+    }
+    S!int r;
+    w.put(r);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10690
-@safe unittest
+@safe pure nothrow unittest
 {
-    import std.algorithm;
-    import std.typecons;
+    import std.algorithm.iteration : filter;
+    import std.typecons : tuple;
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -4129,7 +4186,7 @@ unittest
     au1.put(sc1.repeat().take(10));
 }
 
-@system unittest
+@system pure unittest
 {
     import std.range;
     struct S2
@@ -4141,7 +4198,7 @@ unittest
     au2.put(sc2.repeat().take(10));
 }
 
-@system unittest
+@system pure nothrow unittest
 {
     struct S
     {
@@ -4175,7 +4232,7 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=9528
-@safe unittest
+@safe pure nothrow unittest
 {
     const(E)[] fastCopy(E)(E[] src) {
             auto app = appender!(const(E)[])();
@@ -4193,7 +4250,7 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=10753
-@safe unittest
+@safe pure unittest
 {
     import std.algorithm.iteration : map;
     struct Foo {
@@ -4206,7 +4263,7 @@ unittest
     [1, 2].map!Bar.array;
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4255,7 +4312,7 @@ unittest
     assert(app8[] == null);
 }
 
-@safe unittest //Test large allocations (for GC.extend)
+@safe pure nothrow unittest //Test large allocations (for GC.extend)
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -4266,7 +4323,7 @@ unittest
     assert(equal(app[], 'a'.repeat(100_000)));
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
     auto arr = reference.dup;
@@ -4276,7 +4333,7 @@ unittest
     assert(reference[] == arr[]);
 }
 
-@safe unittest // clear method is supported only for mutable element types
+@safe pure nothrow unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     app.put("foo");
@@ -4284,7 +4341,7 @@ unittest
     assert(app[] == "foo");
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     static struct D//dynamic
     {
@@ -4343,7 +4400,7 @@ RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 }
 
 ///
-@system pure nothrow
+@safe pure nothrow
 unittest
 {
     int[] a = [1, 2];
@@ -4359,35 +4416,41 @@ unittest
     assert(app2.capacity >= 5);
 }
 
-@system unittest
+@safe pure nothrow unittest
 {
-    import std.exception;
-    {
-        auto arr = new char[0];
-        auto app = appender(&arr);
-        string b = "abcdefg";
-        foreach (char c; b) app.put(c);
-        assert(app[] == "abcdefg");
-        assert(arr == "abcdefg");
-    }
-    {
-        auto arr = new char[0];
-        auto app = appender(&arr);
-        string b = "abcdefg";
-        foreach (char c; b) app ~= c;
-        assert(app[] == "abcdefg");
-        assert(arr == "abcdefg");
-    }
-    {
-        int[] a = [ 1, 2 ];
-        auto app2 = appender(&a);
-        assert(app2[] == [ 1, 2 ]);
-        assert(a == [ 1, 2 ]);
-        app2.put(3);
-        app2.put([ 4, 5, 6 ][]);
-        assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
-        assert(a == [ 1, 2, 3, 4, 5, 6 ]);
-    }
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app[] == "abcdefg");
+    assert(arr == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app ~= c;
+    assert(app[] == "abcdefg");
+    assert(arr == "abcdefg");
+}
+
+@safe pure nothrow unittest
+{
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(&a);
+    assert(app2[] == [ 1, 2 ]);
+    assert(a == [ 1, 2 ]);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ][]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+}
+
+@safe pure nothrow unittest
+{
+    import std.exception : assertThrown;
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
@@ -4415,13 +4478,13 @@ unittest
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=14605
-@safe unittest
+@safe pure nothrow unittest
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
@@ -4429,7 +4492,7 @@ unittest
     assert(app[] == [1, 2, 3]);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     string s = "hello".idup;
     char[] a = "hello".dup;
@@ -4471,7 +4534,7 @@ pragma(inline, true) T[n] staticArray(T, size_t n)(auto ref T[n] a)
 }
 
 /// static array from array literal
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto a = [0, 1].staticArray;
     static assert(is(typeof(a) == int[2]));
@@ -4485,14 +4548,14 @@ if (!is(T == U) && is(T : U))
 }
 
 /// static array from array with implicit casting of elements
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto b = [0, 1].staticArray!long;
     static assert(is(typeof(b) == long[2]));
     assert(b == [0, 1]);
 }
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     int val = 3;
     static immutable gold = [1, 2, 3];
@@ -4589,7 +4652,7 @@ if (isInputRange!T && is(ElementType!T : U))
 }
 
 /// static array from range + size
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 
@@ -4605,8 +4668,7 @@ nothrow pure @safe unittest
 // Tests that code compiles when there is an elaborate destructor and exceptions
 // are thrown. Unfortunately can't test that memory is initialized
 // before having a destructor called on it.
-// @system required because of https://issues.dlang.org/show_bug.cgi?id=18872.
-@system nothrow unittest
+@safe nothrow unittest
 {
     // exists only to allow doing something in the destructor. Not tested
     // at the end because value appears to depend on implementation of the.
@@ -4644,7 +4706,7 @@ nothrow pure @safe unittest
 }
 
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     auto a = [1, 2].staticArray;
     assert(is(typeof(a) == int[2]) && a == [1, 2]);
@@ -4656,7 +4718,7 @@ nothrow pure @safe unittest
     2.iota.staticArray!(long[2]).checkStaticArray!long([0, 1]);
 }
 
-nothrow pure @system unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
     size_t copiedAmount;
@@ -4681,7 +4743,7 @@ if (isInputRange!(typeof(a)))
 }
 
 /// static array from CT range
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 
@@ -4694,7 +4756,7 @@ nothrow pure @safe unittest
     assert(b == [0, 1]);
 }
 
-nothrow pure @safe unittest
+nothrow pure @safe @nogc unittest
 {
     import std.range : iota;
 

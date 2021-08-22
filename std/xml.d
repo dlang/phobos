@@ -433,7 +433,7 @@ enum DecodeMode
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
  */
-string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
+string decode(return scope string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
 {
     import std.algorithm.searching : startsWith;
 
@@ -2959,7 +2959,7 @@ private alias Err = CheckException;
 
 private
 {
-    inout(T) toType(T)(inout Object o)
+    inout(T) toType(T)(inout return scope Object o)
     {
         T t = cast(T)(o);
         if (t is null)

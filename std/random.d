@@ -3362,8 +3362,8 @@ if (isRandomAccessRange!Range)
     // Optionally @nogc std.random.randomCover
     // https://issues.dlang.org/show_bug.cgi?id=14001
     auto rng = Xorshift(123_456_789);
-    int[5] sa = [1, 2, 3, 4, 5];
-    auto r = randomCover(sa[], rng);
+    static immutable int[] sa = [1, 2, 3, 4, 5];
+    auto r = randomCover(sa, rng);
     assert(!r.empty);
     const x = r.front;
     r.popFront();

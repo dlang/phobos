@@ -24,9 +24,9 @@ environment:
 
 # Linux
 task:
-  name: Ubuntu 16.04 $TASK_NAME_SUFFIX
+  name: Ubuntu 18.04 $TASK_NAME_SUFFIX
   container:
-    image: ubuntu:16.04
+    image: ubuntu:18.04
     cpu: 4
     memory: 8G
   timeout_in: 60m
@@ -52,14 +52,28 @@ task:
 
 # FreeBSD
 task:
-  name: FreeBSD 12.1 x64
+  name: FreeBSD 12.2 x64
   freebsd_instance:
-    image_family: freebsd-12-1
+    image_family: freebsd-12-2
     cpu: 4
     memory: 8G
   timeout_in: 60m
   environment:
     OS_NAME: freebsd
     CI_DFLAGS: -version=TARGET_FREEBSD12
+  install_bash_and_git_script: pkg install -y bash git
+  << : *COMMON_STEPS_TEMPLATE
+
+task:
+  name: FreeBSD 11.4 x64
+  freebsd_instance:
+    image_family: freebsd-11-4
+    cpu: 4
+    memory: 8G
+  timeout_in: 60m
+  environment:
+    OS_NAME: freebsd
+    HOST_DMD: dmd-2.079.0
+    CI_DFLAGS: -version=TARGET_FREEBSD11
   install_bash_and_git_script: pkg install -y bash git
   << : *COMMON_STEPS_TEMPLATE

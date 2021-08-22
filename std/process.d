@@ -276,7 +276,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    inout(char)[] opIndexAssign(inout char[] value, scope const(char)[] name) @trusted
+    inout(char)[] opIndexAssign(return inout char[] value, scope const(char)[] name) @trusted
     {
         version (Posix)
         {
@@ -1880,6 +1880,7 @@ version (Windows)
 @system unittest
 {
     auto fn = uniqueTempPath();
+    scope(exit) if (exists(fn)) remove(fn);
     std.file.write(fn, "AAAAAAAAAA");
 
     auto f = File(fn, "a");
@@ -1894,11 +1895,12 @@ version (Windows)
 // with indicating a workDir.
 version (Posix) @system unittest
 {
-    import std.file : mkdir, write, setAttributes;
+    import std.file : mkdir, write, setAttributes, rmdirRecurse;
     import std.conv : octal;
 
     auto dir = uniqueTempPath();
     mkdir(dir);
+    scope(exit) rmdirRecurse(dir);
     write(dir ~ "/program", "#!/bin/sh\necho Hello");
     setAttributes(dir ~ "/program", octal!700);
 
@@ -1937,7 +1939,7 @@ Pid spawnShell(scope const(char)[] command,
                Config config = Config.none,
                scope const(char)[] workDir = null,
                scope string shellPath = nativeShell)
-    @safe
+    @trusted // See reason below
 {
     version (Windows)
     {
@@ -1955,6 +1957,11 @@ Pid spawnShell(scope const(char)[] command,
         args[0] = shellPath;
         args[1] = shellSwitch;
         args[2] = command;
+        /* The passing of args converts the static array, which is initialized with `scope` pointers,
+         * to a dynamic array, which is also a scope parameter. So, it is a scope pointer to a
+         * scope pointer, which although is safely used here, D doesn't allow transitive scope.
+         * See https://github.com/dlang/dmd/pull/10951
+         */
         return spawnProcessPosix(args, stdin, stdout, stderr, env, config, workDir);
     }
     else
@@ -3378,11 +3385,12 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     // Temporarily disable output to stderr so as to not spam the build log.
     import std.stdio : stderr;
     import std.typecons : Tuple;
-    import std.file : readText;
+    import std.file : readText, exists, remove;
     import std.traits : ReturnType;
 
     ReturnType!executeShell r;
     auto tmpname = uniqueTempPath;
+    scope(exit) if (exists(tmpname)) remove(tmpname);
     auto t = stderr;
     // Open a new scope to minimize code ran with stderr redirected.
     {
@@ -3649,7 +3657,7 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
             assert(escapeShellCommand(test.args) == test.posix  );
 }
 
-private string escapeShellCommandString(string command) @safe pure
+private string escapeShellCommandString(return scope string command) @safe pure
 {
     version (Windows)
         return escapeWindowsShellCommand(command);

@@ -148,7 +148,7 @@ version (StdUnittest)
 private:
     struct TestAliasedString
     {
-        string get() @safe @nogc pure nothrow { return _s; }
+        string get() @safe @nogc pure nothrow return scope { return _s; }
         alias get this;
         @disable this(this);
         string _s;
@@ -240,6 +240,17 @@ if (isSomeChar!Char)
     return cString ? cString[0 .. cstrlen(cString)] : null;
 }
 
+/// ditto
+inout(Char)[] fromStringz(Char)(return scope inout(Char)[] cString) @nogc @safe pure nothrow
+if (isSomeChar!Char)
+{
+    foreach (i; 0 .. cString.length)
+        if (cString[i] == '\0')
+            return cString[0 .. i];
+
+    return cString;
+}
+
 ///
 @system pure unittest
 {
@@ -250,6 +261,44 @@ if (isSomeChar!Char)
     assert(fromStringz("福\0"c.ptr) == "福"c);
     assert(fromStringz("福\0"w.ptr) == "福"w);
     assert(fromStringz("福\0"d.ptr) == "福"d);
+}
+
+///
+@nogc @safe pure nothrow unittest
+{
+    struct C
+    {
+        char[32] name;
+    }
+    assert(C("foo\0"c).name.fromStringz() == "foo"c);
+
+    struct W
+    {
+        wchar[32] name;
+    }
+    assert(W("foo\0"w).name.fromStringz() == "foo"w);
+
+    struct D
+    {
+        dchar[32] name;
+    }
+    assert(D("foo\0"d).name.fromStringz() == "foo"d);
+}
+
+@nogc @safe pure nothrow unittest
+{
+    assert( string.init.fromStringz() == ""c);
+    assert(wstring.init.fromStringz() == ""w);
+    assert(dstring.init.fromStringz() == ""d);
+
+    immutable  char[3] a = "foo"c;
+    assert(a.fromStringz() == "foo"c);
+
+    immutable wchar[3] b = "foo"w;
+    assert(b.fromStringz() == "foo"w);
+
+    immutable dchar[3] c = "foo"d;
+    assert(c.fromStringz() == "foo"d);
 }
 
 @system pure unittest
@@ -2632,8 +2681,12 @@ if (isSomeChar!C)
 
     enum S : string { a = "hello\nworld" }
     assert(S.a.splitLines() == ["hello", "world"]);
+}
 
-    char[S.a.length] sa = S.a[];
+@system pure nothrow unittest
+{
+    // dip1000 cannot express an array of scope arrays, so this is not @safe
+    char[11] sa = "hello\nworld";
     assert(sa.splitLines() == ["hello", "world"]);
 }
 
@@ -6432,7 +6485,7 @@ if (isConvertibleToString!Range)
  * See_Also:
  *  $(LREF soundexer)
  */
-char[] soundex(scope const(char)[] str, char[] buffer = null)
+char[] soundex(scope const(char)[] str, return scope char[] buffer = null)
     @safe pure nothrow
 in
 {
@@ -6654,7 +6707,7 @@ string[string] abbrev(string[] values) @safe pure
  */
 
 size_t column(Range)(Range str, in size_t tabsize = 8)
-if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
+if ((isInputRange!Range && isSomeChar!(ElementEncodingType!Range) ||
     isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
@@ -6937,7 +6990,7 @@ void main() {
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S[] outdent(S)(S[] lines) @safe pure
+S[] outdent(S)(return scope S[] lines) @safe pure
 if (isSomeString!S)
 {
     import std.algorithm.searching : startsWith;

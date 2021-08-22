@@ -127,19 +127,19 @@ nothrow @safe pure:
     }
 
     @property
-    bool empty() const
+    bool empty() const scope
     {
         assert((_first is null) == (_last is null), "DList.Range: Invalidated state");
         return !_first;
     }
 
-    @property BaseNode* front()
+    @property BaseNode* front() return scope
     {
         assert(!empty, "DList.Range.front: Range is empty");
         return _first;
     }
 
-    void popFront()
+    void popFront() scope
     {
         assert(!empty, "DList.Range.popFront: Range is empty");
         if (_first is _last)
@@ -153,13 +153,13 @@ nothrow @safe pure:
         }
     }
 
-    @property BaseNode* back()
+    @property BaseNode* back() return scope
     {
         assert(!empty, "DList.Range.front: Range is empty");
         return _last;
     }
 
-    void popBack()
+    void popBack() scope
     {
         assert(!empty, "DList.Range.popBack: Range is empty");
         if (_first is _last)
@@ -174,7 +174,7 @@ nothrow @safe pure:
     }
 
     /// Forward range primitive.
-    @property DRange save() { return this; }
+    @property DRange save() return scope { return this; }
 }
 
 /**

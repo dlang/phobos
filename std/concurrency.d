@@ -387,17 +387,17 @@ public:
      * that a Tid executed in the future will have the same toString() output
      * as another Tid that has already terminated.
      */
-    void toString(scope void delegate(const(char)[]) sink) const
+    void toString(W)(ref W w) const
     {
         import std.format.write : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
+        auto p = () @trusted { return cast(void*) mbox; }();
+        formattedWrite(w, "Tid(%x)", p);
     }
 
 }
 
-@system unittest
+@safe unittest
 {
-    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
@@ -510,7 +510,9 @@ private template isSpawnable(F, T...)
  *  to `fn` must either be `shared` or `immutable` or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- */
+ *
+ * Similarly, if `fn` is a delegate, it must not have unshared aliases, meaning
+ * `fn` must be either `shared` or `immutable`. */
 Tid spawn(F, T...)(F fn, T args)
 if (isSpawnable!(F, T))
 {

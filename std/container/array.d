@@ -322,47 +322,9 @@ if (!is(immutable T == immutable bool))
                 return;
             }
             immutable startEmplace = length;
-            if (_capacity < newLength)
-            {
-                // enlarge
-                static if (T.sizeof == 1)
-                {
-                    const nbytes = newLength;
-                }
-                else
-                {
-                    import core.checkedint : mulu;
-
-                    bool overflow;
-                    const nbytes = mulu(newLength, T.sizeof, overflow);
-                    if (overflow)
-                        assert(false, "Overflow");
-                }
-
-                static if (hasIndirections!T)
-                {
-                    auto newPayloadPtr = cast(T*) enforceMalloc(nbytes);
-                    auto newPayload = newPayloadPtr[0 .. newLength];
-                    memcpy(newPayload.ptr, _payload.ptr, startEmplace * T.sizeof);
-                    memset(newPayload.ptr + startEmplace, 0,
-                            (newLength - startEmplace) * T.sizeof);
-                    GC.addRange(newPayload.ptr, nbytes);
-                    GC.removeRange(_payload.ptr);
-                    free(_payload.ptr);
-                    _payload = newPayload;
-                }
-                else
-                {
-                    _payload = (cast(T*) enforceRealloc(_payload.ptr,
-                            nbytes))[0 .. newLength];
-                }
-                _capacity = newLength;
-            }
-            else
-            {
-                _payload = _payload.ptr[0 .. newLength];
-            }
+            reserve(newLength);
             initializeAll(_payload.ptr[startEmplace .. newLength]);
+            _payload = _payload.ptr[0 .. newLength];
         }
 
         @property size_t capacity() const
@@ -423,9 +385,17 @@ if (!is(immutable T == immutable bool))
         if (isImplicitlyConvertible!(Elem, T))
         {
             import core.lifetime : emplace;
+            assert(_capacity >= length);
             if (_capacity == length)
             {
-                reserve(1 + capacity * 3 / 2);
+                import core.checkedint : addu;
+
+                bool overflow;
+                immutable size_t newCapacity = addu(capacity, capacity / 2 + 1, overflow);
+                if (overflow)
+                    assert(false, "Overflow");
+
+                reserve(newCapacity);
             }
             assert(capacity > length && _payload.ptr,
                 "Failed to reserve memory");
@@ -438,22 +408,27 @@ if (!is(immutable T == immutable bool))
         size_t insertBack(Range)(Range r)
         if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T))
         {
+            immutable size_t oldLength = length;
+
             static if (hasLength!Range)
             {
-                immutable oldLength = length;
-                reserve(oldLength + r.length);
+                immutable size_t rLength = r.length;
+                reserve(oldLength + rLength);
             }
+
             size_t result;
             foreach (item; r)
             {
                 insertBack(item);
                 ++result;
             }
+
             static if (hasLength!Range)
-            {
-                assert(length == oldLength + r.length,
-                    "Failed to insertBack range");
-            }
+                assert(result == rLength, "insertBack: range might have changed length");
+
+            assert(length == oldLength + result,
+                "Failed to insertBack range");
+
             return result;
         }
     }
@@ -580,6 +555,17 @@ if (!is(immutable T == immutable bool))
     @property size_t capacity()
     {
         return _data.refCountedStore.isInitialized ? _data._capacity : 0;
+    }
+
+    /**
+     * Returns: the internal representation of the array.
+     *
+     * Complexity: $(BIGOH 1).
+     */
+
+    T[] data() @system
+    {
+        return _data._payload;
     }
 
     /**
@@ -1597,7 +1583,7 @@ if (!is(immutable T == immutable bool))
     ai.insertBack(arr);
 }
 
-/**
+/*
  * typeof may give wrong result in case of classes defining `opCall` operator
  * https://issues.dlang.org/show_bug.cgi?id=20589
  *
@@ -2638,4 +2624,13 @@ if (is(immutable T == immutable bool))
     foreach (ref b; arr) b = new ABC;
     GC.collect();
     arr[1].func();
+}
+
+@system unittest
+{
+    Array!int arr = [1, 2, 4, 5];
+    int[] data = arr.data();
+
+    data[0] = 0;
+    assert(arr[0] == 0);
 }

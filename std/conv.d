@@ -454,6 +454,23 @@ template to(T)
     assert(text(null) == "null");
 }
 
+// Test `scope` inference of parameters of `text`
+@safe unittest
+{
+    static struct S
+    {
+        int* x; // make S a type with pointers
+        string toString() const scope
+        {
+            static int g = 0; // force toString to be impure for:
+            g++; // https://issues.dlang.org/show_bug.cgi?id=20150
+            return "S";
+        }
+    }
+    scope S s;
+    assert(text("a", s) == "aS");
+}
+
 // Tests for issue 11390
 @safe pure /+nothrow+/ unittest
 {
@@ -2884,6 +2901,7 @@ do
 
     assert(parse!int(s = "0011001101101", 2) == 0b0011001101101);
     assert(parse!int(s = "765", 8) == octal!765);
+    assert(parse!int(s = "000135", 8) == octal!"135");
     assert(parse!int(s = "fCDe", 16) == 0xfcde);
 
     // https://issues.dlang.org/show_bug.cgi?id=6609
@@ -4777,8 +4795,8 @@ private S textImpl(S, U...)(U args)
         // assume that on average, parameters will have less
         // than 20 elements
         app.reserve(U.length * 20);
-
-        foreach (arg; args)
+        // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+        static foreach (arg; args)
         {
             static if (
                 isSomeChar!(typeof(arg)) || isSomeString!(typeof(arg)) ||
@@ -4841,12 +4859,14 @@ if (is(typeof(decimalInteger)) && isIntegral!(typeof(decimalInteger)))
 ///
 @safe unittest
 {
-    // same as 0177
-    auto x = octal!177;
+    // Same as 0177
+    auto a = octal!177;
     // octal is a compile-time device
-    enum y = octal!160;
+    enum b = octal!160;
     // Create an unsigned octal
-    auto z = octal!"1_000_000u";
+    auto c = octal!"1_000_000u";
+    // Leading zeros are allowed when converting from a string
+    auto d = octal!"0001_200_000";
 }
 
 /*
@@ -4877,6 +4897,9 @@ private T octal(T)(const string num)
 {
     int a = octal!int("10");
     assert(a == 8);
+
+    int b = octal!int("000137");
+    assert(b == 95);
 }
 
 /*
@@ -4896,10 +4919,39 @@ private template octalFitsInInt(string octalNum)
 private string strippedOctalLiteral(string original)
 {
     string stripped = "";
+    bool leading_zeros = true;
     foreach (c; original)
-        if (c >= '0' && c <= '7')
-            stripped ~= c;
+    {
+        if (!('0' <= c && c <= '7'))
+            continue;
+        if (c == '0')
+        {
+            if (leading_zeros)
+                continue;
+        }
+        else
+        {
+            leading_zeros = false;
+        }
+        stripped ~= c;
+    }
+    if (stripped.length == 0)
+    {
+        assert(leading_zeros);
+        return "0";
+    }
     return stripped;
+}
+
+@safe unittest
+{
+    static assert(strippedOctalLiteral("7") == "7");
+    static assert(strippedOctalLiteral("123") == "123");
+    static assert(strippedOctalLiteral("00123") == "123");
+    static assert(strippedOctalLiteral("01230") == "1230");
+    static assert(strippedOctalLiteral("0") == "0");
+    static assert(strippedOctalLiteral("00_000") == "0");
+    static assert(strippedOctalLiteral("000_000_12_300") == "12300");
 }
 
 private template literalIsLong(string num)
@@ -4925,8 +4977,8 @@ private template literalIsUnsigned(string num)
 /*
 Returns if the given string is a correctly formatted octal literal.
 
-The format is specified in spec/lex.html. The leading zero is allowed, but
-not required.
+The format is specified in spec/lex.html. The leading zeros are allowed,
+but not required.
  */
 @safe pure nothrow @nogc
 private bool isOctalLiteral(const string num)
@@ -4934,34 +4986,30 @@ private bool isOctalLiteral(const string num)
     if (num.length == 0)
         return false;
 
-    // Must start with a number. To avoid confusion, literals that
-    // start with a '0' are not allowed
-    if (num[0] == '0' && num.length > 1)
-        return false;
+    // Must start with a digit.
     if (num[0] < '0' || num[0] > '7')
         return false;
 
     foreach (i, c; num)
     {
-        if ((c < '0' || c > '7') && c != '_') // not a legal character
+        if (('0' <= c && c <= '7') || c == '_')  // a legal character
+            continue;
+
+        if (i < num.length - 2)
+            return false;
+
+        // gotta check for those suffixes
+        if (c != 'U' && c != 'u' && c != 'L')
+            return false;
+        if (i != num.length - 1)
         {
-            if (i < num.length - 2)
-                    return false;
-            else   // gotta check for those suffixes
-            {
-                if (c != 'U' && c != 'u' && c != 'L')
-                        return false;
-                if (i != num.length - 1)
-                {
-                    // if we're not the last one, the next one must
-                    // also be a suffix to be valid
-                    char c2 = num[$-1];
-                    if (c2 != 'U' && c2 != 'u' && c2 != 'L')
-                        return false; // spam at the end of the string
-                    if (c2 == c)
-                        return false; // repeats are disallowed
-                }
-            }
+            // if we're not the last one, the next one must
+            // also be a suffix to be valid
+            char c2 = num[$-1];
+            if (c2 != 'U' && c2 != 'u' && c2 != 'L')
+                return false; // spam at the end of the string
+            if (c2 == c)
+                return false; // repeats are disallowed
         }
     }
 
@@ -4981,6 +5029,9 @@ private bool isOctalLiteral(const string num)
     static assert(octal!"7" == 7);
     static assert(octal!"10" == 8);
     static assert(octal!"666" == 438);
+    static assert(octal!"0004001" == 2049);
+    static assert(octal!"00" == 0);
+    static assert(octal!"0_0" == 0);
 
     static assert(octal!45 == 37);
     static assert(octal!0 == 0);
@@ -4989,6 +5040,7 @@ private bool isOctalLiteral(const string num)
     static assert(octal!666 == 438);
 
     static assert(octal!"66_6" == 438);
+    static assert(octal!"0_0_66_6" == 438);
 
     static assert(octal!2520046213 == 356535435);
     static assert(octal!"2520046213" == 356535435);
@@ -5684,7 +5736,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
             char[(UT.sizeof == 4) ? 10 + isSigned!T : 20] buf = void;
         }
 
-        Result result = void;
+        Result result;
         result.initialize(value);
         return result;
     }
@@ -5771,6 +5823,8 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 {
     import std.array;
     import std.range;
+
+    assert(toChars(123) == toChars(123));
 
     {
         assert(toChars!2(0u).array == "0");

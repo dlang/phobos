@@ -3010,7 +3010,7 @@ struct Nullable(T)
      * Params:
      *     value = A value of type `T` to assign to this `Nullable`.
      */
-    void opAssign()(T value)
+    Nullable opAssign()(T value)
     {
         import std.algorithm.mutation : moveEmplace, move;
 
@@ -3028,6 +3028,7 @@ struct Nullable(T)
             move(copy.payload, _value.payload);
         }
         _isNull = false;
+        return this;
     }
 
     /**
@@ -3072,13 +3073,13 @@ struct Nullable(T)
     }
 
     /// ditto
-    @property inout(T) get()(inout(T) fallback) inout @safe pure nothrow
+    @property inout(T) get()(inout(T) fallback) inout
     {
         return isNull ? fallback : _value.payload;
     }
 
     /// ditto
-    @property auto get(U)(inout(U) fallback) inout @safe pure nothrow
+    @property auto get(U)(inout(U) fallback) inout
     {
         return isNull ? fallback : _value.payload;
     }
@@ -3587,6 +3588,28 @@ auto nullable(T)(T t)
 
     assert(test1 == s);
     assert(test1 == test2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22101
+@safe unittest
+{
+    static int impure;
+
+    struct S
+    {
+        ~this() { impure++; }
+    }
+
+    Nullable!S s;
+    s.get(S());
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22100
+@safe unittest
+{
+    Nullable!int a, b, c;
+    a = b = c = 5;
+    a = b = c = nullable(5);
 }
 
 /**
@@ -8228,7 +8251,7 @@ if (alignment > 0 && !((alignment - 1) & alignment))
         void test(size_t size)
         {
             import core.stdc.stdlib;
-            alloca(size);
+            cast(void) alloca(size);
             alignmentTest();
         }
         foreach (i; 0 .. 10)

@@ -952,7 +952,7 @@ Throws: `Exception` if the file is not opened.
 
  Returns: The name last used to initialize this this file, or `null` otherwise.
  */
-    @property string name() const @safe pure nothrow
+    @property string name() const @safe pure nothrow return
     {
         return _name;
     }
@@ -1649,14 +1649,13 @@ Removes the lock over the specified file segment.
         // the same process. fork() is used to create a second process.
         static void runForked(void delegate() code)
         {
-            import core.stdc.stdlib : exit;
             import core.sys.posix.sys.wait : waitpid;
-            import core.sys.posix.unistd : fork;
+            import core.sys.posix.unistd : fork, _exit;
             int child, status;
             if ((child = fork()) == 0)
             {
                 code();
-                exit(0);
+                _exit(0);
             }
             else
             {
@@ -2121,6 +2120,9 @@ is recommended if you want to process a complete file.
      * When passed as a compile-time argument, the string will be statically checked
      * against the argument types passed.
      * data = Items to be read.
+     * Returns:
+     *      Same as `formattedRead`: The number of variables filled. If the input range `r` ends early,
+     *      this number will be less than the number of variables provided.
      * Example:
 ----
 // test.d
@@ -3150,7 +3152,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         /// Range primitive implementations.
         void put(A)(scope A writeme)
-            if ((isSomeChar!(Unqual!(ElementType!A)) ||
+            if ((isSomeChar!(ElementType!A) ||
                   is(ElementType!A : const(ubyte))) &&
                 isInputRange!A &&
                 !isInfinite!A)
@@ -4359,6 +4361,13 @@ void writeln(T...)(T args)
     useInit(stdout.lockingTextWriter());
 }
 
+@system unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=21920
+    void function(string) printer = &writeln!string;
+    if (false) printer("Hello");
+}
+
 
 /***********************************
 Writes formatted data to standard output (without a trailing newline).
@@ -4481,6 +4490,9 @@ void writefln(Char, A...)(in Char[] fmt, A args)
  * When passed as a compile-time argument, the string will be statically checked
  * against the argument types passed.
  * args = Items to be read.
+ * Returns:
+ *      Same as `formattedRead`: The number of variables filled. If the input range `r` ends early,
+ *      this number will be less than the number of variables provided.
  * Example:
 ----
 // test.d

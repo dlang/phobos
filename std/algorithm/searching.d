@@ -47,13 +47,13 @@ $(T2 findSkip,
         leaves `a` unchanged, whereas `findSkip(a, "c")` advances `a`
         to `"de"` and returns `true`.)
 $(T2 findSplit,
-        `findSplit("abcdefg", "de")` returns the three ranges `"abc"`,
+        `findSplit("abcdefg", "de")` returns a tuple of three ranges `"abc"`,
         `"de"`, and `"fg"`.)
 $(T2 findSplitAfter,
-        `findSplitAfter("abcdefg", "de")` returns the two ranges
-        `"abcde"` and `"fg"`.)
+`findSplitAfter("abcdefg", "de")` returns a tuple of two ranges `"abcde"`
+        and `"fg"`.)
 $(T2 findSplitBefore,
-        `findSplitBefore("abcdefg", "de")` returns the two ranges `"abc"`
+        `findSplitBefore("abcdefg", "de")` returns a tuple of two ranges `"abc"`
         and `"defg"`.)
 $(T2 minCount,
         `minCount([2, 1, 1, 4, 1])` returns `tuple(1, 3)`.)
@@ -1274,6 +1274,16 @@ if (isInputRange!R &&
     }}
 }
 
+@safe pure unittest
+{
+    //example from issue 19727
+    import std.path : asRelativePath;
+    string[] ext = ["abc", "def", "ghi"];
+    string path = "/foo/file.def";
+    assert(ext.any!(e => path.asRelativePath("/foo").endsWith(e)) == true);
+    assert(ext.any!(e => path.asRelativePath("/foo").startsWith(e)) == false);
+}
+
 private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
 
 // Rebindable doesn't work with structs
@@ -1601,7 +1611,8 @@ if (isInputRange!InputRange &&
             {
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
-                    static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
+                    static inout(R) trustedMemchr(ref return scope inout(R) haystack,
+                                                  ref const scope E needle) @trusted nothrow pure
                     {
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
@@ -1665,7 +1676,7 @@ if (isInputRange!InputRange &&
         {
             import std.algorithm.comparison : max, min;
 
-            R findHelper(ref R haystack, ref E needle) @trusted nothrow pure
+            R findHelper(return scope ref R haystack, ref E needle) @trusted nothrow pure
             {
                 import core.stdc.string : memchr;
 
@@ -2629,6 +2640,7 @@ if (isForwardRange!(Range))
     }
     static if (!isInfinite!Range)
         return ahead;
+    assert(0);
 }
 
 ///

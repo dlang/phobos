@@ -246,7 +246,7 @@ public:
      * Implements assignment operators from built-in integers of the form
      * `BigInt op= integer`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe return scope
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -414,7 +414,7 @@ public:
     /**
      * Implements assignment operators of the form `BigInt op= BigInt`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe scope return
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -472,7 +472,7 @@ public:
     /**
      * Implements binary operators between `BigInt`s.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const return scope
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
             op=="/" || op=="%")
             && is (T: BigInt))
@@ -493,13 +493,14 @@ public:
     /**
      * Implements binary operators between `BigInt`'s and built-in integers.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const return scope
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
     {
         BigInt r = this;
-        return r.opOpAssign!(op)(y);
+        r.opOpAssign!(op)(y);
+        return r;
     }
 
     ///
@@ -1350,16 +1351,16 @@ public:
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, string formatString) const
+    void toString(scope void delegate(scope const(char)[]) sink, string formatString) const
     {
-        toString!(void delegate(const(char)[]))(sink, formatString);
+        toString!(void delegate(scope const(char)[]))(sink, formatString);
     }
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    void toString(scope void delegate(scope const(char)[]) sink, scope const ref FormatSpec!char f) const
     {
-        toString!(void delegate(const(char)[]))(sink, f);
+        toString!(void delegate(scope const(char)[]))(sink, f);
     }
 
     // Backwards compatibility test
@@ -1454,19 +1455,19 @@ public:
     }
 
 private:
-    void negate() @safe pure nothrow @nogc
+    void negate() @safe pure nothrow @nogc scope
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const nothrow @nogc @safe
+    bool isZero() pure const nothrow @nogc @safe scope
     {
         return data.isZero();
     }
     alias isNegative = sign;
 
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const nothrow @safe
+    void checkDivByZero() pure const nothrow @safe scope
     {
         assert(!isZero(), "BigInt division by zero");
     }

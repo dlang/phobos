@@ -194,13 +194,16 @@ version (USE_SSSE3)
     /**
      * Chooses the instruction sequence based on the 32bit or 64bit model.
      */
-    private nothrow pure string[] swt3264(string[] insn32, string[] insn64)
+    version (_32Bit)
     {
-        version (_32Bit)
+        private nothrow pure string[] swt3264(return scope string[] insn32, scope string[])
         {
             return insn32;
         }
-        version (_64Bit)
+    }
+    version (_64Bit)
+    {
+        private nothrow pure string[] swt3264(scope string[], return scope string[] insn64)
         {
             return insn64;
         }

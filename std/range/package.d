@@ -932,7 +932,8 @@ if (Ranges.length > 0 &&
         public:
             this(R input)
             {
-                foreach (i, v; input)
+                // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+                static foreach (i, v; input)
                 {
                     source[i] = v;
                 }
@@ -7707,7 +7708,7 @@ if (isForwardRange!RangeOfRanges &&
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    ulong[1] t0 = [ 123 ];
+    ulong[] t0 = [ 123 ];
 
     assert(!hasAssignableElements!(typeof(t0[].chunks(1))));
     assert(!is(typeof(transposed(t0[].chunks(1)))));
@@ -10843,12 +10844,28 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
     mixin ImplementLength!_input;
 
 /**
-   Releases the controlled range and returns it.
+    Releases the controlled range and returns it.
+
+    This does the opposite of $(LREF assumeSorted): instead of turning a range
+    into a `SortedRange`, it extracts the original range back out of the `SortedRange`
+    using $(REF, move, std,algorithm,mutation).
 */
-    auto release()
+    auto release() return scope
     {
         import std.algorithm.mutation : move;
         return move(_input);
+    }
+
+    ///
+    static if (is(Range : int[]))
+    @safe unittest
+    {
+        import std.algorithm.sorting : sort;
+        int[3] data = [ 1, 2, 3 ];
+        auto a = assumeSorted(data[]);
+        assert(a == sort!"a < b"(data[]));
+        int[] p = a.release();
+        assert(p == [ 1, 2, 3 ]);
     }
 
     // Assuming a predicate "test" that returns 0 for a left portion
@@ -11718,7 +11735,7 @@ public:
     version (StdDdoc)
     {
         /++
-            Only defined if `isRandomAccesRange!R` is `true`.
+            Only defined if `isRandomAccessRange!R` is `true`.
           +/
         auto ref opIndex(IndexType)(IndexType index) {assert(0);}
 
@@ -12159,7 +12176,7 @@ private:
         @property int front() @safe const pure nothrow { return 0; }
         enum bool empty = false;
         void popFront() @safe pure nothrow { }
-        @property auto save() @safe pure nothrow { return this; }
+        @property auto save() @safe pure nothrow return scope { return this; }
     }
 
     S s;
@@ -12174,7 +12191,7 @@ private:
         @property int front() @safe const pure nothrow { return 0; }
         @property bool empty() @safe const pure nothrow { return false; }
         void popFront() @safe pure nothrow { }
-        @property auto save() @safe pure nothrow { return this; }
+        @property auto save() @safe pure nothrow return scope { return this; }
     }
     static assert(isForwardRange!C);
 
