@@ -4630,6 +4630,13 @@ if (isInputRange!T && is(ElementType!T : U))
     auto ret = (() @trusted
     {
         Unqual!U[n] theArray = void;
+
+        // BUG: https://issues.dlang.org/show_bug.cgi?id=19320
+        // By adding a nop asm instruction the DFA optimizer will
+        // give up searching
+        version (DigitalMars)
+            version (D_Coverage) asm nothrow pure @nogc { nop; }
+
         return theArray;
     }());
 
