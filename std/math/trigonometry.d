@@ -209,6 +209,12 @@ float tan(float x) @safe pure nothrow @nogc { return __ctfe ? cast(float) tan(ca
 version (InlineAsm_X87)
 private real tanAsm(real x) @trusted pure nothrow @nogc
 {
+    // Separating `return real.nan` from the asm block on LDC produces unintended
+    // behaviour as additional instructions are generated, invalidating the asm
+    // logic inside the previous block. To circumvent this, we can push rnan
+    // manually by creating an immutable variable in the stack.
+    immutable rnan = real.nan;
+
     version (X86)
     {
     asm pure nothrow @nogc
@@ -237,14 +243,13 @@ SC17:   fprem1                          ;
 trigerr:
         jnp     Lret                    ; // if theta is NAN, return theta
         fstp    ST(0)                   ; // dump theta
-    }
-    return real.nan;
-
-Clear1: asm pure nothrow @nogc{
+        fld     rnan                    ; // return rnan
+        jmp     Lret                    ;
+Clear1:
         fstp    ST(0)                   ; // dump X, which is always 1
+Lret:
+        ;
     }
-
-Lret: {}
     }
     else version (X86_64)
     {
@@ -288,14 +293,13 @@ trigerr:
         test    AH,4                    ;
         jz      Lret                    ; // if theta is NAN, return theta
         fstp    ST(0)                   ; // dump theta
-    }
-    return real.nan;
-
-Clear1: asm pure nothrow @nogc{
+        fld     rnan                    ; // return rnan
+        jmp     Lret                    ;
+Clear1:
         fstp    ST(0)                   ; // dump X, which is always 1
+Lret:
+        ;
     }
-
-Lret: {}
     }
     else
         static assert(0);
