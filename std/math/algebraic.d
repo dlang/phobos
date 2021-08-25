@@ -209,6 +209,7 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
 
 @safe unittest
 {
+    // https://issues.dlang.org/show_bug.cgi?id=5305
     float function(float) psqrtf = &sqrt;
     assert(psqrtf != null);
     double function(double) psqrtd = &sqrt;
