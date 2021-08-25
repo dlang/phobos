@@ -2844,6 +2844,19 @@ public:
     assert(format("%b", b) == "1_00001111_00001111");
 }
 
+@system unittest
+{
+    BitArray a;
+    a.length = 5;
+    foreach (ref bool b; a)
+    {
+        assert(b == 0);
+        b = 1;
+    }
+    foreach (bool b; a)
+        assert(b == 1);
+}
+
 /++
     Swaps the endianness of the given integral value or character.
   +/
