@@ -2506,6 +2506,8 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     assert(rng1.uniform!dchar == rng2.uniform!dchar);
     // https://issues.dlang.org/show_bug.cgi?id=21384
     assert(rng1.uniform!(const shared dchar) <= dchar.max);
+    // https://issues.dlang.org/show_bug.cgi?id=8671
+    double t8671 = 1.0 - uniform(0.0, 1.0);
 }
 
 @safe unittest
