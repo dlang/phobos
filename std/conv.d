@@ -462,8 +462,6 @@ template to(T)
         int* x; // make S a type with pointers
         string toString() const scope
         {
-            static int g = 0; // force toString to be impure for:
-            g++; // https://issues.dlang.org/show_bug.cgi?id=20150
             return "S";
         }
     }
