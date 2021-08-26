@@ -1,0 +1,17 @@
+`std.csv` can now optionally handle csv files with variable number of columns.
+
+By default `std.csv` will throw if the number of columns on a line
+is not equal to the number of columns of the first line.
+To allow, or disallow, a variable amount of columns a `bool` can be passed to
+all overloads of the `csvReader` function as shown below.
+
+```
+string text = "76,26,22\n1,2\n3,4,5,6";
+auto records = text.csvReader!int(',', '"', true);
+
+assert(records.equal!equal([
+    [76, 26, 22],
+    [1, 2],
+    [3, 4, 5, 6]
+]));
+```
