@@ -2159,8 +2159,11 @@ struct Config
         /**
         A function that is called before `exec` in $(LREF spawnProcess).
         It returns `true` if succeeded and otherwise returns `false`.
-        Please note that the code in this function must only use
-        async-signal-safe functions.
+
+        $(RED Warning:
+            Please note that the code in this function must only use
+            async-signal-safe functions.)
+
         On Windows, this member is not available.
         */
         bool function() nothrow @nogc @safe preExecFunction;
