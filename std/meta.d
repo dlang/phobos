@@ -367,47 +367,32 @@ if (args.length >= 1)
 }
 
 /*
- * Erase any occurrence of the first `TList[0 .. N]` elements from `TList[N .. $]`.
+ * Returns `items[0 .. $ - 1]` if `item[$ - 1]` found in `items[0 .. $ - 1]`, and
+ * `items` otherwise.
  *
  * Params:
- *   N = number of elements to delete from the `TList`
- *   TList = sequence of aliases
+ *   items = list to be processed
  *
- * See_Also: $(LREF EraseAll)
+ * See_Also: $(LREF NoDuplicates)
  */
-private template EraseAllN(uint N, TList...)
+private template AppendUnique(items...)
 {
-    static if (N == 1)
-    {
-        alias EraseAllN = EraseAll!(TList[0], TList[1 .. $]);
-    }
+    alias head = items[0 .. $ - 1];
+    static if (staticIndexOf!(items[$ - 1], head) >= 0)
+        alias AppendUnique = head;
     else
-    {
-        static if (N & 1)
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 + 1 .. N],
-                    EraseAllN!(N / 2 + 1, TList[0 .. N / 2 + 1], TList[N .. $]));
-        else
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 .. N],
-                    EraseAllN!(N / 2, TList[0 .. N / 2], TList[N .. $]));
-    }
+        alias AppendUnique = items;
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the all duplicate
+ * Returns an `AliasSeq` created from `args` with all duplicate
  * types removed.
  */
-template NoDuplicates(TList...)
+template NoDuplicates(args...)
 {
-    static if (TList.length >= 2)
-    {
-        alias fst = NoDuplicates!(TList[0 .. $/2]);
-        alias snd = NoDuplicates!(TList[$/2 .. $]);
-        alias NoDuplicates = AliasSeq!(fst, EraseAllN!(fst.length, fst, snd));
-    }
-    else
-    {
-        alias NoDuplicates = TList;
-    }
+    alias NoDuplicates = AliasSeq!();
+    static foreach (arg; args)
+        NoDuplicates = AppendUnique!(NoDuplicates, arg);
 }
 
 ///
