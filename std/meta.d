@@ -302,18 +302,17 @@ if (args.length >= 1)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the first occurrence,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from `args[1 .. $]` with the first occurrence,
+ * if any, of `args[0]` removed.
  */
-template Erase(T, TList...)
+template Erase(args...)
+if (args.length >= 1)
 {
-    alias Erase = GenericErase!(T, TList).result;
-}
-
-/// Ditto
-template Erase(alias T, TList...)
-{
-    alias Erase = GenericErase!(T, TList).result;
+    private enum pos = staticIndexOf!(args[0], args[1 .. $]);
+    static if (pos < 0)
+        alias Erase = args[1 .. $];
+    else
+        alias Erase = AliasSeq!(args[1 .. pos + 1], args[pos + 2 .. $]);
 }
 
 ///
@@ -322,29 +321,6 @@ template Erase(alias T, TList...)
     alias Types = AliasSeq!(int, long, double, char);
     alias TL = Erase!(long, Types);
     static assert(is(TL == AliasSeq!(int, double, char)));
-}
-
-// [internal]
-private template GenericErase(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $] ;
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(e, head))
-            alias result = tail;
-        else
-            alias result = AliasSeq!(head, GenericErase!(e, tail).result);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -360,54 +336,23 @@ if (args.length >= 1)
 
 
 /**
- * Returns an `AliasSeq` created from TList with the all occurrences,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from `args[1 .. $]` with all occurrences,
+ * if any, of `args[0]` removed.
  */
-template EraseAll(T, TList...)
+template EraseAll(args...)
+if (args.length >= 1)
 {
-    alias EraseAll = GenericEraseAll!(T, TList).result;
-}
-
-/// Ditto
-template EraseAll(alias T, TList...)
-{
-    alias EraseAll = GenericEraseAll!(T, TList).result;
+    alias EraseAll = AliasSeq!();
+    static foreach (arg; args[1 .. $])
+        static if (!isSame!(args[0], arg))
+            EraseAll = AliasSeq!(EraseAll, arg);
 }
 
 ///
 @safe unittest
 {
     alias Types = AliasSeq!(int, long, long, int);
-
-    alias TL = EraseAll!(long, Types);
-    static assert(is(TL == AliasSeq!(int, int)));
-}
-
-// [internal]
-private template GenericEraseAll(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = AliasSeq!(
-            GenericEraseAll!(e, tail[0..$/2]).result,
-            GenericEraseAll!(e, tail[$/2..$]).result
-            );
-
-        static if (isSame!(e, head))
-            alias result = next;
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
+    static assert(is(EraseAll!(long, Types) == AliasSeq!(int, int)));
 }
 
 @safe unittest
