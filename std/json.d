@@ -750,8 +750,8 @@ struct JSONValue
     {
         JSONValue j = [ "language": "D", "author": "walter" ];
         string a = ("author" in j).str;
-				*("author" in j) = "Walter";
-				assert(j["author"].str == "Walter");
+        *("author" in j) = "Walter";
+        assert(j["author"].str == "Walter");
     }
 
     bool opEquals(const JSONValue rhs) const @nogc nothrow pure @safe
