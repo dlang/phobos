@@ -12740,8 +12740,12 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 
         import std.exception : assertThrown;
 
-        // Check out of bounds error
-        assertThrown!Error(bw[2 * bitsNum - 1]);
+        version (D_NoBoundsChecks) {}
+        else
+        {
+            // Check out of bounds error
+            assertThrown!Error(bw[2 * bitsNum - 1]);
+        }
 
         bw[2] = true;
         assert(bw[2] == true);
