@@ -1,0 +1,10 @@
+`opBinaryRight(string op : "in")` now returns `inout(JSONValue)*`
+
+`opBinaryRight(string op : "in")` returns `inout(JSONValue)*` instead
+of `const(JSONValue)*`. This makes updating a value when present easier:
+
+```
+JSONValue j = [ "foo": "bar" ];
+if (JSONValue* f = "foo" in j)
+	*f = "baz";
+```
