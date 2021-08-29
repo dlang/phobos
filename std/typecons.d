@@ -2762,7 +2762,11 @@ struct Nullable(T)
 {
     private union DontCallDestructorT
     {
-        T payload;
+        import std.traits : hasIndirections;
+        static if (hasIndirections!T)
+            T payload;
+        else
+            T payload = void;
     }
 
     private DontCallDestructorT _value = DontCallDestructorT.init;
@@ -3020,7 +3024,7 @@ struct Nullable(T)
 
         if (_isNull)
         {
-            // trusted since payload is known to be T.init here.
+            // trusted since payload is known to be uninitialized.
             () @trusted { moveEmplace(copy.payload, _value.payload); }();
         }
         else
