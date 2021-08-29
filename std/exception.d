@@ -675,9 +675,14 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo(), b));
 
-    int[] a = new int[3];
-    import core.exception : RangeError;
-    assert(collectException!RangeError(a[4], b));
+    version (D_NoBoundsChecks) {}
+    else
+    {
+        // check for out of bounds error
+        int[] a = new int[3];
+        import core.exception : RangeError;
+        assert(collectException!RangeError(a[4], b));
+    }
 }
 
 /++
