@@ -119,6 +119,7 @@ publictests()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     make -f posix.mak -j"$N" publictests DUB="$DUB" BUILD=$BUILD
+    make -f posix.mak -j"$N" publictests DUB="$DUB" BUILD=$BUILD NO_BOUNDSCHECKS=1
 
     # run -betterC tests
     make -f posix.mak test_extractor # build in single-threaded mode
