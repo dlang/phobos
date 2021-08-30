@@ -8374,16 +8374,19 @@ public:
      +/
     int opCmp(TimeOfDay rhs) const @safe pure nothrow @nogc
     {
+        auto _hour = this._hour;
         if (_hour < rhs._hour)
             return -1;
         if (_hour > rhs._hour)
             return 1;
 
+        auto _minute = this._minute;
         if (_minute < rhs._minute)
             return -1;
         if (_minute > rhs._minute)
             return 1;
 
+        auto _second = this._second;
         if (_second < rhs._second)
             return -1;
         if (_second > rhs._second)
