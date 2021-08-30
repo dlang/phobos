@@ -2055,11 +2055,13 @@ private struct ChunkByGroup(alias eq, Range, bool eqEquivalenceAssured)
     this(this) @trusted
     {
         import core.lifetime : emplace;
+        // since mothership has to be in a union, we have to manually trigger
+        // an increment to the reference count.
         auto temp = mothership;
         mothership = temp;
 
-        // prevent decrementing reference count with brute force
-        () @trusted { emplace(&temp); }();
+        // prevents the reference count from falling back with brute force
+        emplace(&temp);
     }
 
     @property bool empty() { return groupNum == size_t.max; }
@@ -2155,10 +2157,12 @@ if (isForwardRange!Range)
     this(this) @trusted
     {
         import core.lifetime : emplace;
+        // since _impl has to be in a union, we have to manually trigger
+        // an increment to the reference count.
         auto temp = _impl;
         _impl = temp;
 
-        // prevent decrementing reference count with brute force
+        // prevents the reference count from falling back with brute force
         emplace(&temp);
     }
 
