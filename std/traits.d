@@ -7802,13 +7802,17 @@ template Unconst(T)
     static assert(is(Unconst!ImmIntArr == immutable(int)[]));
 }
 
-/**
-Removes all qualifiers, if any, from type `T`.
- */
-template Unqual(T)
+version (StdDdoc)
+{
+    /**
+       Removes all qualifiers, if any, from type `T`.
+    */
+    template Unqual(T) {}
+}
+else
 {
     import core.internal.traits : CoreUnqual = Unqual;
-    alias Unqual = CoreUnqual!(T);
+    alias Unqual = CoreUnqual;
 }
 
 ///
