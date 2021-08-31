@@ -146,6 +146,10 @@ ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov=ctfe
 endif
 
+ifdef NO_BOUNDSCHECKS
+override DFLAGS += -boundscheck=off
+endif
+
 ifdef NO_AUTODECODE
 override DFLAGS += -version=NoAutodecodeStrings
 endif
