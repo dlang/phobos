@@ -7779,13 +7779,17 @@ if (T.length == 1)
 // General Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-/**
-Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
- */
-template Unconst(T)
+version (StdDdoc)
+{
+    /**
+       Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
+    */
+    template Unconst(T) {}
+}
+else
 {
     import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst!(T);
+    alias Unconst = CoreUnconst;
 }
 
 ///
