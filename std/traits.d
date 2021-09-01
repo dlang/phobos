@@ -3612,7 +3612,11 @@ version (StdDdoc)
 
        Classes and unions never have elaborate copy constructors.
     */
-    template hasElaborateCopyConstructor(S) {}
+    template hasElaborateCopyConstructor(S)
+    {
+        import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
+        alias hasElaborateCopyConstructor = hasElabCCtor!(S);
+    }
 }
 else
 {
@@ -3747,7 +3751,11 @@ version (StdDdoc)
        Classes and unions never have elaborate destructors, even
        though classes may define `~this()`.
     */
-    template hasElaborateDestructor(S) {}
+    template hasElaborateDestructor(S)
+    {
+        import core.internal.traits : hasElabDest = hasElaborateDestructor;
+        alias hasElaborateDestructor = hasElabDest!(S);
+    }
 }
 else
 {
@@ -3788,7 +3796,11 @@ version (StdDdoc)
 
        Classes and unions never have elaborate move semantics.
     */
-    template hasElaborateMove(S) {}
+    template hasElaborateMove(S)
+    {
+        import core.internal.traits : hasElabMove = hasElaborateMove;
+        alias hasElaborateMove = hasElabMove!(S);
+    }
 }
 else
 {
@@ -7784,7 +7796,11 @@ version (StdDdoc)
     /**
        Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
     */
-    template Unconst(T) {}
+    template Unconst(T)
+    {
+        import core.internal.traits : CoreUnconst = Unconst;
+        alias Unconst = CoreUnconst!(T);
+    }
 }
 else
 {
@@ -7823,7 +7839,11 @@ version (StdDdoc)
     /**
        Removes all qualifiers, if any, from type `T`.
     */
-    template Unqual(T) {}
+    template Unqual(T)
+    {
+        import core.internal.traits : CoreUnqual = Unqual;
+        alias Unqual = CoreUnqual!(T);
+    }
 }
 else
 {
