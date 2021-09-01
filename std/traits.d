@@ -3779,17 +3779,21 @@ else
     static assert( hasElaborateDestructor!S7);
 }
 
-/**
- True if `S` or any type embedded directly in the representation of `S`
- defines elaborate move semantics. Elaborate move semantics are
- introduced by defining `opPostMove(ref typeof(this))` for a `struct`.
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type embedded directly in the representation of `S`
+       defines elaborate move semantics. Elaborate move semantics are
+       introduced by defining `opPostMove(ref typeof(this))` for a `struct`.
 
- Classes and unions never have elaborate move semantics.
- */
-template hasElaborateMove(S)
+       Classes and unions never have elaborate move semantics.
+    */
+    template hasElaborateMove(S) {}
+}
+else
 {
     import core.internal.traits : hasElabMove = hasElaborateMove;
-    alias hasElaborateMove = hasElabMove!(S);
+    alias hasElaborateMove = hasElabMove;
 }
 
 ///
