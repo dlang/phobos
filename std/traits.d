@@ -5760,13 +5760,11 @@ Note: Trying to use returned value will result in a
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-private alias AliasThisTypeOf(T) = typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0]));
-
 /*
  */
 template BooleanTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = BooleanTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -5817,7 +5815,7 @@ template BooleanTypeOf(T)
  */
 template IntegralTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = IntegralTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -5853,7 +5851,7 @@ template IntegralTypeOf(T)
  */
 template FloatingPointTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = FloatingPointTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -5938,7 +5936,7 @@ template SignedTypeOf(T)
  */
 template CharTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = CharTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -5979,7 +5977,7 @@ template CharTypeOf(T)
  */
 template StaticArrayTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = StaticArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -6136,7 +6134,7 @@ template StringTypeOf(T)
  */
 template AssocArrayTypeOf(T)
 {
-    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
         alias X = AssocArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
@@ -6177,7 +6175,7 @@ template BuiltinTypeOf(T)
         alias BuiltinTypeOf = void;
     else
     {
-        static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) && !is(AT[] == AT))
             alias X = BuiltinTypeOf!AT;
         else
             alias X = OriginalType!T;
