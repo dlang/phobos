@@ -3736,19 +3736,23 @@ template hasElaborateAssign(S)
     static assert( hasElaborateAssign!SS9);
 }
 
-/**
-   True if `S` or any type directly embedded in the representation
-   of `S` defines an elaborate destructor. Elaborate destructors
-   are introduced by defining `~this()` for a $(D
-   struct).
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type directly embedded in the representation
+       of `S` defines an elaborate destructor. Elaborate destructors
+       are introduced by defining `~this()` for a $(D
+       struct).
 
-   Classes and unions never have elaborate destructors, even
-   though classes may define `~this()`.
- */
-template hasElaborateDestructor(S)
+       Classes and unions never have elaborate destructors, even
+       though classes may define `~this()`.
+    */
+    template hasElaborateDestructor(S) {}
+}
+else
 {
     import core.internal.traits : hasElabDest = hasElaborateDestructor;
-    alias hasElaborateDestructor = hasElabDest!(S);
+    alias hasElaborateDestructor = hasElabDest;
 }
 
 ///
