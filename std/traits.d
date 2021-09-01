@@ -3603,17 +3603,21 @@ private template hasUnsharedAliasingImpl(T)
     }
 }
 
-/**
- True if `S` or any type embedded directly in the representation of `S`
- defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining `this(this)` for a `struct`.
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type embedded directly in the representation of `S`
+       defines an elaborate copy constructor. Elaborate copy constructors are
+       introduced by defining `this(this)` for a `struct`.
 
- Classes and unions never have elaborate copy constructors.
- */
-template hasElaborateCopyConstructor(S)
+       Classes and unions never have elaborate copy constructors.
+    */
+    template hasElaborateCopyConstructor(S) {}
+}
+else
 {
     import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
-    alias hasElaborateCopyConstructor = hasElabCCtor!(S);
+    alias hasElaborateCopyConstructor = hasElabCCtor;
 }
 
 ///
