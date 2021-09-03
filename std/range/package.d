@@ -481,6 +481,23 @@ pure @safe nothrow @nogc unittest
     foreach (x; data.retro) {}
 }
 
+pure @safe nothrow unittest
+{
+    struct MyRange
+    {
+        int[] data;
+
+        auto front() { return .front(data); }
+        auto back() { return .back(data); }
+        bool empty() { return .empty(data); }
+        void popFront() { .popFront(data); }
+        void popBack() { .popBack(data); }
+    }
+
+    import std.algorithm.comparison : equal;
+    assert(MyRange([1, 2, 3]).retro.equal([3, 2, 1]));
+}
+
 
 /**
 Iterates range `r` with stride `n`. If the range is a
