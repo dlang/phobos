@@ -289,6 +289,8 @@ if (isInputRange!Range
             alias Source = R;
 
             @property bool empty() { return source.empty; }
+
+            static if (is(ReturnType!((Range r) => r.save) == Range))
             @property auto save()
             {
                 return Result(source.save);
