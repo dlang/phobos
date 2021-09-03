@@ -259,7 +259,9 @@ See_Also:
     $(REF reverse, std,algorithm,mutation) for mutating the source range directly.
  */
 auto retro(Range)(Range r)
-if (isBidirectionalRange!(Unqual!Range))
+if (isInputRange!Range
+    && is(typeof((Range r) => r.popBack))
+    && is(ReturnType!((Range r) => r.back) == ElementType!Range))
 {
     // Check for retro(retro(r)) and just return r in that case
     static if (is(typeof(retro(r.source)) == Range))
