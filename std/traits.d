@@ -3603,17 +3603,25 @@ private template hasUnsharedAliasingImpl(T)
     }
 }
 
-/**
- True if `S` or any type embedded directly in the representation of `S`
- defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining `this(this)` for a `struct`.
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type embedded directly in the representation of `S`
+       defines an elaborate copy constructor. Elaborate copy constructors are
+       introduced by defining `this(this)` for a `struct`.
 
- Classes and unions never have elaborate copy constructors.
- */
-template hasElaborateCopyConstructor(S)
+       Classes and unions never have elaborate copy constructors.
+    */
+    template hasElaborateCopyConstructor(S)
+    {
+        import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
+        alias hasElaborateCopyConstructor = hasElabCCtor!(S);
+    }
+}
+else
 {
     import core.internal.traits : hasElabCCtor = hasElaborateCopyConstructor;
-    alias hasElaborateCopyConstructor = hasElabCCtor!(S);
+    alias hasElaborateCopyConstructor = hasElabCCtor;
 }
 
 ///
@@ -3732,19 +3740,27 @@ template hasElaborateAssign(S)
     static assert( hasElaborateAssign!SS9);
 }
 
-/**
-   True if `S` or any type directly embedded in the representation
-   of `S` defines an elaborate destructor. Elaborate destructors
-   are introduced by defining `~this()` for a $(D
-   struct).
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type directly embedded in the representation
+       of `S` defines an elaborate destructor. Elaborate destructors
+       are introduced by defining `~this()` for a $(D
+       struct).
 
-   Classes and unions never have elaborate destructors, even
-   though classes may define `~this()`.
- */
-template hasElaborateDestructor(S)
+       Classes and unions never have elaborate destructors, even
+       though classes may define `~this()`.
+    */
+    template hasElaborateDestructor(S)
+    {
+        import core.internal.traits : hasElabDest = hasElaborateDestructor;
+        alias hasElaborateDestructor = hasElabDest!(S);
+    }
+}
+else
 {
     import core.internal.traits : hasElabDest = hasElaborateDestructor;
-    alias hasElaborateDestructor = hasElabDest!(S);
+    alias hasElaborateDestructor = hasElabDest;
 }
 
 ///
@@ -3771,17 +3787,25 @@ template hasElaborateDestructor(S)
     static assert( hasElaborateDestructor!S7);
 }
 
-/**
- True if `S` or any type embedded directly in the representation of `S`
- defines elaborate move semantics. Elaborate move semantics are
- introduced by defining `opPostMove(ref typeof(this))` for a `struct`.
+version (StdDdoc)
+{
+    /**
+       True if `S` or any type embedded directly in the representation of `S`
+       defines elaborate move semantics. Elaborate move semantics are
+       introduced by defining `opPostMove(ref typeof(this))` for a `struct`.
 
- Classes and unions never have elaborate move semantics.
- */
-template hasElaborateMove(S)
+       Classes and unions never have elaborate move semantics.
+    */
+    template hasElaborateMove(S)
+    {
+        import core.internal.traits : hasElabMove = hasElaborateMove;
+        alias hasElaborateMove = hasElabMove!(S);
+    }
+}
+else
 {
     import core.internal.traits : hasElabMove = hasElaborateMove;
-    alias hasElaborateMove = hasElabMove!(S);
+    alias hasElaborateMove = hasElabMove;
 }
 
 ///
@@ -7767,13 +7791,21 @@ if (T.length == 1)
 // General Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-/**
-Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
- */
-template Unconst(T)
+version (StdDdoc)
+{
+    /**
+       Removes `const`, `inout` and `immutable` qualifiers, if any, from type `T`.
+    */
+    template Unconst(T)
+    {
+        import core.internal.traits : CoreUnconst = Unconst;
+        alias Unconst = CoreUnconst!(T);
+    }
+}
+else
 {
     import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst!(T);
+    alias Unconst = CoreUnconst;
 }
 
 ///
@@ -7802,13 +7834,21 @@ template Unconst(T)
     static assert(is(Unconst!ImmIntArr == immutable(int)[]));
 }
 
-/**
-Removes all qualifiers, if any, from type `T`.
- */
-template Unqual(T)
+version (StdDdoc)
+{
+    /**
+       Removes all qualifiers, if any, from type `T`.
+    */
+    template Unqual(T)
+    {
+        import core.internal.traits : CoreUnqual = Unqual;
+        alias Unqual = CoreUnqual!(T);
+    }
+}
+else
 {
     import core.internal.traits : CoreUnqual = Unqual;
-    alias Unqual = CoreUnqual!(T);
+    alias Unqual = CoreUnqual;
 }
 
 ///
