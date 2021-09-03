@@ -94,7 +94,7 @@ test.exe : test.obj $(LIB)
 
 SRC= \
 	unittest.d \
-	index.d
+	index.dd
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
