@@ -236,6 +236,7 @@ public import std.typecons : Flag, Yes, No;
 
 import std.internal.attributes : betterC;
 import std.meta : allSatisfy, staticMap;
+import std.traits : ReturnType;
 import std.traits : CommonType;
 import std.traits : isFloatingPoint, isIntegral, isPointer, isStaticArray;
 import std.traits : isCallable, isSomeFunction, isInstanceOf;
