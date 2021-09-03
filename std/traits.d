@@ -663,6 +663,7 @@ private template fqnSym(alias T)
     enum fqnSym = parentPrefix ~ adjustIdent(__traits(identifier, T));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     alias fqn = fullyQualifiedName;
@@ -907,6 +908,7 @@ private template fqnType(T,
         static assert(0, "Unrecognized type " ~ T.stringof ~ ", can't convert to fully qualified string");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.format : format;
@@ -2435,6 +2437,7 @@ private:
     extern(D) int dstyle(...);
     extern(D) int typesafe(int[]...);
 }
+version (StdUnittest)
 @safe unittest
 {
     import std.algorithm.iteration : reduce;
@@ -5790,6 +5793,7 @@ template BooleanTypeOf(T)
         static assert(0, T.stringof~" is not boolean type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     // unexpected failure, maybe dmd type-merging bug
@@ -5842,6 +5846,7 @@ template IntegralTypeOf(T)
         static assert(0, T.stringof~" is not an integral type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; IntegralTypeList)
@@ -5877,6 +5882,7 @@ template FloatingPointTypeOf(T)
         static assert(0, T.stringof~" is not a floating point type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; FloatingPointTypeList)
@@ -5906,6 +5912,7 @@ template NumericTypeOf(T)
         static assert(0, T.stringof~" is not a numeric type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; NumericTypeList)
@@ -5962,6 +5969,7 @@ template CharTypeOf(T)
         static assert(0, T.stringof~" is not a character type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; CharTypeList)
@@ -6001,6 +6009,7 @@ template StaticArrayTypeOf(T)
         static assert(0, T.stringof~" is not a static array type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(bool, NumericTypeList, /*ImaginaryTypeList, ComplexTypeList*/))
@@ -6038,6 +6047,7 @@ template DynamicArrayTypeOf(T)
         static assert(0, T.stringof~" is not a dynamic array");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.meta : Alias;
@@ -6107,6 +6117,7 @@ template StringTypeOf(T)
         static assert(0, T.stringof~" is not a string type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.meta : Alias;
@@ -6169,6 +6180,7 @@ template AssocArrayTypeOf(T)
         static assert(0, T.stringof~" is not an associative array type");
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
@@ -6220,6 +6232,7 @@ template BuiltinTypeOf(T)
 enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 
 ///
+version (StdUnittest)
 @safe unittest
 {
     static assert( isBoolean!bool);
@@ -6281,6 +6294,7 @@ template isIntegral(T)
     static assert(!isIntegral!S);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; IntegralTypeList)
@@ -6329,6 +6343,7 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
     static assert(!isFloatingPoint!S);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
@@ -6404,6 +6419,7 @@ template isNumeric(T)
     static assert(!isNumeric!S);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(NumericTypeList))
@@ -6526,6 +6542,7 @@ template isUnsigned(T)
     );
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(UnsignedIntTypeList))
@@ -6573,6 +6590,7 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T)
     );
 }
 
+version (StdUnittest)
 @safe unittest
 {
     enum E { e1 = 0 }
@@ -6649,6 +6667,7 @@ template isSomeChar(T)
     static assert(!isSomeChar!(char[4]));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     enum EC : char { a = 'x', b = 'y' }
@@ -6710,6 +6729,7 @@ enum bool isSomeString(T) = is(immutable T == immutable C[], C) && (is(C == char
     static assert(!isSomeString!Stringish);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(char[], dchar[], string, wstring, dstring))
@@ -6754,6 +6774,7 @@ enum bool isNarrowString(T) = is(immutable T == immutable C[], C) && (is(C == ch
     static assert(!isNarrowString!Stringish);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.meta : Alias;
@@ -6985,6 +7006,7 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
     static assert(!isStaticArray!int);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int[51], int[][2],
@@ -7030,6 +7052,7 @@ template isDynamicArray(T)
     static assert(!isDynamicArray!(typeof(null)));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.meta : AliasSeq;
@@ -7079,6 +7102,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
     static assert(!isArray!(typeof(null)));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     import std.meta : AliasSeq;
@@ -7097,6 +7121,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
+version (StdUnittest)
 @safe unittest
 {
     struct Foo
@@ -7169,6 +7194,7 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
  */
 enum bool isPointer(T) = is(T == U*, U) && __traits(isScalar, T);
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int*, void*, char[]*))
@@ -8388,6 +8414,7 @@ if (sth.length == 1)
 
 version (StdUnittest) private void freeFunc(string);
 
+version (StdUnittest)
 @safe unittest
 {
     class C { int value() @property { return 0; } }
