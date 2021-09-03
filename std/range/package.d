@@ -151,7 +151,7 @@ $(BOOKTABLE ,
         times, or an infinite range repeating that element indefinitely.
     ))
     $(TR $(TD $(LREF retro))
-        $(TD Iterates a bidirectional range backwards.
+        $(TD Iterates a range backwards.
     ))
     $(TR $(TD $(LREF roundRobin))
         $(TD Given $(I n) ranges, creates a new range that return the $(I n)
@@ -244,17 +244,18 @@ import std.traits : Unqual;
 
 
 /**
-Iterates a bidirectional range backwards. The original range can be
-accessed by using the `source` property. Applying retro twice to
-the same range yields the original range.
+Iterates a range backwards. The original range can be accessed by using the
+`source` property. Applying retro twice to the same range yields the original
+range.
 
 Params:
-    r = the bidirectional range to iterate backwards
+    r = the range to iterate backwards.
 
 Returns:
-    A bidirectional range with length if `r` also provides a length. Or,
-    if `r` is a random access range, then the return value will be random
-    access as well.
+    An InputRange range with 'popBack' and 'back', with length if `r` also
+    provides a length. Or, if `r` is a random access range, then the return
+    value will be random access as well. If the 'r' is a ForwardRange the
+    returned range will also be a ForwardRange.
 See_Also:
     $(REF reverse, std,algorithm,mutation) for mutating the source range directly.
  */
