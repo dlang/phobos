@@ -803,6 +803,7 @@ template templateNot(alias pred)
     static assert(allSatisfy!(isNoPointer, string, char, float));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
@@ -854,6 +855,7 @@ template templateAnd(Preds...)
     static assert(alwaysTrue!int);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
@@ -912,6 +914,7 @@ template templateOr(Preds...)
     static assert(!alwaysFalse!int);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
