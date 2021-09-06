@@ -1148,7 +1148,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     {
         auto namez = name.tempCString();
 
-        static trustedStat(const(FSChar)* namez, out stat_t buf) @trusted
+        static trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
         {
             return stat(namez, &buf);
         }
