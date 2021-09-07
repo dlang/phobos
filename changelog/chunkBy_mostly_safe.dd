@@ -1,0 +1,35 @@
+`chunkBy` `@safe` with forward ranges and `splitWhen` fully `@safe`
+
+`std.algorithm.iteration.splitWhen` now infers safety from the underlying range,
+as most Phobos ranges do. `std.algorithm.iteration.chunkBy` also does that when
+instantiated with a forward range. Inference for `chunkBy` with a non-forward
+input range is not yet implemented, though.
+
+-------
+@safe void fun()
+{
+    import std.algorithm;
+
+    // Grouping by particular attribute of each element:
+    auto data = [
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3]
+    ];
+
+    auto r1 = data.chunkBy!((a,b) => a[0] == b[0]);
+    assert(r1.equal!equal([
+        [[1, 1], [1, 2]],
+        [[2, 2], [2, 3]]
+    ]));
+
+    auto r2 = [1, 2, 3, 4, 5, 6, 7, 8, 9].splitWhen!((x, y) => ((x*y) % 3) > 0);
+    assert(r2.equal!equal([
+        [1],
+        [2, 3, 4],
+        [5, 6, 7],
+        [8, 9]
+    ]));
+}
+-------
