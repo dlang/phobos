@@ -1228,15 +1228,25 @@ Note:
 See_Also:
     $(LREF formattedWrite) which formats several values at once.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f) // TODO: make const(T) work
 {
     import std.format : enforceFmt;
+    import std.traits : isIntegral;
 
     enforceFmt(f.width != f.DYNAMIC && f.precision != f.DYNAMIC
                && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
                "Dynamic argument not allowed for `formatValue`");
 
-    formatValueImpl(w, val, f);
+    static if (is(T == enum))   // enum needs special treatment
+        formatValueImpl(w, val, f);
+    else static if (is(T == bool))
+        formatValueImplBool(w, val, f);
+    else static if (isIntegral!T)
+        formatValueImplIntegral(w, val, f);
+    // else static if (is(T == float) || is(T == double) || is(T == real))
+    //     formatValueImplFloatingPoint(w, val, f);
+    else
+        formatValueImpl(w, val, f);
 }
 
 ///
