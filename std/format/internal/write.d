@@ -28,7 +28,7 @@ package(std.format):
     `bool`s are formatted as `"true"` or `"false"` with `%s` and as `1` or
     `0` with integral-specific format specs.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;  // TODO: remove and pass obj to val directly in line below?
@@ -161,7 +161,7 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 /*
     Integrals are formatted like $(REF printf, core, stdc, stdio).
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
@@ -591,8 +591,7 @@ private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj,
-                                      scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     FloatingPointTypeOf!T val = obj;
@@ -1007,7 +1006,7 @@ if (is(T == float) || is(T == double) || is(T == real))
     Formatting a `creal` is deprecated but still kept around for a while.
  */
 deprecated("Use of complex types is deprecated. Use std.complex")
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.range.primitives : put;
@@ -1027,7 +1026,7 @@ if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char
     Formatting an `ireal` is deprecated but still kept around for a while.
  */
 deprecated("Use of imaginary types is deprecated. Use std.complex")
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.range.primitives : put;
@@ -1042,7 +1041,7 @@ if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char
     Individual characters are formatted as Unicode characters with `%s`
     and as integers with integral-specific format specs
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.meta : AliasSeq;
@@ -1147,7 +1146,7 @@ if (is(immutable T == immutable U, U) && is(U == char) || is(U == wchar) || is(U
 /*
     Strings are formatted like $(REF printf, core, stdc, stdio)
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope const(T) obj, // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope const(T) obj,
     scope const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -1342,7 +1341,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 /*
     Static-size arrays are formatted as dynamic arrays.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref const(T) obj, // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref const(T) obj,
     scope const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -1787,13 +1786,13 @@ void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
     Associative arrays are formatted by using `':'` and $(D ", ") as
     separators, and enclosed by `'['` and `']'`.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f) // TODO: const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.format : enforceFmt, formatValue;
     import std.range.primitives : put;
 
-    AssocArrayTypeOf!T val = obj;
+    AssocArrayTypeOf!(const(T)) val = obj;
     const spec = f.spec;
 
     enforceFmt(spec == 's' || spec == '(',
@@ -2882,7 +2881,7 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 /*
     `enum`s are formatted like their base value
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) val, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) val, scope const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     import std.array : appender;
@@ -2970,7 +2969,7 @@ if (is(T == enum))
 /*
     Pointers are formatted as hex integers.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope const(T) val, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope const(T) val, scope const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(typeof({ shared const void* p = val; })))
@@ -3084,7 +3083,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 /*
     SIMD vectors are formatted as arrays.
  */
-void formatValueImpl(Writer, V, Char)(auto ref Writer w, const(V) val, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, V, Char)(auto ref Writer w, const(V) val, scope const ref FormatSpec!Char f)
 if (isSIMDVector!V)
 {
     formatValueImpl(w, val.array, f);
