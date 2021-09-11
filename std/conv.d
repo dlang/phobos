@@ -3105,42 +3105,42 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
-        if (msg == null)
+        if (msg is null)
             msg = "Floating point conversion error";
         return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
 
     enforce(!p.empty, bailOut());
 
-    size_t count = 0;
+    static if (doCount) size_t count = 0;
     bool sign = false;
     switch (p.front)
     {
     case '-':
         sign = true;
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
             goto case 'i';
         break;
     case '+':
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty, bailOut());
         break;
     case 'i': case 'I':
         // inf
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty && toUpper(p.front) == 'N',
                bailOut("error converting input to floating point"));
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty && toUpper(p.front) == 'F',
                bailOut("error converting input to floating point"));
         // skip past the last 'f'
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         static if (isNarrowString!Source)
             source = cast(Source) p;
@@ -3159,7 +3159,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     bool startsWithZero = p.front == '0';
     if (startsWithZero)
     {
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         if (p.empty)
         {
@@ -3178,23 +3178,23 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         isHex = p.front == 'x' || p.front == 'X';
         if (isHex)
         {
-            ++count;
+            static if (doCount) ++count;
             p.popFront();
         }
     }
     else if (toLower(p.front) == 'n')
     {
         // nan
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty && toUpper(p.front) == 'A',
                bailOut("error converting input to floating point"));
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty && toUpper(p.front) == 'N',
                bailOut("error converting input to floating point"));
         // skip past the last 'n'
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         static if (isNarrowString!Source)
             source = cast(Source) p;
@@ -3283,14 +3283,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                     exp += expIter;
                 }
                 exp -= dot;
-                ++count;
+                static if (doCount) ++count;
                 p.popFront();
                 if (p.empty)
                     break;
                 i = p.front;
                 if (i == '_')
                 {
-                    ++count;
+                    static if (doCount) ++count;
                     p.popFront();
                     if (p.empty)
                         break;
@@ -3299,7 +3299,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             }
             if (i == '.' && !dot)
             {
-                ++count;
+                static if (doCount) ++count;
                 p.popFront();
                 dot += expIter;
             }
@@ -3324,14 +3324,14 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         char sexp = 0;
         int e = 0;
 
-        ++count;
+        static if (doCount) ++count;
         p.popFront();
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
         {
             case '-':    sexp++;
                          goto case;
-            case '+':    ++count;
+            case '+':    static if (doCount) ++count;
                          p.popFront();
                          break;
             default: {}
@@ -3343,7 +3343,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             {
                 e = e * 10 + p.front - '0';
             }
-            ++count;
+            static if (doCount) ++count;
             p.popFront();
             sawDigits = true;
         }
