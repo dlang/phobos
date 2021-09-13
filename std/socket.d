@@ -3119,25 +3119,17 @@ public:
             from = createAddress();
         socklen_t nameLen = from.nameLen;
         version (Windows)
-        {
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int) flags, from.name, &nameLen);
-            if (read >= 0)
-            {
-                from.setNameLen(nameLen);
-                assert(from.addressFamily == _family);
-            }
-            return read;
-        }
+
         else
-        {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int) flags, from.name, &nameLen);
-            if (read >= 0)
-            {
-                from.setNameLen(nameLen);
-                assert(from.addressFamily == _family);
-            }
-            return read;
+
+        if (read >= 0)
+        {
+            from.setNameLen(nameLen);
+            assert(from.addressFamily == _family);
         }
+        return read;
     }
 
 
