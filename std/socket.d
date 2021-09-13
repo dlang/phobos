@@ -3572,7 +3572,7 @@ class UdpSocket: Socket
     }
 }
 
-unittest
+@safe unittest
 {
     byte[] buf;
     buf.length = 1;
