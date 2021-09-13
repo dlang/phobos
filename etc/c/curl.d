@@ -549,7 +549,7 @@ alias curl_proxytype = int;
 
 ///
 enum CurlAuth : ulong {
-  none =         0ul,        /** None */
+  none =         0UL,        /** None */
   basic =        1UL << 0,   /** Basic (default) */
   digest =       1UL << 1,   /** Digest */
   negotiate =    1UL << 2,   /** Negotiate (SPNEGO) */
