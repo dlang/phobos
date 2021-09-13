@@ -680,17 +680,25 @@ template staticMap(alias F, Args ...)
     assert(A == typeid(int));
 }
 
-/**
-Tests whether all given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+version (StdDdoc)
+{
+    /**
+       Tests whether all given items satisfy a template predicate, i.e. evaluates to
+       $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
-Evaluation is $(I not) short-circuited if a false result is encountered; the
-template predicate must be instantiable with all the given items.
- */
-template allSatisfy(alias F, T...)
+       Evaluation is $(I not) short-circuited if a false result is encountered; the
+       template predicate must be instantiable with all the given items.
+    */
+    template allSatisfy(alias F, T...)
+    {
+        import core.internal.traits : allSat = allSatisfy;
+        alias allSatisfy = allSat!(F, T);
+    }
+}
+else
 {
     import core.internal.traits : allSat = allSatisfy;
-    alias allSatisfy = allSat!(F, T);
+    alias allSatisfy = allSat;
 }
 
 ///
@@ -702,17 +710,25 @@ template allSatisfy(alias F, T...)
     static assert( allSatisfy!(isIntegral, int, long));
 }
 
-/**
-Tests whether any given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+version (StdDdoc)
+{
+    /**
+       Tests whether any given items satisfy a template predicate, i.e. evaluates to
+       $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
-Evaluation is short-circuited if a true result is encountered; the
-template predicate must be instantiable with one of the given items.
- */
-template anySatisfy(alias F, T...)
+       Evaluation is short-circuited if a true result is encountered; the
+       template predicate must be instantiable with one of the given items.
+    */
+    template anySatisfy(alias F, T...)
+    {
+        import core.internal.traits : anySat = anySatisfy;
+        alias anySatisfy = anySat!(F, T);
+    }
+}
+else
 {
     import core.internal.traits : anySat = anySatisfy;
-    alias anySatisfy = anySat!(F, T);
+    alias anySatisfy = anySat;
 }
 
 ///
