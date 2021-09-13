@@ -562,7 +562,7 @@ enum CurlAuth : ulong {
   only =         1UL << 31,  /** used together with a single other
                                  type to force no auth or just that
                                  single type */
-  any =          ~digest_ie, /** any allows */    
+  any =          ~digest_ie, /** any allows */
   anysafe =      ~(basic | digest_ie) /** any except basic */
 }
 
@@ -576,7 +576,7 @@ enum CurlSshAuth {
   keyboard  = 1 << 3, /** keyboard interactive */
   agent     = 1 << 4, /** agent (ssh-agent, pageant...) */
   gssapi    = 1 << 5, /** gssapi (kerberos, ...) */
-  
+
   default_  = any // CURLSSH_AUTH_ANY;
 }
 ///
