@@ -1622,7 +1622,7 @@ private template isInputRangeOrConvertible(E)
         `true` if $(D lhs.ptr == rhs.ptr), `false` otherwise.
   +/
 @safe
-pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
+pure nothrow @nogc bool sameHead(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr == rhs.ptr;
 }
@@ -1650,7 +1650,7 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
         `false` otherwise.
   +/
 @trusted
-pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
+pure nothrow @nogc bool sameTail(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
 }
