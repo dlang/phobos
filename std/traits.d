@@ -2714,7 +2714,7 @@ alias FieldTypeTuple = Fields;
     static assert(is(FieldTypeTuple!NestedClass == AliasSeq!int));
 
     static interface I {}
-    static assert(is(Fields!I == AliasSeq!()));
+    static assert(is(Fields!I == AliasSeq!(I)));
 }
 
 //Required for FieldNameTuple
