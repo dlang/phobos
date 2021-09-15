@@ -5584,7 +5584,7 @@ private template ContravariantRhsT(Rhs)
     }
     else static if (is (Rhs == struct))
     {
-        alias ContravariantRhsT = auto ref const Unqual!Rhs;
+        alias ContravariantRhsT = const Unqual!Rhs;
     }
     else
     {
@@ -6164,11 +6164,11 @@ mixin template ImplementEquals(M...)
                 r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
                 if (!r)
                 {
-                    return r;
+                    return cast(bool) r;
                 }
             }
         }}
-        return r;
+        return cast(bool) r;
     }
 }
 
@@ -6288,7 +6288,7 @@ mixin template ImplementHash(M...)
                 static assert(is(typeof({hashFun(thisMember, r);})),
                         typeof({hashFun(thisMember, r);}));
 
-                r = hashFun(__traits(getMember, this, fieldName), r);
+                r = cast(bool) hashFun(__traits(getMember, this, fieldName), r);
             }
         }}
         return r;
