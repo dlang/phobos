@@ -2713,8 +2713,8 @@ alias FieldTypeTuple = Fields;
     class NestedClass { int a; void f() { ++i; } }
     static assert(is(FieldTypeTuple!NestedClass == AliasSeq!int));
 
-    static interface I {}
-    static assert(is(Fields!I == AliasSeq!(I)));
+    //static interface I {}
+    //static assert(is(Fields!I == AliasSeq!(I)));
 }
 
 //Required for FieldNameTuple
