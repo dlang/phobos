@@ -448,6 +448,90 @@ private enum bool distinctFieldNames(names...) = __traits(compiles,
     static assert(!distinctFieldNames!(int, "int"));
 }
 
+
+// Parse (type,name) pairs (FieldSpecs) out of the specified
+// arguments. Some fields would have name, others not.
+private template parseSpecs(Specs...)
+{
+    static if (Specs.length == 0)
+    {
+        alias parseSpecs = AliasSeq!();
+    }
+    else static if (is(Specs[0]))
+    {
+        static if (is(typeof(Specs[1]) : string))
+        {
+            alias parseSpecs =
+                AliasSeq!(FieldSpec!(Specs[0 .. 2]),
+                          parseSpecs!(Specs[2 .. $]));
+        }
+        else
+        {
+            alias parseSpecs =
+                AliasSeq!(FieldSpec!(Specs[0]),
+                          parseSpecs!(Specs[1 .. $]));
+        }
+    }
+    else
+    {
+        static assert(0, "Attempted to instantiate Tuple with an "
+                        ~"invalid argument: "~ Specs[0].stringof);
+    }
+}
+
+private template FieldSpec(T, string s = "")
+{
+    alias Type = T;
+    alias name = s;
+}
+
+// Used with staticMap.
+private alias extractType(alias spec) = spec.Type;
+private alias extractName(alias spec) = spec.name;
+private template expandSpec(alias spec)
+{
+    static if (spec.name.length == 0)
+        alias expandSpec = AliasSeq!(spec.Type);
+    else
+        alias expandSpec = AliasSeq!(spec.Type, spec.name);
+}
+
+
+private enum areCompatibleTuples(Tup1, Tup2, string op) =
+    isTuple!(OriginalType!Tup2) && Tup1.Types.length == Tup2.Types.length && is(typeof(
+    (ref Tup1 tup1, ref Tup2 tup2)
+    {
+        static foreach (i; 0 .. Tup1.Types.length)
+        {{
+            auto lhs = typeof(tup1.field[i]).init;
+            auto rhs = typeof(tup2.field[i]).init;
+            static if (op == "=")
+                lhs = rhs;
+            else
+                auto result = mixin("lhs "~op~" rhs");
+        }}
+    }));
+
+private enum areBuildCompatibleTuples(Tup1, Tup2) =
+    isTuple!Tup2 && Tup1.Types.length == Tup2.Types.length && is(typeof(
+    {
+        static foreach (i; 0 .. Tup1.Types.length)
+            static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
+    }));
+
+// Returns `true` iff a `T` can be initialized from a `U`.
+private enum isBuildable(T, U) = is(typeof(
+    {
+        U u = U.init;
+        T t = u;
+    }));
+// Helper for partial instantiation
+private template isBuildableFrom(U)
+{
+    enum isBuildableFrom(T) = isBuildable!(T, U);
+}
+
+
 /**
 _Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an `int` and a `string`. `Tuple` can be used to bundle
@@ -466,47 +550,7 @@ if (distinctFieldNames!(Specs))
 {
     import std.meta : staticMap;
 
-    // Parse (type,name) pairs (FieldSpecs) out of the specified
-    // arguments. Some fields would have name, others not.
-    template parseSpecs(Specs...)
-    {
-        static if (Specs.length == 0)
-        {
-            alias parseSpecs = AliasSeq!();
-        }
-        else static if (is(Specs[0]))
-        {
-            static if (is(typeof(Specs[1]) : string))
-            {
-                alias parseSpecs =
-                    AliasSeq!(FieldSpec!(Specs[0 .. 2]),
-                              parseSpecs!(Specs[2 .. $]));
-            }
-            else
-            {
-                alias parseSpecs =
-                    AliasSeq!(FieldSpec!(Specs[0]),
-                              parseSpecs!(Specs[1 .. $]));
-            }
-        }
-        else
-        {
-            static assert(0, "Attempted to instantiate Tuple with an "
-                            ~"invalid argument: "~ Specs[0].stringof);
-        }
-    }
-
-    template FieldSpec(T, string s = "")
-    {
-        alias Type = T;
-        alias name = s;
-    }
-
     alias fieldSpecs = parseSpecs!Specs;
-
-    // Used with staticMap.
-    alias extractType(alias spec) = spec.Type;
-    alias extractName(alias spec) = spec.name;
 
     // Generates named fields as follows:
     //    alias name_0 = Identity!(field[0]);
@@ -533,52 +577,6 @@ if (distinctFieldNames!(Specs))
     // names if any.
     alias sliceSpecs(size_t from, size_t to) =
         staticMap!(expandSpec, fieldSpecs[from .. to]);
-
-    template expandSpec(alias spec)
-    {
-        static if (spec.name.length == 0)
-        {
-            alias expandSpec = AliasSeq!(spec.Type);
-        }
-        else
-        {
-            alias expandSpec = AliasSeq!(spec.Type, spec.name);
-        }
-    }
-
-    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!(OriginalType!Tup2) && is(typeof(
-    (ref Tup1 tup1, ref Tup2 tup2)
-    {
-        static assert(tup1.field.length == tup2.field.length);
-        static foreach (i; 0 .. Tup1.Types.length)
-        {{
-            auto lhs = typeof(tup1.field[i]).init;
-            auto rhs = typeof(tup2.field[i]).init;
-            static if (op == "=")
-                lhs = rhs;
-            else
-                auto result = mixin("lhs "~op~" rhs");
-        }}
-    }));
-
-    enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
-    {
-        static assert(Tup1.Types.length == Tup2.Types.length);
-        static foreach (i; 0 .. Tup1.Types.length)
-            static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
-    }));
-
-    /+ Returns `true` iff a `T` can be initialized from a `U`. +/
-    enum isBuildable(T, U) =  is(typeof(
-    {
-        U u = U.init;
-        T t = u;
-    }));
-    /+ Helper for partial instantiation +/
-    template isBuildableFrom(U)
-    {
-        enum isBuildableFrom(T) = isBuildable!(T, U);
-    }
 
     struct Tuple
     {
@@ -1359,8 +1357,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Types.length == 0)
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             import std.format : format;
 
@@ -1381,8 +1378,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Types.length == 0)
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             import std.exception : assertThrown;
             import std.format : format, FormatException;
