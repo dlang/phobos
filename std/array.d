@@ -186,7 +186,7 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableStrin
 @safe pure nothrow unittest
 {
     immutable int[] a = [1, 2, 3, 4];
-    auto b = (&a).array;
+    auto b = (a).array;
     assert(b == a);
 }
 
@@ -3948,7 +3948,7 @@ if (isDynamicArray!A)
 unittest
 {
     int[] a = [1, 2];
-    auto app2 = appender(&a);
+    auto app2 = appender(a);
     assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
@@ -4418,7 +4418,7 @@ RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 unittest
 {
     int[] a = [1, 2];
-    auto app2 = appender(&a);
+    auto app2 = appender(a);
     assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
@@ -4433,7 +4433,7 @@ unittest
 @safe pure nothrow unittest
 {
     auto arr = new char[0];
-    auto app = appender(&arr);
+    auto app = appender(arr);
     string b = "abcdefg";
     foreach (char c; b) app.put(c);
     assert(app[] == "abcdefg");
@@ -4443,7 +4443,7 @@ unittest
 @safe pure nothrow unittest
 {
     auto arr = new char[0];
-    auto app = appender(&arr);
+    auto app = appender(arr);
     string b = "abcdefg";
     foreach (char c; b) app ~= c;
     assert(app[] == "abcdefg");
@@ -4453,7 +4453,7 @@ unittest
 @safe pure nothrow unittest
 {
     int[] a = [ 1, 2 ];
-    auto app2 = appender(&a);
+    auto app2 = appender(a);
     assert(app2[] == [ 1, 2 ]);
     assert(a == [ 1, 2 ]);
     app2.put(3);
@@ -4467,7 +4467,7 @@ unittest
     import std.exception : assertThrown;
 
     int[] a = [ 1, 2 ];
-    auto app2 = appender(&a);
+    auto app2 = appender(a);
     assert(app2[] == [ 1, 2 ]);
     assert(a == [ 1, 2 ]);
     app2 ~= 3;
