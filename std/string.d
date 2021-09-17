@@ -2265,8 +2265,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
-        the stopIdx is greater than or equal to the length of haystack the
-        functions returns `-1`.
+            the stopIdx is greater than or equal to the length of haystack the
+            functions returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
