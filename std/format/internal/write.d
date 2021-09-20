@@ -35,7 +35,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatValueImplBool!(Writer, Char)(w, val, f);
 }
 
-void formatValueImplBool(Writer, Char)(auto ref Writer w, bool val, scope const ref FormatSpec!Char f)
+void formatValueImplBool(Writer, Char)(auto ref Writer w, const(bool) val, scope const ref FormatSpec!Char f)
 {
     if (f.spec == 's')
         writeAligned(w, val ? "true" : "false", f);
