@@ -1240,6 +1240,8 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 
     static if (is(T == enum))   // enum needs special treatment
         formatValueImpl(w, val, f);
+    else static if (is(immutable X == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
+        formatValueImplChar(w, val, f);
     else static if (is(immutable X == immutable U, U) && is(U == bool))
         formatValueImplBool(w, val, f);
     else static if (isIntegral!T)

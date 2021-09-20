@@ -1057,6 +1057,21 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatValueImpl(w, cast(U) val[0], f);
     }
 }
+void formatValueImplChar(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+if (is(immutable T == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
+{                               // TODO: can we avoid duplicating formatValueImpl here?
+    import std.meta : AliasSeq;
+
+    T[1] val = obj;
+
+    if (f.spec == 's' || f.spec == 'c')
+        writeAligned(w, val[], f);
+    else
+    {
+        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        formatValueImpl(w, cast(U) val[0], f);
+    }
+}
 
 @safe pure unittest
 {
