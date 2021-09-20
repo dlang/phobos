@@ -1014,12 +1014,12 @@ if (is(immutable T : immutable creal) && !is(T == enum) && !hasToString!(T, Char
 
     immutable creal val = obj;
 
-    formatValueImpl(w, val.re, f);
+    formatValueImplFloatingPoint(w, val.re, f);
     if (val.im >= 0)
     {
         put(w, '+');
     }
-    formatValueImpl(w, val.im, f);
+    formatValueImplFloatingPoint(w, val.im, f);
     put(w, 'i');
 }
 
@@ -1034,7 +1034,7 @@ if (is(immutable T : immutable ireal) && !is(T == enum) && !hasToString!(T, Char
 
     immutable ireal val = obj;
 
-    formatValueImpl(w, val.im, f);
+    formatValueImplFloatingPoint(w, val.im, f);
     put(w, 'i');
 }
 
