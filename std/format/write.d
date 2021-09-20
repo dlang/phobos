@@ -1243,8 +1243,12 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         formatValueImplBool(w, val, f);
     else static if (isIntegral!T)
         formatValueImplIntegral(w, val, f);
-    // else static if (is(T == float) || is(T == double) || is(T == real))
-    //     formatValueImplFloatingPoint(w, val, f);
+    else static if ((is(immutable X == immutable U, U) &&
+                     is(U == float) || is(U == double) || is(U == real)))
+        formatValueImplFloatingPoint(w, val, f);
+    // TOOD else static if (hasToString!(T, Char))
+    // {
+    // }
     else
         formatValueImpl(w, val, f);
 }

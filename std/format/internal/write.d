@@ -591,14 +591,21 @@ private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in
 /*
     Floating-point values are formatted like $(REF printf, core, stdc, stdio)
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj,
+                                      scope const ref FormatSpec!Char f) // const(T) reduces number of instances
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
+{
+    FloatingPointTypeOf!T val = obj;
+    formatValueImplFloatingPoint(w, val, f);
+}
+void formatValueImplFloatingPoint(Writer, T, Char)(auto ref Writer w, const(T) val,
+                                                   scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+if (is(T == float) || is(T == double) || is(T == real))
 {
     import std.algorithm.searching : find;
     import std.format : enforceFmt;
     import std.range.primitives : put;
 
-    FloatingPointTypeOf!T val = obj;
     const char spec = f.spec;
 
     if (spec == 'r')
