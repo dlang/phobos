@@ -1239,12 +1239,11 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 
     static if (is(T == enum))   // enum needs special treatment
         formatValueImpl(w, val, f);
-    else static if (is(T == bool))
+    else static if (is(immutable X == immutable U, U) && is(U == bool))
         formatValueImplBool(w, val, f);
     else static if (isIntegral!T)
         formatValueImplIntegral(w, val, f);
-    else static if ((is(immutable X == immutable U, U) &&
-                     is(U == float) || is(U == double) || is(U == real)))
+    else static if (is(immutable X == immutable U, U) && is(U == float) || is(U == double) || is(U == real))
         formatValueImplFloatingPoint(w, val, f);
     // TOOD else static if (hasToString!(T, Char))
     // {
