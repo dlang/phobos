@@ -214,7 +214,8 @@ if (isIntegral!U)
 }
 
 // TODO: factor out parts of this function that doesn’t depend on `Writer` and `Char` to reduce template bloat further
-private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool zero, in bool negative, scope const ref FormatSpec!Char f) // avoids code duplication
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool zero, in bool negative,
+                                                scope const ref FormatSpec!Char f) // avoids code duplication
 {
     immutable uint base =
     f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
