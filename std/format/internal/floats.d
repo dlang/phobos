@@ -34,7 +34,7 @@ if (is(T == float) || is(T == double)
 {
     import std.math.operations : extractBitpattern, FloatingPointBitpattern;
 
-    auto bp = extractBitpattern(cast()val);
+    auto bp = extractBitpattern(cast() val);
 
     ulong mnt = bp.mantissa;
     int exp = bp.exponent;

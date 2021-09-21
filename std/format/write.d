@@ -1246,7 +1246,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     // else static if (is(immutable T == immutable C[], C) && (is(C == char) || is(C == wchar) || is(C == dchar)))
     // {
     //     pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
-    //     formatRange(w, cast(const)val, f);
+    //     formatRange(w, cast(const) val, f);
     // }
     else static if (is(immutable X == immutable U, U) && is(U == bool))
         formatValueImplBool(w, val, f);

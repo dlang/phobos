@@ -40,7 +40,7 @@ void formatValueImplBool(Writer, Char)(auto ref Writer w, const(bool) val, scope
     if (f.spec == 's')
         writeAligned(w, val ? "true" : "false", f);
     else
-        formatValueImplIntegral(w, cast(const(byte))val, f);
+        formatValueImplIntegral(w, cast(const(byte)) val, f);
 }
 
 @safe pure unittest
