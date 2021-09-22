@@ -1228,7 +1228,7 @@ Note:
 See_Also:
     $(LREF formattedWrite) which formats several values at once.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f) // TODO: const(T) val
 { // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
     // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.format : enforceFmt;
