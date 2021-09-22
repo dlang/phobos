@@ -1239,7 +1239,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                "Dynamic argument not allowed for `formatValue`");
 
     static if (is(T == enum))   // enum needs special treatment in first static if
-        formatValueImpl(w, val, f);
+        formatValueImplEnum(w, val, f);
     else static if (is(immutable X == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
         formatValueImplChar(w, val, f);
     // TODO:
@@ -1259,7 +1259,6 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                     hasToString!(T, Char))
     {
         enforceValidFormatSpec!(T, Char)(f);
-        pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
         formatObject(w, val, f);
     }
     else
