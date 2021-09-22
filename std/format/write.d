@@ -1252,6 +1252,8 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                      is(T == union)) &&
                     hasToString!(T, Char))
     {
+        // TODO: either move to internal or move all calls to
+        // enforceValidFormatSpec into formatValue
         enforceValidFormatSpec!(T, Char)(f);
         formatObject(w, val, f);
     }
