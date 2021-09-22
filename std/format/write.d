@@ -1261,6 +1261,11 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         enforceValidFormatSpec!(T, Char)(f);
         formatObject(w, val, f);
     }
+    else static if (is(T == interface) &&
+                    (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
+    {
+        formatValueImplInterface(w, val, f);
+    }
     else
         formatValueImpl(w, val, f);
 }

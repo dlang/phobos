@@ -169,7 +169,7 @@ if (is(IntegralTypeOf!T) && !hasToString!(T, Char))
     formatValueImplIntegral(w, val, f);
 }
 
-void formatValueImplIntegral(Writer, U, Char)(auto ref Writer w, const(U) val, scope const ref FormatSpec!Char f) // const(U) reduces number of instances
+void formatValueImplIntegral(Writer, U, Char)(auto ref Writer w, const(U) val, scope const ref FormatSpec!Char f)
 if (isIntegral!U)
 {
     if (f.spec == 'r')
@@ -597,8 +597,7 @@ if (is(FloatingPointTypeOf!T) && !hasToString!(T, Char))
     FloatingPointTypeOf!T val = obj;
     formatValueImplFloatingPoint(w, val, f);
 }
-void formatValueImplFloatingPoint(Writer, T, Char)(auto ref Writer w, const(T) val,
-                                                   scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImplFloatingPoint(Writer, T, Char)(auto ref Writer w, const(T) val, scope const ref FormatSpec!Char f)
 if (is(T == float) || is(T == double) || is(T == real))
 {
     import std.algorithm.searching : find;
@@ -1056,7 +1055,7 @@ if (is(CharTypeOf!T) && !hasToString!(T, Char))
         formatValueImpl(w, cast(U) val[0], f);
     }
 }
-void formatValueImplChar(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f) // const(T) reduces number of instances
+void formatValueImplChar(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(immutable T == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
 {                               // TODO: can we avoid duplicating formatValueImpl here?
     import std.meta : AliasSeq;
@@ -1380,7 +1379,7 @@ if (is(StaticArrayTypeOf!T) && !hasToString!(T, Char))
 /*
     Dynamic arrays are formatted as input ranges.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f) // TODO: const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !hasToString!(T, Char))
 {
     static if (is(immutable(ArrayTypeOf!T) == immutable(void[])))
@@ -2280,7 +2279,7 @@ if (hasToString!(T, Char))
 /*
     Aggregates
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f) // TODO: const(T) reduces number of instances
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class))
 {
     import std.range.primitives : put;
@@ -2455,7 +2454,7 @@ version (StdUnittest)
     assert(s == "Foo", s);
 }
 
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f) // TODO: const(T) reduces number of instances
+void formatValueImplInterface(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
 {
     import std.range.primitives : put;
@@ -2541,8 +2540,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
 }
 
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, // TODO: const(T) reduces number of instances
-    scope const ref FormatSpec!Char f)
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
 {
     import std.range.primitives : put;
