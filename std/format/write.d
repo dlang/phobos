@@ -1250,8 +1250,6 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                !hasToString!(T, Char)) // toString takes precedence over alias following alias this
     {
         alias U = AT;           // follow alias this when T doesn’t a toString member
-        // static if (is(typeof(__traits(getMember, V.init, __traits(getAliasThis, V)[0]))))
-        //     pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", "following nested alias this T:", T, " V:", V);
         static if (is(typeof(__traits(getMember, U.init, __traits(getAliasThis, U)[0])) AU) // TODO: check only if U is struct or class
                    && !is(AU[] == AU) &&
                    !hasToString!(U, Char)) // toString takes precedence over alias following alias this
