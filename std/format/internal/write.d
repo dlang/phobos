@@ -2552,7 +2552,7 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     enforceValidFormatSpec!(T, Char)(f);
     static if (hasToString!(T, Char))
     {
-        static assert(0);       // should be covered in formatValue. TODO remove
+        static assert(0, "this case should be covered in formatValue"); // TODO remove
     }
     else static if (isInputRange!T)
     {
