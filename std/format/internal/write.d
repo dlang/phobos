@@ -1512,7 +1512,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 // input range formatting
-private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
     import std.conv : text;
@@ -2141,7 +2141,7 @@ template hasToString(T, Char)
 }
 
 // object formatting with toString
-private void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
+private void formatObject(Writer, T, Char)(ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     import std.format : NoOpSink;
