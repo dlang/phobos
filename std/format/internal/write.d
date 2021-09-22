@@ -2279,7 +2279,7 @@ if (hasToString!(T, Char))
 /*
     Aggregates
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
+void formatValueImplClass(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == class))
 {
     import std.range.primitives : put;
@@ -2487,12 +2487,12 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
                 }
                 else
                 {
-                    formatValueImpl(w, cast(Object) val, f);
+                    formatValueImplClass(w, cast(Object) val, f);
                 }
             }
             else
             {
-                formatValueImpl(w, cast(Object) val, f);
+                formatValueImplClass(w, cast(Object) val, f);
             }
         }
     }
