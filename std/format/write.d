@@ -1254,13 +1254,13 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                    && !is(AU[] == AU) &&
                    !hasToString!(U, Char)) // toString takes precedence over alias following alias this
         {
-            alias V = AU;           // follow alias this when U doesn’t a toString member
-            V rval = val;           // use cast(V) val instead when possiblep
+            alias V = AU;
+            V rval = val; // use cast(...) val instead when val can be passed by non-ref
         }
         else
         {
             alias V = U;
-            U rval = val;
+            U rval = val; // use cast(...) val instead when val can be passed by non-ref
         }
     }
     else
