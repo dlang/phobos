@@ -1228,8 +1228,10 @@ Note:
 See_Also:
     $(LREF formattedWrite) which formats several values at once.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f) // TODO: const(T) val
-{ // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
+{
+    // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
+    // TODO: const(T) val when val is r-value (non-ref)
     // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.format : enforceFmt;
     import std.traits : isIntegral, isPointer;
@@ -1238,36 +1240,67 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
                "Dynamic argument not allowed for `formatValue`");
 
-    static if (is(T == enum))   // enum needs special treatment in first static if
-        formatValueImplEnum(w, val, f);
-    else static if (is(immutable X == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
-        formatValueImplChar(w, val, f);
-    else static if (is(immutable X == immutable U, U) && is(U == bool))
-        formatValueImplBool(w, val, f);
-    else static if (isIntegral!T)
-        formatValueImplIntegral(w, val, f);
-    else static if (is(immutable X == immutable U, U) && is(U == float) || is(U == double) || is(U == real))
-        formatValueImplFloatingPoint(w, val, f);
-    else static if ((is(T == struct) ||
-                     is(T == union)) &&
-                    hasToString!(T, Char))
+    // follow alias this
+    // TODO support recursive alias this declarations via either
+    // - static foreach and AliasAssign
+    // - recursive FollowAliasThis
+    // - recurse by calling formatValue
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) // TODO: check only if T is struct or class
+               && !is(AT[] == AT) &&
+               !hasToString!(T, Char)) // toString takes precedence over alias following alias this
+    {
+        alias U = AT;           // follow alias this when T doesn’t a toString member
+        // static if (is(typeof(__traits(getMember, V.init, __traits(getAliasThis, V)[0]))))
+        //     pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", "following nested alias this T:", T, " V:", V);
+        static if (is(typeof(__traits(getMember, U.init, __traits(getAliasThis, U)[0])) AU) // TODO: check only if U is struct or class
+                   && !is(AU[] == AU) &&
+                   !hasToString!(U, Char)) // toString takes precedence over alias following alias this
+        {
+            alias V = AU;           // follow alias this when U doesn’t a toString member
+            V rval = val;           // use cast(V) val instead when possiblep
+        }
+        else
+        {
+            alias V = U;
+            U rval = val;
+        }
+    }
+    else
+    {
+        alias V = T;
+        alias rval = val;
+    }
+
+    // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: T:", T, " => V:", V);
+
+    // static if should be in order of commonality
+    static if (is(V == enum)) // enum needs special treatment in first because an enum T is also a T
+        formatValueImplEnum(w, rval, f);
+    else static if (is(immutable X == immutable V, V) && is(V == char) || is(V == wchar) || is(V == dchar))
+        formatValueImplChar(w, rval, f);
+    else static if (is(immutable X == immutable V, V) && is(V == bool))
+        formatValueImplBool(w, rval, f);
+    else static if (isIntegral!V)
+        formatValueImplIntegral(w, rval, f);
+    else static if (is(immutable X == immutable V, V) && is(V == float) || is(V == double) || is(V == real))
+        formatValueImplFloatingPoint(w, rval, f);
+    else static if ((is(V == struct) || is(V == union)) && hasToString!(V, Char))
     {
         // TODO: either move to internal or move all calls to
         // enforceValidFormatSpec into formatValue
-        enforceValidFormatSpec!(T, Char)(f);
-        formatObject(w, val, f);
+        enforceValidFormatSpec!(V, Char)(f);
+        formatObject(w, rval, f);
     }
-    else static if (is(T == class))
-        formatValueImplClass(w, val, f);
-    else static if (isPointer!T && !hasToString!(T, Char))
-        formatValueImplPointer(w, val, f);
-    else static if (is(T == interface) &&
-                    (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
-        formatValueImplInterface(w, val, f);
-    else static if (is(immutable T == immutable typeof(null)) && !hasToString!(T, Char))
-        formatValueImplNull(w, val, f);
+    else static if (is(V == class))
+        formatValueImplClass(w, rval, f);
+    else static if (isPointer!V && !hasToString!(V, Char))
+        formatValueImplPointer(w, rval, f);
+    else static if (is(V == interface) && (hasToString!(V, Char) || !is(BuiltinTypeOf!V)))
+        formatValueImplInterface(w, rval, f);
+    else static if (is(immutable V == immutable typeof(null)) && !hasToString!(V, Char))
+        formatValueImplNull(w, rval, f);
     else
-        formatValueImpl(w, val, f);
+        formatValueImpl(w, rval, f);
 }
 
 ///
