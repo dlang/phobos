@@ -127,7 +127,7 @@ void formatValueImplBool(Writer, Char)(auto ref Writer w, const(bool) val, scope
 /*
     `null` literal is formatted as `"null"`
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
+void formatValueImplNull(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(immutable T == immutable typeof(null)) && !hasToString!(T, Char))
 {
     import std.format : enforceFmt;
