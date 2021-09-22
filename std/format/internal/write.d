@@ -2966,7 +2966,7 @@ if (is(T == enum))
 /*
     Pointers are formatted as hex integers.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope const(T) val, scope const ref FormatSpec!Char f)
+void formatValueImplPointer(Writer, T, Char)(auto ref Writer w, scope const(T) val, scope const ref FormatSpec!Char f)
 if (isPointer!T && !hasToString!(T, Char))
 {
     static if (is(typeof({ shared const void* p = val; })))

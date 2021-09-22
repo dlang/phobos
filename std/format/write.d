@@ -1232,7 +1232,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 { // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
     // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.format : enforceFmt;
-    import std.traits : isIntegral;
+    import std.traits : isIntegral, isPointer;
 
     enforceFmt(f.width != f.DYNAMIC && f.precision != f.DYNAMIC
                && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
@@ -1263,6 +1263,8 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     }
     else static if (is(T == class))
         formatValueImplClass(w, val, f);
+    else static if (isPointer!T && !hasToString!(T, Char))
+        formatValueImplPointer(w, val, f);
     else static if (is(T == interface) &&
                     (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
         formatValueImplInterface(w, val, f);
