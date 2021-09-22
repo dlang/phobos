@@ -2542,7 +2542,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
-{
+{                              // TODO: rename to formatValueImplStructOrUnion and call from formatValue
     import std.range.primitives : put;
 
     static if (__traits(hasMember, T, "toString") && isSomeFunction!(val.toString))
