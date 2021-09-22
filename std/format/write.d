@@ -1238,7 +1238,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
                && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
                "Dynamic argument not allowed for `formatValue`");
 
-    static if (is(T == enum))   // enum needs special treatment
+    static if (is(T == enum))   // enum needs special treatment in first static if
         formatValueImpl(w, val, f);
     else static if (is(immutable X == immutable U, U) && is(U == char) || is(U == wchar) || is(U == dchar))
         formatValueImplChar(w, val, f);
@@ -1254,9 +1254,14 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         formatValueImplIntegral(w, val, f);
     else static if (is(immutable X == immutable U, U) && is(U == float) || is(U == double) || is(U == real))
         formatValueImplFloatingPoint(w, val, f);
-    // TOOD else static if (hasToString!(T, Char))
-    // {
-    // }
+    else static if ((is(T == struct) ||
+                     is(T == union)) &&
+                    hasToString!(T, Char))
+    {
+        enforceValidFormatSpec!(T, Char)(f);
+        pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
+        formatObject(w, val, f);
+    }
     else
         formatValueImpl(w, val, f);
 }
