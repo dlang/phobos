@@ -165,7 +165,7 @@ void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope con
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
-    U val = obj;         // Extracting alias this may be impure/system/may-throw
+    U val = obj;    // Extracting alias this may be impure/system/may-throw
     formatValueImplIntegral(w, val, f);
 }
 
