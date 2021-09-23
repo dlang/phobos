@@ -122,7 +122,9 @@ template all(alias pred = "a")
     if (isInputRange!Range)
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
-                "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
+                "`" ~ (isSomeString!(typeof(pred))
+                    ? pred.stringof[1..$-1] : pred.stringof)
+                ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;

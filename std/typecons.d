@@ -9086,9 +9086,14 @@ template ReplaceTypeUnless(alias pred, From, To, T...)
         {
             template replaceTemplateArgs(T...)
             {
-                static if (is(typeof(T[0])))    // template argument is value or symbol
-                    enum replaceTemplateArgs = T[0];
-                else
+                static if (is(typeof(T[0]))) {   // template argument is value or symbol
+                    static if (__traits(compiles, { alias _ = T[0]; }))
+                        // it's a symbol
+                        alias replaceTemplateArgs = T[0];
+                    else
+                        // it's a value
+                        enum replaceTemplateArgs = T[0];
+                } else
                     alias replaceTemplateArgs = ReplaceTypeUnless!(pred, From, To, T[0]);
             }
             alias ReplaceTypeUnless = U!(staticMap!(replaceTemplateArgs, V));
@@ -9339,6 +9344,14 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
     interface I(T) {}
     class C : I!int {}
     static assert(is(ReplaceType!(int, string, C) == C));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22325
+@safe unittest
+{
+    static struct Foo(alias f) {}
+    static void bar() {}
+    alias _ = ReplaceType!(int, int, Foo!bar);
 }
 
 /**
