@@ -1330,10 +1330,10 @@ private template BottomAliasThisTypeOf(T)
 
 @safe pure unittest
 {
-	static assert(!is(BottomAliasThisTypeOf!bool));
+    static assert(!is(BottomAliasThisTypeOf!bool));
     struct S { bool x; alias x this; }
-	static assert(is(BottomAliasThisTypeOf!S));
-	static assert(is(BottomAliasThisTypeOf!S == bool));
+    static assert(is(BottomAliasThisTypeOf!S));
+    static assert(is(BottomAliasThisTypeOf!S == bool));
 }
 
 ///
