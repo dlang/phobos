@@ -1274,13 +1274,13 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     // static if should be in order of commonality
     static if (is(V == enum)) // enum needs special treatment in first because an enum T is also a T
         formatValueImplEnum(w, rval, f);
-    else static if (is(immutable V == immutable X, X) && is(X == char) || is(X == wchar) || is(X == dchar))
+    else static if (is(immutable V == immutable C, C) && is(C == char) || is(C == wchar) || is(C == dchar))
         formatValueImplChar(w, rval, f);
-    else static if (is(immutable V == immutable Y, Y) && is(Y == bool))
+    else static if (is(immutable V == immutable B, B) && is(B == bool))
         formatValueImplBool(w, rval, f);
     else static if (isIntegral!V)
         formatValueImplIntegral(w, rval, f);
-    else static if (is(immutable V == immutable Z, Z) && is(Z == float) || is(Z == double) || is(Z == real))
+    else static if (is(immutable V == immutable F, F) && is(F == float) || is(F == double) || is(F == real))
         formatValueImplFloatingPoint(w, rval, f);
     else static if ((is(V == struct) || is(V == union)) && hasToString!(V, Char))
     {
