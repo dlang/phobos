@@ -2178,7 +2178,6 @@ template hasToString(T, Char)
 void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
-    pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.format : NoOpSink;
     import std.range.primitives : put;
 
