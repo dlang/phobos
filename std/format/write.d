@@ -1282,6 +1282,12 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         formatValueImplIntegral(w, rval, f);
     else static if (is(immutable V == immutable F, F) && is(F == float) || is(F == double) || is(F == real))
         formatValueImplFloatingPoint(w, rval, f);
+    // TODO isSomeString (no array)
+    // TODO isStaticArray
+    // TODO isDynamicArray
+    // TODO isAssocArray
+    // TODO isSIMDVector
+    // TODO isDelegate
     else static if ((is(V == struct) || is(V == union)) && hasToString!(V, Char))
     {
         // TODO: either move to internal or move all calls to
@@ -1289,6 +1295,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         enforceValidFormatSpec!(V, Char)(f);
         formatObject(w, rval, f);
     }
+    // TODO if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
     else static if (is(V == class))
         formatValueImplClass(w, rval, f);
     else static if (isPointer!V && !hasToString!(V, Char))
@@ -1299,7 +1306,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         formatValueImplNull(w, rval, f);
     else
     {
-        // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: TODO: Handle type ", T);
+        pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: TODO: Handle type ", T);
         formatValueImpl(w, rval, f);
     }
 }
