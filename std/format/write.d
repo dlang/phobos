@@ -1306,7 +1306,8 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
         formatValueImplNull(w, rval, f);
     else
     {
-        pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: TODO: Handle type ", T);
+        // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: TODO: Handle type ", T);
+        // TODO: replace this with a static assert(0, "unhandled case");
         formatValueImpl(w, rval, f);
     }
 }
