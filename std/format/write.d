@@ -1314,14 +1314,14 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     }
 }
 
-private template AliasThisTypeOf(T)
+private template BottomAliasThisTypeOf(T)
 {                    // TODO can we express this with iteration and AliasAssign?
     static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) U))
     {
-        alias AliasThisTypeOf = U;
+        alias BottomAliasThisTypeOf = U;
         static if (is(typeof(__traits(getMember, U.init, __traits(getAliasThis, U)[0])) V))
         {
-            AliasThisTypeOf = V;
+            BottomAliasThisTypeOf = V;
             // ...
         }
     }
@@ -1330,10 +1330,10 @@ private template AliasThisTypeOf(T)
 
 @safe pure unittest
 {
-	static assert(!is(AliasThisTypeOf!bool));
+	static assert(!is(BottomAliasThisTypeOf!bool));
     struct S { bool x; alias x this; }
-	static assert(is(AliasThisTypeOf!S));
-	static assert(is(AliasThisTypeOf!S == bool));
+	static assert(is(BottomAliasThisTypeOf!S));
+	static assert(is(BottomAliasThisTypeOf!S == bool));
 }
 
 ///
