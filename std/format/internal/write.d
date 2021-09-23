@@ -1051,7 +1051,7 @@ if (is(CharTypeOf!T) && !hasToString!(T, Char))
         writeAligned(w, val[], f);
     else
     {
-        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2]; // TODO: what is this?
         formatValueImpl(w, cast(U) val[0], f);
     }
 }
@@ -1066,7 +1066,7 @@ if (is(immutable T == immutable U, U) && is(U == char) || is(U == wchar) || is(U
         writeAligned(w, val[], f);
     else
     {
-        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
+        alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2]; // TODO: what is this?
         formatValueImpl(w, cast(U) val[0], f);
     }
 }
