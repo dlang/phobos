@@ -1549,7 +1549,6 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !hasToString!(T, Char))
 private void formatRange(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
-    pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.conv : text;
     import std.format : FormatException, formatValue, NoOpSink;
     import std.range.primitives : ElementType, empty, front, hasLength,
