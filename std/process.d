@@ -1498,10 +1498,10 @@ package(std) string searchPathFor(scope const(char)[] executable)
     @safe
 {
     import std.algorithm.iteration : splitter;
-    import std.conv : text;
+    import std.conv : to;
     import std.path : chainPath;
 
-    string result;
+    typeof(return) result;
 
     environment.getImpl("PATH",
         (scope const(char)[] path)
@@ -1514,7 +1514,7 @@ package(std) string searchPathFor(scope const(char)[] executable)
                 auto execPath = chainPath(dir, executable);
                 if (isExecutable(execPath))
                 {
-                    result = text(execPath);
+                    result = execPath.to!(typeof(result));
                     return;
                 }
             }
