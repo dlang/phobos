@@ -8308,11 +8308,16 @@ public:
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
         is the time zone).
 
+        Default behaviour:
         Note that the number of digits in the fractional seconds varies with the
         number of fractional seconds. It's a maximum of 7 (which would be
         hnsecs), but only has as many as are necessary to hold the correct value
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
+
+        Parameter "prec" allows to get rid of the variance present as default
+        behaviour, as it takes a value from -1 to 7(-1 for default behaviour)
+        to specify the precision of the fractional seconds.
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
@@ -8325,6 +8330,7 @@ public:
         Params:
             writer = A `char` accepting
             $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+            prec = An `int`
         Returns:
             A `string` when not using an output range; `void` otherwise.
       +/
@@ -11069,14 +11075,7 @@ void fracSecsToISOString(W)(ref W writer, int hnsecs, int prec = -1)
         put(writer, chars);
     }
     else
-    {
-        while (prec)
-        {
-            put(writer, chars.front);
-            chars.popFront();
-            prec--;
-        }
-    }
+        put(writer, chars[0 .. prec]);
 }
 
 @safe unittest
