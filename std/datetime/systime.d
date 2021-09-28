@@ -8328,20 +8328,20 @@ public:
         Returns:
             A `string` when not using an output range; `void` otherwise.
       +/
-    string toISOExtString() @safe const nothrow scope
+    string toISOExtString(int prec = -1) @safe const nothrow scope
     {
         import std.array : appender;
         auto app = appender!string();
         app.reserve(35);
         try
-            toISOExtString(app);
+            toISOExtString(app, prec);
         catch (Exception e)
             assert(0, "toISOExtString() threw.");
         return app.data;
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const scope
+    void toISOExtString(W)(ref W writer, int prec = -1) const scope
     if (isOutputRange!(W, char))
     {
         immutable adjustedTime = adjTime;
@@ -8365,14 +8365,14 @@ public:
         if (_timezone is LocalTime())
         {
             dateTime.toISOExtString(writer);
-            fracSecsToISOString(writer, cast(int) hnsecs);
+            fracSecsToISOString(writer, cast(int) hnsecs, prec);
             return;
         }
 
         if (_timezone is UTC())
         {
             dateTime.toISOExtString(writer);
-            fracSecsToISOString(writer, cast(int) hnsecs);
+            fracSecsToISOString(writer, cast(int) hnsecs, prec);
             put(writer, 'Z');
             return;
         }
@@ -8380,7 +8380,7 @@ public:
         immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
         dateTime.toISOExtString(writer);
-        fracSecsToISOString(writer, cast(int) hnsecs);
+        fracSecsToISOString(writer, cast(int) hnsecs, prec);
         SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
@@ -8401,6 +8401,15 @@ public:
 
         assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString() ==
                "-0004-01-05T00:00:02.052092");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(4) ==
+               "-0004-01-05T00:00:02.0520");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(2) ==
+               "-0004-01-05T00:00:02.05");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(7) ==
+               "-0004-01-05T00:00:02.0520920");
     }
 
     @safe unittest
@@ -11025,32 +11034,49 @@ private:
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-string fracSecsToISOString(int hnsecs) @safe pure nothrow
+string fracSecsToISOString(int hnsecs, int prec = -1) @safe pure nothrow
 {
     import std.array : appender;
     auto w = appender!string();
     try
-        fracSecsToISOString(w, hnsecs);
+        fracSecsToISOString(w, hnsecs, prec);
     catch (Exception e)
         assert(0, "fracSecsToISOString() threw.");
     return w.data;
 }
 
-void fracSecsToISOString(W)(ref W writer, int hnsecs)
+void fracSecsToISOString(W)(ref W writer, int hnsecs, int prec = -1)
 {
     import std.conv : toChars;
     import std.range : padLeft;
 
     assert(hnsecs >= 0);
+    assert(prec >= -1 && prec <= 7);
+
+    if (prec == 0)
+        return;
 
     if (hnsecs == 0)
         return;
 
     put(writer, '.');
     auto chars = hnsecs.toChars.padLeft('0', 7);
-    while (chars.back == '0')
-        chars.popBack();
-    put(writer, chars);
+
+    if (prec == -1)
+    {
+        while (chars.back == '0')
+            chars.popBack();
+        put(writer, chars);
+    }
+    else
+    {
+        while (prec)
+        {
+            put(writer, chars.front);
+            chars.popFront();
+            prec--;
+        }
+    }
 }
 
 @safe unittest
