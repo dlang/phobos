@@ -8315,9 +8315,9 @@ public:
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
 
-        Parameter "prec" allows to get rid of the variance present as default
-        behaviour, as it takes a value from -1 to 7(-1 for default behaviour)
-        to specify the precision of the fractional seconds.
+        The optional parameter "prec" allows to change the default behavior by
+        specifying the precision of the fractional seconds. The accepted values
+        are in the range [-1, 7], where -1 represents the default behavior.
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
@@ -8330,12 +8330,14 @@ public:
         Params:
             writer = A `char` accepting
             $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
-            prec = An `int`
+            prec = An `int` representing the desired precision. Acceptable values range from -1 to 7, where -1 represents the default behavior.
         Returns:
             A `string` when not using an output range; `void` otherwise.
       +/
     string toISOExtString(int prec = -1) @safe const nothrow scope
     {
+        assert(prec >= -1 && prec <= 7, "Precision must be in the range [-1, 7]");
+
         import std.array : appender;
         auto app = appender!string();
         app.reserve(35);
@@ -8350,6 +8352,8 @@ public:
     void toISOExtString(W)(ref W writer, int prec = -1) const scope
     if (isOutputRange!(W, char))
     {
+        assert(prec >= -1 && prec <= 7, "Precision must be in the range [-1, 7]");
+
         immutable adjustedTime = adjTime;
         long hnsecs = adjustedTime;
 
@@ -11057,7 +11061,6 @@ void fracSecsToISOString(W)(ref W writer, int hnsecs, int prec = -1)
     import std.range : padLeft;
 
     assert(hnsecs >= 0);
-    assert(prec >= -1 && prec <= 7);
 
     if (prec == 0)
         return;
