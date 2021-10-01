@@ -392,7 +392,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         // If shared, this is protected by a lock inside 'alignedAllocate'
         private void[] alignedAllocateImpl(size_t n, uint a)
         {
-            import std.math : isPowerOf2;
+            import std.math.traits : isPowerOf2;
             assert(a.isPowerOf2);
             if (a <= alignment) return allocate(n);
 
@@ -540,7 +540,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         }
 
         pure nothrow @safe @nogc
-        private void[] smallAlloc(uint blocks)
+        private void[] smallAlloc(uint blocks) return scope
         {
             assert(blocks >= 2 && blocks <= 64);
             void[] result;
@@ -596,7 +596,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
         }
 
         pure nothrow @trusted @nogc
-        private void[] hugeAlloc(size_t blocks)
+        private void[] hugeAlloc(size_t blocks) return scope
         {
             assert(blocks > 64);
             if (_startIdx == _control._rep.length)
@@ -978,7 +978,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
             }
         }
 
-        void[] allocateAll()
+        void[] allocateAll() return scope
         {
             static if (isShared)
             {
@@ -2456,13 +2456,9 @@ If `x` contains no zeros (i.e. is equal to `ulong.max`), returns 64.
 pure nothrow @safe @nogc
 private uint leadingOnes(ulong x)
 {
-    uint result = 0;
-    while (cast(long) x < 0)
-    {
-        ++result;
-        x <<= 1;
-    }
-    return result;
+    import core.bitop : bsr;
+    const x_ = ~x;
+    return x_ == 0 ? 64 : (63 - bsr(x_));
 }
 
 @safe unittest

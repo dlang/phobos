@@ -47,13 +47,13 @@ $(T2 findSkip,
         leaves `a` unchanged, whereas `findSkip(a, "c")` advances `a`
         to `"de"` and returns `true`.)
 $(T2 findSplit,
-        `findSplit("abcdefg", "de")` returns the three ranges `"abc"`,
+        `findSplit("abcdefg", "de")` returns a tuple of three ranges `"abc"`,
         `"de"`, and `"fg"`.)
 $(T2 findSplitAfter,
-        `findSplitAfter("abcdefg", "de")` returns the two ranges
-        `"abcde"` and `"fg"`.)
+`findSplitAfter("abcdefg", "de")` returns a tuple of two ranges `"abcde"`
+        and `"fg"`.)
 $(T2 findSplitBefore,
-        `findSplitBefore("abcdefg", "de")` returns the two ranges `"abc"`
+        `findSplitBefore("abcdefg", "de")` returns a tuple of two ranges `"abc"`
         and `"defg"`.)
 $(T2 minCount,
         `minCount([2, 1, 1, 4, 1])` returns `tuple(1, 3)`.)
@@ -67,10 +67,10 @@ $(T2 maxElement,
         `maxElement([3, 4, 1, 2])` returns `4`.)
 $(T2 minIndex,
         Index of the minimal element of a range.
-        `minElement([3, 4, 1, 2])` returns `2`.)
+        `minIndex([3, 4, 1, 2])` returns `2`.)
 $(T2 maxIndex,
         Index of the maximal element of a range.
-        `maxElement([3, 4, 1, 2])` returns `1`.)
+        `maxIndex([3, 4, 1, 2])` returns `1`.)
 $(T2 minPos,
         `minPos([2, 3, 1, 3, 4, 1])` returns the subrange `[1, 3, 4, 1]`,
         i.e., positions the range at the first occurrence of its minimal
@@ -103,25 +103,28 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.searching;
 
 import std.functional : unaryFun, binaryFun;
+import std.meta : allSatisfy;
 import std.range.primitives;
 import std.traits;
 import std.typecons : Tuple, Flag, Yes, No, tuple;
 
 /++
-Checks if $(I _all) of the elements verify `pred`.
+Checks if $(I _all) of the elements satisfy `pred`.
  +/
 template all(alias pred = "a")
 {
     /++
-    Returns `true` if and only if $(I _all) values `v` found in the
-    input range `range` satisfy the predicate `pred`.
+    Returns `true` if and only if the input range `range` is empty
+    or $(I _all) values found in `range` satisfy the predicate `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
     if (isInputRange!Range)
     {
         static assert(is(typeof(unaryFun!pred(range.front))),
-                "`" ~ pred.stringof[1..$-1] ~ "` isn't a unary predicate function for range.front");
+                "`" ~ (isSomeString!(typeof(pred))
+                    ? pred.stringof[1..$-1] : pred.stringof)
+                ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;
@@ -157,16 +160,17 @@ are true.
 }
 
 /++
-Checks if $(I _any) of the elements verifies `pred`.
-`!any` can be used to verify that $(I none) of the elements verify
+Checks if $(I _any) of the elements satisfies `pred`.
+`!any` can be used to verify that $(I none) of the elements satisfy
 `pred`.
 This is sometimes called `exists` in other languages.
  +/
 template any(alias pred = "a")
 {
     /++
-    Returns `true` if and only if $(I _any) value `v` found in the
-    input range `range` satisfies the predicate `pred`.
+    Returns `true` if and only if the input range `range` is non-empty
+    and $(I _any) value found in `range` satisfies the predicate
+    `pred`.
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
@@ -235,7 +239,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 {
     size_t count;
 
-    static if (is(Unqual!(ElementEncodingType!Range) == Unqual!E) && isNarrowString!Range)
+    static if (is(immutable ElementEncodingType!Range == immutable E) && isNarrowString!Range)
     {
         import std.utf : byCodeUnit;
         auto rn = r.byCodeUnit;
@@ -572,7 +576,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
             assert(commonPrefix(to!S("hello, world"), to!T("hello, ")) == to!S("hello, "));
             assert(commonPrefix(to!S("hello, world"), to!T("hello, world")) == to!S("hello, world"));
 
-            //Bug# 8890
+            // https://issues.dlang.org/show_bug.cgi?id=8890
             assert(commonPrefix(to!S("Пиво"), to!T("Пони"))== to!S("П"));
             assert(commonPrefix(to!S("Пони"), to!T("Пиво"))== to!S("П"));
             assert(commonPrefix(to!S("Пиво"), to!T("Пиво"))== to!S("Пиво"));
@@ -739,7 +743,7 @@ if (isInputRange!R && !isInfinite!R)
     assert(count("日本語") == 3);
 }
 
-// Issue 11253
+// https://issues.dlang.org/show_bug.cgi?id=11253
 @safe nothrow @nogc unittest
 {
     int[3] a = [1, 2, 3];
@@ -775,9 +779,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
 if (isForwardRange!R
     && Rs.length > 0
     && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
-    && is(typeof(startsWith!pred(haystack, needles[0])))
-    && (Rs.length == 1
-    || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
+    && allSatisfy!(canTestStartsWith!(pred, R), Rs))
 {
     typeof(return) result;
 
@@ -853,7 +855,8 @@ if (isForwardRange!R
         }
     }
 
-    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    // Because of https://issues.dlang.org/show_bug.cgi?id=8804
+    // Avoids both "unreachable code" or "no return statement"
     static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
             ~ " infinite range");
     else return -1;
@@ -957,7 +960,8 @@ if (isInputRange!R &&
         }
     }
 
-    //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
+    // Because of https://issues.dlang.org/show_bug.cgi?id=8804
+    // Avoids both "unreachable code" or "no return statement"
     static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
             ~ " inifite range");
     else return -1;
@@ -969,8 +973,8 @@ if (isInputRange!R &&
     import std.ascii : isDigit;
     import std.uni : isWhite;
 
-    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
-    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!(isWhite)("hello world") == 5);
+    assert(countUntil!(isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
@@ -1031,8 +1035,7 @@ In the case when no needle parameters are given, return `true` iff back of
 */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
-    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
-    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
+    allSatisfy!(canTestStartsWith!(pred, Range), Needles))
 {
     alias haystack = doesThisEnd;
     alias needles  = withOneOfThese;
@@ -1110,7 +1113,7 @@ if (isBidirectionalRange!R1 &&
         enum isDefaultPred = false;
 
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
-               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+               is(immutable ElementEncodingType!R1 == immutable ElementEncodingType!R2))
     {
         if (haystack.length < needle.length) return false;
 
@@ -1202,7 +1205,8 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    (){ // workaround slow optimizations for large functions
+        // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
         assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -1276,6 +1280,16 @@ if (isInputRange!R &&
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
     }}
+}
+
+@safe pure unittest
+{
+    //example from issue 19727
+    import std.path : asRelativePath;
+    string[] ext = ["abc", "def", "ghi"];
+    string path = "/foo/file.def";
+    assert(ext.any!(e => path.asRelativePath("/foo").endsWith(e)) == true);
+    assert(ext.any!(e => path.asRelativePath("/foo").startsWith(e)) == false);
 }
 
 private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
@@ -1430,7 +1444,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(c[].extremum!("a[1]", "a > b") == [0, 4]);
 
     // use a custom comparator
-    import std.math : cmp;
+    import std.math.operations : cmp;
     assert([-2., 0, 5].staticArray[].extremum!cmp == 5.0);
     assert([-2., 0, 2].staticArray[].extremum!`cmp(a, b) < 0` == -2.0);
 
@@ -1584,7 +1598,7 @@ if (isInputRange!InputRange &&
 
     // If the haystack is a SortedRange we can use binary search to find the needle.
     // Works only for the default find predicate and any SortedRange predicate.
-    // 8829 enhancement
+    // https://issues.dlang.org/show_bug.cgi?id=8829
     import std.range : SortedRange;
     static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
@@ -1611,7 +1625,8 @@ if (isInputRange!InputRange &&
             {
                 if (!__ctfe && canSearchInCodeUnits!char(needle))
                 {
-                    static R trustedMemchr(ref R haystack, ref E needle) @trusted nothrow pure
+                    static inout(R) trustedMemchr(ref return scope inout(R) haystack,
+                                                  ref const scope E needle) @trusted nothrow pure
                     {
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
@@ -1670,12 +1685,12 @@ if (isInputRange!InputRange &&
     }
     else static if (isArray!R)
     {
-        //10403 optimization
+        // https://issues.dlang.org/show_bug.cgi?id=10403 optimization
         static if (isDefaultPred && isIntegral!EType && EType.sizeof == 1 && isIntegralNeedle)
         {
             import std.algorithm.comparison : max, min;
 
-            R findHelper(ref R haystack, ref E needle) @trusted nothrow pure
+            R findHelper(return scope ref R haystack, ref E needle) @trusted nothrow pure
             {
                 import core.stdc.string : memchr;
 
@@ -1825,10 +1840,9 @@ if (isInputRange!InputRange &&
     assertCTFEable!dg;
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=11603
 @safe @nogc unittest
 {
-    // Bugzilla 11603
-    import std.array : staticArray;
     enum Foo : ubyte { A }
     assert([Foo.A].staticArray[].find(Foo.A).empty == false);
 
@@ -1995,7 +2009,7 @@ if (isForwardRange!R1 && isForwardRange!R2
         // Binary search can be used to find the first occurence
         // of the first element of the needle in haystack.
         // When it is found O(walklength(needle)) steps are performed.
-        // 8829 enhancement
+        // https://issues.dlang.org/show_bug.cgi?id=8829 enhancement
         import std.algorithm.comparison : mismatch;
         import std.range : SortedRange;
         static if (is(R1 == R2)
@@ -2116,7 +2130,8 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
 }
 
-@safe unittest // issue 12470
+// https://issues.dlang.org/show_bug.cgi?id=12470
+@safe unittest
 {
     import std.array : replace;
     inout(char)[] sanitize(inout(char)[] p)
@@ -2186,7 +2201,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
 
-//Bug# 8334
+// https://issues.dlang.org/show_bug.cgi?id=8334
 @safe @nogc unittest
 {
     import std.algorithm.iteration : filter;
@@ -2202,7 +2217,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find(haystack, filter!"true"(needle)).empty);
 }
 
-// issue 11013
+// https://issues.dlang.org/show_bug.cgi?id=11013
 @safe unittest
 {
     assert(find!"a == a"("abc","abc") == "abc");
@@ -2517,8 +2532,6 @@ $(REF among, std,algorithm,comparison) for checking a value against multiple pos
  +/
 template canFind(alias pred="a == b")
 {
-    import std.meta : allSatisfy;
-
     /++
     Returns `true` if and only if any value `v` found in the
     input range `range` satisfies the predicate `pred`.
@@ -2653,6 +2666,7 @@ if (isForwardRange!(Range))
     }
     static if (!isInfinite!Range)
         return ahead;
+    assert(0);
 }
 
 ///
@@ -2691,7 +2705,7 @@ if (isForwardRange!(Range))
     ReferenceForwardRange!int rfr = new ReferenceForwardRange!int([1, 2, 3, 2, 2, 3]);
     assert(equal(findAdjacent(rfr), [2, 2, 3]));
 
-    // Issue 9350
+    // https://issues.dlang.org/show_bug.cgi?id=9350
     assert(!repeat(1).findAdjacent().empty);
 }
 
@@ -2745,7 +2759,8 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     assert(findAmong!("a == b")(b[], [ 4, 6, 7 ].staticArray[]).empty);
 }
 
-@system unittest // issue 19765
+// https://issues.dlang.org/show_bug.cgi?id=19765
+@system unittest
 {
     import std.range.interfaces : inputRangeObject;
     auto choices = inputRangeObject("b");
@@ -2808,7 +2823,8 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(findSkip(s, "def") && s.empty);
 }
 
-@safe unittest // issue 19020
+// https://issues.dlang.org/show_bug.cgi?id=19020
+@safe unittest
 {
     static struct WrapperRange
     {
@@ -3344,7 +3360,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(split[1] == "one");
 }
 
-// issue 11013
+// https://issues.dlang.org/show_bug.cgi?id=11013
 @safe pure unittest
 {
     auto var = "abc";
@@ -3588,6 +3604,8 @@ Params:
     r = range from which the minimal element will be selected
     seed = custom seed to use as initial element
 
+Precondition: If a seed is not given, `r` must not be empty.
+
 Returns: The minimal element of the passed-in range.
 
 Note:
@@ -3602,7 +3620,7 @@ Note:
     ---
 
     If you want to get NaN as a result if a NaN is present in the range,
-    you can use $(REF fold, std.algorithm,iteration) and $(REF isNaN, std,math):
+    you can use $(REF fold, std,algorithm,iteration) and $(REF isNaN, std,math):
 
     ---
     <range>.fold!((a,b)=>a.isNaN || b.isNaN ? real.nan : a < b ? a : b);
@@ -3740,6 +3758,8 @@ Params:
     map = custom accessor for the comparison key
     r = range from which the maximum element will be selected
     seed = custom seed to use as initial element
+
+Precondition: If a seed is not given, `r` must not be empty.
 
 Returns: The maximal element of the passed-in range.
 
@@ -4249,8 +4269,6 @@ Params:
 */
 template skipOver(alias pred = (a, b) => a == b)
 {
-    import std.meta : allSatisfy;
-
     enum bool isPredComparable(T) = ifTestable!(T, binaryFun!pred);
 
     /**
@@ -4640,14 +4658,11 @@ In the case when no needle parameters are given, return `true` iff front of
  */
 uint startsWith(alias pred = (a, b) => a == b, Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
 if (isInputRange!Range && Needles.length > 1 &&
-    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
-    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
+    allSatisfy!(canTestStartsWith!(pred, Range), Needles))
 {
-    import std.meta : allSatisfy;
-
     template checkType(T)
     {
-        enum checkType = is(Unqual!(ElementEncodingType!Range) == Unqual!T);
+        enum checkType = is(immutable ElementEncodingType!Range == immutable T);
     }
 
     // auto-decoding special case
@@ -4752,7 +4767,7 @@ if (isInputRange!R1 &&
     }
 
     static if (isDefaultPred && isArray!R1 && isArray!R2 &&
-               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+               is(immutable ElementEncodingType!R1 == immutable ElementEncodingType!R2))
     {
         //Array slice comparison mode
         return haystack[0 .. needle.length] == needle;
@@ -4881,7 +4896,8 @@ if (isInputRange!R &&
     import std.range;
 
     static foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-    (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    (){ // workaround slow optimizations for large functions
+        // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
@@ -4963,6 +4979,12 @@ if (isInputRange!R &&
         assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
         assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
     }}
+}
+
+private template canTestStartsWith(alias pred, Haystack)
+{
+    enum bool canTestStartsWith(Needle) = is(typeof(
+        (ref Haystack h, ref Needle n) => startsWith!pred(h, n)));
 }
 
 /* (Not yet documented.)
@@ -5166,7 +5188,8 @@ if (isInputRange!Range)
     assert(equal(until!"a == 2"(a[], No.openRight), [1, 2].staticArray[]));
 }
 
-@system unittest // bugzilla 13171
+// https://issues.dlang.org/show_bug.cgi?id=13171
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -5175,7 +5198,8 @@ if (isInputRange!Range)
     assert(a == [4]);
 }
 
-@safe @nogc unittest // Issue 10460
+// https://issues.dlang.org/show_bug.cgi?id=10460
+@safe @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : staticArray;
@@ -5185,14 +5209,16 @@ if (isInputRange!Range)
     assert(equal(a[], [0, 0, 3, 4].staticArray[]));
 }
 
-@safe unittest // Issue 13124
+// https://issues.dlang.org/show_bug.cgi?id=13124
+@safe unittest
 {
     import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
     assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
 }
 
-pure @safe unittest // issue 18657
+// https://issues.dlang.org/show_bug.cgi?id=18657
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : refRange;

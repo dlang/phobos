@@ -13,8 +13,8 @@ enabled by default.
 Copyright: Copyright Andrei Alexandrescu 2008 - 2015.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(HTTP
-           perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+Credits:   This module and its documentation are inspired by Perl's
+           $(HTTPS perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
            D's `getopt` is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
            the passed-in pointers.
@@ -38,6 +38,7 @@ $(UL
        `std.getopt.config.passThrough` was not present.)
   $(LI A command-line option was not found, and
        `std.getopt.config.required` was present.)
+  $(LI A callback option is missing a value.)
 )
 */
 class GetOptException : Exception
@@ -97,8 +98,8 @@ void main(string[] args)
  the parameter cannot be parsed properly (e.g., a number is expected
  but not present), a `ConvException` exception is thrown.
  If `std.getopt.config.passThrough` was not passed to `getopt`
- and an unrecognized command-line argument is found, a `GetOptException`
- is thrown.
+ and an unrecognized command-line argument is found, or if a required
+ argument is missing a `GetOptException` is thrown.
 
  Depending on the type of the pointer being bound, `getopt`
  recognizes the following kinds of options:
@@ -190,11 +191,12 @@ getopt(args, "output", &outputFiles);
     "--output myfile.txt --output yourfile.txt" will set `outputFiles` to
     $(D [ "myfile.txt", "yourfile.txt" ]).
 
-    Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) to allow multiple elements in
+    one parameter.
 
 ---------
 string[] outputFiles;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "output", &outputFiles);
 ---------
 
@@ -217,7 +219,7 @@ getopt(args, "tune", &tuningParms);
 
 ---------
 double[string] tuningParms;
-arraySep = ",";  // defaults to "", separation by whitespace
+arraySep = ",";  // defaults to "", meaning one element per parameter
 getopt(args, "tune", &tuningParms);
 ---------
 
@@ -344,18 +346,11 @@ Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. `-t`). `getopt` accepts such parameters
 seamlessly. When used with a double-dash (e.g. `--t`), a
 single-letter option behaves the same as a multi-letter option. When
-used with a single dash, a single-letter option is accepted. If the
-option has a parameter, that must be "stuck" to the option without
-any intervening space or "=":
-
----------
-uint timeout;
-getopt(args, "timeout|t", &timeout);
----------
+used with a single dash, a single-letter option is accepted.
 
 To set `timeout` to `5`, use either of the following: `--timeout=5`,
-$(D --timeout 5), `--t=5`, $(D --t 5), or `-t5`. Forms such as $(D -t 5)
-and `-timeout=5` will be not accepted.
+`--timeout 5`, `--t=5`, `--t 5`, `-t5`, or `-t 5`. Forms such as
+`-timeout=5` will be not accepted.
 
 For more details about short options, refer also to the next section.
 
@@ -657,7 +652,8 @@ private template optionValidator(A...)
     static assert(optionValidator!(C,A,P,C,A,S,F) == "");
 }
 
-@safe unittest // bugzilla 15914
+// https://issues.dlang.org/show_bug.cgi?id=15914
+@safe unittest
 {
     import std.exception : assertThrown;
     bool opt;
@@ -873,7 +869,6 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         {
             import std.exception : enforce;
             // non-boolean option, which might include an argument
-            //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
             enum isCallbackWithLessThanTwoParameters =
                 (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
@@ -881,7 +876,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
-                enforce(i < args.length,
+                enforce!GetOptException(i < args.length,
                     "Missing value for argument " ~ a ~ ".");
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
@@ -981,7 +976,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     return ret;
 }
 
-// 17574
+// https://issues.dlang.org/show_bug.cgi?id=17574
 @safe unittest
 {
     import std.algorithm.searching : startsWith;
@@ -1001,7 +996,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
         assert(goe.msg.startsWith("Could not find"));
 }
 
-// 5316 - arrays with arraySep
+// https://issues.dlang.org/show_bug.cgi?id=5316 - arrays with arraySep
 @safe unittest
 {
     import std.conv;
@@ -1030,7 +1025,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     assert(names == ["foo", "bar", "baz"], to!string(names));
 }
 
-// 5316 - associative arrays with arraySep
+// https://issues.dlang.org/show_bug.cgi?id=5316 - associative arrays with arraySep
 @safe unittest
 {
     import std.conv;
@@ -1083,8 +1078,11 @@ string endOfOptions = "--";
 dchar assignChar = '=';
 
 /**
-   The string used to separate the elements of an array or associative array
-   (default is "" which means the elements are separated by whitespace).
+   When set to "", parameters to array and associative array receivers are
+   treated as an individual argument. That is, only one argument is appended or
+   inserted per appearance of the option switch. If `arraySep` is set to
+   something else, then each parameter is first split by the separator, and the
+   individual pieces are treated as arguments to the same option.
 
    Defaults to "" but can be assigned to prior to calling `getopt`.
  */
@@ -1108,9 +1106,9 @@ private struct configuration
 private bool optMatch(string arg, scope string optPattern, ref string value,
     configuration cfg) @safe
 {
-    import std.array : split;
+    import std.algorithm.iteration : splitter;
     import std.string : indexOf;
-    import std.uni : toUpper;
+    import std.uni : icmp;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (arg.length < 2 || arg[0] != optionChar) return false;
@@ -1150,11 +1148,10 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
     }
     //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
-    const variants = split(optPattern, "|");
-    foreach (v ; variants)
+    foreach (v; splitter(optPattern, "|"))
     {
         //writeln("Trying variant: ", v, " against ", arg);
-        if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
+        if (arg == v || (!cfg.caseSensitive && icmp(arg, v) == 0))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
                 && indexOf(arg, v) >= 0)
@@ -1187,7 +1184,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 @safe unittest
 {
     import std.conv;
-    import std.math;
+    import std.math.operations : isClose;
 
     uint paranoid = 2;
     string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
@@ -1244,8 +1241,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         getopt(testArgs, "tune", &tuningParms);
         assert(testArgs.length == 1);
         assert(tuningParms.length == 2);
-        assert(approxEqual(tuningParms["alpha"], 0.5));
-        assert(approxEqual(tuningParms["beta"], 0.6));
+        assert(isClose(tuningParms["alpha"], 0.5));
+        assert(isClose(tuningParms["beta"], 0.6));
         arraySep = "";
     }
 
@@ -1364,6 +1361,12 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
+
+    // check that GetOptException is thrown if the value is missing
+    args = ["program.name", "--verbose"];
+    try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
+    catch (GetOptException e) {}
+    catch (Exception e) { assert(0); }
 }
 
 @safe unittest // @safe std.getopt.config option use
@@ -1376,9 +1379,9 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(x == 2);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=2142
 @safe unittest
 {
-    // From bugzilla 2142
     bool f_linenum, f_filename;
     string[] args = [ "", "-nl" ];
     getopt
@@ -1393,9 +1396,9 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(f_filename);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6887
 @safe unittest
 {
-    // From bugzilla 6887
     string[] p;
     string[] args = ["", "-pa"];
     getopt(args, "p", &p);
@@ -1403,18 +1406,18 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(p[0] == "a");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=6888
 @safe unittest
 {
-    // From bugzilla 6888
     int[string] foo;
     auto args = ["", "-t", "a=1"];
     getopt(args, "t", &foo);
     assert(foo == ["a":1]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9583
 @safe unittest
 {
-    // From bugzilla 9583
     int opt;
     auto args = ["prog", "--opt=123", "--", "--a", "--b", "--c"];
     getopt(args, "opt", &opt);
@@ -1429,7 +1432,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(foo == "hello");
     assert(bar == "bar=baz");
 
-    // From bugzilla 5762
+    // From https://issues.dlang.org/show_bug.cgi?id=5762
     string a;
     args = ["prog", "-a-0x12"];
     getopt(args, config.bundling, "a|addr", &a);
@@ -1438,7 +1441,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     getopt(args, config.bundling, "a|addr", &a);
     assert(a == "-0x12");
 
-    // From https://d.puremagic.com/issues/show_bug.cgi?id=11764
+    // From https://issues.dlang.org/show_bug.cgi?id=11764
     args = ["main", "-test"];
     bool opt;
     args.getopt(config.passThrough, "opt", &opt);
@@ -1456,7 +1459,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(o == "str");
 }
 
-@safe unittest // 5228
+// https://issues.dlang.org/show_bug.cgi?id=5228
+@safe unittest
 {
     import std.conv;
     import std.exception;
@@ -1469,7 +1473,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertThrown!ConvException(getopt(args, "abc", &abc));
 }
 
-@safe unittest // From bugzilla 7693
+// https://issues.dlang.org/show_bug.cgi?id=7693
+@safe unittest
 {
     import std.exception;
 
@@ -1489,7 +1494,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assertNotThrown(getopt(args, "foo", &foo));
 }
 
-@safe unittest // same bug as 7693 only for bool
+// Same as https://issues.dlang.org/show_bug.cgi?id=7693 only for `bool`
+@safe unittest
 {
     import std.exception;
 
@@ -1574,7 +1580,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(r.helpWanted);
 }
 
-// Issue 13316 - std.getopt: implicit help option breaks the next argument
+// std.getopt: implicit help option breaks the next argument
+// https://issues.dlang.org/show_bug.cgi?id=13316
 @safe unittest
 {
     string[] args = ["program", "--help", "--", "something"];
@@ -1591,7 +1598,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(args == ["program", "nonoption", "--option"]);
 }
 
-// Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
+// std.getopt: endOfOptions broken when it doesn't look like an option
+// https://issues.dlang.org/show_bug.cgi?id=13317
 @safe unittest
 {
     auto endOfOptionsBackup = endOfOptions;
@@ -1604,7 +1612,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     assert(args == ["program", "--option"]);
 }
 
-// Issue 20480 - make std.getopt ready for DIP 1000
+// make std.getopt ready for DIP 1000
+// https://issues.dlang.org/show_bug.cgi?id=20480
 @safe unittest
 {
     string[] args = ["test", "--foo", "42", "--bar", "BAR"];
@@ -1657,7 +1666,7 @@ Params:
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, string style = "%*s %*s%*s%s\n")
 {
     import std.algorithm.comparison : min, max;
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     output.formattedWrite("%s\n", text);
 
@@ -1738,7 +1747,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
 
-@safe unittest // Issue 14724
+// https://issues.dlang.org/show_bug.cgi?id=14724
+@safe unittest
 {
     bool a;
     auto args = ["prog", "--help"];
@@ -1769,7 +1779,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
 }
 
-@safe unittest // Issue 17327 repeated option use
+// https://issues.dlang.org/show_bug.cgi?id=17327 repeated option use
+@safe unittest
 {
     long num = 0;
 
@@ -1856,7 +1867,9 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(y == 50);
 }
 
-@safe unittest // Hyphens at the start of option values; Issue 17650
+// Hyphens at the start of option values;
+// https://issues.dlang.org/show_bug.cgi?id=17650
+@safe unittest
 {
     auto args = ["program", "-m", "-5", "-n", "-50", "-c", "-", "-f", "-"];
 

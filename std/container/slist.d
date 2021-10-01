@@ -879,9 +879,9 @@ Complexity: $(BIGOH n)
     auto s = make!(SList!int)(1, 2, 3);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=5193
 @safe unittest
 {
-    // 5193
     static struct Data
     {
         const int val;
@@ -899,17 +899,17 @@ Complexity: $(BIGOH n)
     assert(r.front == 1);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=14920
 @safe unittest
 {
-    // issue 14920
     SList!int s;
     s.insertAfter(s[], 1);
     assert(s.front == 1);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=15659
 @safe unittest
 {
-    // issue 15659
     SList!int s;
     s.clear();
 }

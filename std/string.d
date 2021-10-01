@@ -148,7 +148,7 @@ version (StdUnittest)
 private:
     struct TestAliasedString
     {
-        string get() @safe @nogc pure nothrow { return _s; }
+        string get() @safe @nogc pure nothrow return scope { return _s; }
         alias get this;
         @disable this(this);
         string _s;
@@ -224,9 +224,9 @@ if (isSomeChar!Char)
 {
     import core.stdc.stddef : wchar_t;
 
-    static if (is(Unqual!Char == char))
+    static if (is(immutable Char == immutable char))
         import core.stdc.string : cstrlen = strlen;
-    else static if (is(Unqual!Char == wchar_t))
+    else static if (is(immutable Char == immutable wchar_t))
         import core.stdc.wchar_ : cstrlen = wcslen;
     else
         static size_t cstrlen(scope const Char* s)
@@ -240,6 +240,17 @@ if (isSomeChar!Char)
     return cString ? cString[0 .. cstrlen(cString)] : null;
 }
 
+/// ditto
+inout(Char)[] fromStringz(Char)(return scope inout(Char)[] cString) @nogc @safe pure nothrow
+if (isSomeChar!Char)
+{
+    foreach (i; 0 .. cString.length)
+        if (cString[i] == '\0')
+            return cString[0 .. i];
+
+    return cString;
+}
+
 ///
 @system pure unittest
 {
@@ -250,6 +261,44 @@ if (isSomeChar!Char)
     assert(fromStringz("福\0"c.ptr) == "福"c);
     assert(fromStringz("福\0"w.ptr) == "福"w);
     assert(fromStringz("福\0"d.ptr) == "福"d);
+}
+
+///
+@nogc @safe pure nothrow unittest
+{
+    struct C
+    {
+        char[32] name;
+    }
+    assert(C("foo\0"c).name.fromStringz() == "foo"c);
+
+    struct W
+    {
+        wchar[32] name;
+    }
+    assert(W("foo\0"w).name.fromStringz() == "foo"w);
+
+    struct D
+    {
+        dchar[32] name;
+    }
+    assert(D("foo\0"d).name.fromStringz() == "foo"d);
+}
+
+@nogc @safe pure nothrow unittest
+{
+    assert( string.init.fromStringz() == ""c);
+    assert(wstring.init.fromStringz() == ""w);
+    assert(dstring.init.fromStringz() == ""d);
+
+    immutable  char[3] a = "foo"c;
+    assert(a.fromStringz() == "foo"c);
+
+    immutable wchar[3] b = "foo"w;
+    assert(b.fromStringz() == "foo"w);
+
+    immutable dchar[3] c = "foo"d;
+    assert(c.fromStringz() == "foo"d);
 }
 
 @system pure unittest
@@ -325,6 +374,9 @@ out (result)
 do
 {
     import std.exception : assumeUnique;
+
+    if (s.empty) return "".ptr;
+
     /+ Unfortunately, this isn't reliable.
      We could make this work if string literals are put
      in read-only memory and we test if s[] is pointing into
@@ -346,26 +398,6 @@ do
     copy[s.length] = 0;
 
     return &assumeUnique(copy)[0];
-}
-
-/++ Ditto +/
-immutable(char)* toStringz(return scope string s) @trusted pure nothrow
-{
-    if (s.empty) return "".ptr;
-    /* Peek past end of s[], if it's 0, no conversion necessary.
-     * Note that the compiler will put a 0 past the end of static
-     * strings, and the storage allocator will put a 0 past the end
-     * of newly allocated char[]'s.
-     */
-    immutable p = s.ptr + s.length;
-    // Is p dereferenceable? A simple test: if the p points to an
-    // address multiple of 4, then conservatively assume the pointer
-    // might be pointing to a new block of memory, which might be
-    // unreadable. Otherwise, it's definitely pointing to valid
-    // memory.
-    if ((cast(size_t) p & 3) && *p == 0)
-        return &s[0];
-    return toStringz(cast(const char[]) s);
 }
 
 ///
@@ -395,6 +427,27 @@ pure nothrow @system unittest
     const string test2 = "";
     p = toStringz(test2);
     assert(*p == 0);
+
+    assert(toStringz([]) is toStringz(""));
+}
+
+pure nothrow @system unittest // https://issues.dlang.org/show_bug.cgi?id=15136
+{
+    static struct S
+    {
+        immutable char[5] str;
+        ubyte foo;
+        this(char[5] str) pure nothrow
+        {
+            this.str = str;
+        }
+    }
+    auto s = S("01234");
+    const str = s.str.toStringz;
+    assert(str !is s.str.ptr);
+    assert(*(str + 5) == 0); // Null terminated.
+    s.foo = 42;
+    assert(*(str + 5) == 0); // Still null terminated.
 }
 
 
@@ -1327,7 +1380,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 
     if (cs == Yes.caseSensitive)
     {
-        static if (is(Unqual!Char1 == Unqual!Char2))
+        static if (is(immutable Char1 == immutable Char2))
         {
             import core.stdc.string : memcmp;
 
@@ -1339,12 +1392,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
                 {
                     if (__ctfe)
                     {
-                        foreach (j; 1 .. sub.length)
-                        {
-                            if (s[i + j] != sub[j])
-                                continue;
-                        }
-                        return i;
+                        if (s[i + 1 .. i + sub.length] == sub[1 .. $])
+                            return i;
                     }
                     else
                     {
@@ -1501,7 +1550,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     });
 }
 
-@safe pure unittest // issue13529
+// https://issues.dlang.org/show_bug.cgi?id=13529
+@safe pure unittest
 {
     import std.conv : to;
     static foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1565,6 +1615,19 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, to!S("\u0100"), 3, cs) == 1, csString);
         }
     }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=20783
+@safe pure @nogc unittest
+{
+    enum lastIndex = "aa".lastIndexOf("ab");
+    assert(lastIndex == -1);
+}
+
+@safe pure @nogc unittest
+{
+    enum lastIndex = "hello hello hell h".lastIndexOf("hello");
+    assert(lastIndex == 6);
 }
 
 private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
@@ -1696,8 +1759,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-            the startIdx is greater equal the length of haystack the functions
-            returns `-1`.
+            the startIdx is greater than or equal to the length of haystack the
+            functions returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1863,8 +1926,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
-            the stopIdx is greater equal the length of haystack the functions
-            returns `-1`.
+            the stopIdx is greater than or equal to the length of haystack the
+            functions returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
@@ -2042,8 +2105,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
-            the startIdx is greater equal the length of haystack the functions
-            returns `-1`.
+            the startIdx is greater than or equal to the length of haystack the
+            functions returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -2202,8 +2265,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
-        the stopIdx is greater equal the length of haystack the functions
-        returns `-1`.
+            the stopIdx is greater than or equal to the length of haystack the
+            functions returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -2618,8 +2681,12 @@ if (isSomeChar!C)
 
     enum S : string { a = "hello\nworld" }
     assert(S.a.splitLines() == ["hello", "world"]);
+}
 
-    char[S.a.length] sa = S.a[];
+@system pure nothrow unittest
+{
+    // dip1000 cannot express an array of scope arrays, so this is not @safe
+    char[11] sa = "hello\nworld";
     assert(sa.splitLines() == ["hello", "world"]);
 }
 
@@ -3003,8 +3070,8 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     static import std.ascii;
     static import std.uni;
 
-    static if (is(Unqual!(ElementEncodingType!Range) == dchar)
-        || is(Unqual!(ElementEncodingType!Range) == wchar))
+    static if (is(immutable ElementEncodingType!Range == immutable dchar)
+        || is(immutable ElementEncodingType!Range == immutable wchar))
     {
         // Decoding is never needed for dchar. It happens not to be needed
         // here for wchar because no whitepace is outside the basic
@@ -3705,7 +3772,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : endsWith;
         if (str.endsWith(delimiter))
@@ -3856,7 +3923,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 {
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
+    static if (is(immutable C1 == immutable C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm.searching : startsWith;
         if (str.startsWith(delimiter))
@@ -5234,7 +5301,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+// https://issues.dlang.org/show_bug.cgi?id=13018
+@safe pure unittest
 {
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     assert(translate("hello world", transTable1) == "h5ll7 w7rld");
@@ -5255,7 +5323,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
     static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
@@ -5269,7 +5338,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
         static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+        (){ // workaround slow optimizations for large functions
+            // https://issues.dlang.org/show_bug.cgi?id=2396
             static foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {{
@@ -5313,7 +5383,8 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
     static foreach (S; AliasSeq!( char[], const( char)[], immutable( char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[]))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
         assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
@@ -5331,8 +5402,8 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
         static foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
-
+        (){ // workaround slow optimizations for large functions
+            // https://issues.dlang.org/show_bug.cgi?id=2396
             static foreach (R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
             {{
@@ -5396,7 +5467,8 @@ if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
     assert(buffer.data == "h5llorange worangerld");
 }
 
-@safe pure unittest // issue 13018
+// https://issues.dlang.org/show_bug.cgi?id=13018
+@safe pure unittest
 {
     import std.array : appender;
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
@@ -5484,7 +5556,7 @@ private void translateImpl(C1, T, C2, Buffer)(const(C1)[] str,
   +/
 C[] translate(C = immutable char)(scope const(char)[] str, scope const(char)[] transTable,
               scope const(char)[] toRemove = null) @trusted pure nothrow
-if (is(Unqual!C == char))
+if (is(immutable C == immutable char))
 in
 {
     import std.conv : to;
@@ -5642,7 +5714,7 @@ do
   +/
 void translate(C = immutable char, Buffer)(scope const(char)[] str, scope const(char)[] transTable,
         scope const(char)[] toRemove, Buffer buffer) @trusted pure
-if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
+if (is(immutable C == immutable char) && isOutputRange!(Buffer, char))
 in
 {
     assert(transTable.length == 256, format!
@@ -6299,14 +6371,6 @@ if (isSomeString!S ||
     assert(!isNumeric("+"));
 }
 
-version (TestComplex)
-deprecated
-@safe unittest
-{
-    import std.conv : to;
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
-}
-
 /*****************************
  * Soundex algorithm.
  *
@@ -6421,7 +6485,7 @@ if (isConvertibleToString!Range)
  * See_Also:
  *  $(LREF soundexer)
  */
-char[] soundex(scope const(char)[] str, char[] buffer = null)
+char[] soundex(scope const(char)[] str, return scope char[] buffer = null)
     @safe pure nothrow
 in
 {
@@ -6643,11 +6707,11 @@ string[string] abbrev(string[] values) @safe pure
  */
 
 size_t column(Range)(Range str, in size_t tabsize = 8)
-if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
+if ((isInputRange!Range && isSomeChar!(ElementEncodingType!Range) ||
     isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
-    static if (is(Unqual!(ElementEncodingType!Range) == char))
+    static if (is(immutable ElementEncodingType!Range == immutable char))
     {
         // decoding needed for chars
         import std.utf : byDchar;
@@ -6926,7 +6990,7 @@ void main() {
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S[] outdent(S)(S[] lines) @safe pure
+S[] outdent(S)(return scope S[] lines) @safe pure
 if (isSomeString!S)
 {
     import std.algorithm.searching : startsWith;
@@ -7133,7 +7197,7 @@ Throws:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr)
-if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+if (staticIndexOf!(immutable T, immutable ubyte, immutable ushort, immutable uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
     import std.exception : collectException;

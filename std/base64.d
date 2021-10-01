@@ -218,7 +218,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  The slice of $(D_PARAM buffer) that contains the encoded string.
      */
     @trusted
-    pure char[] encode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
+    pure char[] encode(R1, R2)(in R1 source, return scope R2 buffer) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
                                                             is(R2 == char[]))
     in
     {
@@ -476,12 +476,6 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     size_t encode(R1, R2)(R1 source, auto ref R2 range)
         if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : ubyte) &&
             hasLength!R1 && !is(R2 == char[]) && isOutputRange!(R2, char))
-    out(result)
-    {
-        // @@@BUG@@@ Workaround for DbC problem.
-        //assert(result == encodeLength(source.length), "The number of put is different from the length of Base64");
-    }
-    do
     {
         immutable srcLen = source.length;
         if (srcLen == 0)
@@ -610,7 +604,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         this(Range range)
         {
             range_ = range;
-            doEncoding();
+            if (!empty)
+                doEncoding();
         }
 
 
@@ -986,7 +981,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  base alphabet of the current Base64 encoding scheme.
      */
     @trusted
-    pure ubyte[] decode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : dchar) &&
+    pure ubyte[] decode(R1, R2)(in R1 source, return scope R2 buffer) if (isArray!R1 && is(ElementType!R1 : dchar) &&
                                                              is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
@@ -1077,12 +1072,6 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     {
         assert(buffer.length >= decodeLength(source.length), "Insufficient buffer for decoding");
     }
-    out(result)
-    {
-        // @@@BUG@@@ Workaround for DbC problem.
-        //immutable expect = decodeLength(source.length) - 2;
-        //assert(result.length >= expect, "The length of result is smaller than expected length");
-    }
     do
     {
         immutable srcLen = source.length;
@@ -1135,7 +1124,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             }
         }
 
-        // @@@BUG@@@ Workaround for DbC problem.
+        // We need to do the check here because we have consumed the length
         version (StdUnittest)
             assert(
                 (bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2),
@@ -1390,7 +1379,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         this(Range range)
         {
             range_ = range;
-            doDecoding();
+            if (!empty)
+                doDecoding();
         }
 
 
@@ -1478,6 +1468,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 while (data.length % 4 != 0)
                 {
                     range_.popFront();
+                    enforce(!range_.empty, new Base64Exception("Invalid length of encoded data"));
                     data ~= cast(const(char)[])range_.front;
                 }
             }
@@ -1654,20 +1645,19 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *
      * Params:
      *  range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-     *      over the data to be decoded.
+     *      over the data to be decoded, or a `char` array. Will not accept
+     *      `wchar[]` nor `dchar[]`.
      *
      * Returns:
-     *  If $(D_PARAM range) is a range of characters, a `Decoder` that
+     *  If $(D_PARAM range) is a range or array of `char`, a `Decoder` that
      *  iterates over the bytes of the corresponding Base64 decoding.
      *
      *  If $(D_PARAM range) is a range of ranges of characters, a `Decoder`
      *  that iterates over the decoded strings corresponding to each element of
-     *  the range. In this case, the length of each subrange must be a multiple
-     *  of 4; the returned _decoder does not keep track of Base64 decoding
-     *  state across subrange boundaries.
+     *  the range.
      *
      *  In both cases, the returned `Decoder` will be a
-     * $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) if the
+     *  $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) if the
      *  given `range` is at least a forward range, otherwise it will be only
      *  an input range.
      *
@@ -1684,7 +1674,6 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * }
      * -----
      *
-     * Example:
      * This example shows decoding one byte at a time.
      * -----
      * auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
@@ -1697,6 +1686,24 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     Decoder!(Range) decoder(Range)(Range range) if (isInputRange!Range)
     {
         return typeof(return)(range);
+    }
+
+    /// ditto
+    Decoder!(const(ubyte)[]) decoder()(const(char)[] range)
+    {
+        import std.string : representation;
+        return typeof(return)(range.representation);
+    }
+
+    ///
+    @safe pure unittest
+    {
+        import std.algorithm.comparison : equal;
+        string encoded =
+            "VGhvdSBzaGFsdCBuZXZlciBjb250aW51ZSBhZnRlciBhc3NlcnRpbmcgbnVsbA==";
+
+        assert(Base64.decoder(encoded)
+            .equal("Thou shalt never continue after asserting null"));
     }
 
 
@@ -1908,7 +1915,8 @@ class Base64Exception : Exception
         assert(tv["foobar"] == b.data); a.clear(); b.clear();
     }
 
-    // @@@9543@@@ These tests were disabled because they actually relied on the input range having length.
+    // https://issues.dlang.org/show_bug.cgi?id=9543
+    // These tests were disabled because they actually relied on the input range having length.
     // The implementation (currently) doesn't support encoding/decoding from a length-less source.
     version (none)
     { // with InputRange
@@ -2088,4 +2096,94 @@ class Base64Exception : Exception
         assert(Base64.decode(ir2, &or2) == 6);
     }();
     assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21679
+// https://issues.dlang.org/show_bug.cgi?id=21706
+@safe unittest
+{
+    ubyte[][] input;
+    assert(Base64.encoder(input).empty);
+    assert(Base64.decoder(input).empty);
+}
+
+@safe unittest
+{
+    struct InputRange(ubyte[] data)
+    {
+        ubyte[] impl = data;
+        bool empty() { return impl.length == 0; }
+        ubyte front() { return impl[0]; }
+        void popFront() { impl = impl[1 .. $]; }
+        size_t length() { return impl.length; }
+    }
+
+    struct OutputRange
+    {
+        ubyte[] result;
+        void put(ubyte b) { result ~= b; }
+    }
+
+    void test_encode(ubyte[] data, string result)()
+    {
+        InputRange!data ir;
+        OutputRange or;
+        assert(Base64.encode(ir, or) == result.length);
+        assert(or.result == result);
+    }
+
+    void test_decode(ubyte[] data, string result)()
+    {
+        InputRange!data ir;
+        OutputRange or;
+        assert(Base64.decode(ir, or) == result.length);
+        assert(or.result == result);
+    }
+
+    test_encode!([], "");
+    test_encode!(['x'], "eA==");
+    test_encode!([123, 45], "ey0=");
+
+    test_decode!([], "");
+    test_decode!(['e', 'A', '=', '='], "x");
+    test_decode!(['e', 'y', '0', '='], "{-");
+}
+
+@system unittest
+{
+    // checking forward range
+    auto item = Base64.decoder(Base64.encoder(cast(ubyte[]) "foobar"));
+    auto copy = item.save();
+    item.popFront();
+    assert(item.front == 'o');
+    assert(copy.front == 'f');
+}
+
+@system unittest
+{
+    // checking invalid dchar
+    dchar[] c = cast(dchar[]) "ääää";
+
+    import std.exception : assertThrown;
+    assertThrown!Base64Exception(Base64.decode(c));
+}
+
+@safe unittest
+{
+    import std.array : array;
+
+    char[][] input = [['e', 'y'], ['0', '=']];
+    assert(Base64.decoder(input).array == [[123, 45]]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21707
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    char[][] t1 = [[ 'Z', 'g', '=' ]];
+    assertThrown!Base64Exception(Base64.decoder(t1));
+
+    char[][] t2 = [[ 'e', 'y', '0' ], ['=', '=']];
+    assertThrown!Base64Exception(Base64.decoder(t2));
 }

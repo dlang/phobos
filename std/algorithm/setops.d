@@ -346,7 +346,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     }
 }
 
-// Issue 13091
+// https://issues.dlang.org/show_bug.cgi?id=13091
 pure nothrow @safe @nogc unittest
 {
     int[1] a = [1];
@@ -391,7 +391,7 @@ if (ranges.length >= 2 &&
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
         }
-        void popFront() scope @trusted // @trusted until dmd #9220 is pulled
+        void popFront() scope
         {
             foreach_reverse (i, ref r; current)
             {
@@ -421,9 +421,10 @@ if (ranges.length >= 2 &&
     return Result(ranges);
 }
 
+// cartesian product of empty ranges should be empty
+// https://issues.dlang.org/show_bug.cgi?id=10693
 @safe unittest
 {
-    // Issue 10693: cartesian product of empty ranges should be empty.
     int[] a, b, c, d, e;
     auto cprod = cartesianProduct(a,b,c,d,e);
     assert(cprod.empty);
@@ -445,9 +446,9 @@ if (ranges.length >= 2 &&
     assert(cprod.init.empty);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13393
 @safe unittest
 {
-    // Issue 13393
     assert(!cartesianProduct([0],[0],[0]).save.empty);
 }
 
@@ -506,7 +507,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     assert(canFind(N4, tuple(10, 3, 1, 2)));
 }
 
-// Issue 9878
+// https://issues.dlang.org/show_bug.cgi?id=9878
 ///
 @safe unittest
 {
@@ -545,12 +546,46 @@ pure @safe nothrow @nogc unittest
     assert(D.front == front1);
 }
 
-// Issue 13935
+// https://issues.dlang.org/show_bug.cgi?id=13935
 @safe unittest
 {
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
     foreach (pair; cartesianProduct(seq, seq)) {}
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
+    static struct SystemRange
+    {
+        int[] data;
+
+        int front() @system @property inout
+        {
+            return data[0];
+        }
+
+        bool empty() @system @property inout
+        {
+            return data.length == 0;
+        }
+
+        void popFront() @system
+        {
+            data = data[1 .. $];
+        }
+
+        SystemRange save() @system
+        {
+            return this;
+        }
+    }
+
+    assert(SystemRange([1, 2]).cartesianProduct(SystemRange([3, 4]))
+        .equal([tuple(1, 3), tuple(1, 4), tuple(2, 3), tuple(2, 4)]));
 }
 
 // largestPartialIntersection
@@ -1109,7 +1144,8 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
     assert(setDifference(r, x).empty);
 }
 
-@safe unittest // Issue 10460
+// https://issues.dlang.org/show_bug.cgi?id=10460
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1429,7 +1465,8 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     assert(equal(setSymmetricDifference(c, d), [1, 1, 2, 5, 6, 7, 9]));
 }
 
-@safe unittest // Issue 10460
+// https://issues.dlang.org/show_bug.cgi?id=10460
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 

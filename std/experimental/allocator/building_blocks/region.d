@@ -188,7 +188,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
     {
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
         assert(a.isPowerOf2);
 
         const rounded = goodAllocSize(n);
@@ -527,8 +527,6 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     else version (RISCV64) enum growDownwards = Yes.growDownwards;
     else version (MIPS32) enum growDownwards = Yes.growDownwards;
     else version (MIPS64) enum growDownwards = Yes.growDownwards;
-    else version (RISCV32) enum growDownwards = Yes.growDownwards;
-    else version (RISCV64) enum growDownwards = Yes.growDownwards;
     else version (SPARC) enum growDownwards = Yes.growDownwards;
     else version (SPARC64) enum growDownwards = Yes.growDownwards;
     else version (SystemZ) enum growDownwards = Yes.growDownwards;
@@ -1186,7 +1184,7 @@ shared struct SharedRegion(ParentAllocator = NullAllocator,
     void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
     {
         import core.atomic : cas, atomicLoad;
-        import std.math : isPowerOf2;
+        import std.math.traits : isPowerOf2;
 
         assert(a.isPowerOf2);
         if (n == 0) return null;

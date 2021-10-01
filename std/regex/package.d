@@ -209,7 +209,8 @@ $(TR $(TD Objects) $(TD
   $(REG_START Character classes )
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
-    $(REG_ROW Any atom, Has the same meaning as outside of a character class.)
+    $(REG_ROW Any atom, Has the same meaning as outside of a character class,
+      except for ] which must be written as \\])
     $(REG_ROW a-z, Includes characters a, b, c, ..., z. )
     $(REG_ROW [a||b]$(COMMA) [a--b]$(COMMA) [a~~b]$(COMMA) [a$(AMP)$(AMP)b],
      Where a, b are arbitrary classes, means union, set difference,
@@ -463,7 +464,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     static immutable r = cast(immutable) regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    @trusted bool func(BacktrackingMatcher!Char matcher)
+    @trusted pure bool func(BacktrackingMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
         cast(void) matcher;
@@ -474,7 +475,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     enum wrapper = CTRegexWrapper!Char(&staticRe);
 }
 
-@safe unittest
+@safe pure unittest
 {
     // test compat for logical const workaround
     static void test(StaticRegex!char)
@@ -484,7 +485,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     test(re);
 }
 
-@safe unittest
+@safe pure unittest
 {
     auto re = ctRegex!`foo`;
     assert(matchFirst("foo", re));
@@ -507,8 +508,9 @@ template ctRegexImpl(alias pattern, string flags=[])
 +/
 public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
-     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(immutable RegEx == immutable Regex!(BasicElementOf!R))
+     || is(RegEx : const(Regex!(BasicElementOf!R)))
+     || is(immutable RegEx == immutable StaticRegex!(BasicElementOf!R));
 
 
 /++
@@ -706,7 +708,8 @@ public:
         || cast(bool)(c = matchFirst(s, regex("a"))));
 }
 
-@system unittest // Issue 19979
+// https://issues.dlang.org/show_bug.cgi?id=19979
+@system unittest
 {
     auto c = matchFirst("bad", regex(`(^)(not )?bad($)`));
     assert(c[0] && c[0].length == "bad".length);
@@ -741,7 +744,7 @@ private:
         _engine = _factory.create(prog, input);
         assert(_engine.refCount == 1);
         _captures = Captures!R(this);
-        _captures.matches.mutate((slice) { _captures._nMatch = _engine.match(slice); });
+        _captures.matches.mutate((slice) pure { _captures._nMatch = _engine.match(slice); });
     }
 
 public:
@@ -818,7 +821,7 @@ public:
     @property inout(Captures!R) captures() inout { return _captures; }
 }
 
-private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
+private auto matchOnceImpl(RegEx, R)(R input, const auto ref RegEx prog) @trusted
 {
     alias Char = BasicElementOf!R;
     static struct Key
@@ -844,8 +847,27 @@ private @trusted auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog)
         cacheKey = key;
     }
     auto captures = Captures!R(input, prog.ngroup, prog.dict);
-    captures.matches.mutate((slice){ captures._nMatch = engine.match(slice); });
+    captures.matches.mutate((slice) pure { captures._nMatch = engine.match(slice); });
     return captures;
+}
+
+// matchOnce is constructed as a safe, pure wrapper over matchOnceImpl. It can be
+// faked as pure because the static mutable variables are used to cache the key and
+// character matcher. The technique used avoids delegates and GC.
+private @safe auto matchOnce(RegEx, R)(R input, const auto ref RegEx prog) pure
+{
+    static auto impl(R input, const ref RegEx prog)
+    {
+        return matchOnceImpl(input, prog);
+    }
+
+    static @trusted auto pureImpl(R input, const ref RegEx prog)
+    {
+        auto p = assumePureFunction(&impl);
+        return p(input, prog);
+    }
+
+    return pureImpl(input, prog);
 }
 
 private auto matchMany(RegEx, R)(R input, auto ref RegEx re) @safe

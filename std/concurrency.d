@@ -1,4 +1,49 @@
 /**
+ * $(SCRIPT inhibitQuickIndex = 1;)
+ * $(DIVC quickindex,
+ * $(BOOKTABLE,
+ * $(TR $(TH Category) $(TH Symbols))
+ * $(TR $(TD Tid) $(TD
+ *     $(MYREF locate)
+ *     $(MYREF ownerTid)
+ *     $(MYREF register)
+ *     $(MYREF spawn)
+ *     $(MYREF spawnLinked)
+ *     $(MYREF thisTid)
+ *     $(MYREF Tid)
+ *     $(MYREF TidMissingException)
+ *     $(MYREF unregister)
+ * ))
+ * $(TR $(TD Message passing) $(TD
+ *     $(MYREF prioritySend)
+ *     $(MYREF receive)
+ *     $(MYREF receiveOnly)
+ *     $(MYREF receiveTimeout)
+ *     $(MYREF send)
+ *     $(MYREF setMaxMailboxSize)
+ * ))
+ * $(TR $(TD Message-related types) $(TD
+ *     $(MYREF LinkTerminated)
+ *     $(MYREF MailboxFull)
+ *     $(MYREF MessageMismatch)
+ *     $(MYREF OnCrowding)
+ *     $(MYREF OwnerTerminated)
+ *     $(MYREF PriorityMessageException)
+ * ))
+ * $(TR $(TD Scheduler) $(TD
+ *     $(MYREF FiberScheduler)
+ *     $(MYREF Generator)
+ *     $(MYREF Scheduler)
+ *     $(MYREF scheduler)
+ *     $(MYREF ThreadInfo)
+ *     $(MYREF ThreadScheduler)
+ *     $(MYREF yield)
+ * ))
+ * $(TR $(TD Misc) $(TD
+ *     $(MYREF initOnce)
+ * ))
+ * ))
+ *
  * This is a low-level messaging API upon which more structured or restrictive
  * APIs may be built.  The general idea is that every messageable entity is
  * represented by a common handle type called a Tid, which allows messages to
@@ -98,9 +143,9 @@ private
         static assert(!hasLocalAliasing!(Tid, Container, int));
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=20097
     @safe unittest
     {
-        /* Issue 20097 */
         import std.datetime.systime : SysTime;
         static struct Container { SysTime time; }
         static assert(!hasLocalAliasing!(SysTime, Container));
@@ -342,17 +387,17 @@ public:
      * that a Tid executed in the future will have the same toString() output
      * as another Tid that has already terminated.
      */
-    void toString(scope void delegate(const(char)[]) sink)
+    void toString(W)(ref W w) const
     {
-        import std.format : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
+        import std.format.write : formattedWrite;
+        auto p = () @trusted { return cast(void*) mbox; }();
+        formattedWrite(w, "Tid(%x)", p);
     }
 
 }
 
-@system unittest
+@safe unittest
 {
-    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
@@ -360,6 +405,15 @@ public:
     assert(text(tid2) != "Tid(0)");
     auto tid3 = tid2;
     assert(text(tid2) == text(tid3));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21512
+@system unittest
+{
+    import std.format : format;
+
+    const(Tid) b = spawn(() {});
+    assert(format!"%s"(b)[0 .. 4] == "Tid(");
 }
 
 /**
@@ -456,7 +510,9 @@ private template isSpawnable(F, T...)
  *  to `fn` must either be `shared` or `immutable` or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- */
+ *
+ * Similarly, if `fn` is a delegate, it must not have unshared aliases, meaning
+ * `fn` must be either `shared` or `immutable`. */
 Tid spawn(F, T...)(F fn, T args)
 if (isSpawnable!(F, T))
 {
@@ -796,13 +852,24 @@ in
 do
 {
     import std.format : format;
+    import std.meta : allSatisfy;
     import std.typecons : Tuple;
 
     Tuple!(T) ret;
 
     thisInfo.ident.mbox.get((T val) {
         static if (T.length)
-            ret.field = val;
+        {
+            static if (allSatisfy!(isAssignable, T))
+            {
+                ret.field = val;
+            }
+            else
+            {
+                import core.lifetime : emplace;
+                emplace(&ret, val);
+            }
+        }
     },
     (LinkTerminated e) { throw e; },
     (OwnerTerminated e) { throw e; },
@@ -876,6 +943,12 @@ do
     tid.send(1);
     string result = receiveOnly!string();
     assert(result == "Unexpected message type: expected 'string', got 'int'");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21663
+@safe unittest
+{
+    alias test = receiveOnly!(string, bool, bool);
 }
 
 /**
@@ -1164,7 +1237,7 @@ struct ThreadInfo
         unregisterMe(this); // clean up registry entries
     }
 
-    // issue 20160
+    // https://issues.dlang.org/show_bug.cgi?id=20160
     @system unittest
     {
         register("main_thread", thisTid());
@@ -2480,7 +2553,7 @@ private
             }
             if (n)
             {
-                import std.conv : emplace;
+                import core.lifetime : emplace;
                 emplace!Node(n, v);
             }
             else
@@ -2726,4 +2799,28 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     tid.send(x);
     receiveOnly!(bool);
     assert(x[0] == 5);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=13930
+@system unittest
+{
+    immutable aa = ["0":0];
+    thisTid.send(aa);
+    receiveOnly!(immutable int[string]); // compile error
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19345
+@system unittest
+{
+    static struct Aggregate { const int a; const int[5] b; }
+    static void t1(Tid mainTid)
+    {
+        const sendMe = Aggregate(42, [1, 2, 3, 4, 5]);
+        mainTid.send(sendMe);
+    }
+
+    spawn(&t1, thisTid);
+    auto result1 = receiveOnly!(const Aggregate)();
+    immutable expected = Aggregate(42, [1, 2, 3, 4, 5]);
+    assert(result1 == expected);
 }

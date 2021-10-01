@@ -688,7 +688,7 @@ $(TR $(TD Building blocks) $(TD
     Copyright: Copyright 2013 -
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Dmitry Olshansky
-    Source:    $(PHOBOSSRC std/uni.d)
+    Source:    $(PHOBOSSRC std/uni/package.d)
     Standards: $(HTTP www.unicode.org/versions/Unicode6.2.0/, Unicode v6.2)
 
 Macros:
@@ -878,7 +878,8 @@ struct MultiArray(Types...)
     }
 
     this(const(size_t)[] raw_offsets,
-        const(size_t)[] raw_sizes, const(size_t)[] data)const @safe pure nothrow @nogc
+        const(size_t)[] raw_sizes,
+        return scope const(size_t)[] data) return scope const @safe pure nothrow @nogc
     {
         offsets[] = raw_offsets[];
         sz[] = raw_sizes[];
@@ -960,7 +961,7 @@ struct MultiArray(Types...)
     void store(OutRange)(scope OutRange sink) const
         if (isOutputRange!(OutRange, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", sz[]);
         formattedWrite(sink, ", [%( 0x%x, %)]", storage);
@@ -1124,7 +1125,7 @@ private:
 
 size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     enum bits = _bits == 1 ? 1 : nextPow2(_bits - 1);// see PackedArrayView
     static if (bits > 8*size_t.sizeof)
     {
@@ -1149,7 +1150,7 @@ template PackedArrayView(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedArrayView = PackedArrayViewImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1159,7 +1160,7 @@ template PackedPtr(T)
 if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
     && isBitPackableType!U) || isBitPackableType!T)
 {
-    import std.math : nextPow2;
+    import std.math.algebraic : nextPow2;
     private enum bits = bitSizeOf!T;
     alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
@@ -1473,7 +1474,7 @@ private struct SliceOverIndexed(T)
 
     @property size_t length()const { return to-from;}
 
-    auto opDollar()const { return length; }
+    alias opDollar = length;
 
     @property bool empty()const { return from == to; }
 
@@ -1508,7 +1509,10 @@ private:
     T* arr;
 }
 
-static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+@safe pure nothrow @nogc unittest
+{
+    static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+}
 
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 if (is(Unqual!T == T))
@@ -1649,7 +1653,7 @@ template sharMethod(alias uniLowerBound)
         if (is(T : ElementType!Range))
     {
         import std.functional : binaryFun;
-        import std.math : nextPow2, truncPow2;
+        import std.math.algebraic : nextPow2, truncPow2;
         alias pred = binaryFun!_pred;
         if (range.length == 0)
             return 0;
@@ -1815,7 +1819,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         return ptr[0 .. size];
     }
 
-    static T[] realloc(T)(scope T[] arr, size_t size) @trusted
+    static T[] realloc(T)(return scope T[] arr, size_t size) @trusted
     {
         import std.internal.memory : enforceRealloc;
         if (!size)
@@ -2173,7 +2177,7 @@ public struct InversionList(SP=GcPolicy)
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
     }
 
-    package @property const(CodepointInterval)[] intervals() const
+    package(std) @property const(CodepointInterval)[] intervals() const
     {
         import std.array : array;
         return Intervals!(typeof(data[]))(data[]).array;
@@ -2204,7 +2208,7 @@ public struct InversionList(SP=GcPolicy)
     // TODO:
     // used internally in std.regex
     // should be properly exposed in a public API ?
-    package auto scanFor()(dchar ch) const
+    package(std) auto scanFor()(dchar ch) const
     {
         immutable len = data.length;
         for (size_t i = 0; i < len; i++)
@@ -2428,7 +2432,7 @@ public:
         ---
     */
 
-    private import std.format : FormatSpec;
+    private import std.format.spec : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2441,7 +2445,7 @@ public:
      */
     void toString(Writer)(scope Writer sink, scope const ref FormatSpec!char fmt) /* const */
     {
-        import std.format : formatValue;
+        import std.format.write : formatValue;
         auto range = byInterval;
         if (range.empty)
             return;
@@ -2487,7 +2491,7 @@ public:
     {
         import std.exception : assertThrown;
         import std.format : format, FormatException;
-        assertThrown!FormatException(format("%a", unicode.ASCII));
+        assertThrown!FormatException(format("%z", unicode.ASCII));
     }
 
 
@@ -2613,7 +2617,7 @@ public:
         assert((set & set.inverted).empty);
     }
 
-    package static string toSourceCode(const(CodepointInterval)[] range, string funcName)
+    package(std) static string toSourceCode(const(CodepointInterval)[] range, string funcName)
     {
         import std.algorithm.searching : countUntil;
         import std.format : format;
@@ -2802,9 +2806,9 @@ private:
         }
 
         //may break sorted property - but we need std.sort to access it
-        //hence package protection attribute
+        //hence package(std) protection attribute
         static if (hasAssignableElements!Range)
-        package @property void front(CodepointInterval val)
+        package(std) @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
             slice[start+1] = val.b;
@@ -2819,7 +2823,7 @@ private:
 
         //ditto about package
         static if (hasAssignableElements!Range)
-        package @property void back(CodepointInterval val)
+        package(std) @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
             slice[end-1] = val.b;
@@ -2844,7 +2848,7 @@ private:
 
         //ditto about package
         static if (hasAssignableElements!Range)
-        package void opIndexAssign(CodepointInterval val, size_t idx)
+        package(std) void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
             slice[start+idx*2+1] = val.b;
@@ -2877,7 +2881,8 @@ private:
         alias Ival = CodepointInterval;
         //intervals wrapper for a _range_ over packed array
         auto ivals = Intervals!(typeof(data[]))(data[]);
-        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265
+        //@@@BUG@@@ can't use "a.a < b.a" see
+        // https://issues.dlang.org/show_bug.cgi?id=12265
         sort!((a,b) => a.a < b.a, SwapStrategy.stable)(ivals);
         // what follows is a variation on stable remove
         // differences:
@@ -3733,7 +3738,7 @@ pure @safe unittest// iteration & opIndex
                 [tuple(cast(uint)'A', cast(uint)'N'), tuple(cast(uint)'a', cast(uint)'n')]
             ), text(a.byInterval));
 
-        // same @@@BUG as in issue 8949 ?
+        // same @@@BUG as in https://issues.dlang.org/show_bug.cgi?id=8949 ?
         version (bug8949)
         {
             import std.range : retro;
@@ -4400,7 +4405,7 @@ if (sumOfIntegerTuple!sizes == 21)
     alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
 }
 
-package template cmpK0(alias Pred)
+package(std) template cmpK0(alias Pred)
 {
     import std.typecons : Tuple;
     static bool cmpK0(Value, Key)
@@ -4912,7 +4917,7 @@ template Utf8Matcher()
         //static disptach helper UTF size ==> table
         alias tab(int i) = tables[i - 1];
 
-        package @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
+        package(std) @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -5152,7 +5157,7 @@ template Utf16Matcher()
         }
         mixin DefMatcher;
 
-        package @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
+        package(std) @property CherryPick!(Impl, SizesToPick) subMatcher(SizesToPick...)()
         {
             return CherryPick!(Impl, SizesToPick)(&this);
         }
@@ -5275,7 +5280,7 @@ if (isCodepointSet!Set)
 
 
 //a range of code units, packed with index to speed up forward iteration
-package auto decoder(C)(C[] s, size_t offset=0)
+package(std) auto decoder(C)(C[] s, size_t offset=0)
 if (is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5602,9 +5607,12 @@ struct sliceBits(size_t from, size_t to)
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
-static assert(bitSizeOf!lo8 == 8);
-static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
-static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+@safe pure nothrow @nogc unittest
+{
+    static assert(bitSizeOf!lo8 == 8);
+    static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
+    static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
+}
 
 template Sequence(size_t start, size_t end)
 {
@@ -5825,7 +5833,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
 }
 
 
-package ubyte[] compressIntervals(Range)(Range intervals)
+package(std) ubyte[] compressIntervals(Range)(Range intervals)
 if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 {
     ubyte[] storage;
@@ -5868,7 +5876,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 }
 
 // Creates a range of `CodepointInterval` that lazily decodes compressed data.
-@safe package auto decompressIntervals(const(ubyte)[] data) pure
+@safe package(std) auto decompressIntervals(const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
 }
@@ -5915,11 +5923,15 @@ pure:
         return _idx == size_t.max;
     }
 
-    @property DecompressedIntervals save() { return this; }
+    @property DecompressedIntervals save() return scope { return this; }
 }
 
-static assert(isInputRange!DecompressedIntervals);
-static assert(isForwardRange!DecompressedIntervals);
+@safe pure nothrow @nogc unittest
+{
+    static assert(isInputRange!DecompressedIntervals);
+    static assert(isForwardRange!DecompressedIntervals);
+}
+
 //============================================================================
 
 version (std_uni_bootstrap){}
@@ -6105,10 +6117,10 @@ template SetSearcher(alias table, string kind)
 }
 
 // Characters that need escaping in string posed as regular expressions
-package alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+package(std) alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
     ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
-package CodepointSet memoizeExpr(string expr)()
+package(std) CodepointSet memoizeExpr(string expr)()
 {
     if (__ctfe)
         return mixin(expr);
@@ -6124,14 +6136,14 @@ package CodepointSet memoizeExpr(string expr)()
 }
 
 //property for \w character class
-package @property CodepointSet wordCharacter() @safe
+package(std) @property CodepointSet wordCharacter() @safe
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
-package struct Stack(T)
+package(std) struct Stack(T)
 {
 @safe:
     T[] data;
@@ -6160,7 +6172,7 @@ package struct Stack(T)
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
 //returns it's value and skips these maxDigit chars on success, throws on failure
-package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
+package(std) dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
 {
     import std.exception : enforce;
     //std.conv.parse is both @system and bogus
@@ -6823,7 +6835,7 @@ struct UnicodeSetParser(Range)
     }
 
     //parse control code of form \cXXX, c assumed to be the current symbol
-    static package dchar parseControlCode(Parser)(ref Parser p)
+    static package(std) dchar parseControlCode(Parser)(ref Parser p)
     {
         with(p)
         {
@@ -6838,7 +6850,7 @@ struct UnicodeSetParser(Range)
 
     //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
     //\ - assumed to be processed, p - is current
-    static package CodepointSet parsePropertySpec(Range)(ref Range p,
+    static package(std) CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
         static import std.ascii;
@@ -7133,7 +7145,7 @@ if (is(C : dchar))
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
@@ -7166,7 +7178,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     // TODO: Bidirectional access
     static struct Result(R)
@@ -7269,7 +7281,7 @@ private static struct InputRangeString
     $(P If passed in a range of code points, returns a range with equivalent capabilities.)
 +/
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -7312,7 +7324,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 
 /// Ditto
 auto byCodePoint(Range)(Range range)
-if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 {
     import std.range.primitives : isBidirectionalRange, popBack;
     import std.traits : isNarrowString;
@@ -8098,12 +8110,12 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
     assert(icmp("ΐ"w, "\u03B9\u0308\u0301") == 0);
     assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
-    //bugzilla 11057
+    // https://issues.dlang.org/show_bug.cgi?id=11057
     assert( icmp("K", "L") < 0 );
     });
 }
 
-// issue 17372
+// https://issues.dlang.org/show_bug.cgi?id=17372
 @safe pure unittest
 {
     import std.algorithm.iteration : joiner, map;
@@ -8112,13 +8124,13 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     auto a = [["foo", "bar"], ["baz"]].map!(line => line.joiner(" ")).array.sort!((a, b) => icmp(a, b) < 0);
 }
 
-// This is package for the moment to be used as a support tool for std.regex
+// This is package(std) for the moment to be used as a support tool for std.regex
 // It needs a better API
 /*
     Return a range of all $(CODEPOINTS) that casefold to
     and from this `ch`.
 */
-package auto simpleCaseFoldings(dchar ch) @safe
+package(std) auto simpleCaseFoldings(dchar ch) @safe
 {
     import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
@@ -8552,7 +8564,7 @@ enum {
     In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
 +/
-inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
+inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] input)
 {
     import std.algorithm.mutation : SwapStrategy;
     import std.algorithm.sorting : sort;
@@ -8739,7 +8751,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow 
 // returns tuple of 2 indexes that delimit:
 // normalized text, piece that needs normalization and
 // the rest of input starting with stable code point
-private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
+private auto splitNormalized(NormalizationForm norm, C)(scope const(C)[] input)
 {
     import std.typecons : tuple;
     ubyte lastCC = 0;
@@ -8869,7 +8881,8 @@ else
 {
     import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
 
-    // hide template instances behind functions (Bugzilla 13232)
+    // hide template instances behind functions
+    // https://issues.dlang.org/show_bug.cgi?id=13232
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
     ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
     dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
@@ -9043,7 +9056,8 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
         return s.array;
 }
 
-@safe unittest //12428
+// https://issues.dlang.org/show_bug.cgi?id=12428
+@safe unittest
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
@@ -9054,7 +9068,8 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
     assert(s == "abcdefghij");
 }
 
-@safe unittest // 18993
+// https://issues.dlang.org/show_bug.cgi?id=18993
+@safe unittest
 {
     static assert(`몬스터/A`.toLower.length == `몬스터/a`.toLower.length);
 }
@@ -9877,7 +9892,7 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
     assert("\u00df".toUpper == "SS");
 }
 
-//bugzilla 9629
+// https://issues.dlang.org/show_bug.cgi?id=9629
 @safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
@@ -9927,11 +9942,12 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
     assert(toLower("Some String"w) == "some string"w);
     assert(toLower("Some String"d) == "some string"d);
 
-    // bugzilla 12455
+    // https://issues.dlang.org/show_bug.cgi?id=12455
     dchar c = 'İ'; // '\U0130' LATIN CAPITAL LETTER I WITH DOT ABOVE
     assert(isUpper(c));
     assert(toLower(c) == 'i');
-    // extend on 12455 reprot - check simple-case toUpper too
+    // extends on https://issues.dlang.org/show_bug.cgi?id=12455 report
+    // check simple-case toUpper too
     c = '\u1f87';
     assert(isLower(c));
     assert(toUpper(c) == '\u1F8F');

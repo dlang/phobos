@@ -21,9 +21,6 @@ $(TR $(TH Function Name) $(TH Description)
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(LREF forward))
-        $(TD Forwards function arguments while saving ref-ness.
-    ))
     $(TR $(TD $(LREF lessThan), $(LREF greaterThan), $(LREF equalTo))
         $(TD Ready-made predicate functions to compare two values.
     ))
@@ -69,6 +66,7 @@ module std.functional;
 import std.meta : AliasSeq, Reverse;
 import std.traits : isCallable, Parameters;
 
+import std.internal.attributes : betterC;
 
 private template needOpCallAlias(alias fun)
 {
@@ -128,7 +126,7 @@ template unaryFun(alias fun, string parmName = "a")
     }
     else static if (needOpCallAlias!fun)
     {
-        // Issue 9906
+        // https://issues.dlang.org/show_bug.cgi?id=9906
         alias unaryFun = fun.opCall;
     }
     else
@@ -159,7 +157,7 @@ template unaryFun(alias fun, string parmName = "a")
     int num = 41;
     assert(unaryFun!"a + 1"(num) == 42);
 
-    // Issue 9906
+    // https://issues.dlang.org/show_bug.cgi?id=9906
     struct Seen
     {
         static bool opCall(int n) { return true; }
@@ -222,7 +220,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     }
     else static if (needOpCallAlias!fun)
     {
-        // Issue 9906
+        // https://issues.dlang.org/show_bug.cgi?id=9906
         alias binaryFun = fun.opCall;
     }
     else
@@ -252,7 +250,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     //@@BUG
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
 
-    // Issue 9906
+    // https://issues.dlang.org/show_bug.cgi?id=9906
     struct Seen
     {
         static bool opCall(int x, int y) { return true; }
@@ -650,7 +648,6 @@ template not(alias pred)
 @safe unittest
 {
     import std.algorithm.searching : find;
-    import std.functional;
     import std.uni : isWhite;
     string a = "   Hello, world!";
     assert(find!(not!isWhite)(a) == "Hello, world!");
@@ -840,7 +837,7 @@ template partial(alias fun, alias arg)
     assert(dg2() == 1);
 }
 
-// Fix issue 15732
+// Fix https://issues.dlang.org/show_bug.cgi?id=15732
 @safe unittest
 {
     // Test whether it works with functions.
@@ -1037,6 +1034,14 @@ pure @safe @nogc nothrow unittest
     static assert(!__traits(compiles, curry(NoArgs.init)));
 }
 
+private template Iota(size_t n)
+{
+    static if (n == 0)
+        alias Iota = AliasSeq!();
+    else
+        alias Iota = AliasSeq!(Iota!(n - 1), n - 1);
+}
+
 /**
 Takes multiple functions and adjoins them together.
 
@@ -1062,27 +1067,21 @@ if (F.length > 1)
     auto adjoin(V...)(auto ref V a)
     {
         import std.typecons : tuple;
-        static if (F.length == 2)
+        import std.meta : staticMap;
+
+        auto resultElement(size_t i)()
         {
-            return tuple(F[0](a), F[1](a));
+            return F[i](a);
         }
-        else static if (F.length == 3)
-        {
-            return tuple(F[0](a), F[1](a), F[2](a));
-        }
-        else
-        {
-            import std.format : format;
-            import std.range : iota;
-            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
-        }
+
+        return tuple(staticMap!(resultElement, Iota!(F.length)));
     }
 }
 
 ///
 @safe unittest
 {
-    import std.functional, std.typecons : Tuple;
+    import std.typecons : Tuple;
     static bool f1(int a) { return a != 0; }
     static int f2(int a) { return a / 2; }
     auto x = adjoin!(f1, f2)(5);
@@ -1135,6 +1134,22 @@ if (F.length > 1)
     enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=21347
+@safe @betterC unittest
+{
+    alias f = (int n) => n + 1;
+    alias g = (int n) => n + 2;
+    alias h = (int n) => n + 3;
+    alias i = (int n) => n + 4;
+
+    auto result = adjoin!(f, g, h, i)(0);
+
+    assert(result[0] == 1);
+    assert(result[1] == 2);
+    assert(result[2] == 3);
+    assert(result[3] == 4);
+}
+
 /**
    Composes passed-in functions $(D fun[0], fun[1], ...).
 
@@ -1146,27 +1161,21 @@ if (F.length > 1)
    See_Also: $(LREF pipe)
 */
 template compose(fun...)
+if (fun.length > 0)
 {
     static if (fun.length == 1)
     {
         alias compose = unaryFun!(fun[0]);
     }
-    else static if (fun.length == 2)
-    {
-        // starch
-        alias fun0 = unaryFun!(fun[0]);
-        alias fun1 = unaryFun!(fun[1]);
-
-        // protein: the core composition operation
-        typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
-        {
-            return fun0(fun1(a));
-        }
-    }
     else
     {
-        // protein: assembling operations
-        alias compose = compose!(fun[0], compose!(fun[1 .. $]));
+        alias fun0 = unaryFun!(fun[0]);
+        alias rest = compose!(fun[1 .. $]);
+
+        auto compose(Args...)(Args args)
+        {
+            return fun0(rest(args));
+        }
     }
 }
 
@@ -1181,6 +1190,17 @@ template compose(fun...)
     // First split a string in whitespace-separated tokens and then
     // convert each token into an integer
     assert(compose!(map!(to!(int)), split)("1 2 3").equal([1, 2, 3]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=6484
+@safe unittest
+{
+    int f(int a) { return a; }
+    int g(int a) { return a; }
+    int h(int a,int b,int c) { return a * b * c; }
+
+    alias F = compose!(f,g,h);
+    assert(F(1,2,3) == f(g(h(1,2,3))));
 }
 
 /**
@@ -1261,7 +1281,8 @@ Note:
 template memoize(alias fun)
 {
     import std.traits : ReturnType;
-    // alias Args = Parameters!fun; // Bugzilla 13580
+     // https://issues.dlang.org/show_bug.cgi?id=13580
+    // alias Args = Parameters!fun;
 
     ReturnType!fun memoize(Parameters!fun args)
     {
@@ -1283,7 +1304,8 @@ template memoize(alias fun)
 template memoize(alias fun, uint maxSize)
 {
     import std.traits : ReturnType;
-    // alias Args = Parameters!fun; // Bugzilla 13580
+     // https://issues.dlang.org/show_bug.cgi?id=13580
+    // alias Args = Parameters!fun;
     ReturnType!fun memoize(Parameters!fun args)
     {
         import std.meta : staticMap;
@@ -1308,7 +1330,7 @@ template memoize(alias fun, uint maxSize)
         }
 
         import core.bitop : bt, bts;
-        import std.conv : emplace;
+        import core.lifetime : emplace;
 
         size_t hash;
         foreach (ref arg; args)
@@ -1318,7 +1340,9 @@ template memoize(alias fun, uint maxSize)
         if (!bt(initialized.ptr, idx1))
         {
             emplace(&memo[idx1], args, fun(args));
-            bts(initialized.ptr, idx1); // only set to initialized after setting args and value (bugzilla 14025)
+            // only set to initialized after setting args and value
+            // https://issues.dlang.org/show_bug.cgi?id=14025
+            bts(initialized.ptr, idx1);
             return memo[idx1].res;
         }
         else if (memo[idx1].args == args)
@@ -1328,7 +1352,7 @@ template memoize(alias fun, uint maxSize)
         if (!bt(initialized.ptr, idx2))
         {
             emplace(&memo[idx2], memo[idx1]);
-            bts(initialized.ptr, idx2); // only set to initialized after setting args and value (bugzilla 14025)
+            bts(initialized.ptr, idx2);
         }
         else if (memo[idx2].args == args)
             return memo[idx2].res;
@@ -1427,7 +1451,7 @@ unittest
     }
     assert(fact(10) == 3628800);
 
-    // Issue 12568
+    // https://issues.dlang.org/show_bug.cgi?id=12568
     static uint len2(const string s) { // Error
     alias mLen2 = memoize!len2;
     if (s.length == 0)
@@ -1442,7 +1466,8 @@ unittest
     assert(func(int.init) == 1);
 }
 
-// 16079: memoize should work with arrays
+// https://issues.dlang.org/show_bug.cgi?id=16079
+// memoize should work with arrays
 @system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
@@ -1466,7 +1491,7 @@ unittest
     assert(executed == 1);
 }
 
-// 16079: memoize should work with structs
+// https://issues.dlang.org/show_bug.cgi?id=16079: memoize should work with structs
 @safe unittest
 {
     int executed = 0;
@@ -1485,7 +1510,7 @@ unittest
     assert(executed == 1);
 }
 
-// 20439 memoize should work with void opAssign
+// https://issues.dlang.org/show_bug.cgi?id=20439 memoize should work with void opAssign
 @safe unittest
 {
     static struct S
@@ -1496,7 +1521,7 @@ unittest
     assert(memoize!(() => S()) == S());
 }
 
-// 16079: memoize should work with classes
+// https://issues.dlang.org/show_bug.cgi?id=16079: memoize should work with classes
 @system unittest // not @safe with -dip1000 due to memoize
 {
     int executed = 0;
@@ -1783,125 +1808,9 @@ if (isCallable!(F))
     }
 }
 
-/**
-Forwards function arguments while keeping `out`, `ref`, and `lazy` on
-the parameters.
-
-Params:
-    args = a parameter list or an $(REF AliasSeq,std,meta).
-Returns:
-    An `AliasSeq` of `args` with `out`, `ref`, and `lazy` saved.
-*/
+// forward used to be here but was moved to druntime
 template forward(args...)
 {
     import core.lifetime : fun = forward;
     alias forward = fun!args;
-}
-
-///
-@safe unittest
-{
-    class C
-    {
-        static int foo(int n) { return 1; }
-        static int foo(ref int n) { return 2; }
-    }
-
-    // with forward
-    int bar()(auto ref int x) { return C.foo(forward!x); }
-
-    // without forward
-    int baz()(auto ref int x) { return C.foo(x); }
-
-    int i;
-    assert(bar(1) == 1);
-    assert(bar(i) == 2);
-
-    assert(baz(1) == 2);
-    assert(baz(i) == 2);
-}
-
-///
-@safe unittest
-{
-    void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
-
-    // forwards all arguments which are bound to parameter tuple
-    void bar(Args...)(auto ref Args args) { return foo(forward!args); }
-
-    // forwards all arguments with swapping order
-    void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
-
-    string s;
-    bar(1, s);
-    assert(s == "Hello");
-    baz(s, 2);
-    assert(s == "HelloHello");
-}
-
-///
-@safe unittest
-{
-    struct X {
-        int i;
-        this(this)
-        {
-            ++i;
-        }
-    }
-
-    struct Y
-    {
-        private X x_;
-        this()(auto ref X x)
-        {
-            x_ = forward!x;
-        }
-    }
-
-    struct Z
-    {
-        private const X x_;
-        this()(auto ref X x)
-        {
-            x_ = forward!x;
-        }
-        this()(auto const ref X x)
-        {
-            x_ = forward!x;
-        }
-    }
-
-    X x;
-    const X cx;
-    auto constX = (){ const X x; return x; };
-    static assert(__traits(compiles, { Y y = x; }));
-    static assert(__traits(compiles, { Y y = X(); }));
-    static assert(!__traits(compiles, { Y y = cx; }));
-    static assert(!__traits(compiles, { Y y = constX(); }));
-    static assert(__traits(compiles, { Z z = x; }));
-    static assert(__traits(compiles, { Z z = X(); }));
-    static assert(__traits(compiles, { Z z = cx; }));
-    static assert(__traits(compiles, { Z z = constX(); }));
-
-
-    Y y1 = x;
-    // ref lvalue, copy
-    assert(y1.x_.i == 1);
-    Y y2 = X();
-    // rvalue, move
-    assert(y2.x_.i == 0);
-
-    Z z1 = x;
-    // ref lvalue, copy
-    assert(z1.x_.i == 1);
-    Z z2 = X();
-    // rvalue, move
-    assert(z2.x_.i == 0);
-    Z z3 = cx;
-    // ref const lvalue, copy
-    assert(z3.x_.i == 1);
-    Z z4 = constX();
-    // const rvalue, copy
-    assert(z4.x_.i == 1);
 }

@@ -2890,7 +2890,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toISOString(writer);
         formattedWrite!("T%02d%02d%02d")(
             writer,
@@ -2967,7 +2967,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toISOExtString(writer);
         formattedWrite!("T%02d:%02d:%02d")(
             writer,
@@ -3043,7 +3043,7 @@ public:
     void toSimpleString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         _date.toSimpleString(writer);
         formattedWrite!(" %02d:%02d:%02d")(
             writer,
@@ -3216,7 +3216,7 @@ public:
         assertThrown!DateTimeException(DateTime.fromISOString("2010-12-22T172201"));
         assertThrown!DateTimeException(DateTime.fromISOString("2010-Dec-22 17:22:01"));
 
-        assert(DateTime.fromISOString("20101222T172201") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+        assert(DateTime.fromISOString("20101222T172201") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 1)));
         assert(DateTime.fromISOString("19990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromISOString("-19990706T123033") == DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromISOString("+019990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
@@ -3225,7 +3225,7 @@ public:
         assert(DateTime.fromISOString(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3316,7 +3316,7 @@ public:
         assertThrown!DateTimeException(DateTime.fromISOExtString("20101222T172201"));
         assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Dec-22 17:22:01"));
 
-        assert(DateTime.fromISOExtString("2010-12-22T17:22:01") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+        assert(DateTime.fromISOExtString("2010-12-22T17:22:01") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 1)));
         assert(DateTime.fromISOExtString("1999-07-06T12:30:33") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromISOExtString("-1999-07-06T12:30:33") == DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromISOExtString("+01999-07-06T12:30:33") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
@@ -3325,7 +3325,7 @@ public:
         assert(DateTime.fromISOExtString(" 1999-07-06T12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -3414,7 +3414,7 @@ public:
         assertThrown!DateTimeException(DateTime.fromSimpleString("2010-12-22T172201"));
 
         assert(DateTime.fromSimpleString("2010-Dec-22 17:22:01") ==
-               DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+               DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 1)));
         assert(DateTime.fromSimpleString("1999-Jul-06 12:30:33") ==
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromSimpleString("-1999-Jul-06 12:30:33") ==
@@ -3429,7 +3429,7 @@ public:
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7365,7 +7365,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -7449,7 +7449,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -7533,7 +7533,7 @@ public:
     void toSimpleString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         if (_year >= 0)
         {
             if (_year < 10_000)
@@ -7733,7 +7733,7 @@ public:
         assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -7871,7 +7871,7 @@ public:
         assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -8009,7 +8009,7 @@ public:
         assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9064,7 +9064,7 @@ public:
     void toISOString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(writer, "%02d%02d%02d", _hour, _minute, _second);
     }
 
@@ -9111,7 +9111,7 @@ public:
     void toISOExtString(W)(ref W writer) const
     if (isOutputRange!(W, char))
     {
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         formattedWrite(writer, "%02d:%02d:%02d", _hour, _minute, _second);
     }
 
@@ -9295,7 +9295,7 @@ public:
         assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9420,7 +9420,7 @@ public:
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;

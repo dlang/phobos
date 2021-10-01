@@ -337,7 +337,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
         assert(equal(arr, [1, 2, 3, 4, 5, 6, 7]));
     }
 
-    // Bugzilla 16959
+    // https://issues.dlang.org/show_bug.cgi?id=16959
     auto arr = ['4', '5', '6', '7', '1', '2', '3'];
     auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
 
@@ -374,14 +374,22 @@ if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRa
         assert(tlen >= slen,
                 "Cannot copy a source range into a smaller target range.");
 
-        immutable overlaps = __ctfe || () @trusted {
+        immutable overlaps = () @trusted {
             return source.ptr < target.ptr + tlen &&
                 target.ptr < source.ptr + slen; }();
 
         if (overlaps)
         {
-            foreach (idx; 0 .. slen)
-                target[idx] = source[idx];
+            if (source.ptr < target.ptr)
+            {
+                foreach_reverse (idx; 0 .. slen)
+                    target[idx] = source[idx];
+            }
+            else
+            {
+                foreach (idx; 0 .. slen)
+                    target[idx] = source[idx];
+            }
             return target[slen .. tlen];
         }
         else
@@ -507,7 +515,15 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
         assert(a[4 .. 9] == [6, 7, 8, 9, 10]);
     }
 
-    {   // Test for bug 7898
+    // https://issues.dlang.org/show_bug.cgi?id=21724
+    {
+        int[] a = [1, 2, 3, 4];
+        copy(a[0 .. 2], a[1 .. 3]);
+        assert(a == [1, 1, 2, 4]);
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=7898
+    {
         enum v =
         {
             import std.algorithm;
@@ -520,9 +536,9 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=13650
 @safe unittest
 {
-    // Issue 13650
     import std.meta : AliasSeq;
     static foreach (Char; AliasSeq!(char, wchar, dchar))
     {{
@@ -534,7 +550,8 @@ $(LINK2 http://en.cppreference.com/w/cpp/algorithm/copy_backward, STL's `copy_ba
     }}
 }
 
-@safe unittest // issue 18804
+// https://issues.dlang.org/show_bug.cgi?id=18804
+@safe unittest
 {
     static struct NullSink
     {
@@ -607,7 +624,8 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     assert(a == [ 5, 5, 5, 5 ]);
 }
 
-// issue 16342, test fallback on mutable narrow strings
+// test fallback on mutable narrow strings
+// https://issues.dlang.org/show_bug.cgi?id=16342
 @safe unittest
 {
     char[] chars = ['a', 'b'];
@@ -670,7 +688,7 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
     chars[1 .. 3].fill(':');
     assert(chars == "a::d");
 }
-// end issue 16342
+// end https://issues.dlang.org/show_bug.cgi?id=16342
 
 @safe unittest
 {
@@ -1056,11 +1074,7 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    // test @safe destructible
-    static if (__traits(compiles, (T t) @safe {}))
-        trustedMoveImpl(source, target);
-    else
-        moveImpl(source, target);
+    moveImpl(target, source);
 }
 
 /// For non-struct types, `move` just performs `target = source`:
@@ -1136,7 +1150,7 @@ pure nothrow @safe @nogc unittest
         move(s21, s22);
         assert(s21 == s22);
     });
-    // Issue 5661 test(1)
+    // https://issues.dlang.org/show_bug.cgi?id=5661 test(1)
     static struct S3
     {
         static struct X { int n = 0; ~this(){n = 0;} }
@@ -1149,7 +1163,7 @@ pure nothrow @safe @nogc unittest
     assert(s31.x.n == 0);
     assert(s32.x.n == 1);
 
-    // Issue 5661 test(2)
+    // https://issues.dlang.org/show_bug.cgi?id=5661 test(2)
     static struct S4
     {
         static struct X { int n = 0; this(this){n = 0;} }
@@ -1162,7 +1176,7 @@ pure nothrow @safe @nogc unittest
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
 
-    // Issue 13990 test
+    // https://issues.dlang.org/show_bug.cgi?id=13990 test
     class S5;
 
     S5 s51;
@@ -1175,11 +1189,7 @@ pure nothrow @safe @nogc unittest
 /// Ditto
 T move(T)(return scope ref T source)
 {
-    // test @safe destructible
-    static if (__traits(compiles, (T t) @safe {}))
-        return trustedMoveImpl(source);
-    else
-        return moveImpl(source);
+    return moveImpl(source);
 }
 
 /// Non-copyable structs can still be moved:
@@ -1216,34 +1226,53 @@ pure nothrow @safe @nogc unittest
     assert(s2.a == 42);
 }
 
-private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
+// https://issues.dlang.org/show_bug.cgi?id=20869
+// `move` should propagate the attributes of `opPostMove`
+@system unittest
 {
-    moveImpl(source, target);
+    static struct S
+    {
+        void opPostMove(const ref S old) nothrow @system
+        {
+            __gshared int i;
+            new int(i++); // Force @gc impure @system
+        }
+    }
+
+    alias T = void function() @system nothrow;
+    static assert(is(typeof({ S s; move(s); }) == T));
+    static assert(is(typeof({ S s; move(s, s); }) == T));
 }
 
-private void moveImpl(T)(ref T source, ref T target)
+private void moveImpl(T)(ref scope T target, ref return scope T source)
 {
     import std.traits : hasElaborateDestructor;
 
     static if (is(T == struct))
     {
-        if (&source == &target) return;
+        //  Unsafe when compiling without -dip1000
+        if ((() @trusted => &source == &target)()) return;
+
         // Destroy target before overwriting it
         static if (hasElaborateDestructor!T) target.__xdtor();
     }
     // move and emplace source into target
-    moveEmplace(source, target);
+    moveEmplaceImpl(target, source);
 }
 
-private T trustedMoveImpl(T)(ref T source) @trusted
+private T moveImpl(T)(ref return scope T source)
 {
-    return moveImpl(source);
+    // Properly infer safety from moveEmplaceImpl as the implementation below
+    // might void-initialize pointers in result and hence needs to be @trusted
+    if (false) moveEmplaceImpl(source, source);
+
+    return trustedMoveImpl(source);
 }
 
-private T moveImpl(T)(ref T source)
+private T trustedMoveImpl(T)(ref return scope T source) @trusted
 {
     T result = void;
-    moveEmplace(source, result);
+    moveEmplaceImpl(result, source);
     return result;
 }
 
@@ -1270,7 +1299,7 @@ private T moveImpl(T)(ref T source)
         assert(s21 == s22);
     });
 
-    // Issue 5661 test(1)
+    // https://issues.dlang.org/show_bug.cgi?id=5661 test(1)
     static struct S3
     {
         static struct X { int n = 0; ~this(){n = 0;} }
@@ -1283,7 +1312,7 @@ private T moveImpl(T)(ref T source)
     assert(s31.x.n == 0);
     assert(s32.x.n == 1);
 
-    // Issue 5661 test(2)
+    // https://issues.dlang.org/show_bug.cgi?id=5661 test(2)
     static struct S4
     {
         static struct X { int n = 0; this(this){n = 0;} }
@@ -1296,7 +1325,7 @@ private T moveImpl(T)(ref T source)
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
 
-    // Issue 13990 test
+    // https://issues.dlang.org/show_bug.cgi?id=13990 test
     class S5;
 
     S5 s51;
@@ -1320,14 +1349,16 @@ private T moveImpl(T)(ref T source)
     assert(a.n == 0);
 }
 
-@safe unittest//Issue 6217
+// https://issues.dlang.org/show_bug.cgi?id=6217
+@safe unittest
 {
     import std.algorithm.iteration : map;
     auto x = map!"a"([1,2,3]);
     x = move(x);
 }
 
-@safe unittest// Issue 8055
+// https://issues.dlang.org/show_bug.cgi?id=8055
+@safe unittest
 {
     static struct S
     {
@@ -1347,7 +1378,8 @@ private T moveImpl(T)(ref T source)
     assert(b.x == 0);
 }
 
-@system unittest// Issue 8057
+// https://issues.dlang.org/show_bug.cgi?id=8057
+@system unittest
 {
     int n = 10;
     struct S
@@ -1369,7 +1401,7 @@ private T moveImpl(T)(ref T source)
     auto b = foo(a);
     assert(b.x == 1);
 
-    // Regression 8171
+    // Regression https://issues.dlang.org/show_bug.cgi?id=8171
     static struct Array(T)
     {
         // nested struct has no member
@@ -1383,16 +1415,7 @@ private T moveImpl(T)(ref T source)
     move(x, x);
 }
 
-/**
- * Similar to $(LREF move) but assumes `target` is uninitialized. This
- * is more efficient because `source` can be blitted over `target`
- * without destroying or initializing it first.
- *
- * Params:
- *   source = value to be moved into target
- *   target = uninitialized value to be filled by source
- */
-void moveEmplace(T)(ref T source, ref T target) pure @system
+private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
@@ -1404,15 +1427,16 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
     {
         import std.exception : doesPointTo;
         assert(!(doesPointTo(source, source) && !hasElaborateMove!T),
-            "Cannot move object with internal pointer unless `opPostMove` is defined.");
+            "Cannot move object of type " ~ T.stringof ~ " with internal pointer unless `opPostMove` is defined.");
     }
 
     static if (is(T == struct))
     {
-        assert(&source !is &target, "source and target must not be identical");
+        //  Unsafe when compiling without -dip1000
+        assert((() @trusted => &source !is &target)(), "source and target must not be identical");
 
         static if (hasElaborateAssign!T || !isAssignable!T)
-            memcpy(&target, &source, T.sizeof);
+            () @trusted { memcpy(&target, &source, T.sizeof); }();
         else
             target = source;
 
@@ -1430,11 +1454,11 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
                 enum sz = T.sizeof;
 
             static if (__traits(isZeroInit, T))
-                memset(&source, 0, sz);
+                () @trusted { memset(&source, 0, sz); }();
             else
             {
                 auto init = typeid(T).initializer();
-                memcpy(&source, init.ptr, sz);
+                () @trusted { memcpy(&source, init.ptr, sz); }();
             }
         }
     }
@@ -1449,6 +1473,20 @@ void moveEmplace(T)(ref T source, ref T target) pure @system
         // assignment works great
         target = source;
     }
+}
+
+/**
+ * Similar to $(LREF move) but assumes `target` is uninitialized. This
+ * is more efficient because `source` can be blitted over `target`
+ * without destroying or initializing it first.
+ *
+ * Params:
+ *   source = value to be moved into target
+ *   target = uninitialized value to be filled by source
+ */
+void moveEmplace(T)(ref T source, ref T target) pure @system
+{
+    moveEmplaceImpl(target, source);
 }
 
 ///
@@ -1476,7 +1514,7 @@ pure nothrow @nogc @system unittest
     assert(val == 0);
 }
 
-// issue 18913
+// https://issues.dlang.org/show_bug.cgi?id=18913
 @safe unittest
 {
     static struct NoCopy
@@ -1998,7 +2036,7 @@ private auto removeImpl(SwapStrategy s, Range, Offset...)(Range range, Offset of
     import std.exception : assertThrown;
     import std.range;
 
-    // http://d.puremagic.com/issues/show_bug.cgi?id=10173
+    // https://issues.dlang.org/show_bug.cgi?id=10173
     int[] test = iota(0, 10).array();
     assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
     assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
@@ -2021,7 +2059,7 @@ private auto removeImpl(SwapStrategy s, Range, Offset...)(Range range, Offset of
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.unstable)(a, 0, tuple(9, 11)) ==
             [ 8, 1, 2, 3, 4, 5, 6, 7 ]);
-    // http://d.puremagic.com/issues/show_bug.cgi?id=5224
+    // https://issues.dlang.org/show_bug.cgi?id=5224
     a = [ 1, 2, 3, 4 ];
     assert(remove!(SwapStrategy.unstable)(a, 2) ==
            [ 1, 2, 4 ]);
@@ -2042,19 +2080,19 @@ private auto removeImpl(SwapStrategy s, Range, Offset...)(Range range, Offset of
             == [0, 9, 8, 7, 4, 5]);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=11576
 @safe unittest
 {
-    // Issue 11576
     auto arr = [1,2,3];
     arr = arr.remove!(SwapStrategy.unstable)(2);
     assert(arr == [1,2]);
 
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=12889
 @safe unittest
 {
     import std.range;
-    // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
     auto orig = arr.dup;
     foreach (i; iota(arr.length))
@@ -2350,7 +2388,7 @@ Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)(Range rang
 @nogc @safe unittest
 {
     // @nogc test
-    int[10] arr = [0,1,2,3,4,5,6,7,8,9];
+    static int[] arr = [0,1,2,3,4,5,6,7,8,9];
     alias pred = e => e < 5;
 
     auto r = arr[].remove!(SwapStrategy.unstable)(0);
@@ -2820,8 +2858,15 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
                 return;
         }
 
-        // For non-struct types, suffice to do the classic swap
-        auto tmp = lhs;
+        // For non-elaborate-assign types, suffice to do the classic swap
+        static if (__traits(hasCopyConstructor, T))
+        {
+            // don't invoke any elaborate constructors either
+            T tmp = void;
+            tmp = lhs;
+        }
+        else
+            auto tmp = lhs;
         lhs = rhs;
         rhs = tmp;
     }
@@ -2906,9 +2951,9 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=4789
 @safe unittest
 {
-    //Bug# 4789
     int[1] s = [1];
     swap(s, s);
 
@@ -2946,23 +2991,24 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(s.i3 == 2);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=11853
 @safe unittest
 {
-    //11853
     import std.traits : isAssignable;
     alias T = Tuple!(int, double);
     static assert(isAssignable!T);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=12024
 @safe unittest
 {
-    // 12024
     import std.datetime;
     SysTime a, b;
     swap(a, b);
 }
 
-@system unittest // 9975
+// https://issues.dlang.org/show_bug.cgi?id=9975
+@system unittest
 {
     import std.exception : doesPointTo, mayPointTo;
     static struct S2
@@ -3005,6 +3051,31 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     }
     B b1, b2;
     swap(b1, b2);
+}
+
+// issue 20732
+@safe unittest
+{
+    static struct A
+    {
+        int x;
+        this(scope ref return const A other)
+        {
+            import std.stdio;
+            x = other.x;
+            // note, struct functions inside @safe functions infer ALL
+            // attributes, so the following 3 lines are meant to prevent this.
+            new int; // prevent @nogc inference
+            writeln("impure"); // prevent pure inference
+            throw new Exception(""); // prevent nothrow inference
+        }
+    }
+
+    A a1, a2;
+    swap(a1, a2);
+
+    A[1] a3, a4;
+    swap(a3, a4);
 }
 
 /// ditto
@@ -3206,7 +3277,7 @@ if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = val
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())

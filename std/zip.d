@@ -611,7 +611,7 @@ public:
         _directory.remove(de.name);
     }
 
-    // issue 20398
+    // https://issues.dlang.org/show_bug.cgi?id=20398
     @safe unittest
     {
         import std.string : representation;
@@ -1609,7 +1609,8 @@ the quick brown fox jumps over the lazy dog\r
 
 @system unittest
 {
-    // issue #20239: chameleon file, containing two valid end of central directory entries
+    // https://issues.dlang.org/show_bug.cgi?id=20239
+    // chameleon file, containing two valid end of central directory entries
     auto file =
         "\x50\x4B\x03\x04\x0A\x00\x00\x00\x00\x00\x89\x36\x39\x4F\x04\x6A\xB3\xA3\x01\x00"~
         "\x00\x00\x01\x00\x00\x00\x0D\x00\x1C\x00\x62\x65\x73\x74\x5F\x6C\x61\x6E\x67\x75"~
@@ -1636,7 +1637,8 @@ the quick brown fox jumps over the lazy dog\r
 
 @system unittest
 {
-    // issue #20287: check for correct compressed data
+    // https://issues.dlang.org/show_bug.cgi?id=20287
+    // check for correct compressed data
     auto file =
         "\x50\x4b\x03\x04\x0a\x00\x00\x00\x00\x00\x8f\x72\x4a\x4f\x86\xa6"~
         "\x10\x36\x05\x00\x00\x00\x05\x00\x00\x00\x04\x00\x1c\x00\x66\x69"~
@@ -1654,7 +1656,7 @@ the quick brown fox jumps over the lazy dog\r
     assert(za.directory["file"].compressedData == [104, 101, 108, 108, 111]);
 }
 
-// issue #20027
+// https://issues.dlang.org/show_bug.cgi?id=20027
 @system unittest
 {
     // central file header overlaps end of central directory
@@ -1694,7 +1696,8 @@ the quick brown fox jumps over the lazy dog\r
 
 @system unittest
 {
-    // issue #20295: zip64 with 0xff bytes in end of central dir record do not work
+    // https://issues.dlang.org/show_bug.cgi?id=20295
+    // zip64 with 0xff bytes in end of central dir record do not work
     // minimum (empty zip64) archive should pass
     auto file =
         "\x50\x4b\x06\x06\x2c\x00\x00\x00\x00\x00\x00\x00\x1e\x03\x2d\x00"~

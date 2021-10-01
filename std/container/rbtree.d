@@ -136,9 +136,12 @@ struct RBNode(V)
      * Set the left child.  Also updates the new child's parent node.  This
      * does not update the previous child.
      *
+     * $(RED Warning: If the node this is called on is a local variable, a stack pointer can be
+     * escaped through `newNode.parent`. It's marked `@trusted` only for backwards compatibility.)
+     *
      * Returns newNode
      */
-    @property Node left(Node newNode)
+    @property Node left(return scope Node newNode) @trusted
     {
         _left = newNode;
         if (newNode !is null)
@@ -150,9 +153,12 @@ struct RBNode(V)
      * Set the right child.  Also updates the new child's parent node.  This
      * does not update the previous child.
      *
+     * $(RED Warning: If the node this is called on is a local variable, a stack pointer can be
+     * escaped through `newNode.parent`. It's marked `@trusted` only for backwards compatibility.)
+     *
      * Returns newNode
      */
-    @property Node right(Node newNode)
+    @property Node right(return scope Node newNode) @trusted
     {
         _right = newNode;
         if (newNode !is null)
@@ -542,7 +548,8 @@ struct RBNode(V)
                 _parent.right = null;
         }
 
-        // clean references to help GC - Bugzilla 12915
+        // clean references to help GC
+        // https://issues.dlang.org/show_bug.cgi?id=12915
         _left = _right = _parent = null;
 
         return ret;
@@ -963,7 +970,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      * Check if any elements exist in the container.  Returns `false` if at least
      * one element exists.
      */
-    @property bool empty()
+    @property bool empty() const // pure, nothrow, @safe, @nogc: are inferred
     {
         return _end.left is null;
     }
@@ -1029,7 +1036,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH 1)
      */
-    Elem front()
+    inout(Elem) front() inout
     {
         return _begin.value;
     }
@@ -1039,7 +1046,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    Elem back()
+    inout(Elem) back() inout
     {
         return _end.prev.value;
     }
@@ -1948,7 +1955,7 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
-// issue 19626
+// https://issues.dlang.org/show_bug.cgi?id=19626
 @safe pure unittest
 {
     enum T { a, b }
@@ -2163,8 +2170,12 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     const rt1 = redBlackTree(5,4,3,2,1);
-    static assert(is(typeof(rt1.length)));
-    static assert(is(typeof(5 in rt1)));
+    void allQualifiers() pure nothrow @safe @nogc {
+        assert(!rt1.empty);
+        assert(rt1.length == 5);
+        assert(5 in rt1);
+    }
+    allQualifiers();
 
     static assert(is(typeof(rt1.upperBound(3).front) == const(int)));
     import std.algorithm.comparison : equal;
@@ -2178,21 +2189,24 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 @safe pure unittest
 {
     immutable rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.empty)));
     static assert(is(typeof(rt1.length)));
+    static assert(is(typeof(5 in rt1)));
 
     static assert(is(typeof(rt1.upperBound(3).front) == immutable(int)));
     import std.algorithm.comparison : equal;
     assert(rt1.upperBound(2).equal([3, 4, 5]));
 }
 
-// issue 15941
+// https://issues.dlang.org/show_bug.cgi?id=15941
 @safe pure unittest
 {
     class C {}
     RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
 }
 
-@safe pure unittest // const/immutable elements (issue 17519)
+// const/immutable elements (https://issues.dlang.org/show_bug.cgi?id=17519)
+@safe pure unittest
 {
     RedBlackTree!(immutable int) t1;
     RedBlackTree!(const int) t2;

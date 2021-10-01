@@ -249,12 +249,12 @@ public struct UUID
          * Construct a UUID struct from the 16 byte representation
          * of a UUID.
          */
-        @safe pure nothrow @nogc this(ref in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(ref const scope ubyte[16] uuidData)
         {
             data = uuidData;
         }
         /// ditto
-        @safe pure nothrow @nogc this(in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(const ubyte[16] uuidData)
         {
             data = uuidData;
         }
@@ -331,7 +331,7 @@ public struct UUID
          *
          * For a less strict parser, see $(LREF parseUUID)
          */
-        this(T)(in T[] uuid) if (isSomeChar!(Unqual!T))
+        this(T)(in T[] uuid) if (isSomeChar!T)
         {
             import std.conv : to, parse;
             if (uuid.length < 36)
@@ -664,7 +664,7 @@ public struct UUID
          * All of the standard numeric operators are defined for
          * the UUID struct.
          */
-        @safe pure nothrow @nogc bool opEquals(in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(const UUID s) const
         {
             return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
@@ -693,7 +693,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc bool opEquals(ref in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(ref const scope UUID s) const
         {
             return ulongs[0] == s.ulongs[0] && ulongs[1] == s.ulongs[1];
         }
@@ -701,7 +701,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc int opCmp(in UUID s) const
+        @safe pure nothrow @nogc int opCmp(const UUID s) const
         {
             import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
@@ -710,7 +710,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc int opCmp(ref in UUID s) const
+        @safe pure nothrow @nogc int opCmp(ref const scope UUID s) const
         {
             import std.algorithm.comparison : cmp;
             return cmp(this.data[], s.data[]);
@@ -719,7 +719,7 @@ public struct UUID
         /**
          * ditto
          */
-       @safe pure nothrow @nogc UUID opAssign(in UUID s)
+       @safe pure nothrow @nogc UUID opAssign(const UUID s)
         {
             ulongs[0] = s.ulongs[0];
             ulongs[1] = s.ulongs[1];
@@ -729,7 +729,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow @nogc UUID opAssign(ref in UUID s)
+        @safe pure nothrow @nogc UUID opAssign(ref const scope UUID s)
         {
             ulongs[0] = s.ulongs[0];
             ulongs[1] = s.ulongs[1];
@@ -1332,8 +1332,7 @@ if (isSomeString!T)
 
 ///ditto
 UUID parseUUID(Range)(ref Range uuidRange)
-if (isInputRange!Range
-    && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     import std.ascii : isHexDigit;
     import std.conv : ConvException, parse;
@@ -1630,6 +1629,13 @@ if (isInputRange!Range
         assert(parseHelper!S("///8ab3060e2cba4f23b74cb52db3bdfb46||")
             == parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46"));
     }}
+
+    // Test input range with non-dchar element type.
+    {
+        import std.utf : byCodeUnit;
+        auto range = "8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46".byCodeUnit;
+        assert(parseUUID(range).data == [138, 179, 6, 14, 44, 186, 79, 35, 183, 76, 181, 45, 179, 189, 251, 70]);
+    }
 }
 
 /**

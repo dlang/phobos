@@ -53,7 +53,7 @@ else version (WatchOS)
 @system unittest
 {
     import std.algorithm.iteration : map;
-    import std.math : approxEqual;
+    import std.math.operations : isClose;
     import std.parallelism : taskPool;
     import std.range : iota;
 
@@ -82,7 +82,7 @@ else version (WatchOS)
 
     immutable pi = 4.0 * taskPool.reduce!"a + b"(n.iota.map!getTerm);
 
-    assert(pi.approxEqual(3.1415926));
+    assert(pi.isClose(3.14159, 1e-5));
 }
 
 import core.atomic;
@@ -94,23 +94,6 @@ import std.functional;
 import std.meta;
 import std.range.primitives;
 import std.traits;
-
-version (Darwin)
-{
-    version = useSysctlbyname;
-}
-else version (FreeBSD)
-{
-    version = useSysctlbyname;
-}
-else version (DragonFlyBSD)
-{
-    version = useSysctlbyname;
-}
-else version (NetBSD)
-{
-    version = useSysctlbyname;
-}
 
 /*
 (For now public undocumented with reserved name.)
@@ -553,7 +536,8 @@ struct Task(alias fun, Args...)
         }
     }
 
-    // Work around DMD bug 6588, allow immutable elements.
+    // Work around DMD bug https://issues.dlang.org/show_bug.cgi?id=6588,
+    // allow immutable elements.
     static if (allSatisfy!(isAssignable, Args))
     {
         typeof(this) opAssign(typeof(this) rhs)
@@ -951,11 +935,6 @@ if (is(typeof(fun(args))) && isSafeTask!F)
     return ret;
 }
 
-version (useSysctlbyname)
-    private extern(C) int sysctlbyname(
-        const char *, void *, size_t *, void *, size_t
-    ) @nogc nothrow;
-
 /**
 The total number of CPU cores available on the current machine, as reported by
 the operating system.
@@ -976,46 +955,89 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     }
     else version (linux)
     {
-        import core.sys.linux.sched : CPU_COUNT, cpu_set_t, sched_getaffinity;
+        import core.stdc.stdlib : calloc;
+        import core.stdc.string : memset;
+        import core.sys.linux.sched : CPU_ALLOC_SIZE, CPU_FREE, CPU_COUNT, CPU_COUNT_S, cpu_set_t, sched_getaffinity;
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
 
-        cpu_set_t set = void;
-        if (sched_getaffinity(0, cpu_set_t.sizeof, &set) == 0)
+        int count = 0;
+
+        /**
+         * According to ruby's source code, CPU_ALLOC() doesn't work as expected.
+         *  see: https://github.com/ruby/ruby/commit/7d9e04de496915dd9e4544ee18b1a0026dc79242
+         *
+         *  The hardcode number also comes from ruby's source code.
+         *  see: https://github.com/ruby/ruby/commit/0fa75e813ecf0f5f3dd01f89aa76d0e25ab4fcd4
+         */
+        for (int n = 64; n <= 16384; n *= 2)
         {
-            int count = CPU_COUNT(&set);
+            size_t size = CPU_ALLOC_SIZE(count);
+            if (size >= 0x400)
+            {
+                auto cpuset = cast(cpu_set_t*) calloc(1, size);
+                if (cpuset is null) break;
+                if (sched_getaffinity(0, size, cpuset) == 0)
+                {
+                    count = CPU_COUNT_S(size, cpuset);
+                }
+                CPU_FREE(cpuset);
+            }
+            else
+            {
+                cpu_set_t cpuset;
+                if (sched_getaffinity(0, cpu_set_t.sizeof, &cpuset) == 0)
+                {
+                    count = CPU_COUNT(&cpuset);
+                }
+            }
+
             if (count > 0)
                 return cast(uint) count;
         }
+
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+    else version (Darwin)
+    {
+        import core.sys.darwin.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.physicalcpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (DragonFlyBSD)
+    {
+        import core.sys.dragonflybsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (FreeBSD)
+    {
+        import core.sys.freebsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
+    }
+    else version (NetBSD)
+    {
+        import core.sys.netbsd.sys.sysctl : sysctlbyname;
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname("hw.ncpu", &result, &len, null, 0);
+        return result;
     }
     else version (Solaris)
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
-    else version (useSysctlbyname)
+    else version (OpenBSD)
     {
-        version (Darwin)
-        {
-            enum nameStr = "hw.physicalcpu";
-        }
-        else version (FreeBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-        else version (DragonFlyBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-        else version (NetBSD)
-        {
-            auto nameStr = "hw.ncpu\0".ptr;
-        }
-
-        uint result;
-        size_t len = result.sizeof;
-        sysctlbyname(nameStr, &result, &len, null, 0);
-        return result;
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
     else
     {
@@ -1464,7 +1486,7 @@ private:
 
         // Disabled until writing code to support
         // running thread with specified priority
-        // See https://d.puremagic.com/issues/show_bug.cgi?id=8960
+        // See https://issues.dlang.org/show_bug.cgi?id=8960
 
         /*if (priority != int.max)
         {
@@ -1719,7 +1741,7 @@ public:
         auto amap(Args...)(Args args)
         if (isRandomAccessRange!(Args[0]))
         {
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
 
             alias fun = adjoin!(staticMap!(unaryFun, functions));
 
@@ -2537,7 +2559,7 @@ public:
         auto reduce(Args...)(Args args)
         {
             import core.exception : OutOfMemoryError;
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
             import std.exception : enforce;
 
             alias fun = reduceAdjoin!functions;
@@ -2709,8 +2731,8 @@ public:
             alias RTask = Task!(run, typeof(&reduceOnRange), R, size_t, size_t);
             RTask[] tasks;
 
-            // Can't use alloca() due to Bug 3753.  Use a fixed buffer
-            // backed by malloc().
+            // Can't use alloca() due to https://issues.dlang.org/show_bug.cgi?id=3753
+            // Use a fixed buffer backed by malloc().
             enum maxStack = 2_048;
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
@@ -3581,7 +3603,8 @@ ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     return taskPool.parallel(range, workUnitSize);
 }
 
-// #17019: `each` should be usable with parallel
+//  `each` should be usable with parallel
+// https://issues.dlang.org/show_bug.cgi?id=17019
 @system unittest
 {
     import std.algorithm.iteration : each, sum;
@@ -3628,9 +3651,10 @@ private void submitAndExecute(
     // The logical thing to do would be to just use alloca() here, but that
     // causes problems on Windows for reasons that I don't understand
     // (tentatively a compiler bug) and definitely doesn't work on Posix due
-    // to Bug 3753.  Therefore, allocate a fixed buffer and fall back to
-    // malloc() if someone's using a ridiculous amount of threads.  Also,
-    // the using a byte array instead of a PTask array as the fixed buffer
+    // to https://issues.dlang.org/show_bug.cgi?id=3753.
+    // Therefore, allocate a fixed buffer and fall back to `malloc()` if
+    // someone's using a ridiculous amount of threads.
+    // Also, the using a byte array instead of a PTask array as the fixed buffer
     // is to prevent d'tors from being called on uninitialized excess PTask
     // instances.
     enum nBuf = 64;
@@ -4156,7 +4180,9 @@ version (StdUnittest)
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
-    import std.math : approxEqual, sqrt, log;
+    import std.math.operations : isClose;
+    import std.math.algebraic : sqrt, abs;
+    import std.math.exponential : log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
     import std.stdio;
@@ -4289,7 +4315,7 @@ version (StdUnittest)
 
     foreach (i, elem; logs)
     {
-        assert(approxEqual(elem, cast(double) log(i + 1)));
+        assert(isClose(elem, cast(double) log(i + 1)));
     }
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
@@ -4363,7 +4389,7 @@ version (StdUnittest)
         pool2.finish(true); // blocking
         assert(tSlow2.done);
 
-        // Test fix for Bug 8582 by making pool size zero.
+        // Test fix for https://issues.dlang.org/show_bug.cgi?id=8582 by making pool size zero.
         auto pool3 = new TaskPool(0);
         auto tSlow3 = task!slowFun();
         pool3.put(tSlow3);
@@ -4468,7 +4494,7 @@ version (StdUnittest)
     int ii;
     foreach ( elem; (lmchain))
     {
-        if (!approxEqual(elem, ii))
+        if (!isClose(elem, ii))
         {
             stderr.writeln(ii, '\t', elem);
         }
@@ -4486,7 +4512,7 @@ version (StdUnittest)
 
     assert(equal(iota(1_000_000), bufTrickTest));
 
-    auto myTask = task!(std.math.abs)(-1);
+    auto myTask = task!(abs)(-1);
     taskPool.put(myTask);
     assert(myTask.spinForce == 1);
 
@@ -4562,8 +4588,12 @@ version (StdUnittest)
 // tons of stuff and should not be run every time make unittest is run.
 version (parallelismStressTest)
 {
-    @safe unittest
+    @system unittest
     {
+        import std.stdio : stderr, writeln, readln;
+        import std.range : iota;
+        import std.algorithm.iteration : filter, reduce;
+
         size_t attempt;
         for (; attempt < 10; attempt++)
             foreach (poolSize; [0, 4])
@@ -4645,8 +4675,16 @@ version (parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    @safe unittest
+    @system unittest
     {
+        import std.stdio : stderr;
+        import std.range : iota;
+        import std.algorithm.iteration : filter, reduce;
+        import std.math.algebraic : sqrt;
+        import std.math.operations : isClose;
+        import std.math.traits : isNaN;
+        import std.conv : text;
+
         foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
         {
@@ -4716,7 +4754,7 @@ version (parallelismStressTest)
                 foreach (j, elem; row)
                 {
                     real shouldBe = sqrt( cast(real) i * j);
-                    assert(approxEqual(shouldBe, elem));
+                    assert(isClose(shouldBe, elem));
                     sqrtMatrix[i][j] = shouldBe;
                 }
             }
@@ -4743,10 +4781,11 @@ version (parallelismStressTest)
                                )
                            );
 
-            assert(approxEqual(sumSqrt, 4.437e8));
+            assert(isClose(sumSqrt, 4.437e8, 1e-2));
             stderr.writeln("Done sum of square roots.");
 
             // Test whether tasks work with function pointers.
+            /+ // This part is buggy and needs to be fixed...
             auto nanTask = task(&isNaN, 1.0L);
             poolInstance.put(nanTask);
             assert(nanTask.spinForce == false);
@@ -4773,6 +4812,7 @@ version (parallelismStressTest)
                     uselessTask.workForce();
                 }
             }
+             +/
 
             // Test the case of non-random access + ref returns.
             int[] nums = [1,2,3,4,5];

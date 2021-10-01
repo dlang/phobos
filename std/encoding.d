@@ -848,7 +848,7 @@ private template GenericEncoder()
 //=============================================================================
 
 /** Defines various character sets. */
-enum AsciiChar : ubyte { init }
+enum AsciiChar : ubyte { _init }
 /// Ditto
 alias AsciiString = immutable(AsciiChar)[];
 
@@ -928,7 +928,7 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-enum Latin1Char : ubyte { init }
+enum Latin1Char : ubyte { _init }
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
@@ -1004,7 +1004,7 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /// Defines a Latin2-encoded character.
-enum Latin2Char : ubyte { init }
+enum Latin2Char : ubyte { _init }
 
 /**
  * Defines an Latin2-encoded string (as an array of $(D
@@ -1084,7 +1084,7 @@ private template EncoderInstance(CharType : Latin2Char)
 //=============================================================================
 
 /// Defines a Windows1250-encoded character.
-enum Windows1250Char : ubyte { init }
+enum Windows1250Char : ubyte { _init }
 
 /**
  * Defines an Windows1250-encoded string (as an array of $(D
@@ -1177,7 +1177,7 @@ private template EncoderInstance(CharType : Windows1250Char)
 //=============================================================================
 
 /// Defines a Windows1251-encoded character.
-enum Windows1251Char : ubyte { init }
+enum Windows1251Char : ubyte { _init }
 
 /**
  * Defines an Windows1251-encoded string (as an array of $(D
@@ -1272,7 +1272,7 @@ private template EncoderInstance(CharType : Windows1251Char)
 //=============================================================================
 
 /// Defines a Windows1252-encoded character.
-enum Windows1252Char : ubyte { init }
+enum Windows1252Char : ubyte { _init }
 
 /**
  * Defines an Windows1252-encoded string (as an array of $(D
@@ -2175,7 +2175,7 @@ output range `R`. Returns the number of `E`s written.
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
 {
-    static if (is(Unqual!E == char))
+    static if (is(immutable E == immutable char))
     {
         if (c <= 0x7F)
         {
@@ -2208,7 +2208,7 @@ if (isNativeOutputRange!(R, E))
             assert(0);
         }
     }
-    else static if (is(Unqual!E == wchar))
+    else static if (is(immutable E == immutable wchar))
     {
         if (c <= 0xFFFF)
         {
@@ -2219,7 +2219,7 @@ if (isNativeOutputRange!(R, E))
         range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
-    else static if (is(Unqual!E == dchar))
+    else static if (is(immutable E == immutable dchar))
     {
         range.put(c);
         return 1;
@@ -2420,17 +2420,17 @@ do
     {
         r = s;
     }
-    else static if (is(Unqual!Src == AsciiChar))
+    else static if (is(immutable Src == immutable AsciiChar))
     {
         transcode(cast(const(char)[])s, r);
     }
     else
     {
-        static if (is(Unqual!Dst == wchar))
+        static if (is(immutable Dst == immutable wchar))
         {
             immutable minReservePlace = 2;
         }
-        else static if (is(Unqual!Dst == dchar))
+        else static if (is(immutable Dst == immutable dchar))
         {
             immutable minReservePlace = 1;
         }
@@ -3692,7 +3692,7 @@ enum BOM
     none      = 0,  /// no BOM was found
     utf32be   = 1,  /// [0x00, 0x00, 0xFE, 0xFF]
     utf32le   = 2,  /// [0xFF, 0xFE, 0x00, 0x00]
-    utf7      = 3,  /*  [0x2B, 0x2F, 0x76, 0x38]
+    utf7      = 3,  /** [0x2B, 0x2F, 0x76, 0x38]
                         [0x2B, 0x2F, 0x76, 0x39],
                         [0x2B, 0x2F, 0x76, 0x2B],
                         [0x2B, 0x2F, 0x76, 0x2F],
@@ -3745,7 +3745,7 @@ Returns:
     the found `BOMSeq` corresponding to the passed `input`.
 */
 immutable(BOMSeq) getBOM(Range)(Range input)
-if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
+if (isForwardRange!Range && is(immutable ElementType!Range == immutable ubyte))
 {
     import std.algorithm.searching : startsWith;
     foreach (it; bomTable[1 .. $])

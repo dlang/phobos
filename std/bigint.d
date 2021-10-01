@@ -27,8 +27,10 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-import std.format : FormatSpec, FormatException;
+import std.format.spec : FormatSpec;
+import std.format : FormatException;
 import std.internal.math.biguintcore;
+import std.internal.math.biguintnoasm : BigDigit;
 import std.range.primitives;
 import std.traits;
 
@@ -145,6 +147,39 @@ public:
         assertThrown!ConvException(BigInt(r4));
     }
 
+    /**
+     * Construct a `BigInt` from a sign and a magnitude.
+     *
+     * The magnitude is an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+     * of unsigned integers that satisfies either $(REF hasLength, std,range,primitives)
+     * or $(REF isForwardRange, std,range,primitives). The first (leftmost)
+     * element of the magnitude is considered the most significant.
+     *
+     * Params:
+     *     isNegative = true for negative, false for non-negative
+     *          (ignored when magnitude is zero)
+     *     magnitude = a finite range of unsigned integers
+     */
+    this(Range)(bool isNegative, Range magnitude) if (
+        isInputRange!Range &&
+        isUnsigned!(ElementType!Range) &&
+        (hasLength!Range || isForwardRange!Range) &&
+        !isInfinite!Range)
+    {
+        data.fromMagnitude(magnitude);
+        sign = isNegative && !data.isZero;
+    }
+
+    ///
+    pure @safe unittest
+    {
+        ubyte[] magnitude = [1, 2, 3, 4, 5, 6];
+        auto b1 = BigInt(false, magnitude);
+        assert(cast(long) b1 == 0x01_02_03_04_05_06L);
+        auto b2 = BigInt(true, magnitude);
+        assert(cast(long) b2 == -0x01_02_03_04_05_06L);
+    }
+
     /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
@@ -161,7 +196,7 @@ public:
     }
 
     /// Construct a `BigInt` from another `BigInt`.
-    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(immutable T == immutable BigInt))
     {
         opAssign(x);
     }
@@ -211,7 +246,7 @@ public:
      * Implements assignment operators from built-in integers of the form
      * `BigInt op= integer`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe return scope
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -290,7 +325,23 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
-        else static if (op=="|" || op=="&" || op=="^")
+        else static if (op=="&")
+        {
+            if (y >= 0 && (y <= 1 || !sign)) // In these cases we can avoid some allocation.
+            {
+                static if (T.sizeof <= uint.sizeof && BigDigit.sizeof <= uint.sizeof)
+                    data = cast(ulong) data.peekUint(0) & y;
+                else
+                    data = data.peekUlong(0) & y;
+                sign = false;
+            }
+            else
+            {
+                BigInt b = y;
+                opOpAssign!op(b);
+            }
+        }
+        else static if (op=="|" || op=="^")
         {
             BigInt b = y;
             opOpAssign!op(b);
@@ -311,7 +362,7 @@ public:
         assert(b == BigInt("200_002_469"));
     }
 
-    // Issue 16264
+    // https://issues.dlang.org/show_bug.cgi?id=16264
     @safe unittest
     {
         auto a = BigInt(
@@ -363,7 +414,7 @@ public:
     /**
      * Implements assignment operators of the form `BigInt op= BigInt`.
      */
-    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe scope return
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -421,7 +472,7 @@ public:
     /**
      * Implements binary operators between `BigInt`s.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const return scope
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
             op=="/" || op=="%")
             && is (T: BigInt))
@@ -442,13 +493,14 @@ public:
     /**
      * Implements binary operators between `BigInt`'s and built-in integers.
      */
-    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const return scope
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
     {
         BigInt r = this;
-        return r.opOpAssign!(op)(y);
+        r.opOpAssign!(op)(y);
+        return r;
     }
 
     ///
@@ -481,11 +533,11 @@ public:
         // BigInt % long => long
         // BigInt % ulong => BigInt
         // BigInt % other_type => int
-        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        static if (is(immutable T == immutable long) || is(immutable T == immutable ulong))
         {
             auto r = this % BigInt(y);
 
-            static if (is(Unqual!T == long))
+            static if (is(immutable T == immutable long))
             {
                 return r.toLong();
             }
@@ -498,7 +550,7 @@ public:
         else
         {
             immutable uint u = absUnsign(y);
-            static if (is(Unqual!T == uint))
+            static if (is(immutable T == immutable uint))
                alias R = long;
             else
                alias R = int;
@@ -656,11 +708,8 @@ public:
     }
 
     /// ditto
-    bool opEquals(T)(const T y) const nothrow @nogc if (isFloatingPoint!T)
+    bool opEquals(T)(const T y) const pure nothrow @nogc if (isFloatingPoint!T)
     {
-        // This is a separate function from the isIntegral!T case
-        // due to the impurity of std.math.scalbn which is used
-        // for 80 bit floats.
         return 0 == opCmp(y);
     }
 
@@ -689,7 +738,7 @@ public:
 
     @safe unittest
     {
-        import std.math : nextDown, nextUp;
+        import std.math.operations : nextDown, nextUp;
 
         const x = BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000");
         BigInt x1 = x + 1;
@@ -834,13 +883,16 @@ public:
     ///
     @system unittest
     {
-        assert(0x1.abcd_e8p+124f        == cast(float)  BigInt("0x1abc_de80_0000_0000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124  == cast(double) BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
-        assert(0x1.abcd_ef12_3456p+124L == cast(real)   BigInt("0x1abc_def1_2345_6000_0000_0000_0000_0000"));
+        assert(cast(float)  BigInt("35540592535949172786332045140593475584")
+                == 35540592535949172786332045140593475584.0f);
+        assert(cast(double) BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0);
+        assert(cast(real)   BigInt("35540601499647381470685035515422441472")
+                == 35540601499647381470685035515422441472.0L);
 
-        assert(-0x1.3456_78p+108f        == cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108  == cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
-        assert(-0x1.3456_78ab_cdefp+108L == cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000"));
+        assert(cast(float)  BigInt("-0x1345_6780_0000_0000_0000_0000_0000") == -0x1.3456_78p+108f       );
+        assert(cast(double) BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108 );
+        assert(cast(real)   BigInt("-0x1345_678a_bcde_f000_0000_0000_0000") == -0x1.3456_78ab_cdefp+108L);
     }
 
     /// Rounding when casting to floating point
@@ -853,42 +905,42 @@ public:
 
         // BigInts that fall somewhere between two non-infinite floats/doubles
         // are rounded to the closer value when cast to float/double.
-        assert(0x1.aaa_aaep+28f == cast(float) BigInt(0x1aaa_aae7));
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaff));
-        assert(-0x1.aaaaaep+28f == cast(float) BigInt(-0x1aaa_aae7));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaff));
+        assert(cast(float) BigInt(0x1aaa_aae7) == 0x1.aaa_aaep+28f);
+        assert(cast(float) BigInt(0x1aaa_aaff) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aae7) == -0x1.aaaaaep+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaff) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77));
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff));
-        assert(-0x1.aaa_aaaa_aaaa_aa00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa77) == 0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aaff) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa77) == -0x1.aaa_aaaa_aaaa_aa00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aaff) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that fall exactly between two non-infinite floats/doubles
         // are rounded away from zero when cast to float/double. (Note that
         // in most environments this is NOT the same rounding rule rule used
         // when casting int/long to float/double.)
-        assert(0x1.aaa_ab0p+28f == cast(float) BigInt(0x1aaa_aaf0));
-        assert(-0x1.aaaab0p+28f == cast(float) BigInt(-0x1aaa_aaf0));
+        assert(cast(float) BigInt(0x1aaa_aaf0) == 0x1.aaa_ab0p+28f);
+        assert(cast(float) BigInt(-0x1aaa_aaf0) == -0x1.aaaab0p+28f);
 
-        assert(0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80));
-        assert(-0x1.aaa_aaaa_aaaa_ab00p+60 == cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80));
+        assert(cast(double) BigInt(0x1aaa_aaaa_aaaa_aa80) == 0x1.aaa_aaaa_aaaa_ab00p+60);
+        assert(cast(double) BigInt(-0x1aaa_aaaa_aaaa_aa80) == -0x1.aaa_aaaa_aaaa_ab00p+60);
 
         // BigInts that are bounded on one side by the largest positive or
         // most negative finite float/double and on the other side by infinity
         // or -infinity are rounded as if in place of infinity was the value
         // `2^^(T.max_exp)` when cast to float/double.
-        assert(float.infinity == cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(-float.infinity == cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(float) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") == float.infinity);
+        assert(cast(float) BigInt("-999_999_999_999_999_999_999_999_999_999_999_999_999") == -float.infinity);
 
-        assert(double.infinity > cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
-        assert(real.infinity > cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999"));
+        assert(cast(double) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < double.infinity);
+        assert(cast(real) BigInt("999_999_999_999_999_999_999_999_999_999_999_999_999") < real.infinity);
     }
 
     @safe unittest
     {
         // Test exponent overflow is correct.
-        assert(0x1.000000p+29f == cast(float) BigInt(0x1fffffff));
-        assert(0x1.000000p+61 == cast(double) BigInt(0x1fff_ffff_ffff_fff0));
+        assert(cast(float) BigInt(0x1fffffff) == 0x1.000000p+29f);
+        assert(cast(double) BigInt(0x1fff_ffff_ffff_fff0) == 0x1.000000p+61);
     }
 
     private T toFloat(T, string roundingMode)() @safe nothrow @nogc const
@@ -929,7 +981,8 @@ public:
                 uint resultBits = (uint(isNegative) << 31) | // sign bit
                     ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
                     cast(uint) ((sansExponent << 1) >>> (64 - 23)); // mantissa.
-                return *cast(float*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(float*) &resultBits)();
             }
             else static if (T.mant_dig == double.mant_dig)
             {
@@ -938,18 +991,19 @@ public:
                 ulong resultBits = (ulong(isNegative) << 63) | // sign bit
                     ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
                     ((sansExponent << 1) >>> (64 - 52)); // mantissa.
-                return *cast(double*) &resultBits;
+                // TODO: remove @trusted lambda after DIP 1000 is enabled by default.
+                return (() @trusted => *cast(double*) &resultBits)();
             }
             else
             {
-                import std.math : scalbn;
-                return scalbn(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
+                import core.math : ldexp;
+                return ldexp(isNegative ? -cast(real) sansExponent : cast(real) sansExponent,
                     cast(int) exponent - 65);
             }
         }
         else
         {
-            import std.math : scalbn;
+            import core.math : ldexp;
             const ulongLength = data.ulongLength;
             if ((ulongLength - 1) * 64L > int.max)
                 return isNegative ? -T.infinity : T.infinity;
@@ -958,20 +1012,20 @@ public:
             if (w1 == 0)
                 return T(0); // Special: bsr(w1) is undefined.
             int bitsStillNeeded = totalNeededBits - bsr(w1) - 1;
-            T acc = scalbn(w1, scale);
+            T acc = ldexp(cast(T) w1, scale);
             for (ptrdiff_t i = ulongLength - 2; i >= 0 && bitsStillNeeded > 0; i--)
             {
                 ulong w = data.peekUlong(i);
                 // To round towards zero we must make sure not to use too many bits.
                 if (bitsStillNeeded >= 64)
                 {
-                    acc += scalbn(w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     bitsStillNeeded -= 64;
                 }
                 else
                 {
                     w = (w >>> (64 - bitsStillNeeded)) << (64 - bitsStillNeeded);
-                    acc += scalbn(w, scale -= 64);
+                    acc += ldexp(cast(T) w, scale -= 64);
                     break;
                 }
             }
@@ -988,7 +1042,7 @@ public:
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
-    if (is(Unqual!T == BigInt))
+    if (is(immutable T == immutable BigInt))
     {
         return this;
     }
@@ -1026,7 +1080,8 @@ public:
     int opCmp(T)(const T y) nothrow @nogc @safe const if (isFloatingPoint!T)
     {
         import core.bitop : bsr;
-        import std.math : cmp, isFinite;
+        import std.math.operations : cmp;
+        import std.math.traits : isFinite;
 
         const asFloat = toFloat!(T, "truncate");
         if (asFloat != y)
@@ -1236,7 +1291,7 @@ public:
         }
         assert(buff.length > 0, "Invalid buffer length");
 
-        char signChar = isNegative() ? '-' : 0;
+        char signChar = isNegative ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
 
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
@@ -1296,16 +1351,16 @@ public:
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, string formatString) const
+    void toString(scope void delegate(scope const(char)[]) sink, string formatString) const
     {
-        toString!(void delegate(const(char)[]))(sink, formatString);
+        toString!(void delegate(scope const(char)[]))(sink, formatString);
     }
 
     // for backwards compatibility, see unittest below
     /// ditto
-    void toString(scope void delegate(const(char)[]) sink, scope const ref FormatSpec!char f) const
+    void toString(scope void delegate(scope const(char)[]) sink, scope const ref FormatSpec!char f) const
     {
-        toString!(void delegate(const(char)[]))(sink, f);
+        toString!(void delegate(scope const(char)[]))(sink, f);
     }
 
     // Backwards compatibility test
@@ -1316,7 +1371,7 @@ public:
     // the function failed to instantiate.
     @system unittest
     {
-        import std.format : FormatSpec;
+        import std.format.spec : FormatSpec;
         import std.array : appender;
         BigInt num = 503;
         auto dst = appender!string();
@@ -1333,7 +1388,7 @@ public:
         Returns: A unique hash of the `BigInt`'s value suitable for use in a hash
         table.
      */
-    size_t toHash() const @safe nothrow
+    size_t toHash() const @safe pure nothrow @nogc
     {
         return data.toHash() + sign;
     }
@@ -1342,7 +1397,7 @@ public:
         `toHash` is rarely directly invoked; it is implicitly used when
         BigInt is used as the key of an associative array.
      */
-    @safe unittest
+    @safe pure unittest
     {
         string[BigInt] aa;
         aa[BigInt(123)] = "abc";
@@ -1400,22 +1455,19 @@ public:
     }
 
 private:
-    void negate() @safe pure nothrow @nogc
+    void negate() @safe pure nothrow @nogc scope
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const nothrow @nogc @safe
+    bool isZero() pure const nothrow @nogc @safe scope
     {
         return data.isZero();
     }
-    bool isNegative() pure const nothrow @nogc @safe
-    {
-        return sign;
-    }
+    alias isNegative = sign;
 
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const nothrow @safe
+    void checkDivByZero() pure const nothrow @safe scope
     {
         assert(!isZero(), "BigInt division by zero");
     }
@@ -1607,7 +1659,7 @@ unittest
     assert(BigInt(-0x1234_5678_9ABC_5A5AL).toLong() == -0x1234_5678_9ABC_5A5AL);
     assert(BigInt(0xF234_5678_9ABC_5A5AL).toLong() == long.max);
     assert(BigInt(-0x123456789ABCL).toInt() == -int.max);
-    char[] s1 = "123".dup; // bug 8164
+    char[] s1 = "123".dup; // https://issues.dlang.org/show_bug.cgi?id=8164
     assert(BigInt(s1) == 123);
     char[] s2 = "0xABC".dup;
     assert(BigInt(s2) == 2748);
@@ -1619,10 +1671,10 @@ unittest
     b = long.max / a;
     assert( b == long.max /(ulong.max - 5));
     assert(BigInt(1) - 1 == 0);
-    assert((-4) % BigInt(5) == -4); // bug 5928
+    assert((-4) % BigInt(5) == -4); // https://issues.dlang.org/show_bug.cgi?id=5928
     assert(BigInt(-4) % BigInt(5) == -4);
-    assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
-    assert(BigInt("-1") > long.min); // bug 9548
+    assert(BigInt(2)/BigInt(-3) == BigInt(0)); // https://issues.dlang.org/show_bug.cgi?id=8022
+    assert(BigInt("-1") > long.min); // https://issues.dlang.org/show_bug.cgi?id=9548
 
     assert(toDecimalString(BigInt("0000000000000000000000000000000000000000001234567"))
         == "1234567");
@@ -1649,7 +1701,8 @@ unittest
     assert((BigInt(int.min)-1)%int.min == -1);
 }
 
-@safe unittest // Recursive division, bug 5568
+ // Recursive division (https://issues.dlang.org/show_bug.cgi?id=5568)
+@safe unittest
 {
     enum Z = 4843;
     BigInt m = (BigInt(1) << (Z*8) ) - 1;
@@ -1669,17 +1722,17 @@ unittest
     BigInt w =  c - b + a;
     assert(w % m == 0);
 
-    // Bug 6819. ^^
+    // https://issues.dlang.org/show_bug.cgi?id=6819
     BigInt z1 = BigInt(10)^^64;
     BigInt w1 = BigInt(10)^^128;
     assert(z1^^2 == w1);
     BigInt z2 = BigInt(1)<<64;
     BigInt w2 = BigInt(1)<<128;
     assert(z2^^2 == w2);
-    // Bug 7993
+    // https://issues.dlang.org/show_bug.cgi?id=7993
     BigInt n7793 = 10;
     assert( n7793 / 1 == 10);
-    // Bug 7973
+    // https://issues.dlang.org/show_bug.cgi?id=7973
     auto a7973 = 10_000_000_000_000_000;
     const c7973 = 10_000_000_000_000_000;
     immutable i7973 = 10_000_000_000_000_000;
@@ -1690,7 +1743,7 @@ unittest
     assert(v7973 == 2551700137);
     v7973 %= i7973;
     assert(v7973 == 2551700137);
-    // 8165
+    // https://issues.dlang.org/show_bug.cgi?id=8165
     BigInt[2] a8165;
     a8165[0] = a8165[1] = 1;
 }
@@ -1698,7 +1751,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1749,7 +1802,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1800,7 +1853,7 @@ unittest
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -1848,11 +1901,11 @@ unittest
     }
 }
 
-// 6448
+// https://issues.dlang.org/show_bug.cgi?id=6448
 @safe unittest
 {
     import std.array;
-    import std.format;
+    import std.format.write : formattedWrite;
 
     auto w1 = appender!string();
     auto w2 = appender!string();
@@ -1862,7 +1915,7 @@ unittest
     BigInt bx = x;
     formattedWrite(w2, "%010d", bx);
     assert(w1.data == w2.data);
-    //8011
+    // https://issues.dlang.org/show_bug.cgi?id=8011
     BigInt y = -3;
     ++y;
     assert(y.toLong() == -2);
@@ -1877,13 +1930,13 @@ unittest
 
 @safe unittest
 {
-    import std.math : abs;
-    auto r = abs(BigInt(-1000)); // 6486
+    import std.math.algebraic : abs;
+    auto r = abs(BigInt(-1000)); // https://issues.dlang.org/show_bug.cgi?id=6486
     assert(r == 1000);
 
-    auto r2 = abs(const(BigInt)(-500)); // 11188
+    auto r2 = abs(const(BigInt)(-500)); // https://issues.dlang.org/show_bug.cgi?id=11188
     assert(r2 == 500);
-    auto r3 = abs(immutable(BigInt)(-733)); // 11188
+    auto r3 = abs(immutable(BigInt)(-733)); // https://issues.dlang.org/show_bug.cgi?id=11188
     assert(r3 == 733);
 
     // opCast!bool
@@ -1891,7 +1944,8 @@ unittest
     assert(one && !zero);
 }
 
-@safe unittest // 6850
+// https://issues.dlang.org/show_bug.cgi?id=6850
+@safe unittest
 {
     pure long pureTest() {
         BigInt a = 1;
@@ -1903,7 +1957,9 @@ unittest
     assert(pureTest() == 1337);
 }
 
-@safe unittest // 8435 & 10118
+// https://issues.dlang.org/show_bug.cgi?id=8435
+// https://issues.dlang.org/show_bug.cgi?id=10118
+@safe unittest
 {
     auto i = BigInt(100);
     auto j = BigInt(100);
@@ -1927,7 +1983,8 @@ unittest
     assert(keys.empty);
 }
 
-@safe unittest // 11148
+// https://issues.dlang.org/show_bug.cgi?id=11148
+@safe unittest
 {
     void foo(BigInt) {}
     const BigInt cbi = 3;
@@ -1965,14 +2022,16 @@ unittest
     assert(n == 4);
 }
 
-@safe unittest // 8167
+// https://issues.dlang.org/show_bug.cgi?id=8167
+@safe unittest
 {
     BigInt a = BigInt(3);
     BigInt b = BigInt(a);
     assert(b == 3);
 }
 
-@safe unittest // 9061
+// https://issues.dlang.org/show_bug.cgi?id=9061
+@safe unittest
 {
     long l1 = 0x12345678_90ABCDEF;
     long l2 = 0xFEDCBA09_87654321;
@@ -1991,7 +2050,8 @@ unittest
     assert(l5 == b5);
 }
 
-@safe unittest // 11600
+// https://issues.dlang.org/show_bug.cgi?id=11600
+@safe unittest
 {
     import std.conv;
     import std.exception : assertThrown;
@@ -2006,13 +2066,15 @@ unittest
     assertThrown!ConvException(to!BigInt("-123four"));
 }
 
-@safe unittest // 11583
+// https://issues.dlang.org/show_bug.cgi?id=11583
+@safe unittest
 {
     BigInt x = 0;
     assert((x > 0) == false);
 }
 
-@safe unittest // 13391
+// https://issues.dlang.org/show_bug.cgi?id=13391
+@safe unittest
 {
     BigInt x1 = "123456789";
     BigInt x2 = "123456789123456789";
@@ -2043,7 +2105,8 @@ unittest
     assert(x2 == 1);
 }
 
-@safe unittest // 13963
+// https://issues.dlang.org/show_bug.cgi?id=13963
+@safe unittest
 {
     BigInt x = 1;
     import std.meta : AliasSeq;
@@ -2094,30 +2157,31 @@ unittest
     assert(-x2 % ulong.max == -x2);
 }
 
-@safe unittest // 14124
+// https://issues.dlang.org/show_bug.cgi?id=14124
+@safe unittest
 {
     auto x = BigInt(-3);
     x %= 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= cast(ushort) 3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(-3);
     x %= 3L;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 
     x = BigInt(3);
     x %= -3;
-    assert(!x.isNegative());
-    assert(x.isZero());
+    assert(!x.isNegative);
+    assert(x.isZero);
 }
 
-// issue 15678
+// https://issues.dlang.org/show_bug.cgi?id=15678
 @safe unittest
 {
     import std.exception : assertThrown;
@@ -2126,7 +2190,7 @@ unittest
     assertThrown!ConvException(BigInt("1234PUKE"));
 }
 
-// Issue 6447
+// https://issues.dlang.org/show_bug.cgi?id=6447
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -2142,14 +2206,15 @@ unittest
     ]));
 }
 
-// Issue 17330
+// https://issues.dlang.org/show_bug.cgi?id=17330
 @safe unittest
 {
     auto b = immutable BigInt("123");
     assert(b == 123);
 }
 
-@safe pure unittest // issue 14767
+// https://issues.dlang.org/show_bug.cgi?id=14767
+@safe pure unittest
 {
     static immutable a = BigInt("340282366920938463463374607431768211455");
     assert(a == BigInt("340282366920938463463374607431768211455"));
@@ -2197,7 +2262,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     assert(q * b + r == a);
 }
 
-// Issue 18086
+// https://issues.dlang.org/show_bug.cgi?id=18086
 @safe pure nothrow unittest
 {
     BigInt q = 1;
@@ -2226,7 +2291,7 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     assert(q * d + r == -c);
 }
 
-// Issue 19740
+// https://issues.dlang.org/show_bug.cgi?id=19740
 @safe unittest
 {
     BigInt a = BigInt(
@@ -2266,12 +2331,13 @@ BigInt powmod(BigInt base, BigInt exponent, BigInt modulus) pure nothrow @safe
 
     while (exponent)
     {
-        if (exponent & 1)
+        if (exponent.data.peekUint(0) & 1)
         {
             result = (result * base) % modulus;
         }
 
-        base = ((base % modulus) * (base % modulus)) % modulus;
+        auto tmp = base % modulus;
+        base = (tmp * tmp) % modulus;
         exponent >>= 1;
     }
 

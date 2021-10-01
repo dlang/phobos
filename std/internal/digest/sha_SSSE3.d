@@ -17,7 +17,7 @@ module std.internal.digest.sha_SSSE3;
 
 version (D_InlineAsm_X86)
 {
-    version (D_PIC) {} // Bugzilla 9378
+    version (D_PIC) {} // https://issues.dlang.org/show_bug.cgi?id=9378
     else
     {
         private version = USE_SSSE3;
@@ -122,18 +122,18 @@ version (USE_SSSE3)
     }
 
     /* The control words for the byte shuffle instruction and the round constants. */
-    align(16) public immutable uint[20] constants =
+    align(16) public immutable uint[4][5] constants =
     [
         // The control words for the byte shuffle instruction.
-        0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f,
+        [ 0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f ],
         // Constants for round 0-19
-        0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999,
+        [ 0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999 ],
         // Constants for round 20-39
-        0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1,
+        [ 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1 ],
         // Constants for round 40-59
-        0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc,
+        [ 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc ],
         // Constants for round 60-79
-        0xca62c1d6, 0xca62c1d6, 0xca62c1d6, 0xca62c1d6
+        [ 0xca62c1d6, 0xca62c1d6, 0xca62c1d6, 0xca62c1d6 ]
     ];
 
     /** Simple version to produce numbers < 100 as string. */
@@ -194,13 +194,16 @@ version (USE_SSSE3)
     /**
      * Chooses the instruction sequence based on the 32bit or 64bit model.
      */
-    private nothrow pure string[] swt3264(string[] insn32, string[] insn64)
+    version (_32Bit)
     {
-        version (_32Bit)
+        private nothrow pure string[] swt3264(return scope string[] insn32, scope string[])
         {
             return insn32;
         }
-        version (_64Bit)
+    }
+    version (_64Bit)
+    {
+        private nothrow pure string[] swt3264(scope string[], return scope string[] insn64)
         {
             return insn64;
         }
@@ -721,7 +724,8 @@ version (USE_SSSE3)
         }
     }
 
-    // constants as extra argument for PIC, see Bugzilla 9378
+    // constants as extra argument for PIC
+    // https://issues.dlang.org/show_bug.cgi?id=9378
     import std.meta : AliasSeq;
     version (_64Bit)
         alias ExtraArgs = AliasSeq!(typeof(&constants));

@@ -31,7 +31,7 @@ module std.datetime.timezone;
 import core.time : abs, convert, dur, Duration, hours, minutes;
 import std.datetime.systime : Clock, stdTimeToUnixTime, SysTime;
 import std.range.primitives : back, empty, front, isOutputRange, popFront;
-import std.traits : isIntegral, isSomeString, Unqual;
+import std.traits : isIntegral, isSomeString;
 
 version (OSX)
     version = Darwin;
@@ -450,7 +450,7 @@ public:
             bool first = true;
             auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
             auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
-            // @@@BUG@@@ 3659 makes this necessary.
+            // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
             auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
             foreach (hour; -24 .. 25)
@@ -596,7 +596,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.StandardName);
 
             wchar[32] str;
@@ -681,7 +681,7 @@ public:
             GetTimeZoneInformation(&tzInfo);
 
             // Cannot use to!string() like this should, probably due to bug
-            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            // https://issues.dlang.org/show_bug.cgi?id=5016
             //return to!string(tzInfo.DaylightName);
 
             wchar[32] str;
@@ -1039,7 +1039,7 @@ public:
                 bool first = true;
                 auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
                 auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
-                // @@@BUG@@@ 3659 makes this necessary.
+                // https://issues.dlang.org/show_bug.cgi?id=3659 makes this necessary.
                 auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
                 foreach (hour; -24 .. 25)
@@ -1420,7 +1420,7 @@ package:
     {
         import std.datetime.date : DateTimeException;
         import std.exception : enforce;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
                                   "Offset from UTC must be within range (-24:00 - 24:00).");
@@ -1489,7 +1489,7 @@ package:
     static void toISOExtString(W)(ref W writer, Duration utcOffset)
     {
         import std.datetime.date : DateTimeException;
-        import std.format : formattedWrite;
+        import std.format.write : formattedWrite;
         import std.exception : enforce;
 
         immutable absOffset = abs(utcOffset);
@@ -1702,7 +1702,7 @@ package:
         Params:
             isoExtString = A string which represents a time zone in the ISO format.
       +/
-    static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
+    static immutable(SimpleTimeZone) fromISOExtString(S)(scope S isoExtString) @safe pure
         if (isSomeString!S)
     {
         import std.algorithm.searching : startsWith;
@@ -2417,7 +2417,7 @@ public:
         Throws:
             `FileException` if it fails to read from disk.
       +/
-    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @safe
     {
         import std.algorithm.sorting : sort;
         import std.array : appender;
@@ -2443,28 +2443,35 @@ public:
         {
             import std.algorithm.iteration : filter;
             import std.algorithm.mutation : copy;
-            tzdataIndex(tzDatabaseDir).byKey.filter!(a => a.startsWith(subName)).copy(timezones);
+
+            const index = () @trusted { return tzdataIndex(tzDatabaseDir); }();
+            index.byKey.filter!(a => a.startsWith(subName)).copy(timezones);
         }
         else
         {
             import std.path : baseName;
-            foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
-            {
-                if (de.isFile)
+            // dirEntries is @system because it uses a DirIterator with a
+            // RefCounted variable, but here, no references to the payload is
+            // escaped to the outside, so this should be @trusted
+            () @trusted {
+                foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
                 {
-                    auto tzName = de.name[tzDatabaseDir.length .. $];
-
-                    if (!tzName.extension().empty ||
-                        !tzName.startsWith(subName) ||
-                        baseName(tzName) == "leapseconds" ||
-                        tzName == "+VERSION")
+                    if (de.isFile)
                     {
-                        continue;
-                    }
+                        auto tzName = de.name[tzDatabaseDir.length .. $];
 
-                    timezones.put(tzName);
+                        if (!tzName.extension().empty ||
+                            !tzName.startsWith(subName) ||
+                            baseName(tzName) == "leapseconds" ||
+                            tzName == "+VERSION")
+                        {
+                            continue;
+                        }
+
+                        timezones.put(tzName);
+                    }
                 }
-            }
+            }();
         }
 
         sort(timezones.data);
@@ -2633,7 +2640,7 @@ private:
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile) @trusted
-        if ((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
+        if ((isIntegral!T || isSomeChar!T) || is(immutable T == immutable bool))
     {
         import std.bitmanip : bigEndianToNative;
         T[1] buff;
@@ -2754,6 +2761,7 @@ private:
             initOnce!_tzIndex(
             {
                 import std.conv : to;
+                import std.datetime.date : DateTimeException;
                 import std.format : format;
                 import std.path : asNormalizedPath, chainPath;
 

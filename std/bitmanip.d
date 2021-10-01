@@ -80,12 +80,12 @@ private template createAccessors(
     static if (!name.length)
     {
         // No need to create any accessor
-        enum result = "";
+        enum createAccessors = "";
     }
     else static if (len == 0)
     {
         // Fields of length 0 are always zero
-        enum result = "enum "~T.stringof~" "~name~" = 0;\n";
+        enum createAccessors = "enum "~T.stringof~" "~name~" = 0;\n";
     }
     else
     {
@@ -109,9 +109,7 @@ private template createAccessors(
 
         static if (is(T == bool))
         {
-            static assert(len == 1, "`" ~ name ~
-                    "` definition problem: type `bool` is only allowed for single-bit fields");
-            enum result =
+            enum createAccessors =
             // getter
                 "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
@@ -123,7 +121,7 @@ private template createAccessors(
         else
         {
             // getter
-            enum result = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const { auto result = "
+            enum createAccessors = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const { auto result = "
                 ~"("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -152,7 +150,7 @@ private template createAccessors(
 private template createStoreName(Ts...)
 {
     static if (Ts.length < 2)
-        enum createStoreName = "";
+        enum createStoreName = "_bf";
     else
         enum createStoreName = "_" ~ Ts[1] ~ createStoreName!(Ts[3 .. $]);
 }
@@ -171,22 +169,24 @@ private template createStorageAndFields(Ts...)
         alias StoreType = ulong;
     else
     {
-        static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+        import std.conv : to;
+        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ to!string(Size));
         alias StoreType = ulong; // just to avoid another error msg
     }
-    enum result
+
+    enum createStorageAndFields
         = "private " ~ StoreType.stringof ~ " " ~ Name ~ ";"
-        ~ createFields!(Name, 0, Ts).result;
+        ~ createFields!(Name, 0, Ts);
 }
 
 private template createFields(string store, size_t offset, Ts...)
 {
     static if (Ts.length > 0)
-        enum result
-            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
-            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]).result;
+        enum createFields
+            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset)
+            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]);
     else
-        enum result = "";
+        enum createFields = "";
 }
 
 private ulong getBitsForAlign(ulong a)
@@ -223,7 +223,7 @@ private template createReferenceAccessor(string store, T, ulong bits, string nam
         ~" (("~store~" & (cast(typeof("~store~")) "~myToString(mask)~"))"
         ~" | ((cast(typeof("~store~")) cast(void*) v) & (cast(typeof("~store~")) "~myToString(~mask)~")));}\n";
 
-    enum result = storage ~ storage_accessor ~ ref_accessor;
+    enum createReferenceAccessor = storage ~ storage_accessor ~ ref_accessor;
 }
 
 private template sizeOfBitField(T...)
@@ -241,32 +241,89 @@ private template createTaggedReference(T, ulong a, string name, Ts...)
         "Fields must fit in the bits know to be zero because of alignment."
     );
     enum StoreName = createStoreName!(T, name, 0, Ts);
-    enum result
-        = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name).result
-        ~ createFields!(StoreName, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
+    enum createTaggedReference
+        = createReferenceAccessor!(StoreName, T, sizeOfBitField!Ts, name)
+        ~ createFields!(StoreName, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts);
 }
 
 /**
-Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
-class)es.
+Allows creating `bitfields` inside `structs`, `classes` and `unions`.
 
-The type of a bit field can be any integral type or enumerated
-type. The most efficient type to store in bitfields is $(D_PARAM
-bool), followed by unsigned types, followed by signed types.
+A `bitfield` consists of one or more entries with a fixed number of
+bits reserved for each of the entries. The types of the entries can
+be `bool`s, integral types or enumerated types, arbitrarily mixed.
+The most efficient type to store in `bitfields` is `bool`, followed
+by unsigned types, followed by signed types.
+
+Each non-`bool` entry of the `bitfield` will be represented by the
+number of bits specified by the user. The minimum and the maximum
+numbers that represent this domain can be queried by using the name
+of the variable followed by `_min` or `_max`.
+
+Limitation: The number of bits in a `bitfield` is limited to 8, 16,
+32 or 64. If padding is needed, an entry should be explicitly
+allocated with an empty name.
+
+Implementation_details: `Bitfields` are internally stored in an
+`ubyte`, `ushort`, `uint` or `ulong` depending on the number of bits
+used. The bits are filled in the order given by the parameters,
+starting with the lowest significant bit. The name of the (private)
+variable used for saving the `bitfield` is created by a prefix `_bf`
+and concatenating all of the variable names, each preceded by an
+underscore.
+
+Params: T = A list of template parameters divided into chunks of 3
+            items. Each chunk consists (in this order) of a type, a
+            name and a number. Together they define an entry
+            of the `bitfield`: a variable of the given type and name,
+            which can hold as many bits as the number denotes.
+
+Returns: A string that can be used in a `mixin` to add the `bitfield`.
 
 See_Also: $(REF BitFlags, std,typecons)
 */
-
-template bitfields(T...)
+string bitfields(T...)()
 {
-    enum { bitfields = createStorageAndFields!T.result }
+    import std.conv : to;
+
+    static assert(T.length % 3 == 0,
+                  "Wrong number of arguments (" ~ to!string(T.length) ~ "): Must be a multiple of 3");
+
+    static foreach (i, ARG; T)
+    {
+        static if (i % 3 == 0)
+            static assert(is (typeof({ARG tmp = cast (ARG)0; if (ARG.min < 0) {} }())),
+                          "Integral type or `bool` expected, found " ~ ARG.stringof);
+
+        // would be nice to check for valid variable names too
+        static if (i % 3 == 1)
+            static assert(is (typeof(ARG) : string),
+                          "Variable name expected, found " ~ ARG.stringof);
+
+        static if (i % 3 == 2)
+        {
+            static assert(is (typeof({ulong tmp = ARG;}())),
+                          "Integral value expected, found " ~ ARG.stringof);
+
+            static if (T[i-1] != "")
+            {
+                static assert(!is (T[i-2] : bool) || ARG <= 1,
+                              "Type `bool` is only allowed for single-bit fields");
+
+                static assert(ARG >= 0 && ARG <= T[i-2].sizeof * 8,
+                              "Wrong size of bitfield: " ~ ARG.stringof);
+            }
+        }
+    }
+
+    return createStorageAndFields!T;
 }
 
 /**
-Create a bitfield pack of eight bits, which fit in
-one $(D_PARAM ubyte). The bitfields are allocated starting from the
-least significant bit, i.e. x occupies the two least significant bits
-of the bitfields storage.
+Create a `bitfield` pack of eight bits, which fit in
+one `ubyte`. The `bitfields` are allocated starting from the
+least significant bit, i.e. `x` occupies the two least significant bits
+of the `bitfields` storage.
 */
 @safe unittest
 {
@@ -291,7 +348,7 @@ of the bitfields storage.
 }
 
 /**
-The sum of all bit lengths in one $(D_PARAM bitfield) instantiation
+The sum of all bit lengths in one `bitfield` instantiation
 must be exactly 8, 16, 32, or 64. If padding is needed, just allocate
 one bitfield with an empty name.
 */
@@ -326,78 +383,12 @@ one bitfield with an empty name.
     }
 }
 
-/**
-This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
-
-A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
-For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
-One can store a 2-bit integer there.
-
-The example above creates a tagged pointer in the struct A. The pointer is of type
-`uint*` as specified by the first argument, and is named x, as specified by the second
-argument.
-
-Following arguments works the same way as `bitfield`'s. The bitfield must fit into the
-bits known to be zero because of the pointer alignment.
-*/
-
-template taggedPointer(T : T*, string name, Ts...) {
-    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
-}
-
-///
-@safe unittest
-{
-    struct A
-    {
-        int a;
-        mixin(taggedPointer!(
-            uint*, "x",
-            bool, "b1", 1,
-            bool, "b2", 1));
-    }
-    A obj;
-    obj.x = new uint;
-    obj.b1 = true;
-    obj.b2 = false;
-}
-
-/**
-This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
-
-A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
-For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
-One can store a 2-bit integer there.
-
-The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
-as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
-*/
-
-template taggedClassRef(T, string name, Ts...)
-if (is(T == class))
-{
-    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts).result;
-}
-
-///
-@safe unittest
-{
-    struct A
-    {
-        int a;
-        mixin(taggedClassRef!(
-            Object, "o",
-            uint, "i", 2));
-    }
-    A obj;
-    obj.o = new Object();
-    obj.i = 3;
-}
-
 @safe pure nothrow @nogc
 unittest
 {
-    // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
+    // Degenerate bitfields tests mixed with range tests
+    // https://issues.dlang.org/show_bug.cgi?id=8474
+    // https://issues.dlang.org/show_bug.cgi?id=11160
     struct Test1
     {
         mixin(bitfields!(uint, "a", 32,
@@ -461,73 +452,9 @@ unittest
     t4b.a = -5; assert(t4b.a == -5L);
 }
 
-@system unittest
-{
-    struct Test5
-    {
-        mixin(taggedPointer!(
-            int*, "a",
-            uint, "b", 2));
-    }
-
-    Test5 t5;
-    t5.a = null;
-    t5.b = 3;
-    assert(t5.a is null);
-    assert(t5.b == 3);
-
-    int myint = 42;
-    t5.a = &myint;
-    assert(t5.a is &myint);
-    assert(t5.b == 3);
-
-    struct Test6
-    {
-        mixin(taggedClassRef!(
-            Object, "o",
-            bool, "b", 1));
-    }
-
-    Test6 t6;
-    t6.o = null;
-    t6.b = false;
-    assert(t6.o is null);
-    assert(t6.b == false);
-
-    auto o = new Object();
-    t6.o = o;
-    t6.b = true;
-    assert(t6.o is o);
-    assert(t6.b == true);
-}
-
+// https://issues.dlang.org/show_bug.cgi?id=6686
 @safe unittest
 {
-    static assert(!__traits(compiles,
-        taggedPointer!(
-            int*, "a",
-            uint, "b", 3)));
-
-    static assert(!__traits(compiles,
-        taggedClassRef!(
-            Object, "a",
-            uint, "b", 4)));
-
-    struct S {
-        mixin(taggedClassRef!(
-            Object, "a",
-            bool, "b", 1));
-    }
-
-    const S s;
-    void bar(S s) {}
-
-    static assert(!__traits(compiles, bar(s)));
-}
-
-@safe unittest
-{
-    // Bug #6686
     union  S {
         ulong bits = ulong.max;
         mixin (bitfields!(
@@ -542,9 +469,9 @@ unittest
     assert(num.bits == 0xFFFF_FFFF_8000_0001uL);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=5942
 @safe unittest
 {
-    // Bug #5942
     struct S
     {
         mixin(bitfields!(
@@ -607,7 +534,7 @@ unittest
         assert(i.checkExpectations(true, 7, 7));
     }
 
-    //Bug# 8876
+    //https://issues.dlang.org/show_bug.cgi?id=8876
     {
         struct MoreIntegrals {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
@@ -660,12 +587,11 @@ unittest
     assert(f.checkExpectations(true));
 }
 
-// Issue 12477
+// https://issues.dlang.org/show_bug.cgi?id=12477
 @system unittest
 {
     import core.exception : AssertError;
     import std.algorithm.searching : canFind;
-    import std.bitmanip : bitfields;
 
     static struct S
     {
@@ -685,9 +611,182 @@ unittest
     { assert(ae.msg.canFind("Value is smaller than the minimum value of bitfield 'b'"), ae.msg); }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=15305
+@safe unittest
+{
+    struct S {
+            mixin(bitfields!(
+                    bool, "alice", 1,
+                    ulong, "bob", 63,
+            ));
+    }
+
+    S s;
+    s.bob = long.max - 1;
+    s.alice = false;
+    assert(s.bob == long.max - 1);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21634
+@safe unittest
+{
+    struct A
+    {
+        mixin(bitfields!(int, "", 1,
+                         int, "gshared", 7));
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21725
+@safe unittest
+{
+    struct S
+    {
+        mixin(bitfields!(
+            uint, q{foo}, 4,
+            uint, null, 4,
+        ));
+    }
+}
+
+/**
+This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+The example above creates a tagged pointer in the struct A. The pointer is of type
+`uint*` as specified by the first argument, and is named x, as specified by the second
+argument.
+
+Following arguments works the same way as `bitfield`'s. The bitfield must fit into the
+bits known to be zero because of the pointer alignment.
+*/
+
+template taggedPointer(T : T*, string name, Ts...) {
+    enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts);
+}
+
+///
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedPointer!(
+            uint*, "x",
+            bool, "b1", 1,
+            bool, "b2", 1));
+    }
+    A obj;
+    obj.x = new uint;
+    obj.b1 = true;
+    obj.b2 = false;
+}
+
+@system unittest
+{
+    struct Test5
+    {
+        mixin(taggedPointer!(
+            int*, "a",
+            uint, "b", 2));
+    }
+
+    Test5 t5;
+    t5.a = null;
+    t5.b = 3;
+    assert(t5.a is null);
+    assert(t5.b == 3);
+
+    int myint = 42;
+    t5.a = &myint;
+    assert(t5.a is &myint);
+    assert(t5.b == 3);
+}
+
+/**
+This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
+as `taggedPointer`, except the first argument which must be a class type instead of a pointer type.
+*/
+
+template taggedClassRef(T, string name, Ts...)
+if (is(T == class))
+{
+    enum taggedClassRef = createTaggedReference!(T, 8, name, Ts);
+}
+
+///
+@safe unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedClassRef!(
+            Object, "o",
+            uint, "i", 2));
+    }
+    A obj;
+    obj.o = new Object();
+    obj.i = 3;
+}
+
+@system unittest
+{
+    struct Test6
+    {
+        mixin(taggedClassRef!(
+            Object, "o",
+            bool, "b", 1));
+    }
+
+    Test6 t6;
+    t6.o = null;
+    t6.b = false;
+    assert(t6.o is null);
+    assert(t6.b == false);
+
+    auto o = new Object();
+    t6.o = o;
+    t6.b = true;
+    assert(t6.o is o);
+    assert(t6.b == true);
+}
+
+@safe unittest
+{
+    static assert(!__traits(compiles,
+        taggedPointer!(
+            int*, "a",
+            uint, "b", 3)));
+
+    static assert(!__traits(compiles,
+        taggedClassRef!(
+            Object, "a",
+            uint, "b", 4)));
+
+    struct S {
+        mixin(taggedClassRef!(
+            Object, "a",
+            bool, "b", 1));
+    }
+
+    const S s;
+    void bar(S s) {}
+
+    static assert(!__traits(compiles, bar(s)));
+}
+
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM float) separately. The definition is:
+   `float` separately. The definition is:
 
 ----
 struct FloatRep
@@ -704,17 +803,52 @@ struct FloatRep
 }
 ----
 */
-struct FloatRep
+alias FloatRep = FloatingPointRepresentation!float;
+
+/**
+   Allows manipulating the fraction, exponent, and sign parts of a
+   `double` separately. The definition is:
+
+----
+struct DoubleRep
 {
     union
     {
-        float value;
+        double value;
         mixin(bitfields!(
-                  uint,  "fraction", 23,
-                  ubyte, "exponent",  8,
-                  bool,  "sign",      1));
+                  ulong,   "fraction", 52,
+                  ushort,  "exponent", 11,
+                  bool,    "sign",      1));
     }
-    enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
+}
+----
+*/
+alias DoubleRep = FloatingPointRepresentation!double;
+
+private struct FloatingPointRepresentation(T)
+{
+    static if (is(T == float))
+    {
+        enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
+        alias FractionType = uint;
+        alias ExponentType = ubyte;
+    }
+    else
+    {
+        enum uint bias = 1023, fractionBits = 52, exponentBits = 11, signBits = 1;
+        alias FractionType = ulong;
+        alias ExponentType = ushort;
+    }
+
+    union
+    {
+        T value;
+        mixin(bitfields!(
+                  FractionType, "fraction", fractionBits,
+                  ExponentType, "exponent", exponentBits,
+                  bool,  "sign",     signBits));
+    }
 }
 
 ///
@@ -763,39 +897,6 @@ struct FloatRep
     assert(rep.fraction == 2796203);
     assert(rep.exponent == 125);
     assert(rep.sign);
-}
-
-/**
-   Allows manipulating the fraction, exponent, and sign parts of a
-   $(D_PARAM double) separately. The definition is:
-
-----
-struct DoubleRep
-{
-    union
-    {
-        double value;
-        mixin(bitfields!(
-                  ulong,   "fraction", 52,
-                  ushort,  "exponent", 11,
-                  bool,    "sign",      1));
-    }
-    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
-}
-----
-*/
-
-struct DoubleRep
-{
-    union
-    {
-        double value;
-        mixin(bitfields!(
-                  ulong,  "fraction", 52,
-                  ushort, "exponent", 11,
-                  bool,   "sign",      1));
-    }
-    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
 ///
@@ -868,22 +969,6 @@ struct DoubleRep
     assert(x.value == -5.0);
 }
 
-@safe unittest
-{
-    // Issue #15305
-    struct S {
-            mixin(bitfields!(
-                    bool, "alice", 1,
-                    ulong, "bob", 63,
-            ));
-    }
-
-    S s;
-    s.bob = long.max - 1;
-    s.alice = false;
-    assert(s.bob == long.max - 1);
-}
-
 /**
 A dynamic array of bits. Each bit in a `BitArray` can be manipulated individually
 or by the standard bitwise operators `&`, `|`, `^`, `~`, `>>`, `<<` and also by
@@ -895,7 +980,7 @@ struct BitArray
 private:
 
     import core.bitop : btc, bts, btr, bsf, bt;
-    import std.format : FormatSpec;
+    import std.format.spec : FormatSpec;
 
     size_t _len;
     size_t* _ptr;
@@ -1126,7 +1211,7 @@ public:
         return _len;
     }
 
-    // Issue 20240
+    // https://issues.dlang.org/show_bug.cgi?id=20240
     @system unittest
     {
         BitArray ba;
@@ -1513,7 +1598,7 @@ public:
     /**********************************************
      * Reverses the bits of the `BitArray`.
      */
-    @property BitArray reverse() @nogc pure nothrow
+    @property BitArray reverse() @nogc pure nothrow return
     out (result)
     {
         assert(result == this, "the result must be equal to this");
@@ -1553,7 +1638,7 @@ public:
     /**********************************************
      * Sorts the `BitArray`'s elements.
      */
-    @property BitArray sort() @nogc pure nothrow
+    @property BitArray sort() @nogc pure nothrow return
     out (result)
     {
         assert(result == this, "the result must be equal to this");
@@ -1978,7 +2063,7 @@ public:
     /***************************************
      * Support for operator op= for `BitArray`.
      */
-    BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow
+    BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow return scope
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
@@ -2099,7 +2184,7 @@ public:
      * shared between BitArray objects. i.e. D dynamic array
      * concatenation semantics are not followed)
      */
-    BitArray opOpAssign(string op)(bool b) pure nothrow
+    BitArray opOpAssign(string op)(bool b) pure nothrow return scope
         if (op == "~")
     {
         length = _len + 1;
@@ -2129,7 +2214,7 @@ public:
     /***************************************
      * ditto
      */
-    BitArray opOpAssign(string op)(BitArray b) pure nothrow
+    BitArray opOpAssign(string op)(BitArray b) pure nothrow return scope
         if (op == "~")
     {
         auto istart = _len;
@@ -2382,7 +2467,7 @@ public:
         }
     }
 
-    // Issue 17467
+    // https://issues.dlang.org/show_bug.cgi?id=17467
     @system unittest
     {
         import std.algorithm.comparison : equal;
@@ -2403,7 +2488,8 @@ public:
         assert(equal(b.bitsSet, iota(64, 128)));
     }
 
-    // Issue 18134 - shifting right when length is a multiple of 8 * size_t.sizeof.
+    // https://issues.dlang.org/show_bug.cgi?id=18134
+    // shifting right when length is a multiple of 8 * size_t.sizeof.
     @system unittest
     {
         import std.algorithm.comparison : equal;
@@ -2613,7 +2699,7 @@ public:
         assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
-    // Issue 20241
+    // https://issues.dlang.org/show_bug.cgi?id=20241
     @system unittest
     {
         BitArray ba;
@@ -2758,17 +2844,30 @@ public:
     assert(format("%b", b) == "1_00001111_00001111");
 }
 
+@system unittest
+{
+    BitArray a;
+    a.length = 5;
+    foreach (ref bool b; a)
+    {
+        assert(b == 0);
+        b = 1;
+    }
+    foreach (bool b; a)
+        assert(b == 1);
+}
+
 /++
     Swaps the endianness of the given integral value or character.
   +/
 T swapEndian(T)(const T val) @safe pure nothrow @nogc
 if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
-    import core.bitop : bswap;
+    import core.bitop : bswap, byteswap;
     static if (val.sizeof == 1)
         return val;
     else static if (T.sizeof == 2)
-        return cast(T) (((val & 0xff00U) >> 8) | ((val & 0x00ffU) << 8));
+        return cast(T) byteswap(cast(ushort) val);
     else static if (T.sizeof == 4)
         return cast(T) bswap(cast(uint) val);
     else static if (T.sizeof == 8)
@@ -2827,7 +2926,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
         static if (isSigned!T)
             assert(swapEndian(swapEndian(cast(T) 0)) == 0);
 
-        // used to trigger BUG6354
+        // used to trigger https://issues.dlang.org/show_bug.cgi?id=6354
         static if (T.sizeof > 1 && isUnsigned!T)
         {
             T left = 0xffU;
@@ -2849,12 +2948,12 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 private union EndianSwapper(T)
 if (canSwapEndianness!T)
 {
-    Unqual!T value;
+    T value;
     ubyte[T.sizeof] array;
 
-    static if (is(FloatingPointTypeOf!(Unqual!T) == float))
+    static if (is(immutable FloatingPointTypeOf!(T) == immutable float))
         uint  intValue;
-    else static if (is(FloatingPointTypeOf!(Unqual!T) == double))
+    else static if (is(immutable FloatingPointTypeOf!(T) == immutable double))
         ulong intValue;
 
 }
@@ -3248,7 +3347,7 @@ if (isFloatOrDouble!T && n == T.sizeof)
 private template isFloatOrDouble(T)
 {
     enum isFloatOrDouble = isFloatingPoint!T &&
-                           !is(Unqual!(FloatingPointTypeOf!T) == real);
+                           !is(immutable FloatingPointTypeOf!T == immutable real);
 }
 
 @safe unittest
@@ -3838,7 +3937,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
     }
 }
 
-// issue 17247
+// https://issues.dlang.org/show_bug.cgi?id=17247
 @safe unittest
 {
     struct UbyteRange
@@ -3855,7 +3954,7 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
             return UbyteRange(impl[start .. end]);
         }
         @property size_t length() { return impl.length; }
-        size_t opDollar() { return impl.length; }
+        alias opDollar = length;
     }
     static assert(hasSlicing!UbyteRange);
 
@@ -4534,7 +4633,7 @@ private struct BitsSet(T)
         _index = startIndex + trailingZerosCount;
     }
 
-    @property size_t front()
+    @property size_t front() const
     {
         return _index;
     }
@@ -4559,12 +4658,12 @@ private struct BitsSet(T)
         _index += trailingZerosCount + 1;
     }
 
-    @property auto save()
+    @property BitsSet save() const
     {
         return this;
     }
 
-    @property size_t length()
+    @property size_t length() const
     {
         return countBitsSet(_value);
     }

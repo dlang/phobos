@@ -42,7 +42,7 @@ void* enforceCalloc()(size_t nmemb, size_t size) @nogc nothrow pure @safe
 }
 
 // ditto
-void* enforceRealloc()(void* ptr, size_t size) @nogc nothrow pure @system
+void* enforceRealloc()(return scope void* ptr, size_t size) @nogc nothrow pure @system
 {
     auto result = fakePureRealloc(ptr, size);
     if (!result) mixin(allocationFailed);
@@ -54,5 +54,5 @@ extern (C) @nogc nothrow pure private
 {
     pragma(mangle, "malloc") void* fakePureMalloc(size_t) @safe;
     pragma(mangle, "calloc") void* fakePureCalloc(size_t nmemb, size_t size) @safe;
-    pragma(mangle, "realloc") void* fakePureRealloc(void* ptr, size_t size) @system;
+    pragma(mangle, "realloc") void* fakePureRealloc(return scope void* ptr, size_t size) @system;
 }

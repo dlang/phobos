@@ -84,7 +84,8 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     // Note: res._ptr can't point to res._buff as structs are movable.
 
-    static if (isSomeString!From) // Bugzilla 1498
+    // https://issues.dlang.org/show_bug.cgi?id=14980
+    static if (isSomeString!From)
     {
         if (str is null)
         {
@@ -144,7 +145,10 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
         {
             if (i + 1 == p.length)
             {
-                heapBuffer = trustedRealloc(p, strLength, heapBuffer is null);
+                if (heapBuffer is null)
+                    heapBuffer = trustedReallocStack(p, strLength);
+                else
+                    heapBuffer = trustedRealloc(heapBuffer);
                 p = heapBuffer;
             }
             p[i++] = c;
@@ -200,7 +204,7 @@ nothrow @nogc @system unittest
     assert(tempCString(abc[].byChar)[] == abc);
 }
 
-// Bugzilla 14980
+// https://issues.dlang.org/show_bug.cgi?id=14980
 pure nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
@@ -268,38 +272,41 @@ private:
     static TempCStringBuffer trustedVoidInit() { TempCStringBuffer res = void; return res; }
 }
 
-private To[] trustedRealloc(To)(scope To[] buf, size_t strLength, bool bufIsOnStack)
+private To[] trustedRealloc(To)(return scope To[] buf)
+    @trusted @nogc pure nothrow
+{
+    pragma(inline, false);  // because it's rarely called
+    import std.internal.memory : enforceRealloc;
+
+    const size_t newlen = buf.length * 3 / 2;
+    if (buf.length >= size_t.max / (2 * To.sizeof))
+    {
+        version (D_Exceptions)
+        {
+            import core.exception : onOutOfMemoryError;
+            onOutOfMemoryError();
+        }
+        else
+        {
+            assert(0, "Memory allocation failed");
+        }
+    }
+    auto ptr = cast(To*) enforceRealloc(buf.ptr, newlen * To.sizeof);
+    return ptr[0 .. newlen];
+
+}
+
+private To[] trustedReallocStack(To)(scope To[] buf, size_t strLength)
     @trusted @nogc pure nothrow
 {
     pragma(inline, false);  // because it's rarely called
 
-    import std.internal.memory : enforceMalloc, enforceRealloc;
+    import std.internal.memory : enforceMalloc;
 
     size_t newlen = buf.length * 3 / 2;
-
-    if (bufIsOnStack)
-    {
-        if (newlen <= strLength)
-            newlen = strLength + 1; // +1 for terminating 0
-        auto ptr = cast(To*) enforceMalloc(newlen * To.sizeof);
-        ptr[0 .. buf.length] = buf[];
-        return ptr[0 .. newlen];
-    }
-    else
-    {
-        if (buf.length >= size_t.max / (2 * To.sizeof))
-        {
-            version (D_Exceptions)
-            {
-                import core.exception : onOutOfMemoryError;
-                onOutOfMemoryError();
-            }
-            else
-            {
-                assert(0, "Memory allocation failed");
-            }
-        }
-        auto ptr = cast(To*) enforceRealloc(buf.ptr, newlen * To.sizeof);
-        return ptr[0 .. newlen];
-    }
+    if (newlen <= strLength)
+        newlen = strLength + 1; // +1 for terminating 0
+    auto ptr = cast(To*) enforceMalloc(newlen * To.sizeof);
+    ptr[0 .. buf.length] = buf[];
+    return ptr[0 .. newlen];
 }

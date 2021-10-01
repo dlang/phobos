@@ -418,7 +418,8 @@ version (StdUnittest)
     testAllocator!(() => FreeTree!GCAllocator());
 }
 
-@system unittest // issue 16506
+// https://issues.dlang.org/show_bug.cgi?id=16506
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -437,7 +438,8 @@ version (StdUnittest)
     f!GCAllocator(1);
 }
 
-@system unittest // issue 16507
+// https://issues.dlang.org/show_bug.cgi?id=16507
+@system unittest
 {
     static struct MyAllocator
     {

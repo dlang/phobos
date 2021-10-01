@@ -433,11 +433,62 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range)
 if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm.mutation : copy;
     Hash hash;
     hash.start();
-    copy(range, &hash);
-    return hash.finish();
+    alias E = ElementType!Range; // Not necessarily ubyte. Could be ubyte[N] or ubyte[] or something w/alias this.
+    static if (!(__traits(isScalar, E) && E.sizeof == 1))
+    {
+        foreach (e; range)
+            hash.put(e);
+        return hash.finish();
+    }
+    else
+    {
+        static if (hasBlockSize!Hash)
+            enum bufferBytes = Hash.blockSize >= (8192 * 8) ? 8192 : Hash.blockSize <= 64 ? 8 : (Hash.blockSize / 8);
+        else
+            enum bufferBytes = 8;
+        ubyte[bufferBytes] buffer = void;
+        static if (isRandomAccessRange!Range && hasLength!Range)
+        {
+            const end = range.length;
+            size_t i = 0;
+            while (end - i >= buffer.length)
+            {
+                foreach (ref e; buffer)
+                    e = range[i++];
+                hash.put(buffer);
+            }
+            if (const remaining = end - i)
+            {
+                foreach (ref e; buffer[0 .. remaining])
+                    e = range[i++];
+                hash.put(buffer[0 .. remaining]);
+            }
+            return hash.finish();
+        }
+        else
+        {
+            for (;;)
+            {
+                size_t n = buffer.length;
+                foreach (i, ref e; buffer)
+                {
+                    if (range.empty)
+                    {
+                        n = i;
+                        break;
+                    }
+                    e = range.front;
+                    range.popFront();
+                }
+                if (n)
+                    hash.put(buffer[0 .. n]);
+                if (n != buffer.length)
+                    return hash.finish();
+            }
+        }
+    }
 }
 
 ///
@@ -606,7 +657,7 @@ interface Digest
         @trusted nothrow ubyte[] finish();
         ///ditto
         nothrow ubyte[] finish(ubyte[] buf);
-        //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
+        // https://issues.dlang.org/show_bug.cgi?id=6549
         /*in
         {
             assert(buf.length >= this.length);
@@ -715,7 +766,7 @@ enum Order : bool
  * the return value, effectively avoiding dynamic allocation.
  */
 char[num*2] toHexString(Order order = Order.increasing, size_t num, LetterCase letterCase = LetterCase.upper)
-(in ubyte[num] digest)
+(const ubyte[num] digest)
 {
 
     char[num*2] result;

@@ -68,7 +68,8 @@ class MmFile
      * Open memory mapped file filename for reading.
      * File is closed when the object instance is deleted.
      * Throws:
-     *  std.file.FileException
+     *  - On POSIX, $(REF ErrnoException, std, exception).
+     *  - On Windows, $(REF WindowsException, std, windows, syserror).
      */
     this(string filename)
     {
@@ -164,7 +165,8 @@ class MmFile
      *      with 0 meaning map the entire file. The window size must be a
      *      multiple of the memory allocation page size.
      * Throws:
-     *  std.file.FileException
+     *  - On POSIX, $(REF ErrnoException, std, exception).
+     *  - On Windows, $(REF WindowsException, std, windows, syserror).
      */
     this(string filename, Mode mode, ulong size, void* address,
             size_t window = 0)
@@ -668,7 +670,6 @@ private:
     assert( data2[$-1] == 'b' );
 
     destroy(mf);
-    GC.free(&mf);
 
     std.file.remove(test_file);
     // Create anonymous mapping
@@ -676,7 +677,7 @@ private:
 }
 
 version (linux)
-@system unittest // Issue 14868
+@system unittest // https://issues.dlang.org/show_bug.cgi?id=14868
 {
     import std.file : deleteme;
     import std.typecons : scoped;
@@ -699,7 +700,9 @@ version (linux)
     assert(.close(fd) == -1);
 }
 
-@system unittest // Issue 14994, 14995
+// https://issues.dlang.org/show_bug.cgi?id=14994
+// https://issues.dlang.org/show_bug.cgi?id=14995
+@system unittest
 {
     import std.file : deleteme;
     import std.typecons : scoped;
@@ -721,4 +724,96 @@ version (linux)
 {
     MmFile shar = new MmFile(null, MmFile.Mode.readWrite, 10, null, 0);
     void[] output = shar[0 .. $];
+}
+
+@system unittest
+{
+    import std.file : deleteme;
+    auto name = std.file.deleteme ~ "-test.tmp";
+    scope(exit) std.file.remove(name);
+
+    std.file.write(name, "abcd");
+    {
+        scope MmFile mmf = new MmFile(name);
+        string p;
+
+        assert(mmf[0] == 'a');
+        p = cast(string) mmf[];
+        assert(p[1] == 'b');
+        p = cast(string) mmf[0 .. 4];
+        assert(p[2] == 'c');
+    }
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.read, 0, null);
+        string p;
+
+        assert(mmf[0] == 'a');
+        p = cast(string) mmf[];
+        assert(mmf.length == 4);
+        assert(p[1] == 'b');
+        p = cast(string) mmf[0 .. 4];
+        assert(p[2] == 'c');
+    }
+    std.file.remove(name);
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.readWriteNew, 4, null);
+        char[] p = cast(char[]) mmf[];
+        p[] = "1234";
+        mmf[3] = '5';
+        assert(mmf[2] == '3');
+        assert(mmf[3] == '5');
+    }
+    {
+        string p = cast(string) std.file.read(name);
+        assert(p[] == "1235");
+    }
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.readWriteNew, 4, null);
+        char[] p = cast(char[]) mmf[];
+        p[] = "5678";
+        mmf[3] = '5';
+        assert(mmf[2] == '7');
+        assert(mmf[3] == '5');
+        assert(cast(string) mmf[] == "5675");
+    }
+    {
+        string p = cast(string) std.file.read(name);
+        assert(p[] == "5675");
+    }
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.readWrite, 4, null);
+        char[] p = cast(char[]) mmf[];
+        assert(cast(char[]) mmf[] == "5675");
+        p[] = "9102";
+        mmf[2] = '5';
+        assert(cast(string) mmf[] == "9152");
+    }
+    {
+        string p = cast(string) std.file.read(name);
+        assert(p[] == "9152");
+    }
+    std.file.remove(name);
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.readWrite, 4, null);
+        char[] p = cast(char[]) mmf[];
+        p[] = "abcd";
+        mmf[2] = '5';
+        assert(cast(string) mmf[] == "ab5d");
+    }
+    {
+        string p = cast(string) std.file.read(name);
+        assert(p[] == "ab5d");
+    }
+    {
+        scope MmFile mmf = new MmFile(name, MmFile.Mode.readCopyOnWrite, 4, null);
+        char[] p = cast(char[]) mmf[];
+        assert(cast(string) mmf[] == "ab5d");
+        p[] = "9102";
+        mmf[2] = '5';
+        assert(cast(string) mmf[] == "9152");
+    }
+    {
+        string p = cast(string) std.file.read(name);
+        assert(p[] == "ab5d");
+    }
 }

@@ -664,7 +664,8 @@ class UnCompress
         return destbuf;
     }
 
-    // Test for issues 3191 and 9505
+    // Test for https://issues.dlang.org/show_bug.cgi?id=3191 and
+    // https://issues.dlang.org/show_bug.cgi?id=9505
     @system unittest
     {
         import std.algorithm.comparison;
@@ -880,7 +881,8 @@ import std.stdio;
     assert( output[] == input[] );
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=15457
 @system unittest
 {
-    static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
+    static assert(__traits(compiles, etc.c.zlib.gzclose(null)));
 }

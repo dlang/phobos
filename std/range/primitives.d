@@ -381,7 +381,7 @@ void put(R, E)(ref R r, E e)
     }
     //Optional optimization block for straight up array to array copy.
     else static if (isDynamicArray!R &&
-                    !(isAutodecodableString!R && !isAggregateType!R) &&
+                    !isAutodecodableString!R &&
                     isDynamicArray!E &&
                     is(typeof(r[] = e[])))
     {
@@ -512,7 +512,7 @@ void put(R, E)(ref R r, E e)
 private void putChar(R, E)(ref R r, E e)
 if (isSomeChar!E)
 {
-    ////@@@9186@@@: Can't use (E[]).init
+    // https://issues.dlang.org/show_bug.cgi?id=9186: Can't use (E[]).init
     ref const( char)[] cstringInit();
     ref const(wchar)[] wstringInit();
     ref const(dchar)[] dstringInit();
@@ -802,19 +802,19 @@ pure @safe unittest
     put(c, "hello"d);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=9823
 @system unittest
 {
-    // issue 9823
     const(char)[] r;
     void delegate(const(char)[]) dg = (s) { r = s; };
     put(dg, ["ABC"]);
     assert(r == "ABC");
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10571
 @safe unittest
 {
-    // issue 10571
-    import std.format;
+    import std.format.write : formattedWrite;
     string buf;
     formattedWrite((scope const(char)[] s) { buf ~= s; }, "%s", "hello");
     assert(buf == "hello");
@@ -822,7 +822,7 @@ pure @safe unittest
 
 @safe unittest
 {
-    import std.format;
+    import std.format.write : formattedWrite;
     import std.meta : AliasSeq;
     struct PutC(C)
     {
@@ -972,6 +972,16 @@ The semantics of a forward range (not checkable during compilation)
 are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with `save` and using it later.
+
+`save` behaves in many ways like a copy constructor, and its
+implementation typically is done using copy construction.
+
+The existence of a copy constructor, however, does not imply
+the range is a forward range. For example, a range that reads
+from a TTY consumes its input and cannot save its place and
+read it again, and so cannot be a forward range and cannot
+have a `save` function.
+
 
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
@@ -1319,7 +1329,8 @@ template ElementType(R)
     static assert(is(ElementType!(char[0]) == dchar));
 }
 
-@safe unittest //11336
+// https://issues.dlang.org/show_bug.cgi?id=11336
+@safe unittest
 {
     static struct S
     {
@@ -1328,7 +1339,8 @@ template ElementType(R)
     static assert(is(ElementType!(S[]) == S));
 }
 
-@safe unittest // 11401
+// https://issues.dlang.org/show_bug.cgi?id=11401
+@safe unittest
 {
     // ElementType should also work for non-@propety 'front'
     struct E { ushort id; }
@@ -1577,12 +1589,12 @@ template hasLength(R)
     struct A { ulong length; }
     struct B { @property uint length() { return 0; } }
 
-    version (X86)
+    static if (is(size_t == uint))
     {
         static assert(!hasLength!(A));
         static assert(hasLength!(B));
     }
-    else version (X86_64)
+    else static if (is(size_t == ulong))
     {
         static assert(hasLength!(A));
         static assert(!hasLength!(B));
@@ -1748,6 +1760,20 @@ if (isInputRange!Range && !isInfinite!Range)
     else
     {
         size_t result;
+        static if (autodecodeStrings && isNarrowString!Range)
+        {
+            import std.utf : codeUnitLimit;
+            result = range.length;
+            foreach (const i, const c; range)
+            {
+                if (c >= codeUnitLimit!Range)
+                {
+                    result = i;
+                    break;
+                }
+            }
+            range = range[result .. $];
+        }
         for ( ; !range.empty ; range.popFront() )
             ++result;
         return result;
@@ -1764,6 +1790,20 @@ if (isInputRange!Range)
     else
     {
         size_t result;
+        static if (autodecodeStrings && isNarrowString!Range)
+        {
+            import std.utf : codeUnitLimit;
+            result = upTo > range.length ? range.length : upTo;
+            foreach (const i, const c; range[0 .. result])
+            {
+                if (c >= codeUnitLimit!Range)
+                {
+                    result = i;
+                    break;
+                }
+            }
+            range = range[result .. $];
+        }
         for ( ; result < upTo && !range.empty ; range.popFront() )
             ++result;
         return result;
@@ -2230,7 +2270,7 @@ equivalent to `popFront(array)`. For $(GLOSSARY narrow strings),
 point).
 */
 void popFront(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
@@ -2253,13 +2293,13 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 void popFront(C)(scope ref inout(C)[] str) @trusted pure nothrow
-if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
+if (isAutodecodableString!(C[]))
 {
     import std.algorithm.comparison : min;
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
-    static if (is(Unqual!C == char))
+    static if (is(immutable C == immutable char))
     {
         static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -2269,17 +2309,10 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
         ];
 
         immutable c = str[0];
-        if (c < 192)
-        {
-            str = str.ptr[1 .. str.length];
-        }
-        else
-        {
-            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
-        }
-
+        immutable charWidth = c < 192 ? 1 : charWidthTab.ptr[c - 192];
+        str = str.ptr[min(str.length, charWidth) .. str.length];
     }
-    else static if (is(Unqual!C == wchar))
+    else static if (is(immutable C == immutable wchar))
     {
         immutable u = str[0];
         immutable seqLen = 1 + (u >= 0xD800 && u <= 0xDBFF);
@@ -2323,7 +2356,8 @@ if (isAutodecodableString!(C[]) && !isAggregateType!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-@safe unittest // issue 16090
+// https://issues.dlang.org/show_bug.cgi?id=16090
+@safe unittest
 {
     string s = "\u00E4";
     assert(s.length == 2);
@@ -2351,7 +2385,7 @@ equivalent to `popBack(array)`. For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 void popBack(T)(scope ref inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -2374,7 +2408,7 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 void popBack(T)(scope ref inout(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : strideBack;
     assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
@@ -2410,10 +2444,19 @@ if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
 }
 
 /**
-Autodecoding is enabled if this is set to true.
+EXPERIMENTAL: to try out removing autodecoding, set the version
+`NoAutodecodeStrings`. Most things are expected to fail with this version
+currently.
 */
-
-enum autodecodeStrings = true;
+version (NoAutodecodeStrings)
+{
+    enum autodecodeStrings = false;
+}
+else
+{
+    ///
+    enum autodecodeStrings = true;
+}
 
 /**
 Implements the range interface primitive `front` for built-in
@@ -2424,7 +2467,7 @@ front) automatically returns the first $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref inout(T) front(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     return a[0];
@@ -2453,7 +2496,7 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 
 /// ditto
 @property dchar front(T)(scope const(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2470,7 +2513,7 @@ back) automatically returns the last $(GLOSSARY code point) as _a $(D
 dchar).
 */
 @property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
-if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[]))
+if (!isAutodecodableString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];
@@ -2497,10 +2540,25 @@ if (!(isAutodecodableString!(T[]) && !isAggregateType!(T[])) && !is(T[] == void[
 /// ditto
 // Specialization for strings
 @property dchar back(T)(scope const(T)[] a) @safe pure
-if (isAutodecodableString!(T[]) && !isAggregateType!(T[]))
+if (isAutodecodableString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
+}
+
+/*
+Implements `length` for a range by forwarding it to `member`.
+*/
+package(std) mixin template ImplementLength(alias member)
+{
+    static if (hasLength!(typeof(member)))
+    {
+        @property auto length()
+        {
+            return member.length;
+        }
+        alias opDollar = length;
+    }
 }

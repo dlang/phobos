@@ -86,7 +86,7 @@ import std.datetime.timezone;// : LocalTime, SimpleTimeZone, TimeZone, UTC;
 import std.exception : enforce;
 import std.format : format;
 import std.range.primitives;
-import std.traits : isIntegral, isSigned, isSomeString, Unqual, isNarrowString;
+import std.traits : isIntegral, isSigned, isSomeString, isNarrowString;
 
 version (Windows)
 {
@@ -113,6 +113,16 @@ version (StdUnittest)
     initializeTests();
 }
 
+version (unittest) private bool clockSupported(ClockType c)
+{
+    // Skip unsupported clocks on older linux kernels, assume that only
+    // CLOCK_MONOTONIC and CLOCK_REALTIME exist, as that is the lowest
+    // common denominator supported by all versions of Linux pre-2.6.12.
+    version (Linux_Pre_2639)
+        return c == ClockType.normal || c == ClockType.precise;
+    else
+        return true;
+}
 
 /++
     Effectively a namespace to make it clear that the methods it contains are
@@ -168,10 +178,13 @@ public:
         import std.meta : AliasSeq;
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            auto value1 = Clock.currTime!ct;
-            auto value2 = Clock.currTime!ct(UTC());
-            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
-            assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
+            static if (clockSupported(ct))
+            {
+                auto value1 = Clock.currTime!ct;
+                auto value2 = Clock.currTime!ct(UTC());
+                assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+                assert(abs(value1 - value2) <= seconds(2), format("ClockType.%s", ct));
+            }
         }}
     }
 
@@ -309,6 +322,25 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
+            else version (OpenBSD)
+            {
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.openbsd.time : clock_gettime, CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts;
+                    if (clock_gettime(clockArg, &ts) != 0)
+                        throw new TimeException("Call to clock_gettime() failed");
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else version (DragonFlyBSD)
             {
                 import core.sys.dragonflybsd.time : clock_gettime, CLOCK_REALTIME,
@@ -366,7 +398,7 @@ public:
     @safe unittest
     {
         import std.format : format;
-        import std.math : abs;
+        import std.math.algebraic : abs;
         import std.meta : AliasSeq;
         enum limit = convert!("seconds", "hnsecs")(2);
 
@@ -377,10 +409,13 @@ public:
 
         static foreach (ct; AliasSeq!(ClockType.coarse, ClockType.precise, ClockType.second))
         {{
-            auto value1 = Clock.currStdTime!ct;
-            auto value2 = Clock.currStdTime!ct;
-            assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
-            assert(abs(value1 - value2) <= limit);
+            static if (clockSupported(ct))
+            {
+                auto value1 = Clock.currStdTime!ct;
+                auto value2 = Clock.currStdTime!ct;
+                assert(value1 <= value2, format("%s %s (ClockType: %s)", value1, value2, ct));
+                assert(abs(value1 - value2) <= limit);
+            }
         }}
     }
 
@@ -410,6 +445,8 @@ private:
     unlike $(REF DateTime,std,datetime,date), it is not optimized for
     calendar-based operations, and getting individual units from it such as
     years or days is going to involve conversions and be less efficient.
+
+    An $(I hnsec) (hecto-nanosecond) is 100 nanoseconds. There are 10,000,000 hnsecs in a second.
 
     For calendar-based operations that don't
     care about time zones, then $(REF DateTime,std,datetime,date) would be
@@ -2074,7 +2111,7 @@ public:
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
         internal representation of $(LREF SysTime).
      +/
-    @property long stdTime() @safe const pure nothrow scope
+    @property long stdTime() @safe const pure nothrow scope @nogc
     {
         return _stdTime;
     }
@@ -2523,7 +2560,7 @@ public:
 
     version (StdDdoc)
     {
-        private struct timespec {}
+        version (Windows) private struct timespec {}
         /++
             Returns a `timespec` which represents this $(LREF SysTime).
 
@@ -7916,7 +7953,7 @@ public:
         Returns a $(REF Date,std,datetime,date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == Date))
+        if (is(immutable T == immutable Date))
     {
         return Date(dayOfGregorianCal);
     }
@@ -7957,7 +7994,7 @@ public:
         $(LREF SysTime).
       +/
     DateTime opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == DateTime))
+        if (is(immutable T == immutable DateTime))
     {
         try
         {
@@ -8023,7 +8060,7 @@ public:
         $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() @safe const nothrow scope
-        if (is(Unqual!T == TimeOfDay))
+        if (is(immutable T == immutable TimeOfDay))
     {
         try
         {
@@ -8074,13 +8111,13 @@ public:
     }
 
 
-    // Temporary hack until bug http://d.puremagic.com/issues/show_bug.cgi?id=4867 is fixed.
+    // Temporary hack until bug https://issues.dlang.org/show_bug.cgi?id=4867 is fixed.
     // This allows assignment from const(SysTime) to SysTime.
     // It may be a good idea to keep it though, since casting from a type to itself
     // should be allowed, and it doesn't work without this opCast() since opCast()
     // has already been defined for other types.
     SysTime opCast(T)() @safe const pure nothrow scope
-        if (is(Unqual!T == SysTime))
+        if (is(immutable T == immutable SysTime))
     {
         return SysTime(_stdTime, _timezone);
     }
@@ -8271,11 +8308,16 @@ public:
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
         is the time zone).
 
+        Default behaviour:
         Note that the number of digits in the fractional seconds varies with the
         number of fractional seconds. It's a maximum of 7 (which would be
         hnsecs), but only has as many as are necessary to hold the correct value
         (so no trailing zeroes), and if there are no fractional seconds, then
         there is no decimal point.
+
+        The optional parameter "prec" allows to change the default behavior by
+        specifying the precision of the fractional seconds. The accepted values
+        are in the range [-1, 7], where -1 represents the default behavior.
 
         If this $(LREF SysTime)'s time zone is
         $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
@@ -8288,25 +8330,30 @@ public:
         Params:
             writer = A `char` accepting
             $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+            prec = An `int` representing the desired precision. Acceptable values range from -1 to 7, where -1 represents the default behavior.
         Returns:
             A `string` when not using an output range; `void` otherwise.
       +/
-    string toISOExtString() @safe const nothrow scope
+    string toISOExtString(int prec = -1) @safe const nothrow scope
     {
+        assert(prec >= -1 && prec <= 7, "Precision must be in the range [-1, 7]");
+
         import std.array : appender;
         auto app = appender!string();
         app.reserve(35);
         try
-            toISOExtString(app);
+            toISOExtString(app, prec);
         catch (Exception e)
             assert(0, "toISOExtString() threw.");
         return app.data;
     }
 
     /// ditto
-    void toISOExtString(W)(ref W writer) const scope
+    void toISOExtString(W)(ref W writer, int prec = -1) const scope
     if (isOutputRange!(W, char))
     {
+        assert(prec >= -1 && prec <= 7, "Precision must be in the range [-1, 7]");
+
         immutable adjustedTime = adjTime;
         long hnsecs = adjustedTime;
 
@@ -8328,14 +8375,14 @@ public:
         if (_timezone is LocalTime())
         {
             dateTime.toISOExtString(writer);
-            fracSecsToISOString(writer, cast(int) hnsecs);
+            fracSecsToISOString(writer, cast(int) hnsecs, prec);
             return;
         }
 
         if (_timezone is UTC())
         {
             dateTime.toISOExtString(writer);
-            fracSecsToISOString(writer, cast(int) hnsecs);
+            fracSecsToISOString(writer, cast(int) hnsecs, prec);
             put(writer, 'Z');
             return;
         }
@@ -8343,7 +8390,7 @@ public:
         immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
         dateTime.toISOExtString(writer);
-        fracSecsToISOString(writer, cast(int) hnsecs);
+        fracSecsToISOString(writer, cast(int) hnsecs, prec);
         SimpleTimeZone.toISOExtString(writer, utcOffset);
     }
 
@@ -8364,6 +8411,15 @@ public:
 
         assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString() ==
                "-0004-01-05T00:00:02.052092");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(4) ==
+               "-0004-01-05T00:00:02.0520");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(2) ==
+               "-0004-01-05T00:00:02.05");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), hnsecs(520_920)).toISOExtString(7) ==
+               "-0004-01-05T00:00:02.0520920");
     }
 
     @safe unittest
@@ -8716,6 +8772,7 @@ public:
         auto found = (skipFirst ? str[1..$] : str).byCodeUnit.find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str.byCodeUnit) foundTZ; // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -8723,19 +8780,19 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
                     static if (isNarrowString!S)
                     {
-                        fracSecStr = found[0][0 .. $ - foundTZ[0].length].source;
-                        zoneStr = foundTZ[0].source;
+                        fracSecStr = found[0][0 .. $ - foundTZ.length].source;
+                        zoneStr = foundTZ.source;
                     }
                     else
                     {
-                        fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                        zoneStr = foundTZ[0];
+                        fracSecStr = found[0][0 .. $ - foundTZ.length];
+                        zoneStr = foundTZ;
                     }
                 }
                 else
@@ -8865,7 +8922,7 @@ public:
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
-        test("20101222T172201", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("20101222T172201", SysTime(DateTime(2010, 12, 22, 17, 22, 1)));
         test("19990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test("-19990706T123033", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
         test("+019990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
@@ -8873,16 +8930,16 @@ public:
         test(" 19990706T123033", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test(" 19990706T123033 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        test("19070707T121212.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("19070707T121212.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("19070707T121212.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        test("20100704T000000.00000000", SysTime(Date(2010, 07, 04)));
-        test("20100704T000000.00000009", SysTime(Date(2010, 07, 04)));
-        test("20100704T000000.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
-        test("19070707T121212.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("19070707T121212.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("19070707T121212.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        test("19070707T121212.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("19070707T121212.0", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("19070707T121212.0000000", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("19070707T121212.0000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), hnsecs(1)));
+        test("20100704T000000.00000000", SysTime(Date(2010, 7, 4)));
+        test("20100704T000000.00000009", SysTime(Date(2010, 7, 4)));
+        test("20100704T000000.00000019", SysTime(DateTime(2010, 7, 4), hnsecs(1)));
+        test("19070707T121212.000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("19070707T121212.0000010", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("19070707T121212.001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
+        test("19070707T121212.0010000", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
 
         auto west60 = new immutable SimpleTimeZone(hours(-1));
         auto west90 = new immutable SimpleTimeZone(minutes(-90));
@@ -8891,56 +8948,56 @@ public:
         auto east90 = new immutable SimpleTimeZone(minutes(90));
         auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        test("20101222T172201Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        test("20101222T172201-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("20101222T172201-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("20101222T172201-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
-        test("20101222T172201-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
-        test("20101222T172201+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("20101222T172201+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("20101222T172201+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("20101222T172201+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
+        test("20101222T172201Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), UTC()));
+        test("20101222T172201-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("20101222T172201-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("20101222T172201-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west90));
+        test("20101222T172201-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west480));
+        test("20101222T172201+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("20101222T172201+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("20101222T172201+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("20101222T172201+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east480));
 
         test("20101103T065106.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
-        test("20101222T172201.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
-        test("20101222T172201.23112-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
-        test("20101222T172201.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
-        test("20101222T172201.1-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
-        test("20101222T172201.55-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
-        test("20101222T172201.1234567+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
-        test("20101222T172201.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("20101222T172201.0000000+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("20101222T172201.45+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+        test("20101222T172201.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_341_200), UTC()));
+        test("20101222T172201.23112-0100", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_311_200), west60));
+        test("20101222T172201.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), west60));
+        test("20101222T172201.1-0130", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_000_000), west90));
+        test("20101222T172201.55-0800", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(5_500_000), west480));
+        test("20101222T172201.1234567+0100", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_234_567), east60));
+        test("20101222T172201.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("20101222T172201.0000000+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("20101222T172201.45+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), east480));
 
         // for dstring coverage
         assert(SysTime.fromISOString("20101222T172201.23112-0100"d) == SysTime(
-            DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
+            DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_311_200), west60));
         assert(SysTime.fromISOString("19070707T121212.0010000"d) == SysTime(
-            DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+            DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
 
         // @@@DEPRECATED_2019-07@@@
         // This isn't deprecated per se, but that text will make it so that it
         // pops up when deprecations are moved along around July 2019. At that
         // time, we will update fromISOString so that it is conformant with ISO
         // 8601, and it will no longer accept ISO extended time zones (it does
-        // currently because of issue #15654 - toISOString used to incorrectly
-        // use the ISO extended time zone format). These tests will then start
-        // failing will need to be updated accordingly. Also, the notes about
-        // this issue in toISOString and fromISOString's documentation will need
-        // to be removed.
-        test("20101222T172201-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("20101222T172201-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
-        test("20101222T172201-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
-        test("20101222T172201+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("20101222T172201+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("20101222T172201+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
+        // currently because of https://issues.dlang.org/show_bug.cgi?id=15654
+        // toISOString used to incorrectly use the ISO extended time zone format).
+        // These tests will then start failing will need to be updated accordingly.
+        // Also, the notes about this issue in toISOString and fromISOString's
+        // documentation will need to be removed.
+        test("20101222T172201-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("20101222T172201-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west90));
+        test("20101222T172201-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west480));
+        test("20101222T172201+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("20101222T172201+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("20101222T172201+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east480));
 
-        test("20101222T172201.23112-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
-        test("20101222T172201.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
-        test("20101222T172201.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
-        test("20101222T172201.1234567+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
-        test("20101222T172201.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("20101222T172201.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+        test("20101222T172201.23112-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_311_200), west60));
+        test("20101222T172201.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_000_000), west90));
+        test("20101222T172201.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(5_500_000), west480));
+        test("20101222T172201.1234567+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_234_567), east60));
+        test("20101222T172201.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("20101222T172201.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), east480));
 
         static void testScope(scope ref string str) @safe
         {
@@ -8948,7 +9005,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import std.conv : to;
@@ -9016,6 +9073,7 @@ public:
         auto found = str[tIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str) foundTZ;  // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -9023,12 +9081,12 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
-                    fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                    zoneStr = foundTZ[0];
+                    fracSecStr = found[0][0 .. $ - foundTZ.length];
+                    zoneStr = foundTZ;
                 }
                 else
                     fracSecStr = found[0];
@@ -9140,7 +9198,7 @@ public:
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
-        test("2010-12-22T17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("2010-12-22T17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 1)));
         test("1999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test("-1999-07-06T12:30:33", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
         test("+01999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
@@ -9148,16 +9206,16 @@ public:
         test(" 1999-07-06T12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test(" 1999-07-06T12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        test("1907-07-07T12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("1907-07-07T12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("1907-07-07T12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        test("2010-07-04T00:00:00.00000000", SysTime(Date(2010, 07, 04)));
-        test("2010-07-04T00:00:00.00000009", SysTime(Date(2010, 07, 04)));
-        test("2010-07-04T00:00:00.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
-        test("1907-07-07T12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("1907-07-07T12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("1907-07-07T12:12:12.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        test("1907-07-07T12:12:12.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("1907-07-07T12:12:12.0", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("1907-07-07T12:12:12.0000000", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("1907-07-07T12:12:12.0000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), hnsecs(1)));
+        test("2010-07-04T00:00:00.00000000", SysTime(Date(2010, 7, 4)));
+        test("2010-07-04T00:00:00.00000009", SysTime(Date(2010, 7, 4)));
+        test("2010-07-04T00:00:00.00000019", SysTime(DateTime(2010, 7, 4), hnsecs(1)));
+        test("1907-07-07T12:12:12.000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("1907-07-07T12:12:12.0000010", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("1907-07-07T12:12:12.001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
+        test("1907-07-07T12:12:12.0010000", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
 
         auto west60 = new immutable SimpleTimeZone(hours(-1));
         auto west90 = new immutable SimpleTimeZone(minutes(-90));
@@ -9166,28 +9224,28 @@ public:
         auto east90 = new immutable SimpleTimeZone(minutes(90));
         auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        test("2010-12-22T17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        test("2010-12-22T17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("2010-12-22T17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("2010-12-22T17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
-        test("2010-12-22T17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
-        test("2010-12-22T17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-12-22T17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-12-22T17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("2010-12-22T17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
+        test("2010-12-22T17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), UTC()));
+        test("2010-12-22T17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("2010-12-22T17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("2010-12-22T17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west90));
+        test("2010-12-22T17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west480));
+        test("2010-12-22T17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-12-22T17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-12-22T17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("2010-12-22T17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east480));
 
         test("2010-11-03T06:51:06.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
-        test("2010-12-22T17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
+        test("2010-12-22T17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_341_200), UTC()));
         test("2010-12-22T17:22:01.23112-01:00",
-             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
-        test("2010-12-22T17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
-        test("2010-12-22T17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
-        test("2010-12-22T17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+             SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_311_200), west60));
+        test("2010-12-22T17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), west60));
+        test("2010-12-22T17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_000_000), west90));
+        test("2010-12-22T17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(5_500_000), west480));
         test("2010-12-22T17:22:01.1234567+01:00",
-             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
-        test("2010-12-22T17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-12-22T17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("2010-12-22T17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+             SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_234_567), east60));
+        test("2010-12-22T17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-12-22T17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("2010-12-22T17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), east480));
 
         static void testScope(scope ref string str) @safe
         {
@@ -9195,7 +9253,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import core.time;
@@ -9264,6 +9322,7 @@ public:
         auto found = str[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
 
+        typeof(str) foundTZ;  // needs to have longer lifetime than zoneStr
         typeof(str) fracSecStr;
         typeof(str) zoneStr;
 
@@ -9271,12 +9330,12 @@ public:
         {
             if (found[1] == 1)
             {
-                auto foundTZ = found[0].find('Z', '+', '-');
+                foundTZ = found[0].find('Z', '+', '-')[0];
 
-                if (foundTZ[1] != 0)
+                if (foundTZ.length != 0)
                 {
-                    fracSecStr = found[0][0 .. $ - foundTZ[0].length];
-                    zoneStr = foundTZ[0];
+                    fracSecStr = found[0][0 .. $ - foundTZ.length];
+                    zoneStr = foundTZ;
                 }
                 else
                     fracSecStr = found[0];
@@ -9391,7 +9450,7 @@ public:
                 throw new AssertError("unittest failure", __FILE__, line);
         }
 
-        test("2010-Dec-22 17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+        test("2010-Dec-22 17:22:01", SysTime(DateTime(2010, 12, 22, 17, 22, 1)));
         test("1999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test("-1999-Jul-06 12:30:33", SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
         test("+01999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
@@ -9399,16 +9458,16 @@ public:
         test(" 1999-Jul-06 12:30:33", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
         test(" 1999-Jul-06 12:30:33 ", SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-        test("1907-Jul-07 12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("1907-Jul-07 12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-        test("2010-Jul-04 00:00:00.00000000", SysTime(Date(2010, 07, 04)));
-        test("2010-Jul-04 00:00:00.00000009", SysTime(Date(2010, 07, 04)));
-        test("2010-Jul-04 00:00:00.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
-        test("1907-Jul-07 12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
-        test("1907-Jul-07 12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("1907-Jul-07 12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
-        test("1907-Jul-07 12:12:12.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
-        test("1907-Jul-07 12:12:12.0010000", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
+        test("1907-Jul-07 12:12:12.0", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("1907-Jul-07 12:12:12.0000000", SysTime(DateTime(1907, 7, 7, 12, 12, 12)));
+        test("2010-Jul-04 00:00:00.00000000", SysTime(Date(2010, 7, 4)));
+        test("2010-Jul-04 00:00:00.00000009", SysTime(Date(2010, 7, 4)));
+        test("2010-Jul-04 00:00:00.00000019", SysTime(DateTime(2010, 7, 4), hnsecs(1)));
+        test("1907-Jul-07 12:12:12.0000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), hnsecs(1)));
+        test("1907-Jul-07 12:12:12.000001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("1907-Jul-07 12:12:12.0000010", SysTime(DateTime(1907, 7, 7, 12, 12, 12), usecs(1)));
+        test("1907-Jul-07 12:12:12.001", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
+        test("1907-Jul-07 12:12:12.0010000", SysTime(DateTime(1907, 7, 7, 12, 12, 12), msecs(1)));
 
         auto west60 = new immutable SimpleTimeZone(hours(-1));
         auto west90 = new immutable SimpleTimeZone(minutes(-90));
@@ -9417,28 +9476,28 @@ public:
         auto east90 = new immutable SimpleTimeZone(minutes(90));
         auto east480 = new immutable SimpleTimeZone(hours(8));
 
-        test("2010-Dec-22 17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-        test("2010-Dec-22 17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("2010-Dec-22 17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
-        test("2010-Dec-22 17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
-        test("2010-Dec-22 17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));
-        test("2010-Dec-22 17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-Dec-22 17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-Dec-22 17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("2010-Dec-22 17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east480));
+        test("2010-Dec-22 17:22:01Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), UTC()));
+        test("2010-Dec-22 17:22:01-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("2010-Dec-22 17:22:01-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west60));
+        test("2010-Dec-22 17:22:01-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west90));
+        test("2010-Dec-22 17:22:01-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), west480));
+        test("2010-Dec-22 17:22:01+01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-Dec-22 17:22:01+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-Dec-22 17:22:01+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("2010-Dec-22 17:22:01+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east480));
 
         test("2010-Nov-03 06:51:06.57159Z", SysTime(DateTime(2010, 11, 3, 6, 51, 6), hnsecs(5715900), UTC()));
-        test("2010-Dec-22 17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_341_200), UTC()));
+        test("2010-Dec-22 17:22:01.23412Z", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_341_200), UTC()));
         test("2010-Dec-22 17:22:01.23112-01:00",
-             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(2_311_200), west60));
-        test("2010-Dec-22 17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), west60));
-        test("2010-Dec-22 17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_000_000), west90));
-        test("2010-Dec-22 17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(5_500_000), west480));
+             SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(2_311_200), west60));
+        test("2010-Dec-22 17:22:01.45-01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), west60));
+        test("2010-Dec-22 17:22:01.1-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_000_000), west90));
+        test("2010-Dec-22 17:22:01.55-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(5_500_000), west480));
         test("2010-Dec-22 17:22:01.1234567+01:00",
-             SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(1_234_567), east60));
-        test("2010-Dec-22 17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
-        test("2010-Dec-22 17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
-        test("2010-Dec-22 17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+             SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(1_234_567), east60));
+        test("2010-Dec-22 17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east60));
+        test("2010-Dec-22 17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 1), east90));
+        test("2010-Dec-22 17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 1), hnsecs(4_500_000), east480));
 
         static void testScope(scope ref string str) @safe
         {
@@ -9446,7 +9505,7 @@ public:
         }
     }
 
-    // bug# 17801
+    // https://issues.dlang.org/show_bug.cgi?id=17801
     @safe unittest
     {
         import core.time;
@@ -9650,7 +9709,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow @nogc
 
     assert(unixTimeToStdTime(int.max) == 642_830_804_470_000_000L);
     assert(SysTime(unixTimeToStdTime(int.max)) ==
-           SysTime(DateTime(2038, 1, 19, 3, 14, 07), UTC()));
+           SysTime(DateTime(2038, 1, 19, 3, 14, 7), UTC()));
 
     assert(unixTimeToStdTime(-127_127) == 621_354_696_730_000_000L);
     assert(SysTime(unixTimeToStdTime(-127_127)) ==
@@ -10244,7 +10303,7 @@ SysTime parseRFC822DateTime()(scope const char[] value) @safe
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(scope R value)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     import std.algorithm.searching : find, all;
     import std.ascii : isDigit, isAlpha, isPrintable;
@@ -10329,7 +10388,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
     }
 
     // year
-    auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
+    auto found = value[2 .. value.length].find!(not!(isDigit))();
     size_t yearLen = value.length - found.length;
     if (found.length == 0)
         throw new DateTimeException("Invalid year");
@@ -10419,7 +10478,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
             case "J": case "j": throw new DateTimeException("Invalid timezone");
             default:
             {
-                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                if (all!(isAlpha)(value[0 .. tzLen]))
                 {
                     tz = new immutable SimpleTimeZone(Duration.zero);
                     break;
@@ -10513,7 +10572,8 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         alias testBad = testBadParse822!cr;
@@ -10784,7 +10844,8 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    {(){ // workaround slow optimizations for large functions @@@BUG@@@ 2396
+    {(){ // workaround slow optimizations for large functions
+         // https://issues.dlang.org/show_bug.cgi?id=2396
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         {
@@ -10894,7 +10955,7 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
 
         // test time zones
         {
-            auto dt = DateTime(1982, 05, 03, 12, 22, 04);
+            auto dt = DateTime(1982, 5, 3, 12, 22, 4);
             test("Wed, 03 May 1982 12:22:04 UT", SysTime(dt, UTC()));
             test("Wed, 03 May 1982 12:22:04 GMT", SysTime(dt, UTC()));
             test("Wed, 03 May 1982 12:22:04 EST", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-5))));
@@ -10955,13 +11016,13 @@ version (StdUnittest) private void testBadParse822(alias cr)(string str, size_t 
 
         // test that the checks for minimum length work correctly and avoid
         // any RangeErrors.
-        test("7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+        test("7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 0, 0, 0),
                                      new immutable SimpleTimeZone(Duration.zero)));
-        test("Fri,7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+        test("Fri,7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 0, 0, 0),
                                          new immutable SimpleTimeZone(Duration.zero)));
-        test("7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+        test("7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 0, 0, 0),
                                         new immutable SimpleTimeZone(Duration.zero)));
-        test("Fri,7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+        test("Fri,7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 0, 0, 0),
                                             new immutable SimpleTimeZone(Duration.zero)));
 
         auto tooShortMsg = collectExceptionMsg!DateTimeException(parseRFC822DateTime(""));
@@ -10983,32 +11044,41 @@ private:
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-string fracSecsToISOString(int hnsecs) @safe pure nothrow
+string fracSecsToISOString(int hnsecs, int prec = -1) @safe pure nothrow
 {
     import std.array : appender;
     auto w = appender!string();
     try
-        fracSecsToISOString(w, hnsecs);
+        fracSecsToISOString(w, hnsecs, prec);
     catch (Exception e)
         assert(0, "fracSecsToISOString() threw.");
     return w.data;
 }
 
-void fracSecsToISOString(W)(ref W writer, int hnsecs)
+void fracSecsToISOString(W)(ref W writer, int hnsecs, int prec = -1)
 {
     import std.conv : toChars;
     import std.range : padLeft;
 
     assert(hnsecs >= 0);
 
+    if (prec == 0)
+        return;
+
     if (hnsecs == 0)
         return;
 
     put(writer, '.');
     auto chars = hnsecs.toChars.padLeft('0', 7);
-    while (chars.back == '0')
-        chars.popBack();
-    put(writer, chars);
+
+    if (prec == -1)
+    {
+        while (chars.back == '0')
+            chars.popBack();
+        put(writer, chars);
+    }
+    else
+        put(writer, chars[0 .. prec]);
 }
 
 @safe unittest
@@ -11213,7 +11283,7 @@ if (validTimeUnits(units) &&
   +/
 R _stripCFWS(R)(R range)
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+    (is(immutable ElementType!R == immutable char) || is(immutable ElementType!R == immutable ubyte)))
 {
     immutable e = range.length;
     outer: for (size_t i = 0; i < e; )

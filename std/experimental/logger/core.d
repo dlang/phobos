@@ -168,7 +168,7 @@ The fractional second part is in milliseconds and is always 3 digits.
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
 if (isOutputRange!(OutputRange,string))
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     const auto dt = cast(DateTime) time;
     const auto fsec = time.fracSecs.total!"msecs";
@@ -657,7 +657,7 @@ private struct MsgRange
 
 private void formatString(A...)(MsgRange oRange, A args)
 {
-    import std.format : formattedWrite;
+    import std.format.write : formattedWrite;
 
     foreach (arg; args)
     {
@@ -1043,7 +1043,7 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
-                import std.format : formattedWrite;
+                import std.format.write : formattedWrite;
 
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
                                      condition))
@@ -1091,7 +1091,7 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
-                import std.format : formattedWrite;
+                import std.format.write : formattedWrite;
 
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
                 {
@@ -1368,7 +1368,7 @@ abstract class Logger
         string moduleName = __MODULE__, A...)(lazy A args)
         if ((args.length > 1
                 && !is(Unqual!(A[0]) : bool)
-                && !is(Unqual!(A[0]) == LogLevel))
+                && !is(immutable A[0] == immutable LogLevel))
             || args.length == 0)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1444,7 +1444,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
@@ -1492,7 +1492,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
@@ -1541,7 +1541,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
@@ -1587,7 +1587,7 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
-            import std.format : formattedWrite;
+            import std.format.write : formattedWrite;
 
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel))
@@ -1625,7 +1625,7 @@ private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
  */
 private @property Logger defaultSharedLoggerImpl() @trusted
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     import std.stdio : stderr;
 
     __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
@@ -1759,7 +1759,7 @@ private Logger stdLoggerDefaultThreadLogger;
 */
 private @property Logger stdThreadLocalLogImpl() @trusted
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
 
     static void*[(__traits(classInstanceSize, StdForwardLogger) - 1) / (void*).sizeof + 1] _buffer;
 
@@ -3071,7 +3071,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
 
-// Issue 14940
+// https://issues.dlang.org/show_bug.cgi?id=14940
 @safe unittest
 {
     import std.typecons : Nullable;
@@ -3101,7 +3101,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == SystemToStringMsg);
 }
 
-// Issue 17328
+// https://issues.dlang.org/show_bug.cgi?id=17328
 @safe unittest
 {
     import std.format : format;
@@ -3123,7 +3123,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(fs.length == 2);
 }
 
-// Issue 15954
+// https://issues.dlang.org/show_bug.cgi?id=15954
 @safe unittest
 {
     import std.conv : to;
@@ -3132,7 +3132,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == "123456789");
 }
 
-// Issue 16256
+// https://issues.dlang.org/show_bug.cgi?id=16256
 @safe unittest
 {
     import std.conv : to;
@@ -3141,7 +3141,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(tl.msg == "123456789");
 }
 
-// Issue 15517
+// https://issues.dlang.org/show_bug.cgi?id=15517
 @system unittest
 {
     import std.file : exists, remove, tempDir;

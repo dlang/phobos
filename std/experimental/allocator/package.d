@@ -226,8 +226,9 @@ module std.experimental.allocator;
 public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
-// Fix issue 17806: this should always be the first unittest in this module
-// in order to ensure that we use the `processAllocator` setter before the getter
+// Fix https://issues.dlang.org/show_bug.cgi?id=17806
+// this should always be the first unittest in this module in order to ensure
+// that we use the `processAllocator` setter before the getter
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -991,7 +992,7 @@ private ref RCIAllocator setupThreadAllocator()
     }
 
     assert(_threadAllocator.isNull);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
     () @trusted {
         _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[], processAllocator()));
@@ -1163,7 +1164,9 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     }
     else
     {
-        import std.conv : emplace, emplaceRef;
+        import core.internal.lifetime : emplaceRef;
+        import core.lifetime : emplace;
+
         auto m = alloc.allocate(max(stateSize!T, 1));
         if (!m.ptr) return null;
 
@@ -1246,7 +1249,9 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
     assert(outer.x == inner.getX);
 }
 
-@system unittest // bugzilla 15639 & 15772
+// https://issues.dlang.org/show_bug.cgi?id=15639
+// https://issues.dlang.org/show_bug.cgi?id=15772
+@system unittest
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -1271,7 +1276,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         A* b = alloc.make!A(42);
         assert(b.x == 42);
         assert(b.y is null);
-        import std.math : isNaN;
+        import std.math.traits : isNaN;
         assert(b.z.isNaN);
 
         b = alloc.make!A(43, "44", 45);
@@ -1410,7 +1415,8 @@ nothrow @safe @nogc unittest
         "Don't allow zero-ctor-args `make` for structs with `@disable this();`");
 }
 
-@safe unittest // issue 18937
+// https://issues.dlang.org/show_bug.cgi?id=18937
+@safe unittest
 {
     static struct S
     {
@@ -1489,7 +1495,7 @@ private T[] uninitializedFillDefault(T)(T[] array) nothrow
             memset(array.ptr, 0, T.sizeof * array.length);
         return array;
     }
-    else static if (is(Unqual!T == char) || is(Unqual!T == wchar))
+    else static if (is(immutable T == immutable char) || is(immutable T == immutable wchar))
     {
         import core.stdc.string : memset;
         if (array !is null)
@@ -1684,7 +1690,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
                 }
             }
         }
-        import std.conv : emplace;
+        import core.lifetime : emplace;
         for (; i < length; ++i)
         {
             emplace!T(&result[i], init);
@@ -1832,7 +1838,7 @@ if (isInputRange!R && !isInfinite!R)
                 alloc.deallocate(m);
         }
 
-        import std.conv : emplaceRef;
+        import core.internal.lifetime : emplaceRef;
         static if (isNarrowString!R || isRandomAccessRange!R)
         {
             foreach (j; 0 .. range.length)
@@ -1889,7 +1895,7 @@ if (isInputRange!R && !isInfinite!R)
                 }
                 result = () @trusted { return cast(T[]) m; } ();
             }
-            import std.conv : emplaceRef;
+            import core.internal.lifetime : emplaceRef;
             emplaceRef(result[initialized], range.front);
         }
 
@@ -2013,7 +2019,7 @@ if (isInputRange!R && !isInfinite!R)
             j++;
         }
     }
-    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
+    makeArray!NoCopy(Mallocator.instance, NoCopyRange()); // rvalue elements are forwarded/moved
 }
 
 // test failure with an impure, failing struct
@@ -2043,9 +2049,8 @@ if (isInputRange!R && !isInfinite!R)
     auto arr = [NoCopy(1), NoCopy(2)];
     assertThrown(makeArray!NoCopy(Mallocator.instance, arr));
 
-    // allow more copies and thus force reallocation
     i = 0;
-    maxElements = 30;
+    maxElements = 0; // disallow any postblit
     static j = 0;
 
     struct NoCopyRange
@@ -2065,25 +2070,19 @@ if (isInputRange!R && !isInfinite!R)
             j++;
         }
     }
-    assertThrown(makeArray!NoCopy(Mallocator.instance, NoCopyRange()));
 
-    maxElements = 300;
     auto arr2 = makeArray!NoCopy(Mallocator.instance, NoCopyRange());
-
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : map;
-    import std.range : iota;
-    assert(arr2.map!`a.val`.equal(iota(32, 204, 2)));
+    assert(i == j && i == 101); // all 101 rvalue elements forwarded/moved
 }
 
 version (StdUnittest)
 {
-    private struct ForcedInputRange
+    private struct ForcedInputRange(T)
     {
-        int[]* array;
+        T[]* array;
         pure nothrow @safe @nogc:
         bool empty() { return !array || (*array).empty; }
-        ref int front() { return (*array)[0]; }
+        ref T front() { return (*array)[0]; }
         void popFront() { *array = (*array)[1 .. $]; }
     }
 }
@@ -2096,7 +2095,7 @@ version (StdUnittest)
 
     void test(A)(auto ref A alloc)
     {
-        ForcedInputRange r;
+        ForcedInputRange!int r;
         long[] a = alloc.makeArray!long(r);
         assert(a.length == 0 && a.ptr is null);
         auto arr2 = arr;
@@ -2217,13 +2216,13 @@ if (isInputRange!R)
             toFill.uninitializedFillDefault;
         }
 
-        for (; !range.empty; range.popFront, toFill.popFront)
+        for (; !range.empty; range.popFront, toFill = toFill[1 .. $])
         {
-            assert(!toFill.empty);
-            import std.conv : emplace;
-            emplace!T(&toFill.front, range.front);
+            assert(toFill.length > 0);
+            import core.lifetime : emplace;
+            emplace!T(&toFill[0], range.front);
         }
-        assert(toFill.empty);
+        assert(toFill.length == 0);
     }
     else
     {
@@ -2240,7 +2239,7 @@ if (isInputRange!R)
                 array = cast(T[]) buf;
                 return false;
             }
-            import std.conv : emplace;
+            import core.lifetime : emplace;
             emplace!T(buf[$ - T.sizeof .. $], range.front);
         }
 
@@ -2263,12 +2262,42 @@ if (isInputRange!R)
 @system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
-    ForcedInputRange r;
+    ForcedInputRange!int r;
     int[] b = [ 1, 2, 3, 4 ];
     auto temp = b;
     r.array = &temp;
     assert(theAllocator.expandArray(arr, r));
     assert(arr == [1, 2, 3, 1, 2, 3, 4]);
+}
+
+// Regression test for https://issues.dlang.org/show_bug.cgi?id=20929
+@system unittest
+{
+    static void test(Char, Allocator)(auto ref Allocator alloc)
+    {
+        auto arr = alloc.makeArray!Char(1, Char('f'));
+
+        import std.utf : byUTF;
+        auto forwardRange = "oo".byUTF!Char();
+        static assert(isForwardRange!(typeof(forwardRange)));
+        // Test the forward-range code-path.
+        assert(alloc.expandArray(arr, forwardRange));
+
+        assert(arr == "foo");
+
+        immutable(Char)[] temp = "bar";
+        auto inputRange = ForcedInputRange!(immutable(Char))(&temp);
+        // Test the input-range code-path.
+        assert(alloc.expandArray(arr, inputRange));
+
+        assert(arr == "foobar");
+    }
+
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test!char(GCAllocator.instance);
+    test!wchar(GCAllocator.instance);
+    test!char(theAllocator);
+    test!wchar(theAllocator);
 }
 
 /**
@@ -2455,7 +2484,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     theAllocator.dispose(arr);
 }
 
-@system unittest //bugzilla 16512
+// https://issues.dlang.org/show_bug.cgi?id=16512
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2476,7 +2506,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
     assert(ua is null);
 }
 
-@system unittest //bugzilla 15721
+// https://issues.dlang.org/show_bug.cgi?id=15721
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -2636,7 +2667,7 @@ own statically-typed allocator.)
 RCIAllocator allocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
@@ -2669,7 +2700,7 @@ if (!isPointer!A)
 RCIAllocator allocatorObject(A)(A* pa)
 {
     assert(pa);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
     import std.traits : hasMember;
     static if (hasMember!(A, "deallocate"))
@@ -2747,7 +2778,7 @@ nothrow
 RCISharedAllocator sharedAllocatorObject(A)(auto ref A a)
 if (!isPointer!A)
 {
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CSharedAllocatorImpl!A).divideRoundUp(ulong.sizeof);
@@ -2787,7 +2818,7 @@ if (!isPointer!A)
 RCISharedAllocator sharedAllocatorObject(A)(A* pa)
 {
     assert(pa);
-    import std.conv : emplace;
+    import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CSharedAllocatorImpl!(A, Yes.indirect)));
     import std.traits : hasMember;
     static if (hasMember!(A, "deallocate"))
@@ -3292,8 +3323,6 @@ nothrow:
     theAllocator.dispose(arr);
 }
 
-__EOF__
-
 /**
 
 Stores an allocator object in thread-local storage (i.e. non-`shared` D
@@ -3333,6 +3362,7 @@ struct ThreadLocal(A)
 }
 
 ///
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -3341,9 +3371,9 @@ unittest
 
     static assert(!is(ThreadLocal!Mallocator));
     static assert(!is(ThreadLocal!GCAllocator));
-    alias ThreadLocal!(FreeList!(GCAllocator, 0, 8)) Allocator;
+    alias Allocator = ThreadLocal!(FreeList!(GCAllocator, 0, 8));
     auto b = Allocator.instance.allocate(5);
-    static assert(hasMember!(Allocator, "allocate"));
+    static assert(__traits(hasMember, Allocator, "allocate"));
 }
 
 /*
@@ -3499,14 +3529,14 @@ private struct EmbeddedTree(T, alias less)
 
     void dump()
     {
-        import std.stdio;
+        import std.stdio : writeln;
         writeln(typeid(this), " @ ", cast(void*) &this);
         dump(root, 3);
     }
 
     void dump(Node* r, uint indent)
     {
-        import std.stdio;
+        import std.stdio : write, writeln;
         import std.range : repeat;
         import std.array : array;
 
@@ -3537,6 +3567,7 @@ private struct EmbeddedTree(T, alias less)
     }
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -3682,6 +3713,7 @@ private struct InternalPointersTree(Allocator)
     }
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -3720,6 +3752,7 @@ unittest
 }
 
 //version (std_allocator_benchmark)
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
@@ -3789,6 +3822,7 @@ unittest
     )(20)[].map!(t => t.to!Duration));
 }
 
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -3814,6 +3848,7 @@ unittest
 }
 
 ///
+@system
 unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
@@ -3824,7 +3859,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
     /// Define an allocator bound to the built-in GC.
-    IAllocator alloc = allocatorObject(GCAllocator.instance);
+    auto alloc = allocatorObject(GCAllocator.instance);
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b));

@@ -51,7 +51,7 @@ public import std.zip;
 public import std.zlib;
 public import std.net.isemail;
 public import std.net.curl;
-public import std.digest.digest;
+public import std.digest;
 public import std.digest.crc;
 public import std.digest.sha;
 public import std.digest.md;

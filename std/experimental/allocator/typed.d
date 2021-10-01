@@ -28,7 +28,7 @@ allocator accordingly.
 */
 enum AllocFlag : uint
 {
-    init = 0,
+    _init = 0,
     /**
     Fixed-size allocation (unlikely to get reallocated later). Examples: `int`,
     `double`, any `struct` or `class` type. By default it is assumed that the

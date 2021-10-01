@@ -509,7 +509,7 @@ T enforce(T)(T value, lazy Throwable ex)
     assertThrown!ConvException(convEnforce(false, "blah"));
 }
 
-private void bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
+private noreturn bailOut(E : Throwable = Exception)(string file, size_t line, scope const(char)[] msg)
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
@@ -526,9 +526,9 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     }
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=10510
 @safe unittest
 {
-    // Issue 10510
     extern(C) void cFoo() { }
     enforce(false, &cFoo);
 }
@@ -566,7 +566,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     }
 }
 
-// Test for bugzilla 8637
+// Test for https://issues.dlang.org/show_bug.cgi?id=8637
 @system unittest
 {
     struct S
@@ -600,10 +600,9 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, scope 
     enforce!E2(s);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=14685
 @safe unittest
 {
-    // Issue 14685
-
     class E : Exception
     {
         this() { super("Not found"); }
@@ -638,99 +637,6 @@ alias errnoEnforce = enforce!ErrnoException;
     char[100] buf;
     auto line = fgets(buf.ptr, buf.length, f);
     enforce(line !is null); // expect a non-empty line
-}
-
-// @@@DEPRECATED_2.089@@@
-/++
-    $(RED Deprecated. Please use $(LREF enforce) instead. This function will be removed 2.089.)
-
-    If `!value` is `false`, `value` is returned. Otherwise,
-    $(D new E(msg, file, line)) is thrown. Or if `E` doesn't take a message
-    and can be constructed with $(D new E(file, line)), then
-    $(D new E(file, line)) will be thrown.
-
-    Example:
-    --------------------
-    auto f = enforceEx!FileMissingException(fopen("data.txt"));
-    auto line = readln(f);
-    enforceEx!DataCorruptionException(line.length);
-    --------------------
- +/
-deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
-template enforceEx(E : Throwable)
-if (is(typeof(new E("", string.init, size_t.init))))
-{
-    /++ Ditto +/
-    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
-    {
-        if (!value) throw new E(msg, file, line);
-        return value;
-    }
-}
-
-/+ Ditto +/
-deprecated("Use `enforce`. `enforceEx` will be removed with 2.089.")
-template enforceEx(E : Throwable)
-if (is(typeof(new E(string.init, size_t.init))) && !is(typeof(new E("", string.init, size_t.init))))
-{
-    /++ Ditto +/
-    T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
-    {
-        if (!value) throw new E(file, line);
-        return value;
-    }
-}
-
-deprecated
-@system unittest
-{
-    import core.exception : OutOfMemoryError;
-    import std.array : empty;
-    assertNotThrown(enforceEx!Exception(true));
-    assertNotThrown(enforceEx!Exception(true, "blah"));
-    assertNotThrown(enforceEx!OutOfMemoryError(true));
-
-    {
-        auto e = collectException(enforceEx!Exception(false));
-        assert(e !is null);
-        assert(e.msg.empty);
-        assert(e.file == __FILE__);
-        assert(e.line == __LINE__ - 4);
-    }
-
-    {
-        auto e = collectException(enforceEx!Exception(false, "hello", "file", 42));
-        assert(e !is null);
-        assert(e.msg == "hello");
-        assert(e.file == "file");
-        assert(e.line == 42);
-    }
-
-    {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
-        assert(e !is null);
-        assert(e.msg == "Memory allocation failed");
-        assert(e.file == __FILE__);
-        assert(e.line == __LINE__ - 4);
-    }
-
-    {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
-        assert(e !is null);
-        assert(e.msg == "Memory allocation failed");
-        assert(e.file == "file");
-        assert(e.line == 42);
-    }
-
-    static assert(!is(typeof(enforceEx!int(true))));
-}
-
-deprecated
-@safe unittest
-{
-    alias enf = enforceEx!Exception;
-    assertNotThrown(enf(true));
-    assertThrown(enf(false, "blah"));
 }
 
 /++
@@ -769,9 +675,14 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo(), b));
 
-    int[] a = new int[3];
-    import core.exception : RangeError;
-    assert(collectException!RangeError(a[4], b));
+    version (D_NoBoundsChecks) {}
+    else
+    {
+        // check for out of bounds error
+        int[] a = new int[3];
+        import core.exception : RangeError;
+        assert(collectException!RangeError(a[4], b));
+    }
 }
 
 /++
@@ -1050,7 +961,7 @@ T assumeWontThrow(T)(lazy T expr,
 ///
 @safe unittest
 {
-    import std.math : sqrt;
+    import std.math.algebraic : sqrt;
 
     // This function may throw.
     int squareRoot(int x)
@@ -1112,7 +1023,7 @@ If `source` is a class, then it will be handled as a pointer.
 If `target` is a pointer, a dynamic array or a class, then these functions will only
 check if `source` points to `target`, $(I not) what `target` references.
 
-If `source` is or contains a union, then there may be either false positives or
+If `source` is or contains a union or `void[n]`, then there may be either false positives or
 false negatives:
 
 `doesPointTo` will return `true` if it is absolutely certain
@@ -1150,8 +1061,11 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     }
     else static if (isStaticArray!S)
     {
-        foreach (ref s; source)
-            if (doesPointTo(s, target)) return true;
+        static if (!is(S == void[n], size_t n))
+        {
+            foreach (ref s; source)
+                if (doesPointTo(s, target)) return true;
+        }
         return false;
     }
     else static if (isDynamicArray!S)
@@ -1192,8 +1106,38 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     }
     else static if (isStaticArray!S)
     {
-        foreach (size_t i; 0 .. S.length)
-            if (mayPointTo(source[i], target)) return true;
+        static if (is(S == void[n], size_t n))
+        {
+            static if (n >= (void[]).sizeof)
+            {
+                // could contain a slice, which could point at anything.
+                // But a void[N] that is all 0 cannot point anywhere
+                import std.algorithm.searching : any;
+                if (__ctfe || any(cast(ubyte[]) source[]))
+                    return true;
+            }
+            else static if (n >= (void*).sizeof)
+            {
+                // Reinterpreting cast is impossible during ctfe
+                if (__ctfe)
+                    return true;
+
+                // Only check for properly aligned pointers
+                enum al = (void*).alignof - 1;
+                const base = cast(size_t) &source;
+                const alBase = (base + al) & ~al;
+
+                if ((n - (alBase - base)) >= (void*).sizeof &&
+                    mayPointTo(*(cast(void**) alBase), target))
+                    return true;
+            }
+        }
+        else
+        {
+            foreach (size_t i; 0 .. S.length)
+                if (mayPointTo(source[i], target)) return true;
+        }
+
         return false;
     }
     else static if (isDynamicArray!S)
@@ -1249,7 +1193,9 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 @system unittest
 {
     int i;
-    int* p = &i; // trick the compiler when initializing slicep; https://issues.dlang.org/show_bug.cgi?id=18637
+     // trick the compiler when initializing slice
+     // https://issues.dlang.org/show_bug.cgi?id=18637
+    int* p = &i;
     int[]  slice = [0, 1, 2, 3, 4];
     int[5] arr   = [0, 1, 2, 3, 4];
     int*[]  slicep = [p];
@@ -1315,8 +1261,9 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 
 version (StdUnittest)
 {
-    // 17084 : the bug doesn't happen if these declarations are
-    // in the unittest block (static or not).
+    // https://issues.dlang.org/show_bug.cgi?id=17084
+    // the bug doesn't happen if these declarations are in the unittest block
+    // (static or not).
     private struct Page17084
     {
         URL17084 url;
@@ -1332,7 +1279,8 @@ version (StdUnittest)
     }
 }
 
-@system unittest // Bugzilla 17084
+// https://issues.dlang.org/show_bug.cgi?id=17084
+@system unittest
 {
     import std.algorithm.sorting : sort;
     Page17084[] s;
@@ -1437,6 +1385,57 @@ version (StdUnittest)
     assert( doesPointTo(ss, a));  //The array contains a struct that points to a
     assert(!doesPointTo(ss, b));  //The array doesn't contains a struct that points to b
     assert(!doesPointTo(ss, ss)); //The array doesn't point itself.
+
+    // https://issues.dlang.org/show_bug.cgi?id=20426
+    align((void*).alignof) void[32] voidArr = void;
+    (cast(void*[]) voidArr[])[] = null; // Ensure no false pointers
+
+    // zeroed void ranges can't point at anything
+    assert(!mayPointTo(voidArr, a));
+    assert(!mayPointTo(voidArr, b));
+
+    *cast(void**) &voidArr[16] = &a; // Pointers should be found
+
+    alias SA = void[size_t.sizeof + 3];
+    SA *smallArr1 = cast(SA*)&voidArr;
+    SA *smallArr2 = cast(SA*)&(voidArr[16]);
+
+    // But it should only consider properly aligned pointers
+    // Write single bytes to avoid issues due to misaligned writes
+    void*[1] tmp = [&b];
+    (cast(ubyte[]) voidArr[3 .. 3 + (void*).sizeof])[] = cast(ubyte[]) tmp[];
+
+
+    assert( mayPointTo(*smallArr2, a));
+    assert(!mayPointTo(*smallArr1, b));
+
+    assert(!doesPointTo(voidArr, a)); // Value might be a false pointer
+    assert(!doesPointTo(voidArr, b));
+
+    SA *smallArr3 = cast(SA *) &voidArr[13]; // Works for weird sizes/alignments
+    assert( mayPointTo(*smallArr3, a));
+    assert(!mayPointTo(*smallArr3, b));
+
+    assert(!doesPointTo(*smallArr3, a));
+    assert(!doesPointTo(*smallArr3, b));
+
+    auto v3 = cast(void[3]*) &voidArr[16]; // Arrays smaller than pointers are ignored
+    assert(!mayPointTo(*v3, a));
+    assert(!mayPointTo(*v3, b));
+
+    assert(!doesPointTo(*v3, a));
+    assert(!doesPointTo(*v3, b));
+
+    assert(mayPointTo(voidArr, a)); // slice-contiaining void[N] might point at anything
+    assert(mayPointTo(voidArr, b));
+
+    static assert(() {
+        void[16] arr1 = void;
+        void[size_t.sizeof] arr2 = void;
+        int var;
+        return mayPointTo(arr1, var) && !doesPointTo(arr1, var) &&
+               mayPointTo(arr2, var) && !doesPointTo(arr2, var);
+    }());
 }
 
 
