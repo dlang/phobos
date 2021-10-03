@@ -1580,6 +1580,7 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
 // calls, but we make do...
 version (Posix) @system unittest
 {
+    import core.stdc.errno : errno;
     import core.sys.posix.fcntl : open, O_RDONLY;
     import core.sys.posix.unistd : close;
     import std.algorithm.searching : canFind, findSplitBefore;
@@ -1594,7 +1595,20 @@ version (Posix) @system unittest
     scope(exit) std.file.rmdirRecurse(directory);
     auto path = buildPath(directory, "tmp");
     std.file.write(path, null);
+    errno = 0;
     auto fd = open(path.tempCString, O_RDONLY);
+    if (fd == -1)
+    {
+        import core.stdc.string : strerror;
+        import std.stdio : stderr;
+        import std.string : fromStringz;
+
+        // For the CI logs
+        stderr.writefln("%s: could not open '%s': %s",
+            __FUNCTION__, path, strerror(errno).fromStringz);
+        // TODO: should we retry here instead?
+        return;
+    }
     scope(exit) close(fd);
 
     // command >&2 (or any other number) checks whethether that number
