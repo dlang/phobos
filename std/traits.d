@@ -4129,50 +4129,10 @@ int[] abc = cast(int[]) [ EnumMembers!E ];
 template EnumMembers(E)
 if (is(E == enum))
 {
-    import std.meta : AliasSeq;
-    // Supply the specified identifier to an constant value.
-    template WithIdentifier(string ident)
-    {
-        static if (ident == "Symbolize")
-        {
-            template Symbolize(alias value)
-            {
-                enum Symbolize = value;
-            }
-        }
-        else
-        {
-            mixin("template Symbolize(alias "~ ident ~")"
-                 ~"{"
-                     ~"alias Symbolize = "~ ident ~";"
-                 ~"}");
-        }
-    }
+    import std.meta : Map = staticMap;
 
-    template EnumSpecificMembers(names...)
-    {
-        static if (names.length == 1)
-        {
-            alias EnumSpecificMembers = AliasSeq!(WithIdentifier!(names[0])
-                        .Symbolize!(__traits(getMember, E, names[0])));
-        }
-        else static if (names.length > 0)
-        {
-            alias EnumSpecificMembers =
-                AliasSeq!(
-                    WithIdentifier!(names[0])
-                        .Symbolize!(__traits(getMember, E, names[0])),
-                    EnumSpecificMembers!(names[1 .. $/2]),
-                    EnumSpecificMembers!(names[$/2..$])
-                );
-        }
-        else
-        {
-            alias EnumSpecificMembers = AliasSeq!();
-        }
-    }
-
-    alias EnumMembers = EnumSpecificMembers!(__traits(allMembers, E));
+    alias getEnumMember(string name) = __traits(getMember, E, name);
+    alias EnumMembers = Map!(getEnumMember, __traits(allMembers, E));
 }
 
 /// Create an array of enumerated values
