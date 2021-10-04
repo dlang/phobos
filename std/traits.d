@@ -4131,10 +4131,9 @@ int[] abc = cast(int[]) [ EnumMembers!E ];
 template EnumMembers(E)
 if (is(E == enum))
 {
-    import std.meta : Map = staticMap;
-
-    alias getEnumMember(string name) = __traits(getMember, E, name);
-    alias EnumMembers = Map!(getEnumMember, __traits(allMembers, E));
+    alias EnumMembers = AliasSeq!();
+    static foreach (M; __traits(allMembers, E))
+        EnumMembers = AliasSeq!(EnumMembers, __traits(getMember, E, M));
 }
 
 /// Create an array of enumerated values
