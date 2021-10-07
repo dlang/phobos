@@ -666,7 +666,9 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     {
         return e;
     }
-    return null;
+    // Avoid "statement not reachable" warning
+    static if (!is(immutable E == immutable noreturn))
+        return null;
 }
 ///
 @system unittest
@@ -711,7 +713,9 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     {
         return t;
     }
-    return null;
+    // Avoid "statement not reachable" warning
+    static if (!is(immutable E == immutable noreturn))
+        return null;
 }
 
 ///
@@ -747,7 +751,9 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     {
         expression();
 
-        return cast(string) null;
+        // Avoid "statement not reachable" warning
+        static if (!is(immutable E == immutable noreturn))
+            return cast(string) null;
     }
     catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
@@ -770,6 +776,25 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     with an empty exception message.
  +/
 enum emptyExceptionMsg = "<Empty Exception Message>";
+
+// https://issues.dlang.org/show_bug.cgi?id=22364
+@system unittest
+{
+    static noreturn foo() { throw new Exception(""); }
+
+    const ex = collectException!(Exception, noreturn)(foo());
+    assert(ex);
+
+    const msg = collectExceptionMsg!(Exception, noreturn)(foo());
+    assert(msg);
+
+    noreturn n;
+
+    // Triggers a backend assertion failure
+    // collectException!(Exception, noreturn)(foo(), n);
+
+    static assert(__traits(compiles, collectException!(Exception, noreturn)(foo(), n)));
+}
 
 /**
  * Casts a mutable array to an immutable array in an idiomatic
