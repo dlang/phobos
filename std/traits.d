@@ -2843,6 +2843,8 @@ template RepresentationTypeTuple(T)
     struct S5 { int a; Rebindable!(immutable Object) b; }
     alias R2 = RepresentationTypeTuple!S5;
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
+
+    static assert(is(RepresentationTypeTuple!noreturn == AliasSeq!noreturn));
 }
 
 @safe unittest
@@ -2865,7 +2867,7 @@ private template RepresentationTypeTupleImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T R: Rebindable!R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         alias RepresentationTypeTupleImpl
             = staticMapMeta!(.RepresentationTypeTupleImpl, RepresentationTypeTupleImpl!R);
@@ -3288,13 +3290,15 @@ template hasAliasing(T...)
     class S15 { S15[1] a; }
     static assert( hasAliasing!S15);
     static assert(!hasAliasing!(immutable(S15)));
+
+    static assert(!hasAliasing!noreturn);
 }
 
 private template hasAliasingImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T : Rebindable!R, R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         enum hasAliasingImpl = hasAliasingImpl!R;
     }
@@ -3398,6 +3402,8 @@ template hasIndirections(T)
     int local;
     struct HasContextPointer { int opCall() { return ++local; } }
     static assert(hasIndirections!HasContextPointer);
+
+    static assert(!hasIndirections!noreturn);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12000
@@ -3564,13 +3570,15 @@ template hasUnsharedAliasing(T...)
     static assert( hasUnsharedAliasing!S18);
     static assert( hasUnsharedAliasing!S19);
     static assert(!hasUnsharedAliasing!S20);
+
+    static assert(!hasUnsharedAliasing!noreturn);
 }
 
 private template hasUnsharedAliasingImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T R: Rebindable!R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         enum hasUnsharedAliasingImpl = hasUnsharedAliasingImpl!R;
     }
