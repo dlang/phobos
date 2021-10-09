@@ -3687,10 +3687,18 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto save()
             {
-                auto r = Result(_items.save, _current.save);
+                // the null check is important if it is a class range, since null.save will segfault; issue #22359
+                // could not just compare x is y here without static if due to a compiler assertion failure
+                static if (is(typeof(null) : typeof(_current)))
+                    auto r = Result(_items.save, _current is null ? null : _current.save);
+                else
+                    auto r = Result(_items.save, _current.save);
                 static if (isBidirectional)
                 {
-                    r._currentBack = _currentBack.save;
+                    static if (is(typeof(null) : typeof(_currentBack)))
+                        r._currentBack = _currentBack is null ? null : _currentBack.save;
+                    else
+                        r._currentBack = _currentBack.save;
                     r.reachedFinalElement = reachedFinalElement;
                 }
                 return r;
@@ -3869,6 +3877,26 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     import std.range.interfaces : inputRangeObject;
     static assert(isInputRange!(typeof(joiner([""]))));
     static assert(isForwardRange!(typeof(joiner([""]))));
+}
+
+@system unittest
+{
+    // this test is system because the virtual interface call to save
+    // is flexible and thus cannot be inferred safe automatically
+
+    // https://issues.dlang.org/show_bug.cgi?id=22359
+    import std.range;
+    ForwardRange!int bug(int[][] r)
+    {
+        import std.range : inputRangeObject;
+        import std.algorithm.iteration : map, joiner;
+
+        auto range = inputRangeObject(r);
+
+        return range.map!(a =>inputRangeObject(a)).joiner.inputRangeObject;
+    }
+    auto f = bug([[]]);
+    f.save(); // should not segfault
 }
 
 @safe unittest
