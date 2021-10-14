@@ -2833,7 +2833,6 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 {
     static noreturn foo(int) { throw new Exception(""); }
 
-    // spawn expecpts void return
     if (false) spawn(&foo, 1);
     if (false) spawnLinked(&foo, 1);
 
