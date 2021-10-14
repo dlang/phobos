@@ -160,8 +160,6 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.range.primitives : put;
-
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
@@ -171,51 +169,48 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val) @trusted {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-
+        import std.range.primitives : put;
         if (needToSwapEndianess(f))
-        {
             foreach_reverse (c; raw)
                 put(w, c);
-        }
         else
-        {
             foreach (c; raw)
                 put(w, c);
-        }
         return;
     }
 
+    static if (isSigned!U)
+    {
+        const bool negative = f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u' && val < 0;
+        ulong arg = negative ? -cast(ulong) val : val;
+    }
+    else
+    {
+        const bool negative = false;
+        ulong arg = val;
+    }
+    arg &= Unsigned!U.max;
+
+    formatValueImplUlong!(Writer, Char)(w, arg, negative, f);
+}
+
+// Helper function for `formatValueImpl` that avoids template bloat
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative, scope const ref FormatSpec!Char f)
+{
     immutable uint base =
-        f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
-        f.spec == 'o' ? 8 :
-        f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u'
-        || f.spec == 'e' || f.spec == 'E' || f.spec == 'f' || f.spec == 'F'
-        || f.spec == 'g' || f.spec == 'G' ? 10 :
-        0;
+    f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
+    f.spec == 'o' ? 8 :
+    f.spec == 'b' ? 2 :
+    f.spec == 's' || f.spec == 'd' || f.spec == 'u'
+    || f.spec == 'e' || f.spec == 'E' || f.spec == 'f' || f.spec == 'F'
+    || f.spec == 'g' || f.spec == 'G' ? 10 :
+    0;
 
     import std.format : enforceFmt;
     enforceFmt(base > 0,
-        "incompatible format character for integral argument: %" ~ f.spec);
+               "incompatible format character for integral argument: %" ~ f.spec);
 
-    import std.math.algebraic : abs;
-
-    bool negative = false;
-    ulong arg = val;
-    static if (isSigned!U)
-    {
-        if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
-        {
-            if (val < 0)
-            {
-                negative = true;
-                arg = cast(ulong) abs(val);
-            }
-        }
-    }
-
-    arg &= Unsigned!U.max;
-
+    const bool zero = arg == 0;
     char[64] digits = void;
     size_t pos = digits.length - 1;
     do
@@ -245,12 +240,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (f.spec == 'x' || f.spec == 'X' || f.spec == 'b' || f.spec == 'o' || f.spec == 'u'
         || f.spec == 'd' || f.spec == 's')
     {
-        if (f.flHash && (base == 16) && obj != 0)
+        if (f.flHash && (base == 16) && !zero)
         {
             prefix[--left] = f.spec;
             prefix[--left] = '0';
         }
-        if (f.flHash && (base == 8) && obj != 0
+        if (f.flHash && (base == 8) && !zero
             && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
             prefix[--left] = '0';
 
@@ -356,6 +351,27 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                  digits[pos + 1 .. min(digit_end, $)],
                  suffix[0 .. $], fs,
                  (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
+}
+
+@safe pure unittest
+{
+    formatTest(byte.min, "-128");
+    formatTest(byte.max, "127");
+    formatTest(short.min, "-32768");
+    formatTest(short.max, "32767");
+    formatTest(int.min, "-2147483648");
+    formatTest(int.max, "2147483647");
+    formatTest(long.min, "-9223372036854775808");
+    formatTest(long.max, "9223372036854775807");
+
+    formatTest(ubyte.min, "0");
+    formatTest(ubyte.max, "255");
+    formatTest(ushort.min, "0");
+    formatTest(ushort.max, "65535");
+    formatTest(uint.min, "0");
+    formatTest(uint.max, "4294967295");
+    formatTest(ulong.min, "0");
+    formatTest(ulong.max, "18446744073709551615");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
