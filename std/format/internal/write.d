@@ -2572,12 +2572,23 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
             else static if (0 < i && val.tupleof[i-1].offsetof == val.tupleof[i].offsetof)
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
-                    put(w, separator~val.tupleof[i].stringof[4 .. $]~"}");
+                {
+                    put(w, separator);
+                    put(w, val.tupleof[i].stringof[4 .. $]);
+                    put(w, "}");
+                }
                 else
-                    put(w, separator~val.tupleof[i].stringof[4 .. $]);
+                {
+                    put(w, separator);
+                    put(w, val.tupleof[i].stringof[4 .. $]);
+                }
             }
             else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
-                put(w, (i > 0 ? separator : "")~"#{overlap "~val.tupleof[i].stringof[4 .. $]);
+            {
+                put(w, (i > 0 ? separator : ""));
+                put(w, "#{overlap ");
+                put(w, val.tupleof[i].stringof[4 .. $]);
+            }
             else
             {
                 static if (i > 0)
@@ -2898,7 +2909,9 @@ if (is(T == enum))
         auto w2 = appender!string();
 
         // val is not a member of T, output cast(T) rawValue instead.
-        put(w2, "cast(" ~ T.stringof ~ ")");
+        put(w2, "cast(");
+        put(w2, T.stringof);
+        put(w2, ")");
         static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
             "must not be equal to " ~ T.stringof);
 

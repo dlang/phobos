@@ -247,7 +247,7 @@ auto castSwitch(choices...)(Object switchObject)
         bool result = true;
         foreach (index, choice; choices)
         {
-            result &= is(ReturnType!choice == void);
+            result &= is(ReturnType!choice : void); // void or noreturn
         }
         return result;
     }();
@@ -512,6 +512,53 @@ auto castSwitch(choices...)(Object switchObject)
             (B b) => "class B",
             (I i) => "derived from I",
     ) == "derived from I");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22384
+@system unittest
+{
+    // Use explicit methods to enforce return types
+    static void objectSkip(Object) {}
+    static void defaultSkip() {}
+
+    static noreturn objectError(Object) { assert(false); }
+    static noreturn defaultError() { assert(false); }
+
+    {
+        alias test = castSwitch!(objectSkip, defaultError);
+        static assert(is(ReturnType!test == void));
+    }{
+        alias test = castSwitch!(objectError, defaultSkip);
+        static assert(is(ReturnType!test == void));
+    }{
+        alias test = castSwitch!(objectError, defaultError);
+        static assert(is(ReturnType!test == noreturn));
+    }
+
+    // Also works with non-void handlers
+    static int objectValue(Object) { return 1;}
+    static int defaultValue() { return 2; }
+
+    {
+        alias test = castSwitch!(objectValue, defaultError);
+        static assert(is(ReturnType!test == int));
+    }{
+        alias test = castSwitch!(objectError, defaultValue);
+        static assert(is(ReturnType!test == int));
+    }
+
+    // No confusion w.r.t. void callbacks
+    alias FP = void function();
+    static FP objectFunc(Object) { return &defaultSkip; }
+    static FP defaultFunc() { return &defaultSkip; }
+
+    {
+        alias test = castSwitch!(objectFunc, defaultError);
+        static assert(is(ReturnType!test == FP));
+    }{
+        alias test = castSwitch!(objectError, defaultFunc);
+        static assert(is(ReturnType!test == FP));
+    }
 }
 
 /** Clamps a value into the given bounds.

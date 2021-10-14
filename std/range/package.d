@@ -9872,34 +9872,6 @@ private struct OnlyResult(T)
     private bool _empty = true;
 }
 
-// Specialize for the empty range
-private struct OnlyResult()
-{
-    private static struct EmptyElementType {}
-
-    bool empty() @property { return true; }
-    size_t length() const @property { return 0; }
-    alias opDollar = length;
-    EmptyElementType front() @property { assert(false); }
-    void popFront() { assert(false); }
-    EmptyElementType back() @property { assert(false); }
-    void popBack() { assert(false); }
-    OnlyResult save() @property { return this; }
-
-    EmptyElementType opIndex(size_t i)
-    {
-        assert(false);
-    }
-
-    OnlyResult opSlice() { return this; }
-
-    OnlyResult opSlice(size_t from, size_t to)
-    {
-        assert(from == 0 && to == 0);
-        return this;
-    }
-}
-
 /**
 Assemble `values` into a range that carries all its
 elements in-situ.
@@ -9921,9 +9893,18 @@ Returns:
 See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(return scope Values values)
-if (!is(CommonType!Values == void) || Values.length == 0)
+if (!is(CommonType!Values == void))
 {
     return OnlyResult!Values(values);
+}
+
+/// ditto
+auto only()()
+{
+    // cannot use noreturn due to issue 22383
+    struct EmptyElementType {}
+    EmptyElementType[] result;
+    return result;
 }
 
 ///

@@ -2843,6 +2843,8 @@ template RepresentationTypeTuple(T)
     struct S5 { int a; Rebindable!(immutable Object) b; }
     alias R2 = RepresentationTypeTuple!S5;
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
+
+    static assert(is(RepresentationTypeTuple!noreturn == AliasSeq!noreturn));
 }
 
 @safe unittest
@@ -2865,7 +2867,7 @@ private template RepresentationTypeTupleImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T R: Rebindable!R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         alias RepresentationTypeTupleImpl
             = staticMapMeta!(.RepresentationTypeTupleImpl, RepresentationTypeTupleImpl!R);
@@ -3288,13 +3290,15 @@ template hasAliasing(T...)
     class S15 { S15[1] a; }
     static assert( hasAliasing!S15);
     static assert(!hasAliasing!(immutable(S15)));
+
+    static assert(!hasAliasing!noreturn);
 }
 
 private template hasAliasingImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T : Rebindable!R, R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         enum hasAliasingImpl = hasAliasingImpl!R;
     }
@@ -3398,6 +3402,8 @@ template hasIndirections(T)
     int local;
     struct HasContextPointer { int opCall() { return ++local; } }
     static assert(hasIndirections!HasContextPointer);
+
+    static assert(!hasIndirections!noreturn);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12000
@@ -3564,13 +3570,15 @@ template hasUnsharedAliasing(T...)
     static assert( hasUnsharedAliasing!S18);
     static assert( hasUnsharedAliasing!S19);
     static assert(!hasUnsharedAliasing!S20);
+
+    static assert(!hasUnsharedAliasing!noreturn);
 }
 
 private template hasUnsharedAliasingImpl(T)
 {
     import std.typecons : Rebindable;
 
-    static if (is(T R: Rebindable!R))
+    static if (is(immutable T == immutable Rebindable!R, R))
     {
         enum hasUnsharedAliasingImpl = hasUnsharedAliasingImpl!R;
     }
@@ -4129,50 +4137,10 @@ int[] abc = cast(int[]) [ EnumMembers!E ];
 template EnumMembers(E)
 if (is(E == enum))
 {
-    import std.meta : AliasSeq;
-    // Supply the specified identifier to an constant value.
-    template WithIdentifier(string ident)
-    {
-        static if (ident == "Symbolize")
-        {
-            template Symbolize(alias value)
-            {
-                enum Symbolize = value;
-            }
-        }
-        else
-        {
-            mixin("template Symbolize(alias "~ ident ~")"
-                 ~"{"
-                     ~"alias Symbolize = "~ ident ~";"
-                 ~"}");
-        }
-    }
+    import std.meta : Map = staticMap;
 
-    template EnumSpecificMembers(names...)
-    {
-        static if (names.length == 1)
-        {
-            alias EnumSpecificMembers = AliasSeq!(WithIdentifier!(names[0])
-                        .Symbolize!(__traits(getMember, E, names[0])));
-        }
-        else static if (names.length > 0)
-        {
-            alias EnumSpecificMembers =
-                AliasSeq!(
-                    WithIdentifier!(names[0])
-                        .Symbolize!(__traits(getMember, E, names[0])),
-                    EnumSpecificMembers!(names[1 .. $/2]),
-                    EnumSpecificMembers!(names[$/2..$])
-                );
-        }
-        else
-        {
-            alias EnumSpecificMembers = AliasSeq!();
-        }
-    }
-
-    alias EnumMembers = EnumSpecificMembers!(__traits(allMembers, E));
+    alias getEnumMember(string name) = __traits(getMember, E, name);
+    alias EnumMembers = Map!(getEnumMember, __traits(allMembers, E));
 }
 
 /// Create an array of enumerated values
@@ -6904,7 +6872,9 @@ template isAutodecodableString(T)
     import std.range.primitives : autodecodeStrings;
 
     enum isAutodecodableString = autodecodeStrings &&
-        (is(T : const char[]) || is(T : const wchar[])) && !is(T : U[n], U, size_t n);
+        (is(T : const char[]) || is(T : const wchar[]))
+        && !is(T : U[n], U, size_t n)
+        && !is(immutable T : immutable noreturn[]);
 }
 
 ///
@@ -6939,6 +6909,9 @@ template isAutodecodableString(T)
 
     static assert(isAutodecodableString!(H));
     static assert(isAutodecodableString!(I));
+
+    static assert(!isAutodecodableString!(noreturn[]));
+    static assert(!isAutodecodableString!(immutable(noreturn)[]));
 }
 
 /**

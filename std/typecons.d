@@ -6850,9 +6850,10 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 {
     static struct File
     {
+        static size_t nDestroyed;
         string name;
         @disable this(this); // not copyable
-        ~this() { name = null; }
+        ~this() { name = null; ++nDestroyed; }
     }
 
     auto file = File("name");
@@ -6860,14 +6861,37 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
     // file cannot be copied and has unique ownership
     static assert(!__traits(compiles, {auto file2 = file;}));
 
+    assert(File.nDestroyed == 0);
+
     // make the file refcounted to share ownership
-    import std.algorithm.mutation : move;
-    auto rcFile = refCounted(move(file));
-    assert(rcFile.name == "name");
-    assert(file.name == null);
-    auto rcFile2 = rcFile;
-    assert(rcFile.refCountedStore.refCount == 2);
-    // file gets properly closed when last reference is dropped
+    // Note:
+    //   We write a compound statement (brace-delimited scope) in which all `RefCounted!File` handles are created and deleted.
+    //   This allows us to see (after the scope) what happens after all handles have been destroyed.
+    {
+        // We move the content of `file` to a separate (and heap-allocated) `File` object,
+        // managed-and-accessed via one-or-multiple (initially: one) `RefCounted!File` objects ("handles").
+        // This "moving":
+        //   (1) invokes `file`'s destructor (=> `File.nDestroyed` is incremented from 0 to 1 and `file.name` becomes `null`);
+        //   (2) overwrites `file` with `File.init` (=> `file.name` becomes `null`).
+        // It appears that writing `name = null;` in the destructor is redundant,
+        // but please note that (2) is only performed if `File` defines a destructor (or post-blit operator),
+        // and in the absence of the `nDestroyed` instrumentation there would have been no reason to define a destructor.
+        import std.algorithm.mutation : move;
+        auto rcFile = refCounted(move(file));
+        assert(rcFile.name == "name");
+        assert(File.nDestroyed == 1);
+        assert(file.name == null);
+
+        // We create another `RefCounted!File` handle to the same separate `File` object.
+        // While any of the handles is still alive, the `File` object is kept alive (=> `File.nDestroyed` is not modified).
+        auto rcFile2 = rcFile;
+        assert(rcFile.refCountedStore.refCount == 2);
+        assert(File.nDestroyed == 1);
+    }
+    // The separate `File` object is deleted when the last `RefCounted!File` handle is destroyed
+    // (i.e. at the closing brace of the compound statement above, which destroys both handles: `rcFile` and `rcFile2`)
+    // (=> `File.nDestroyed` is incremented again, from 1 to 2):
+    assert(File.nDestroyed == 2);
 }
 
 /**

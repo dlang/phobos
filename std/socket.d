@@ -2121,23 +2121,6 @@ enum SocketFlags: int
 }
 
 
-private mixin template FieldProxy(string target, string field)
-{
-    mixin(`
-        @property typeof(`~target~`) `~field~`() const pure nothrow @nogc
-        {
-            return `~target~`;
-        }
-
-        /// ditto
-        @property typeof(`~target~`) `~field~`(typeof(`~target~`) value) pure nothrow @nogc
-        {
-            return `~target~` = value;
-        }
-    `);
-}
-
-
 /// Duration timeout value.
 struct TimeVal
 {
@@ -2145,16 +2128,18 @@ struct TimeVal
     alias tv_sec_t = typeof(ctimeval.tv_sec);
     alias tv_usec_t = typeof(ctimeval.tv_usec);
 
-    version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
+    /// Number of _seconds.
+    pure nothrow @nogc @property
+    ref inout(tv_sec_t) seconds() inout return
     {
-        tv_sec_t seconds;           /// Number of _seconds.
-        tv_usec_t microseconds;     /// Number of additional _microseconds.
+        return ctimeval.tv_sec;
     }
-    else
+
+    /// Number of additional _microseconds.
+    pure nothrow @nogc @property
+    ref inout(tv_usec_t) microseconds() inout return
     {
-        // D interface
-        mixin FieldProxy!(`ctimeval.tv_sec`, `seconds`);
-        mixin FieldProxy!(`ctimeval.tv_usec`, `microseconds`);
+        return ctimeval.tv_usec;
     }
 }
 
@@ -2567,18 +2552,21 @@ struct Linger
 {
     _clinger clinger;
 
-    version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
+    private alias l_onoff_t = typeof(_clinger.init.l_onoff );
+    private alias l_linger_t = typeof(_clinger.init.l_linger);
+
+    /// Nonzero for _on.
+    pure nothrow @nogc @property
+    ref inout(l_onoff_t) on() inout return
     {
-        private alias l_onoff_t = typeof(_clinger.init.l_onoff );
-        private alias l_linger_t = typeof(_clinger.init.l_linger);
-        l_onoff_t  on;   /// Nonzero for _on.
-        l_linger_t time; /// Linger _time.
+        return clinger.l_onoff;
     }
-    else
+
+    /// Linger _time.
+    pure nothrow @nogc @property
+    ref inout(l_linger_t) time() inout return
     {
-        // D interface
-        mixin FieldProxy!(`clinger.l_onoff`, `on`);
-        mixin FieldProxy!(`clinger.l_linger`, `time`);
+        return clinger.l_linger;
     }
 }
 
