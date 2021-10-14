@@ -9814,6 +9814,9 @@ if (Values.length > 1)
             private UnqualValues values = void;
     }
     else
+        // These may alias to shared or immutable data. Do not let the user
+        // to access these directly, and do not allow mutation without checking
+        // the qualifier.
         private UnqualValues values;
 }
 
@@ -9880,6 +9883,9 @@ private struct OnlyResult(T)
         return copy;
     }
 
+    // This may alias to shared or immutable data. Do not let the user
+    // to access this directly, and do not allow mutation without checking
+    // the qualifier.
     private Unqual!T _value;
     private bool _empty = true;
     private @trusted T fetchFront()
