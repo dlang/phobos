@@ -6872,7 +6872,9 @@ template isAutodecodableString(T)
     import std.range.primitives : autodecodeStrings;
 
     enum isAutodecodableString = autodecodeStrings &&
-        (is(T : const char[]) || is(T : const wchar[])) && !is(T : U[n], U, size_t n);
+        (is(T : const char[]) || is(T : const wchar[]))
+        && !is(T : U[n], U, size_t n)
+        && !is(immutable T : immutable noreturn[]);
 }
 
 ///
@@ -6907,6 +6909,9 @@ template isAutodecodableString(T)
 
     static assert(isAutodecodableString!(H));
     static assert(isAutodecodableString!(I));
+
+    static assert(!isAutodecodableString!(noreturn[]));
+    static assert(!isAutodecodableString!(immutable(noreturn)[]));
 }
 
 /**
