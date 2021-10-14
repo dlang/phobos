@@ -484,7 +484,7 @@ private template isSpawnable(F, T...)
             enum isParamsImplicitlyConvertible = false;
     }
 
-    enum isSpawnable = isCallable!F && is(ReturnType!F == void)
+    enum isSpawnable = isCallable!F && is(ReturnType!F : void)
             && isParamsImplicitlyConvertible!(F, void function(T))
             && (isFunctionPointer!F || !hasUnsharedAliasing!F);
 }
@@ -2834,8 +2834,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     static noreturn foo(int) { throw new Exception(""); }
 
     // spawn expecpts void return
-    // if (false) spawn(&foo, 1);
-    // if (false) spawnLinked(&foo, 1);
+    if (false) spawn(&foo, 1);
+    if (false) spawnLinked(&foo, 1);
 
     if (false) receive(&foo);
     if (false) receiveTimeout(Duration.init, &foo);
