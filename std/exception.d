@@ -191,7 +191,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
 {
     import core.exception : AssertError;
 
-    void throwEx(Throwable t) { throw t; }
+    static noreturn throwEx(Throwable t) { throw t; }
     bool nothrowEx() { return true; }
 
     try
@@ -294,7 +294,9 @@ void assertThrown(T : Throwable = Exception, E)
         expression();
     catch (T)
         return;
-    throw new AssertError("assertThrown failed: No " ~ T.stringof ~ " was thrown"
+
+    static if (!is(immutable E == immutable noreturn))
+        throw new AssertError("assertThrown failed: No " ~ T.stringof ~ " was thrown"
                                  ~ (msg.length == 0 ? "." : ": ") ~ msg,
                           file, line);
 }
@@ -318,7 +320,7 @@ void assertThrown(T : Throwable = Exception, E)
 {
     import core.exception : AssertError;
 
-    void throwEx(Throwable t) { throw t; }
+    static noreturn throwEx(Throwable t) { throw t; }
     void nothrowEx() { }
 
     try
