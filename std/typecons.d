@@ -6259,7 +6259,7 @@ mixin template ImplementHash(M...)
         }
         enum len = U.length;
 
-        bool r = true;
+        size_t r = 0;
         static foreach (i, unused; U)
         {{
 
@@ -6285,10 +6285,10 @@ mixin template ImplementHash(M...)
                 alias thisMember = __traits(getMember, this, fieldName);
 
                 // If we can't call the function with the args, throw the compiler error
-                static assert(is(typeof({hashFun(thisMember, r);})),
-                        typeof({hashFun(thisMember, r);}));
+                static assert(is(typeof({r = hashFun(thisMember, r);})),
+                        typeof({r = hashFun(thisMember, r);}));
 
-                r = cast(bool) hashFun(__traits(getMember, this, fieldName), r);
+                r = hashFun(__traits(getMember, this, fieldName), r);
             }
         }}
         return r;
