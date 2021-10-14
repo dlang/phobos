@@ -610,6 +610,14 @@ private noreturn bailOut(E : Throwable = Exception)(string file, size_t line, sc
     static assert(!__traits(compiles, { enforce!E(false); }));
 }
 
+@safe unittest
+{
+    static noreturn abort() { assert(false); }
+    if (false) enforce(abort(), abort());
+    if (false) enforce(abort(), () => abort());
+    if (false) enforce(abort(), "");
+    if (false) enforce(abort(), new Exception(""));
+}
 /++
     Enforces that the given value is true, throwing an `ErrnoException` if it
     is not.
@@ -1879,6 +1887,15 @@ expression.
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
+@system unittest
+{
+    static noreturn abort() { assert(0); }
+
+    if (false) ifThrown(abort(), abort());
+    if (false) ifThrown(abort(), (Throwable) => abort());
+    if (false) ifThrown(abort(), (Exception) => abort());
+}
+
 version (StdUnittest) package
 void assertCTFEable(alias dg)()
 {
@@ -2378,8 +2395,18 @@ pure nothrow @safe unittest
         RangePrimitive.opSlice, (e, r) => Infinite())();
 
     auto infSlice = infinite[0 .. $]; // this would throw otherwise
-}
 
+    // noreturn handlers
+    {
+        ThrowingRange tr;
+        enum what = RangePrimitive.pop | RangePrimitive.access | RangePrimitive.empty | RangePrimitive.save
+                    | RangePrimitive.length | RangePrimitive.opDollar | RangePrimitive.opSlice;
+
+        static noreturn abort(T...)(Exception, T) { assert(false); }
+
+        cast(void) tr.handle!(Exception, what, abort, ThrowingRange)();
+    }
+}
 
 /++
     Convenience mixin for trivially sub-classing exceptions
