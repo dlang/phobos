@@ -5588,7 +5588,7 @@ private template ContravariantRhsT(Rhs)
     }
     else
     {
-        static assert (0, "Unsupported type " ~ Rhs.stringof ~ ". Rhs must be a `class` or `struct`");
+        static assert(0, "Unsupported type " ~ Rhs.stringof ~ ". Rhs must be a `class` or `struct`");
     }
 }
 
@@ -5846,8 +5846,8 @@ mixin template ImplementOrdered(M...)
 {
     class Widget
     {
-        static int cmp(int a, int b) { return a - b + 1; };
-        static bool eq(int a, int b) { return (a - b + 1) == 0; };
+        static int cmp(int a, int b) { return a - b + 1; }
+        static bool eq(int a, int b) { return (a - b + 1) == 0; }
         static size_t hashfn(int a, size_t seed) { return hashOf(a, seed); }
 
         override const @nogc nothrow pure @safe scope
