@@ -8427,7 +8427,7 @@ if (isForwardRange!Source && hasLength!Source)
     /// Ditto
     @property bool empty()
     {
-        return _source.empty;
+        return _chunkCount == 0;
     }
 
     /// Ditto
