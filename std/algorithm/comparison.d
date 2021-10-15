@@ -964,6 +964,8 @@ template equal(alias pred = "a == b")
         enum differentSize(T) = T.sizeof != ElementEncodingTypes[0].sizeof;
         enum useCodePoint = allSatisfy!(isSomeChar, ElementEncodingTypes) &&
             anySatisfy!(differentSize, ElementEncodingTypes);
+        enum bool comparableWithEq(alias r) = is(typeof(rs[0] == r));
+
         static if (anySatisfy!(isInfinite, Ranges))
         {
             return false;
@@ -981,7 +983,7 @@ template equal(alias pred = "a == b")
             return allByDchar!0(rs);
         }
         else static if (is(typeof(pred) == string) && pred == "a == b" &&
-                allSatisfy!(isArray, Ranges) && allSameType!ElementEncodingTypes)
+                allSatisfy!(isArray, Ranges) && allSatisfy!(comparableWithEq, rs))
         {
             static foreach (r; rs[1 .. $])
                 if (rs[0] != r)
