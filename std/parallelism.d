@@ -2733,9 +2733,6 @@ public:
                 }
             }
 
-            foreach (ref t; tasks[])
-                emplaceRef(t, RTask());
-
             // Hack to take the address of a nested function w/o
             // making a closure.
             static auto scopedAddress(D)(scope D del) @system
@@ -2748,12 +2745,19 @@ public:
             void useTask(ref RTask task)
             {
                 import std.algorithm.comparison : min;
+                import core.lifetime : emplace;
+
+                // A private constructor, so can't feed it's arguments directly
+                // to emplace
+                emplace(&task, RTask
+                (
+                    scopedAddress(&reduceOnRange),
+                    range,
+                    curPos,
+                    cast() min(len, curPos + workUnitSize) // upper bound
+                ));
 
                 task.pool = this;
-                task._args[0] = scopedAddress(&reduceOnRange);
-                task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
-                task._args[1] = range;  // range
-                task._args[2] = curPos; // lower bound.
 
                 curPos += workUnitSize;
             }
@@ -3503,6 +3507,21 @@ public:
     // Range, seeds, and work unit size
     assert(taskPool.fold!"a + b"(r, 0, 42) == expected);
     assert(taskPool.fold!("a + b", "a + b")(r, 0, 0, 42) == tuple(expected, expected));
+}
+
+// Issue 16705
+@system unittest
+{
+    struct MyIota
+    {
+        size_t front;
+        void popFront()(){front++;}
+        auto empty(){return front >= 25;}
+        auto opIndex(size_t i){return front+i;}
+        auto length(){return 25-front;}
+    }
+
+    auto mySum = taskPool.reduce!"a + b"(MyIota());
 }
 
 /**
