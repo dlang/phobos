@@ -1003,10 +1003,23 @@ template equal(alias pred = "a == b")
         }
         else
         {
-            static if (allSatisfy!(hasLength, Ranges))
-                static foreach (r; rs[1 .. $])
-                    if (rs[0].length != r.length)
-                        return false;
+            static foreach (i, R; Ranges)
+            {
+                static if (hasLength!R)
+                {
+                    static if (!is(typeof(firstWithLength)))
+                    {
+                        // Found the first range that has length
+                        enum firstWithLength = i;
+                    }
+                    else
+                    {
+                        // Compare the length of the current range against the first with length
+                        if (rs[firstWithLength].length != rs[i].length)
+                            return false;
+                    }
+                }
+            }
             return equalLoop(rs);
         }
     }
