@@ -1007,15 +1007,15 @@ template equal(alias pred = "a == b")
             {
                 static if (hasLength!R)
                 {
-                    static if (!is(typeof(firstWithLength)))
+                    static if (!is(typeof(firstLength)))
                     {
                         // Found the first range that has length
-                        enum firstWithLength = i;
+                        auto firstLength = rs[i].length;
                     }
                     else
                     {
                         // Compare the length of the current range against the first with length
-                        if (rs[firstWithLength].length != rs[i].length)
+                        if (firstLength != rs[i].length)
                             return false;
                     }
                 }
