@@ -9899,12 +9899,9 @@ if (!is(CommonType!Values == void))
 }
 
 /// ditto
-auto only()()
+noreturn[] only()()
 {
-    // cannot use noreturn due to issue 22383
-    struct EmptyElementType {}
-    EmptyElementType[] result;
-    return result;
+    return typeof(return).init;
 }
 
 ///
