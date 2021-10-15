@@ -2542,21 +2542,19 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
                 {
-                    put(w, separator);
-                    put(w, val.tupleof[i].stringof[4 .. $]);
-                    put(w, "}");
+                    enum el = separator ~ val.tupleof[i].stringof[4 .. $] ~ "}";
+                    put(w, el);
                 }
                 else
                 {
-                    put(w, separator);
-                    put(w, val.tupleof[i].stringof[4 .. $]);
+                    enum el = separator ~ val.tupleof[i].stringof[4 .. $];
+                    put(w, el);
                 }
             }
             else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
             {
-                put(w, (i > 0 ? separator : ""));
-                put(w, "#{overlap ");
-                put(w, val.tupleof[i].stringof[4 .. $]);
+                enum el = (i > 0 ? separator : "") ~ "#{overlap " ~ val.tupleof[i].stringof[4 .. $];
+                put(w, el);
             }
             else
             {
