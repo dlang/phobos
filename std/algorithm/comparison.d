@@ -949,7 +949,7 @@ template equal(alias pred = "a == b")
         rs = The ranges to be compared.
 
     Returns:
-        `true` if and only if the two ranges compare _equal element
+        `true` if and only if all ranges compare _equal element
         for element, according to binary predicate `pred`.
     +/
     bool equal(Ranges...)(Ranges rs)
