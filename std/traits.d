@@ -8899,28 +8899,22 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
 }
 
 /**
-   Returns: `true` iff all types `T` are the same.
+   Returns: `true` iff all types `Ts` are the same.
 */
-template allSameType(T...)
+enum bool allSameType(Ts...) =
 {
-    static foreach (idx, Ti; T)
-    {
-        static if (idx + 1 < T.length &&
-                   !is(typeof(allSameType) == bool) &&
-                   !is(T[idx] == T[idx + 1]))
-        {
-            enum bool allSameType = false;
-        }
-    }
-    static if (!is(typeof(allSameType) == bool))
-    {
-        enum bool allSameType = true;
-    }
-}
+    static foreach (T; Ts[Ts.length > 1 .. $])
+        static if (!is(Ts[0] == T))
+            if (__ctfe)  // Dodge the "statement is unreachable" warning
+                return false;
+    return true;
+}();
 
 ///
 @safe unittest
 {
+    static assert(allSameType!());
+    static assert(allSameType!(int));
     static assert(allSameType!(int, int));
     static assert(allSameType!(int, int, int));
     static assert(allSameType!(float, float, float));
