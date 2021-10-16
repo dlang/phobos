@@ -178,44 +178,33 @@ if (isIntegral!U)
         auto raw = (ref val) @trusted {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-
         import std.range.primitives : put;
         if (needToSwapEndianess(f))
-        {
             foreach_reverse (c; raw)
                 put(w, c);
-        }
         else
-        {
             foreach (c; raw)
                 put(w, c);
-        }
         return;
     }
 
-    ulong arg = val;
-    const bool zero = arg == 0;
-    bool negative = false;
     static if (isSigned!U)
     {
-        if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
-        {
-            if (val < 0)
-            {
-                negative = true;
-                import std.math.algebraic : abs;
-                arg = cast(ulong) abs(val);
-            }
-        }
+        const bool negative = f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u' && val < 0;
+        ulong arg = negative ? -cast(ulong)val : val;
+    }
+    else
+    {
+        const bool negative = false;
+        ulong arg = val;
     }
     arg &= Unsigned!U.max;
 
-    formatValueImplUlong!(Writer, Char)(w, arg, zero, negative, f);
+    formatValueImplUlong!(Writer, Char)(w, arg, negative, f);
 }
 
-// TODO: factor out parts of this function that doesn’t depend on `Writer` and `Char` to reduce template bloat further
-private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool zero, in bool negative,
-                                                scope const ref FormatSpec!Char f) // avoids code duplication
+// Helper function for `formatValueImpl` that avoids template bloat
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative, scope const ref FormatSpec!Char f)
 {
     immutable uint base =
     f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
@@ -230,6 +219,7 @@ private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in
     enforceFmt(base > 0,
                "incompatible format character for integral argument: %" ~ f.spec);
 
+    const bool zero = arg == 0;
     char[64] digits = void;
     size_t pos = digits.length - 1;
     do
