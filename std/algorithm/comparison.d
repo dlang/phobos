@@ -58,7 +58,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.comparison;
 
-import std.functional : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun, lessThan, greaterThan;
 import std.range.primitives;
 import std.traits;
 import std.meta : allSatisfy;
@@ -561,9 +561,7 @@ auto castSwitch(choices...)(Object switchObject)
     }
 }
 
-/** Clamps a value into the given bounds.
-
-This function is equivalent to `max(lower, min(upper, val))`.
+/** Clamps `val` into the given bounds. Result has the same type as `val`.
 
 Params:
     val = The value to _clamp.
@@ -571,20 +569,21 @@ Params:
     upper = The _upper bound of the _clamp.
 
 Returns:
-    Returns `val`, if it is between `lower` and `upper`.
-    Otherwise returns the nearest of the two.
-
+    `lower` if `val` is less than `lower`, `upper` if `val` is greater than
+    `upper`, and `val` in all other cases. Comparisons are made
+    correctly (using $(REF lessThan, std,functional) and
+    $(REF greaterThan, std,functional)) even if the signedness of `T1`, `T2`,
+    and `T3` are different.
 */
-auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
-if (is(typeof(max(min(val, upper), lower))))
+T1 clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+if (is(typeof(val.lessThan(lower) ? lower : val.greaterThan(upper) ? upper : val) : T1))
 in
 {
-    import std.functional : greaterThan;
     assert(!lower.greaterThan(upper), "Lower can't be greater than upper.");
 }
 do
 {
-    return max(min(val, upper), lower);
+    return val.lessThan(lower) ? lower : val.greaterThan(upper) ? upper : val;
 }
 
 ///
@@ -597,6 +596,10 @@ do
     assert(clamp(1, 1, 1) == 1);
 
     assert(clamp(5, -1, 2u) == 2);
+
+    auto x = clamp(42, uint.max, uint.max);
+    static assert(is(typeof(x) == int));
+    assert(x == -1);
 }
 
 @safe unittest
@@ -611,7 +614,7 @@ do
     // mixed sign
     a = -5;
     uint f = 5;
-    static assert(is(typeof(clamp(f, a, b)) == int));
+    static assert(is(typeof(clamp(f, a, b)) == uint));
     assert(clamp(f, a, b) == f);
     // similar type deduction for (u)long
     static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
