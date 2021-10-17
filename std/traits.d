@@ -4475,14 +4475,7 @@ template InterfacesTuple(T)
  * interfaces. $(D_PARAM TransitiveBaseTypeTuple!Object) yields the
  * empty type tuple.
  */
-template TransitiveBaseTypeTuple(T)
-{
-    static if (is(T == Object))
-        alias TransitiveBaseTypeTuple = AliasSeq!();
-    else
-        alias TransitiveBaseTypeTuple =
-            AliasSeq!(BaseClassesTuple!T, InterfacesTuple!T);
-}
+alias TransitiveBaseTypeTuple(T) = AliasSeq!(BaseClassesTuple!T, InterfacesTuple!T);
 
 ///
 @safe unittest
