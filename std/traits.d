@@ -4947,36 +4947,29 @@ template AllImplicitConversionTargets(T)
 {
     static if (is(T == bool))
         alias AllImplicitConversionTargets =
-            AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
-                       float, double, real, char, wchar, dchar);
+            AliasSeq!(byte, AllImplicitConversionTargets!byte);
     else static if (is(T == byte))
         alias AllImplicitConversionTargets =
-            AliasSeq!(ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
-                       float, double, real, char, wchar, dchar);
+            AliasSeq!(char, ubyte, short, AllImplicitConversionTargets!short);
     else static if (is(T == ubyte))
         alias AllImplicitConversionTargets =
-            AliasSeq!(byte, short, ushort, int, uint, long, ulong, CentTypeList,
-                       float, double, real, char, wchar, dchar);
+            AliasSeq!(byte, char, short, AllImplicitConversionTargets!short);
     else static if (is(T == short))
         alias AllImplicitConversionTargets =
-            AliasSeq!(ushort, int, uint, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(ushort, wchar, int, AllImplicitConversionTargets!int);
     else static if (is(T == ushort))
         alias AllImplicitConversionTargets =
-            AliasSeq!(short, int, uint, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(short, wchar, dchar, AllImplicitConversionTargets!dchar);
     else static if (is(T == int))
         alias AllImplicitConversionTargets =
-            AliasSeq!(uint, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(dchar, uint, long, AllImplicitConversionTargets!long);
     else static if (is(T == uint))
         alias AllImplicitConversionTargets =
-            AliasSeq!(int, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(dchar, int, long, AllImplicitConversionTargets!long);
     else static if (is(T == long))
-        alias AllImplicitConversionTargets = AliasSeq!(ulong, float, double, real);
+        alias AllImplicitConversionTargets = AliasSeq!(ulong, CentTypeList, float, double, real);
     else static if (is(T == ulong))
-        alias AllImplicitConversionTargets = AliasSeq!(long, float, double, real);
-    else static if (is(cent) && is(T == cent))
-        alias AllImplicitConversionTargets = AliasSeq!(UnsignedCentTypeList, float, double, real);
-    else static if (is(ucent) && is(T == ucent))
-        alias AllImplicitConversionTargets = AliasSeq!(SignedCentTypeList, float, double, real);
+        alias AllImplicitConversionTargets = AliasSeq!(long, CentTypeList, float, double, real);
     else static if (is(T == float))
         alias AllImplicitConversionTargets = AliasSeq!(double, real);
     else static if (is(T == double))
@@ -4985,21 +4978,17 @@ template AllImplicitConversionTargets(T)
         alias AllImplicitConversionTargets = AliasSeq!(float, double);
     else static if (is(T == char))
         alias AllImplicitConversionTargets =
-            AliasSeq!(wchar, dchar, byte, ubyte, short, ushort,
-                       int, uint, long, ulong, CentTypeList, float, double, real);
+            AliasSeq!(byte, ubyte, short, AllImplicitConversionTargets!short);
     else static if (is(T == wchar))
         alias AllImplicitConversionTargets =
-            AliasSeq!(dchar, short, ushort, int, uint, long, ulong, CentTypeList,
-                       float, double, real);
+            AliasSeq!(short, ushort, dchar, AllImplicitConversionTargets!dchar);
     else static if (is(T == dchar))
         alias AllImplicitConversionTargets =
-            AliasSeq!(int, uint, long, ulong, CentTypeList, float, double, real);
-    else static if (is(T : typeof(null)))
-        alias AllImplicitConversionTargets = AliasSeq!(typeof(null));
+            AliasSeq!(int, uint, long, AllImplicitConversionTargets!long);
     else static if (is(T == class))
-        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!(T));
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), TransitiveBaseTypeTuple!T);
     else static if (is(T == interface))
-        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), InterfacesTuple!(T));
+        alias AllImplicitConversionTargets = staticMap!(ApplyLeft!(CopyConstness, T), InterfacesTuple!T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
     {
        static if (is(typeof(T.init[0]) == shared))
@@ -5009,8 +4998,12 @@ template AllImplicitConversionTargets(T)
            alias AllImplicitConversionTargets =
            AliasSeq!(const(Unqual!(typeof(T.init[0])))[]);
     }
-    else static if (is(T : void*))
+    else static if (is(T : void*) && !is(T == void*))
         alias AllImplicitConversionTargets = AliasSeq!(void*);
+    else static if (is(cent) && is(T == cent))
+        alias AllImplicitConversionTargets = AliasSeq!(UnsignedCentTypeList, float, double, real);
+    else static if (is(ucent) && is(T == ucent))
+        alias AllImplicitConversionTargets = AliasSeq!(SignedCentTypeList, float, double, real);
     else
         alias AllImplicitConversionTargets = AliasSeq!();
 }
@@ -5021,22 +5014,23 @@ template AllImplicitConversionTargets(T)
     import std.meta : AliasSeq;
 
     static assert(is(AllImplicitConversionTargets!(ulong) == AliasSeq!(long, float, double, real)));
-    static assert(is(AllImplicitConversionTargets!(int) == AliasSeq!(uint, long, ulong, float, double, real)));
+    static assert(is(AllImplicitConversionTargets!(int) == AliasSeq!(dchar, uint, long, ulong, float, double, real)));
     static assert(is(AllImplicitConversionTargets!(float) == AliasSeq!(double, real)));
     static assert(is(AllImplicitConversionTargets!(double) == AliasSeq!(float, real)));
 
-    static assert(is(AllImplicitConversionTargets!(char) == AliasSeq!(
-        wchar, dchar, byte, ubyte, short, ushort, int, uint, long, ulong, float, double, real
-    )));
+    static assert(is(AllImplicitConversionTargets!(char) ==
+        AliasSeq!(byte, ubyte, short, ushort, wchar, int, dchar, uint, long,
+            ulong, float, double, real)
+    ));
     static assert(is(AllImplicitConversionTargets!(wchar) == AliasSeq!(
-        dchar, short, ushort, int, uint, long, ulong, float, double, real
+        short, ushort, dchar, int, uint, long, ulong, float, double, real
     )));
     static assert(is(AllImplicitConversionTargets!(dchar) == AliasSeq!(
         int, uint, long, ulong, float, double, real
     )));
 
     static assert(is(AllImplicitConversionTargets!(string) == AliasSeq!(const(char)[])));
-    static assert(is(AllImplicitConversionTargets!(void*) == AliasSeq!(void*)));
+    static assert(is(AllImplicitConversionTargets!(int*) == AliasSeq!(void*)));
 
     interface A {}
     interface B {}
