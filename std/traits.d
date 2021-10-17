@@ -4729,22 +4729,13 @@ if (is(C == class) || is(C == interface))
 Returns an alias to the template that `T` is an instance of.
 It will return `void` if a symbol without a template is given.
  */
-template TemplateOf(alias T : Base!Args, alias Base, Args...)
-{
-    alias TemplateOf = Base;
-}
+alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
 
 /// ditto
-template TemplateOf(T : Base!Args, alias Base, Args...)
-{
-    alias TemplateOf = Base;
-}
+alias TemplateOf(T : Base!Args, alias Base, Args...) = Base;
 
 /// ditto
-template TemplateOf(T)
-{
-    alias TemplateOf = void;
-}
+alias TemplateOf(T) = void;
 
 ///
 @safe unittest
@@ -4786,16 +4777,10 @@ template TemplateOf(T)
 /**
 Returns a `AliasSeq` of the template arguments used to instantiate `T`.
  */
-template TemplateArgsOf(alias T : Base!Args, alias Base, Args...)
-{
-    alias TemplateArgsOf = Args;
-}
+alias TemplateArgsOf(alias T : Base!Args, alias Base, Args...) = Args;
 
 /// ditto
-template TemplateArgsOf(T : Base!Args, alias Base, Args...)
-{
-    alias TemplateArgsOf = Args;
-}
+alias TemplateArgsOf(T : Base!Args, alias Base, Args...) = Args;
 
 ///
 @safe unittest
