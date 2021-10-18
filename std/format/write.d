@@ -1201,10 +1201,11 @@ if (isSomeString!(typeof(fmt)))
     formattedWrite(stream, "%s", aa);
 }
 
-private enum isMutatingFormattingAggregate(T, Char) = ((is(T == struct) || is(T == class) || is(T == interface))
-                                                       && (isInputRange!T ||
-                                                           (hasToString!(T, Char)&&
-                                                            !is(typeof(const(T).init.toString) : const(char)[])))); // non-mutating
+private enum isMutatingFormattingAggregate(T, Char) =
+    ((is(T == struct) || is(T == class) || is(T == interface))
+     && (isInputRange!T ||
+         (hasToString!(T, Char)&&
+          !is(typeof(const(T).init.toString) : const(char)[])))); // non-mutating
 
 template AliasThisTypeOf(T)
 {
