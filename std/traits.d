@@ -4816,24 +4816,15 @@ alias TemplateArgsOf(T : Base!Args, alias Base, Args...) = Args;
     static assert(is(TemplateArgsOf!(Foo10!()) == AliasSeq!()));
 }
 
-
-package template maxAlignment(U...)
-if (isTypeTuple!U)
+// Returns the largest alignment in a type tuple.
+package enum maxAlignment(U...) =
 {
-    static if (U.length == 0)
-        static assert(0);
-    else static if (U.length == 1)
-        enum maxAlignment = U[0].alignof;
-    else static if (U.length == 2)
-        enum maxAlignment = U[0].alignof > U[1].alignof ? U[0].alignof : U[1].alignof;
-    else
-    {
-        enum a = maxAlignment!(U[0 .. ($+1)/2]);
-        enum b = maxAlignment!(U[($+1)/2 .. $]);
-        enum maxAlignment = a > b ? a : b;
-    }
-}
-
+    size_t result = U[0].alignof;
+    static foreach (T; U[1 .. $])
+        if (result < T.alignof)
+            result = T.alignof;
+    return result;
+}();
 
 /**
 Returns class instance alignment.
