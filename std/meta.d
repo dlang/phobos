@@ -637,7 +637,7 @@ private string generateCases()
 private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
 
 /**
-Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D AliasSeq!(F!(Args[0]), F!(Args[1]), ..., F!(Args[$ - 1]))).
  */
 template staticMap(alias F, Args ...)
 {
