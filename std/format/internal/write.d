@@ -181,12 +181,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     static if (isSigned!U)
     {
-        const bool negative = f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u' && val < 0;
+        const negative = val < 0 && f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u';
         ulong arg = negative ? -cast(ulong) val : val;
     }
     else
     {
-        const bool negative = false;
+        const negative = false;
         ulong arg = val;
     }
     arg &= Unsigned!U.max;
@@ -195,7 +195,8 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 // Helper function for `formatValueImpl` that avoids template bloat
-private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative, scope const ref FormatSpec!Char f)
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative,
+                                                scope const ref FormatSpec!Char f)
 {
     immutable uint base =
     f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
