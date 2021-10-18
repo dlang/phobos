@@ -2166,7 +2166,7 @@ template hasToString(T, Char)
 
 // object formatting with toString
 void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
-if (hasToString!(T, Char))
+if (hasToString!(T, Char)) // TODO: add overload for when const(T) `T.toString` is const to reduce code bloat
 {
     import std.format : NoOpSink;
     import std.range.primitives : put;
