@@ -562,15 +562,10 @@ struct MyStruct {}
 static assert(fullyQualifiedName!(const MyStruct[]) == "const(myModule.MyStruct[])");
 -----------------
 */
-template fullyQualifiedName(T...)
-if (T.length == 1)
-{
+enum fullyQualifiedName(T) = fqnType!(T, false, false, false, false);
 
-    static if (is(T))
-        enum fullyQualifiedName = fqnType!(T[0], false, false, false, false);
-    else
-        enum fullyQualifiedName = fqnSym!(T[0]);
-}
+/// ditto
+enum fullyQualifiedName(alias T) = fqnSym!(T);
 
 ///
 @safe unittest
@@ -986,8 +981,8 @@ private template fqnType(T,
  * is not part of a type, but the attribute of the function
  * (see template $(LREF functionAttributes)).
  */
-template ReturnType(func...)
-if (func.length == 1 && isCallable!func)
+template ReturnType(alias func)
+if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func R == return))
         alias ReturnType = R;
@@ -1045,8 +1040,8 @@ Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an `opCall`, a pointer to a
 struct with an `opCall`, or a class with an `opCall`.
 */
-template Parameters(func...)
-if (func.length == 1 && isCallable!func)
+template Parameters(alias func)
+if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func P == function))
         alias Parameters = P;
@@ -1095,9 +1090,8 @@ alias ParameterTypeTuple = Parameters;
 Returns the number of arguments of function `func`.
 arity is undefined for variadic functions.
 */
-template arity(func...)
-if (func.length == 1 && isCallable!func &&
-    variadicFunctionStyle!func == Variadic.no)
+template arity(alias func)
+if (isCallable!func && variadicFunctionStyle!func == Variadic.no)
 {
     enum size_t arity = Parameters!func.length;
 }
@@ -1143,8 +1137,8 @@ enum ParameterStorageClass : uint
 }
 
 /// ditto
-template ParameterStorageClassTuple(func...)
-if (func.length == 1 && isCallable!func)
+template ParameterStorageClassTuple(alias func)
+if (isCallable!func)
 {
     alias Func = FunctionTypeOf!func;
 
@@ -1308,8 +1302,8 @@ template extractParameterStorageClassFlags(Attribs...)
 /**
 Get, as a tuple, the identifiers of the parameters to a function symbol.
  */
-template ParameterIdentifierTuple(func...)
-if (func.length == 1 && isCallable!func)
+template ParameterIdentifierTuple(alias func)
+if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
@@ -1331,7 +1325,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ " is not a function");
+        static assert(0, func.stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
@@ -1407,11 +1401,11 @@ if (func.length == 1 && isCallable!func)
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, `void` is returned instead.
  */
-template ParameterDefaults(func...)
-if (func.length == 1 && isCallable!func)
+template ParameterDefaults(alias func)
+if (isCallable!func)
 {
     alias param_names = ParameterIdentifierTuple!func;
-    static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
+    static if (is(FunctionTypeOf!(func) PT == __parameters))
     {
         template Get(size_t i)
         {
@@ -1444,7 +1438,7 @@ if (func.length == 1 && isCallable!func)
     }
     else
     {
-        static assert(0, func[0].stringof ~ " is not a function");
+        static assert(0, func.stringof ~ " is not a function");
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
@@ -1559,8 +1553,8 @@ enum FunctionAttribute : uint
 }
 
 /// ditto
-template functionAttributes(func...)
-if (func.length == 1 && isCallable!func)
+template functionAttributes(alias func)
+if (isCallable!func)
 {
     // @bug: workaround for opCall
     alias FuncSym = Select!(is(typeof(__traits(getFunctionAttributes, func))),
@@ -2090,8 +2084,8 @@ Params:
 Returns:
     one of the strings "D", "C", "C++", "Windows", "Objective-C", or "System".
 */
-template functionLinkage(func...)
-if (func.length == 1 && isCallable!func)
+template functionLinkage(alias func)
+if (isCallable!func)
 {
     enum string functionLinkage = __traits(getLinkage, FunctionTypeOf!func);
 }
@@ -2148,8 +2142,8 @@ enum Variadic
 }
 
 /// ditto
-template variadicFunctionStyle(func...)
-if (func.length == 1 && isCallable!func)
+template variadicFunctionStyle(alias func)
+if (isCallable!func)
 {
     enum string varargs = __traits(getFunctionVariadicStyle, FunctionTypeOf!func);
     enum Variadic variadicFunctionStyle =
@@ -2198,25 +2192,25 @@ Note:
 Do not confuse function types with function pointer types; function types are
 usually used for compile-time reflection purposes.
  */
-template FunctionTypeOf(func...)
-if (func.length == 1 && isCallable!func)
+template FunctionTypeOf(alias func)
+if (isCallable!func)
 {
-    static if ((is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function)) || is(typeof(& func[0]) Fsym == delegate))
+    static if ((is(typeof(& func) Fsym : Fsym*) && is(Fsym == function)) || is(typeof(& func) Fsym == delegate))
     {
         alias FunctionTypeOf = Fsym; // HIT: (nested) function symbol
     }
-    else static if (is(typeof(& func[0].opCall) Fobj == delegate) || is(typeof(& func[0].opCall!()) Fobj == delegate))
+    else static if (is(typeof(& func.opCall) Fobj == delegate) || is(typeof(& func.opCall!()) Fobj == delegate))
     {
         alias FunctionTypeOf = Fobj; // HIT: callable object
     }
     else static if (
-            (is(typeof(& func[0].opCall) Ftyp : Ftyp*) && is(Ftyp == function)) ||
-            (is(typeof(& func[0].opCall!()) Ftyp : Ftyp*) && is(Ftyp == function))
+            (is(typeof(& func.opCall) Ftyp : Ftyp*) && is(Ftyp == function)) ||
+            (is(typeof(& func.opCall!()) Ftyp : Ftyp*) && is(Ftyp == function))
         )
     {
         alias FunctionTypeOf = Ftyp; // HIT: callable type
     }
-    else static if (is(func[0] T) || is(typeof(func[0]) T))
+    else static if (is(func T) || is(typeof(func) T))
     {
         static if (is(T == function))
             alias FunctionTypeOf = T;    // HIT: function
@@ -7402,15 +7396,14 @@ Params:
 Returns:
     A `bool`
  */
-template isSomeFunction(T...)
-if (T.length == 1)
+template isSomeFunction(alias T)
 {
-    static if (is(typeof(& T[0]) U : U*) && is(U == function) || is(typeof(& T[0]) U == delegate))
+    static if (is(typeof(& T) U : U*) && is(U == function) || is(typeof(& T) U == delegate))
     {
         // T is a (nested) function symbol.
         enum bool isSomeFunction = true;
     }
-    else static if (is(T[0] W) || is(typeof(T[0]) W))
+    else static if (is(T W) || is(typeof(T) W))
     {
         // T is an expression or a type.  Take the type of it and examine.
         static if (is(W F : F*) && is(F == function))
@@ -7552,11 +7545,7 @@ Params:
 Returns:
     A `bool`
  */
-template isAbstractFunction(T...)
-if (T.length == 1)
-{
-    enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
-}
+enum isAbstractFunction(alias T) = __traits(isAbstractFunction, T);
 
 ///
 @safe unittest
@@ -7573,11 +7562,7 @@ if (T.length == 1)
 /**
  * Detect whether `T` is a final function.
  */
-template isFinalFunction(T...)
-if (T.length == 1)
-{
-    enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
-}
+enum isFinalFunction(alias T) = __traits(isFinalFunction, T);
 
 ///
 @safe unittest
@@ -7645,11 +7630,7 @@ template isNestedFunction(alias f)
 /**
  * Detect whether `T` is an abstract class.
  */
-template isAbstractClass(T...)
-if (T.length == 1)
-{
-    enum bool isAbstractClass = __traits(isAbstractClass, T[0]);
-}
+enum isAbstractClass(alias T) = __traits(isAbstractClass, T);
 
 ///
 @safe unittest
@@ -7669,11 +7650,7 @@ if (T.length == 1)
 /**
  * Detect whether `T` is a final class.
  */
-template isFinalClass(T...)
-if (T.length == 1)
-{
-    enum bool isFinalClass = __traits(isFinalClass, T[0]);
-}
+enum isFinalClass(alias T) = __traits(isFinalClass, T);
 
 ///
 @safe unittest
@@ -8244,11 +8221,7 @@ Returns the mangled name of symbol or type `sth`.
 might be more convenient in generic code, e.g. as a template argument
 when invoking staticMap.
  */
-template mangledName(sth...)
-if (sth.length == 1)
-{
-    enum string mangledName = sth[0].mangleof;
-}
+enum mangledName(alias sth) = sth.mangleof;
 
 ///
 @safe unittest
@@ -8899,11 +8872,7 @@ enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init))
  * Returns:
  *      `true` if `X` is a type, `false` otherwise
  */
-template isType(X...)
-if (X.length == 1)
-{
-    enum isType = is(X[0]);
-}
+enum isType(alias X) = is(X);
 
 ///
 @safe unittest
@@ -8943,16 +8912,15 @@ if (X.length == 1)
  *     Use $(LREF isFunctionPointer) or $(LREF isDelegate) for detecting those types
  *     respectively.
  */
-template isFunction(X...)
-if (X.length == 1)
+template isFunction(alias X)
 {
-    static if (is(typeof(&X[0]) U : U*) && is(U == function) ||
-               is(typeof(&X[0]) U == delegate))
+    static if (is(typeof(&X) U : U*) && is(U == function) ||
+               is(typeof(&X) U == delegate))
     {
         // x is a (nested) function symbol.
         enum isFunction = true;
     }
-    else static if (is(X[0] T))
+    else static if (is(X T))
     {
         // x is a type.  Take the type of it and examine.
         enum isFunction = is(T == function);
@@ -8980,13 +8948,12 @@ if (X.length == 1)
  * Returns:
  *     `true` if `X` is final, `false` otherwise
  */
-template isFinal(X...)
-if (X.length == 1)
+template isFinal(alias X)
 {
-    static if (is(X[0] == class))
-        enum isFinal = __traits(isFinalClass, X[0]);
+    static if (is(X == class))
+        enum isFinal = __traits(isFinalClass, X);
     else static if (isFunction!X)
-        enum isFinal = __traits(isFinalFunction, X[0]);
+        enum isFinal = __traits(isFinalFunction, X);
     else
         enum isFinal = false;
 }
