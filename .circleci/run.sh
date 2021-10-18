@@ -2,7 +2,7 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.079.1
+HOST_DMD_VER=2.095.0
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
 N=${N:-2}
