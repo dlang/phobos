@@ -190,12 +190,12 @@ if (isIntegral!U)
 
     static if (isSigned!U)
     {
-        const bool negative = f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u' && val < 0;
-        ulong arg = negative ? -cast(ulong)val : val;
+        const negative = val < 0 && f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u';
+        ulong arg = negative ? -cast(ulong) val : val;
     }
     else
     {
-        const bool negative = false;
+        const negative = false;
         ulong arg = val;
     }
     arg &= Unsigned!U.max;
@@ -204,7 +204,8 @@ if (isIntegral!U)
 }
 
 // Helper function for `formatValueImpl` that avoids template bloat
-private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative, scope const ref FormatSpec!Char f)
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative,
+                                                scope const ref FormatSpec!Char f)
 {
     immutable uint base =
     f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
@@ -360,6 +361,27 @@ private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in
                  digits[pos + 1 .. min(digit_end, $)],
                  suffix[0 .. $], fs,
                  (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
+}
+
+@safe pure unittest
+{
+    formatTest(byte.min, "-128");
+    formatTest(byte.max, "127");
+    formatTest(short.min, "-32768");
+    formatTest(short.max, "32767");
+    formatTest(int.min, "-2147483648");
+    formatTest(int.max, "2147483647");
+    formatTest(long.min, "-9223372036854775808");
+    formatTest(long.max, "9223372036854775807");
+
+    formatTest(ubyte.min, "0");
+    formatTest(ubyte.max, "255");
+    formatTest(ushort.min, "0");
+    formatTest(ushort.max, "65535");
+    formatTest(uint.min, "0");
+    formatTest(uint.max, "4294967295");
+    formatTest(ulong.min, "0");
+    formatTest(ulong.max, "18446744073709551615");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
@@ -2563,21 +2585,19 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
             {
                 static if (i == val.tupleof.length - 1 || val.tupleof[i].offsetof != val.tupleof[i+1].offsetof)
                 {
-                    put(w, separator);
-                    put(w, val.tupleof[i].stringof[4 .. $]);
-                    put(w, "}");
+                    enum el = separator ~ val.tupleof[i].stringof[4 .. $] ~ "}";
+                    put(w, el);
                 }
                 else
                 {
-                    put(w, separator);
-                    put(w, val.tupleof[i].stringof[4 .. $]);
+                    enum el = separator ~ val.tupleof[i].stringof[4 .. $];
+                    put(w, el);
                 }
             }
             else static if (i+1 < val.tupleof.length && val.tupleof[i].offsetof == val.tupleof[i+1].offsetof)
             {
-                put(w, (i > 0 ? separator : ""));
-                put(w, "#{overlap ");
-                put(w, val.tupleof[i].stringof[4 .. $]);
+                enum el = (i > 0 ? separator : "") ~ "#{overlap " ~ val.tupleof[i].stringof[4 .. $];
+                put(w, el);
             }
             else
             {
