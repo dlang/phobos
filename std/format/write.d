@@ -1201,6 +1201,20 @@ if (isSomeString!(typeof(fmt)))
     formattedWrite(stream, "%s", aa);
 }
 
+private enum isMutatingFormattingAggregate(T, Char) = ((is(T == struct) || is(T == class) || is(T == interface))
+                                                       && (isInputRange!T ||
+                                                           (hasToString!(T, Char)&&
+                                                            !is(typeof(const(T).init.toString) : const(char)[])))); // non-mutating
+
+template AliasThisTypeOf(T)
+{
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT)
+               && !is(AT[] == AT))
+        alias AliasThisTypeOf = AliasThisTypeOf!(AT); // recurse
+    else
+        alias AliasThisTypeOf = T;
+}
+
 /**
 Formats a value of any type according to a format specifier and
 writes the result to an output range.
@@ -1231,7 +1245,7 @@ See_Also:
     $(LREF formattedWrite) which formats several values at once.
  */
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref const T val, scope const ref FormatSpec!Char f)
-if (!((is(T == struct) || is(T == class) || is(T == interface)) && (isInputRange!T || hasToString!(T, Char))))
+if (!isMutatingFormattingAggregate!(T, Char))
 {
     // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
     // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
@@ -1243,10 +1257,7 @@ if (!((is(T == struct) || is(T == class) || is(T == interface)) && (isInputRange
                "Dynamic argument not allowed for `formatValue`");
 
     // follow alias this
-    // TODO support recursive alias this declarations via either
-    // - static foreach and AliasAssign
-    // - recursive FollowAliasThis
-    // - recurse by calling formatValue
+    // TODO: use AliasThisTypeOf respecting !hasToString
     static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) // TODO: check only if T is struct or class
                && !is(AT[] == AT) &&
                !hasToString!(T, Char)) // toString takes precedence over alias following alias this
@@ -1317,7 +1328,7 @@ if (!((is(T == struct) || is(T == class) || is(T == interface)) && (isInputRange
 }
 /// ditto
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
-if ((is(T == struct) || is(T == class) || is(T == interface)) && (isInputRange!T || hasToString!(T, Char)))
+if (isMutatingFormattingAggregate!(T, Char))
 {
     import std.format : enforceFmt;
     import std.traits : isIntegral, isPointer;
@@ -1327,10 +1338,7 @@ if ((is(T == struct) || is(T == class) || is(T == interface)) && (isInputRange!T
                "Dynamic argument not allowed for `formatValue`");
 
     // follow alias this
-    // TODO support recursive alias this declarations via either
-    // - static foreach and AliasAssign
-    // - recursive FollowAliasThis
-    // - recurse by calling formatValue
+    // TODO: use AliasThisTypeOf respecting !hasToString
     static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) // TODO: check only if T is struct or class
                && !is(AT[] == AT) &&
                !hasToString!(T, Char)) // toString takes precedence over alias following alias this
