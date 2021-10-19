@@ -303,8 +303,9 @@ private struct _Cache(R, bool bidir)
 
     this(R range)
     {
-        source = range;
-        if (!range.empty)
+        import std.algorithm.mutation : move;
+        this.source = move(range);
+        if (!source.empty)
         {
             caches[0] = source.front;
             static if (bidir)
@@ -373,7 +374,8 @@ private struct _Cache(R, bool bidir)
     {
         private this(R source, ref CacheTypes caches)
         {
-            this.source = source;
+            import std.algorithm.mutation : move;
+            this.source = move(source);
             this.caches = caches;
         }
         typeof(this) save() @property
@@ -476,7 +478,8 @@ if (fun.length >= 1)
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
-        return MapResult!(_fun, Range)(r);
+        import std.algorithm.mutation : move;
+        return MapResult!(_fun, Range)(move(r));
     }
 }
 
@@ -554,7 +557,8 @@ private struct MapResult(alias fun, Range)
 
     this(R input)
     {
-        _input = input;
+        import std.algorithm.mutation : move;
+        _input = move(input);
     }
 
     static if (isInfinite!R)
@@ -1290,7 +1294,8 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!predicate, Range)(range);
+        import std.algorithm.mutation : move;
+        return FilterResult!(unaryFun!predicate, Range)(move(range));
     }
 }
 
@@ -1325,6 +1330,8 @@ if (is(typeof(unaryFun!predicate)))
 
 private struct FilterResult(alias pred, Range)
 {
+    import std.algorithm.mutation : move;
+
     alias R = Unqual!Range;
     R _input;
     private bool _primed;
@@ -1341,16 +1348,17 @@ private struct FilterResult(alias pred, Range)
 
     this(R r)
     {
-        _input = r;
+        _input = move(r);
     }
 
     private this(R r, bool primed)
     {
-        _input = r;
+        _input = move(r);
         _primed = primed;
     }
 
-    auto opSlice() { return this; }
+    static if (__traits(isCopyable, Range))
+        auto opSlice() { return this; }
 
     static if (isInfinite!Range)
     {
@@ -1557,7 +1565,8 @@ private struct FilterBidiResult(alias pred, Range)
 
     this(R r)
     {
-        _input = r;
+        import std.algorithm.mutation : move;
+        _input = move(r);
         while (!_input.empty && !pred(_input.front)) _input.popFront();
         while (!_input.empty && !pred(_input.back)) _input.popBack();
     }
@@ -1658,7 +1667,8 @@ if (isInputRange!R)
     ///
     this(R input)
     {
-        _input = input;
+        import std.algorithm.mutation : move;
+        _input = move(input);
         if (!_input.empty) popFront();
     }
 
@@ -1907,7 +1917,8 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     this(Range _r)
     {
-        r = _r;
+        import std.algorithm.mutation : move;
+        _r = move(r);
         if (!empty)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
@@ -3074,7 +3085,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         this(RoR items, Separator sep)
         {
-            _items = items;
+            import std.algorithm.mutation : move;
+            _items = move(items);
             _currentSep.initialize(sep);
             static if (isBidirectional)
                 _currentBackSep.initialize(sep);
@@ -3615,7 +3627,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         this(RoR items, ElementType!RoR current)
         {
-            _items = items;
+            import std.algorithm.mutation : move;
+            _items = move(items);
             _current = current;
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
@@ -3624,7 +3637,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     public:
         this(RoR r)
         {
-            _items = r;
+            import std.algorithm.mutation : move;
+            _items = move(r);
 
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
@@ -4917,7 +4931,8 @@ if (fun.length >= 1)
 
             this(R range, ref Args args)
             {
-                source = range;
+                import std.algorithm.mutation : move;
+                source = move(range);
                 if (source.empty)
                     return;
 
@@ -5294,7 +5309,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            _input = input;
+            import std.algorithm.mutation : move;
+            _input = move(input);
             _separator = separator;
 
             static if (isNarrowString!Range)
@@ -5875,7 +5891,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            _input = input;
+            import std.algorithm.mutation : move;
+            _input = move(input);
             _separator = separator;
         }
 
@@ -6080,7 +6097,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
     this(Range input)
     {
-        _input = input;
+        import std.algorithm.mutation : move;
+        _input = move(input);
         static if (!fullSlicing)
             _next = _input.save;
 
@@ -7740,13 +7758,12 @@ private struct UniqResult(alias pred, Range)
 
     this(Range input)
     {
-        _input = input;
+        import std.algorithm.mutation : move;
+        _input = move(input);
     }
 
-    auto opSlice()
-    {
-        return this;
-    }
+    static if (__traits(isCopyable, Range))
+        auto opSlice() { return this; }
 
     void popFront()
     {
@@ -7874,7 +7891,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
         import std.array : array;
         import std.range : iota;
 
-        this._r = r;
+        import std.algorithm.mutation : move;
+        _r = move(r);
         _state = r.length ? new size_t[r.length-1] : null;
         _indices = iota(size_t(r.length)).array;
         _empty = r.length == 0;
