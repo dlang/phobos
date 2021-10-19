@@ -9713,9 +9713,18 @@ if (Values.length > 1)
 {
     private enum arity = Values.length;
 
+    private alias UnqualValues = staticMap!(Unqual, Values);
+
     private this(return scope ref Values values)
     {
-        this.values = values;
+        ref @trusted unqual(T)(ref T x){return cast() x;}
+
+        // TODO: this calls any possible copy constructors without qualifiers.
+        // Find a way to initialize values using qualified copy constructors.
+        static foreach (i; 0 .. Values.length)
+        {
+            this.values[i] = unqual(values[i]);
+        }
         this.backIndex = arity;
     }
 
@@ -9760,7 +9769,7 @@ if (Values.length > 1)
 
     alias opDollar = length;
 
-    CommonType!Values opIndex(size_t idx)
+    @trusted CommonType!Values opIndex(size_t idx)
     {
         // when i + idx points to elements popped
         // with popBack
@@ -9768,7 +9777,7 @@ if (Values.length > 1)
         final switch (frontIndex + idx)
             static foreach (i, T; Values)
             case i:
-                return values[i];
+                return cast(T) values[i];
     }
 
     OnlyResult opSlice()
@@ -9800,12 +9809,15 @@ if (Values.length > 1)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
-            private Values values;
+            private UnqualValues values;
         else
-            private Values values = void;
+            private UnqualValues values = void;
     }
     else
-        private Values values;
+        // These may alias to shared or immutable data. Do not let the user
+        // to access these directly, and do not allow mutation without checking
+        // the qualifier.
+        private UnqualValues values;
 }
 
 // Specialize for single-element results
@@ -9814,12 +9826,12 @@ private struct OnlyResult(T)
     @property T front()
     {
         assert(!empty, "Attempting to fetch the front of an empty Only range");
-        return _value;
+        return fetchFront();
     }
     @property T back()
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
-        return _value;
+        return fetchFront();
     }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
@@ -9838,14 +9850,17 @@ private struct OnlyResult(T)
 
     private this()(return scope auto ref T value)
     {
-        this._value = value;
+        ref @trusted unqual(ref T x){return cast() x;}
+        // TODO: this calls the possible copy constructor without qualifiers.
+        // Find a way to initialize value using a qualified copy constructor.
+        this._value = unqual(value);
         this._empty = false;
     }
 
     T opIndex(size_t i)
     {
         assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
-        return _value;
+        return fetchFront();
     }
 
     OnlyResult opSlice()
@@ -9868,8 +9883,15 @@ private struct OnlyResult(T)
         return copy;
     }
 
+    // This may alias to shared or immutable data. Do not let the user
+    // to access this directly, and do not allow mutation without checking
+    // the qualifier.
     private Unqual!T _value;
     private bool _empty = true;
+    private @trusted T fetchFront()
+    {
+        return *cast(T*)&_value;
+    }
 }
 
 /**
@@ -10136,6 +10158,19 @@ auto only()()
     } ();
 
     assert(range.join == "Hello World");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21022
+@safe pure nothrow unittest
+{
+    struct S
+    {
+        int* mem;
+    }
+
+    immutable S x;
+    immutable(S)[] arr;
+    auto r1 = arr.chain(x.only, only(x, x));
 }
 
 /**
