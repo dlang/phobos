@@ -8046,25 +8046,9 @@ returned.
 template Largest(T...)
 if (T.length >= 1)
 {
-    static if (T.length == 1)
-    {
-        alias Largest = T[0];
-    }
-    else static if (T.length == 2)
-    {
-        static if (T[0].sizeof >= T[1].sizeof)
-        {
-            alias Largest = T[0];
-        }
-        else
-        {
-            alias Largest = T[1];
-        }
-    }
-    else
-    {
-        alias Largest = Largest!(Largest!(T[0 .. $/2]), Largest!(T[$/2 .. $]));
-    }
+    alias Largest = T[0];
+    static foreach (U; T[1 .. $])
+        Largest = Select!(U.sizeof > Largest.sizeof, U, Largest);
 }
 
 ///
