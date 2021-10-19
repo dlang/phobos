@@ -7304,15 +7304,14 @@ alias isExpressionTuple = isExpressions;
  *
  * See_Also: $(LREF isExpressions).
  */
-template isTypeTuple(T...)
+enum isTypeTuple(T...) =
 {
-    static if (T.length >= 2)
-        enum bool isTypeTuple = isTypeTuple!(T[0 .. $/2]) && isTypeTuple!(T[$/2 .. $]);
-    else static if (T.length == 1)
-        enum bool isTypeTuple = is(T[0]);
-    else
-        enum bool isTypeTuple = true; // default
-}
+    static foreach (U; T)
+        static if (!is(U))
+            if (__ctfe)
+                return false;
+    return true;
+}();
 
 ///
 @safe unittest
@@ -8336,10 +8335,7 @@ B select(bool cond : false, A, B)(lazy A a, B b) { return b; }
     See_Also:
         $(LREF getUDAs)
   +/
-template hasUDA(alias symbol, alias attribute)
-{
-    enum hasUDA = getUDAs!(symbol, attribute).length != 0;
-}
+enum hasUDA(alias symbol, alias attribute) = getUDAs!(symbol, attribute).length != 0;
 
 ///
 @safe unittest
