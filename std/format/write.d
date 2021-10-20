@@ -1230,13 +1230,110 @@ See_Also:
  */
 void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const ref FormatSpec!Char f)
 {
+    // TODO: make const(T) work. this template is currently instantiated 10890 times when make -f posix.mak unittest
+    // TODO: const(T) val when val is r-value (non-ref)
+    // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: ", T);
     import std.format : enforceFmt;
+    import std.traits : isIntegral, isPointer;
 
     enforceFmt(f.width != f.DYNAMIC && f.precision != f.DYNAMIC
                && f.separators != f.DYNAMIC && !f.dynamicSeparatorChar,
                "Dynamic argument not allowed for `formatValue`");
 
-    formatValueImpl(w, val, f);
+    // follow alias this
+    // TODO support recursive alias this declarations via either
+    // - static foreach and AliasAssign
+    // - recursive FollowAliasThis
+    // - recurse by calling formatValue
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) AT) // TODO: check only if T is struct or class
+               && !is(AT[] == AT) &&
+               !hasToString!(T, Char)) // toString takes precedence over alias following alias this
+    {
+        alias U = AT;           // follow alias this when T doesn’t a toString member
+        static if (is(typeof(__traits(getMember, U.init, __traits(getAliasThis, U)[0])) AU) // TODO: check only if U is struct or class
+                   && !is(AU[] == AU) &&
+                   !hasToString!(U, Char)) // toString takes precedence over alias following alias this
+        {
+            alias V = AU;
+            static if (!is(V == void))
+                V rval = val; // use cast(...) val instead when val can be passed by non-ref
+        }
+        else
+        {
+            alias V = U;
+            static if (!is(U == void))
+                U rval = val; // use cast(...) val instead when val can be passed by non-ref
+        }
+    }
+    else
+    {
+        alias V = T;
+        alias rval = val;
+    }
+
+    // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: T:", T, " => V:", V);
+
+    // static if should be in order of commonality
+    static if (is(V == enum)) // enum needs special treatment in first because an enum T is also a T
+        formatValueImplEnum(w, rval, f);
+    else static if (is(immutable V == immutable C, C) && is(C == char) || is(C == wchar) || is(C == dchar))
+        formatValueImplChar(w, rval, f);
+    else static if (is(immutable V == immutable B, B) && is(B == bool))
+        formatValueImplBool(w, rval, f);
+    else static if (isIntegral!V)
+        formatValueImplIntegral(w, rval, f);
+    else static if (is(immutable V == immutable F, F) && is(F == float) || is(F == double) || is(F == real))
+        formatValueImplFloatingPoint(w, rval, f);
+    // TODO isSomeString (no array)
+    // TODO isStaticArray
+    // TODO isDynamicArray
+    // TODO isAssocArray
+    // TODO isSIMDVector
+    // TODO isDelegate
+    else static if ((is(V == struct) || is(V == union)) && hasToString!(V, Char))
+    {
+        // TODO: either move to internal or move all calls to
+        // enforceValidFormatSpec into formatValue
+        enforceValidFormatSpec!(V, Char)(f);
+        formatObject(w, rval, f);
+    }
+    // TODO if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)))
+    else static if (is(V == class))
+        formatValueImplClass(w, rval, f);
+    else static if (isPointer!V && !hasToString!(V, Char))
+        formatValueImplPointer(w, rval, f);
+    else static if (is(V == interface) && (hasToString!(V, Char) || !is(BuiltinTypeOf!V)))
+        formatValueImplInterface(w, rval, f);
+    else static if (is(immutable V == immutable typeof(null)) && !hasToString!(V, Char))
+        formatValueImplNull(w, rval, f);
+    else
+    {
+        // pragma(msg, __FILE__, "(", __LINE__, ",1): Debug: TODO: Handle type ", T);
+        // TODO: replace this with a static assert(0, "unhandled case");
+        formatValueImpl(w, rval, f);
+    }
+}
+
+private template BottomAliasThisTypeOf(T)
+{                    // TODO can we express this with iteration and AliasAssign?
+    static if (is(typeof(__traits(getMember, T.init, __traits(getAliasThis, T)[0])) U))
+    {
+        alias BottomAliasThisTypeOf = U;
+        static if (is(typeof(__traits(getMember, U.init, __traits(getAliasThis, U)[0])) V))
+        {
+            BottomAliasThisTypeOf = V;
+            // ...
+        }
+    }
+    // else branch?
+}
+
+@safe pure unittest
+{
+    static assert(!is(BottomAliasThisTypeOf!bool));
+    struct S { bool x; alias x this; }
+    static assert(is(BottomAliasThisTypeOf!S));
+    static assert(is(BottomAliasThisTypeOf!S == bool));
 }
 
 ///
