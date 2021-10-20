@@ -61,7 +61,7 @@ module std.algorithm.comparison;
 import std.functional : unaryFun, binaryFun, lessThan, greaterThan;
 import std.range.primitives;
 import std.traits;
-import std.meta : allSatisfy;
+import std.meta : allSatisfy, anySatisfy;
 import std.typecons : tuple, Tuple, Flag, Yes;
 
 import std.internal.attributes : betterC;
@@ -924,100 +924,120 @@ nothrow pure @safe unittest
 
 // equal
 /**
-Compares two ranges for equality, as defined by predicate `pred`
+Compares two or more ranges for equality, as defined by predicate `pred`
 (which is `==` by default).
 */
 template equal(alias pred = "a == b")
 {
     /++
-    Compares two ranges for equality. The ranges may have
-    different element types, as long as `pred(r1.front, r2.front)`
-    evaluates to `bool`.
-    Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
+    Compares two or more ranges for equality. The ranges may have
+    different element types, as long as all are comparable by means of
+    the `pred`.
+    Performs $(BIGOH min(rs[0].length, rs[1].length, ...)) evaluations of `pred`. However, if
+    `equal` is invoked with the default predicate, the implementation may take the liberty
+    to use faster implementations that have the theoretical worst-case
+    $(BIGOH max(rs[0].length, rs[1].length, ...)).
 
     At least one of the ranges must be finite. If one range involved is infinite, the result is
     (statically known to be) `false`.
 
-    If the two ranges are different kinds of UTF code unit (`char`, `wchar`, or
-    `dchar`), then the arrays are compared using UTF decoding to avoid
+    If the ranges have different kinds of UTF code unit (`char`, `wchar`, or
+    `dchar`), then they are compared using UTF decoding to avoid
     accidentally integer-promoting units.
 
     Params:
-        r1 = The first range to be compared.
-        r2 = The second range to be compared.
+        rs = The ranges to be compared.
 
     Returns:
-        `true` if and only if the two ranges compare _equal element
+        `true` if and only if all ranges compare _equal element
         for element, according to binary predicate `pred`.
     +/
-    bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
-        !(isInfinite!Range1 && isInfinite!Range2) &&
-        is(typeof(binaryFun!pred(r1.front, r2.front))))
+    bool equal(Ranges...)(Ranges rs)
+    if (rs.length > 1
+        && allSatisfy!(isInputRange, Ranges)
+        && !allSatisfy!(isInfinite, Ranges)
+        && is(typeof(binaryFun!pred(rs[0].front, rs[1].front)))
+        && (rs.length == 2 || is(typeof(equal!pred(rs[1 .. $])) == bool))
+        )
     {
-        // Use code points when comparing two ranges of UTF code units that aren't
-        // the same type. This is for backwards compatibility with autodecode
-        // strings.
-        enum useCodePoint =
-            isSomeChar!(ElementEncodingType!Range1) && isSomeChar!(ElementEncodingType!Range2) &&
-            ElementEncodingType!Range1.sizeof != ElementEncodingType!Range2.sizeof;
+        alias ElementEncodingTypes = staticMap!(ElementEncodingType, Ranges);
+        enum differentSize(T) = T.sizeof != ElementEncodingTypes[0].sizeof;
+        enum useCodePoint = allSatisfy!(isSomeChar, ElementEncodingTypes) &&
+            anySatisfy!(differentSize, ElementEncodingTypes);
+        enum bool comparableWithEq(alias r) = is(typeof(rs[0] == r));
 
-        static if (useCodePoint)
+        static if (anySatisfy!(isInfinite, Ranges))
+        {
+            return false;
+        }
+        else static if (useCodePoint)
         {
             import std.utf : byDchar;
-            return equal(r1.byDchar, r2.byDchar);
+            static bool allByDchar(size_t done, Ranges...)(auto ref Ranges rs)
+            {
+                static if (done == rs.length)
+                    return equalLoop(rs);
+                else
+                    return allByDchar!(done + 1)(rs[0 .. done], rs[done].byDchar, rs[done + 1 .. $]);
+            }
+            return allByDchar!0(rs);
+        }
+        else static if (is(typeof(pred) == string) && pred == "a == b" &&
+                allSatisfy!(isArray, Ranges) && allSatisfy!(comparableWithEq, rs))
+        {
+            static foreach (r; rs[1 .. $])
+                if (rs[0] != r)
+                    return false;
+            return true;
+        }
+        // if one of the arguments is a string and the other isn't, then auto-decoding
+        // can be avoided if they have the same ElementEncodingType
+        // TODO: generalize this
+        else static if (rs.length == 2 && is(typeof(pred) == string) && pred == "a == b" &&
+                isAutodecodableString!(Ranges[0]) != isAutodecodableString!(Ranges[1]) &&
+                is(immutable ElementEncodingType!(Ranges[0]) == immutable ElementEncodingType!(Ranges[1])))
+        {
+            import std.utf : byCodeUnit;
+            static if (isAutodecodableString!(Ranges[0]))
+                return equal(rs[0].byCodeUnit, rs[1]);
+            else
+                return equal(rs[1].byCodeUnit, rs[0]);
         }
         else
         {
-            static if (isInfinite!Range1 || isInfinite!Range2)
+            static foreach (i, R; Ranges)
             {
-                // No finite range can be ever equal to an infinite range.
-                return false;
-            }
-            // Detect default pred and compatible dynamic arrays.
-            else static if (is(typeof(pred) == string) && pred == "a == b" &&
-                isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
-            {
-                return r1 == r2;
-            }
-            // If one of the arguments is a string and the other isn't, then auto-decoding
-            // can be avoided if they have the same ElementEncodingType.
-            else static if (is(typeof(pred) == string) && pred == "a == b" &&
-                isAutodecodableString!Range1 != isAutodecodableString!Range2 &&
-                is(immutable ElementEncodingType!Range1 == immutable ElementEncodingType!Range2))
-            {
-                import std.utf : byCodeUnit;
-
-                static if (isAutodecodableString!Range1)
-                    return equal(r1.byCodeUnit, r2);
-                else
-                    return equal(r2.byCodeUnit, r1);
-            }
-            // Try a fast implementation when the ranges have comparable lengths.
-            else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
-            {
-                immutable len1 = r1.length;
-                immutable len2 = r2.length;
-                if (len1 != len2) return false; //Short circuit return
-
-                // Lengths are the same, so we need to do an actual comparison.
-                // Good news is we can squeeze out a bit of performance by not checking if r2 is empty.
-                for (; !r1.empty; r1.popFront(), r2.popFront())
+                static if (hasLength!R)
                 {
-                    if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                    static if (!is(typeof(firstLength)))
+                    {
+                        // Found the first range that has length
+                        auto firstLength = rs[i].length;
+                    }
+                    else
+                    {
+                        // Compare the length of the current range against the first with length
+                        if (firstLength != rs[i].length)
+                            return false;
+                    }
                 }
-                return true;
             }
-            else
-            {
-                //Generic case, we have to walk both ranges making sure neither is empty
-                for (; !r1.empty; r1.popFront(), r2.popFront())
-                {
-                    if (r2.empty || !binaryFun!(pred)(r1.front, r2.front)) return false;
-                }
-                return r2.empty;
-            }
+            return equalLoop(rs);
         }
+    }
+
+    private bool equalLoop(Rs...)(Rs rs)
+    {
+        for (; !rs[0].empty; rs[0].popFront)
+            static foreach (r; rs[1 .. $])
+                if (r.empty || !binaryFun!pred(rs[0].front, r.front))
+                    return false;
+                else
+                    r.popFront;
+        static foreach (r; rs[1 .. $])
+            if (!r.empty)
+                return false;
+        return true;
     }
 }
 
@@ -1040,6 +1060,31 @@ template equal(alias pred = "a == b")
     // predicated: ensure that two vectors are approximately equal
     double[4] c = [ 1.0000000005, 2, 4, 3];
     assert(equal!isClose(b[], c[]));
+}
+
+@safe @nogc unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.math.operations : isClose;
+
+    auto s1 = "abc", s2 = "abc"w;
+    assert(equal(s1, s2, s2));
+    assert(equal(s1, s2, s2, s1));
+    assert(!equal(s1, s2, s2[1 .. $]));
+
+    int[4] a = [ 1, 2, 4, 3 ];
+    assert(!equal(a[], a[1..$], a[]));
+    assert(equal(a[], a[], a[]));
+    assert(equal!((a, b) => a == b)(a[], a[], a[]));
+
+    // different types
+    double[4] b = [ 1.0, 2, 4, 3];
+    assert(!equal(a[], b[1..$], b[]));
+    assert(equal(a[], b[], a[], b[]));
+
+    // predicated: ensure that two vectors are approximately equal
+    double[4] c = [ 1.0000000005, 2, 4, 3];
+    assert(equal!isClose(b[], c[], b[]));
 }
 
 /++
