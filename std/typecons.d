@@ -5576,7 +5576,7 @@ private
 
 
 // Implement{Ordered, Equals, Hash} helper function
-private template ContravariantRhsT(Rhs)
+template ContravariantRhsT(Rhs)
 {
     static if (is (Rhs == class))
     {
