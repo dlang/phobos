@@ -559,9 +559,18 @@ template ReplaceAll(args...)
  */
 template Reverse(args...)
 {
-    alias Reverse = AliasSeq!();
-    static foreach_reverse (arg; args)
-        Reverse = AliasSeq!(Reverse, arg);
+    static if (args.length <= 8)
+    {
+        // This part is O(n * n) because it grows an array by front insertions
+        alias Reverse = AliasSeq!();
+        static foreach_reverse (arg; args)
+            Reverse = AliasSeq!(Reverse, arg);
+    }
+    else
+    {
+        // This part is O(n * log n) because it does O(n) work for n, n/2, n/4...
+        alias Reverse = AliasSeq!(Reverse!(args[$ / 2 .. $]), Reverse!(args[0 .. $ / 2]));
+    }
 }
 
 ///
