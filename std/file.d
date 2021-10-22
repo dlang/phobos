@@ -5319,6 +5319,7 @@ Returns:
 */
 string tempDir() @trusted
 {
+    import std.path : dirSeparator;
     static string cache;
     if (cache is null)
     {
@@ -5332,7 +5333,6 @@ string tempDir() @trusted
         }
         else version (Posix)
         {
-            import std.path : dirSeparator;
             import std.process : environment;
             // This function looks through the list of alternative directories
             // and returns the first one which exists and is a directory.
