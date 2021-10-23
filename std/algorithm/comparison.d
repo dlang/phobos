@@ -1843,21 +1843,26 @@ store the lowest values.
 
 // mismatch
 /**
-Sequentially compares elements in `r1` and `r2` in lockstep, and
+Sequentially compares elements in `rs` in lockstep, and
 stops at the first mismatch (according to `pred`, by default
 equality). Returns a tuple with the reduced ranges that start with the
-two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
+two mismatched values. Performs $(BIGOH min(r[0].length, r[1].length, ...))
 evaluations of `pred`.
 */
-Tuple!(Range1, Range2)
-mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!(Range1) && isInputRange!(Range2))
+Tuple!(Ranges)
+mismatch(alias pred = (a, b) => a == b, Ranges...)(Ranges rs)
+if (rs.length >= 2 && allSatisfy!(isInputRange, Ranges))
 {
-    for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
+    loop: for (; !rs[0].empty; rs[0].popFront)
     {
-        if (!binaryFun!(pred)(r1.front, r2.front)) break;
+        static foreach (r; rs[1 .. $])
+        {
+            if (r.empty || !binaryFun!pred(rs[0].front, r.front))
+                break loop;
+            r.popFront;
+        }
     }
-    return tuple(r1, r2);
+    return tuple(rs);
 }
 
 ///
@@ -1868,6 +1873,12 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
     auto m = mismatch(x[], y[]);
     assert(m[0] == x[3 .. $]);
     assert(m[1] == y[3 .. $]);
+
+    auto m2 = mismatch(x[], y[], x[], y[]);
+    assert(m2[0] == x[3 .. $]);
+    assert(m2[1] == y[3 .. $]);
+    assert(m2[2] == x[3 .. $]);
+    assert(m2[3] == y[3 .. $]);
 }
 
 @safe @nogc unittest
