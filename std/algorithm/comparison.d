@@ -2031,50 +2031,91 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
 }
 
 /**
-Checks if the two ranges have the same number of elements. This function is
+Checks if two or more ranges have the same number of elements. This function is
 optimized to always take advantage of the `length` member of either range
 if it exists.
 
-If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
-this function is $(BIGOH min(r1.length, r2.length)).
+If all ranges have a `length` member or at least one is infinite,
+`_isSameLength`'s complexity is $(BIGOH 1). Otherwise, complexity is
+$(BIGOH n), where `n` is the smallest of the lengths of ranges with unknown
+length.
 
-Infinite ranges are considered of the same length. An infinite range has never the same length as a
-finite range.
+Infinite ranges are considered of the same length. An infinite range has never
+the same length as a finite range.
 
 Params:
-    r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-    r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    rs = two or more $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 
 Returns:
     `true` if both ranges have the same length, `false` otherwise.
 */
-bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-if (isInputRange!Range1 && isInputRange!Range2)
+bool isSameLength(Ranges...)(Ranges rs)
+if (allSatisfy!(isInputRange, Ranges))
 {
-    static if (isInfinite!Range1 || isInfinite!Range2)
+    static if (anySatisfy!(isInfinite, Ranges))
     {
-        return isInfinite!Range1 && isInfinite!Range2;
+        return allSatisfy!(isInfinite, Ranges);
     }
-    else static if (hasLength!(Range1) && hasLength!(Range2))
+    else static if (anySatisfy!(hasLength, Ranges))
     {
-        return r1.length == r2.length;
-    }
-    else static if (hasLength!(Range1) && !hasLength!(Range2))
-    {
-        return r2.walkLength(r1.length + 1) == r1.length;
-    }
-    else static if (!hasLength!(Range1) && hasLength!(Range2))
-    {
-        return r1.walkLength(r2.length + 1) == r2.length;
+        // Compute the O(1) length
+        auto baselineLength = size_t.max;
+        static foreach (i, R; Ranges)
+        {
+            static if (hasLength!R)
+            {
+                if (baselineLength == size_t.max)
+                    baselineLength = rs[i].length;
+                else if (rs[i].length != baselineLength)
+                    return false;
+            }
+        }
+        // Iterate all ranges without known length
+        foreach (_; 0 .. baselineLength)
+            static foreach (i, R; Ranges)
+            {
+                static if (!hasLength!R)
+                {
+                    // All must be non-empty
+                    if (rs[i].empty)
+                        return false;
+                    rs[i].popFront;
+                }
+            }
+        static foreach (i, R; Ranges)
+        {
+            static if (!hasLength!R)
+            {
+                // All must be now empty
+                if (!rs[i].empty)
+                    return false;
+            }
+        }
+        return true;
     }
     else
     {
-        for (; !r1.empty; r1.popFront, r2.popFront)
-        {
-           if (r2.empty)
-              return false;
-        }
-        return r2.empty;
+        // All have unknown length, iterate in lockstep
+        for (;;)
+            static foreach (i, r; rs)
+            {
+                if (r.empty)
+                {
+                    // One is empty, so all must be empty
+                    static if (i != 0)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        static foreach (j, r1; rs[1 .. $])
+                            if (!r1.empty)
+                                return false;
+                        return true;
+                    }
+                }
+                r.popFront;
+            }
     }
 }
 
@@ -2139,6 +2180,13 @@ if (isInputRange!Range1 && isInputRange!Range2)
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input) r11;
     auto r12 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
     assert(!isSameLength(r11, r12));
+
+    import std.algorithm.iteration : filter;
+
+    assert(isSameLength(filter!"a >= 1"([1, 2, 3]), [4, 5, 6]));
+    assert(!isSameLength(filter!"a > 1"([1, 2, 3]), [4, 5, 6]));
+
+    assert(isSameLength(filter!"a > 1"([1, 2, 3]), filter!"a > 4"([4, 5, 6])));
 }
 
 // Still functional but not documented anymore.
