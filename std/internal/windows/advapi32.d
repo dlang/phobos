@@ -16,7 +16,7 @@ import core.sys.windows.winbase, core.sys.windows.winnt, core.sys.windows.winreg
 
 pragma(lib, "advapi32.lib");
 
-@property immutable bool isWow64()
+@property bool isWow64()
 {
     // WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
     // IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
