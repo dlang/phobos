@@ -2123,34 +2123,42 @@ if (allSatisfy!(isInputRange, Ranges))
 @safe nothrow pure unittest
 {
     assert(isSameLength([1, 2, 3], [4, 5, 6]));
+    assert(isSameLength([1, 2, 3], [4, 5, 6], [7, 8, 9]));
     assert(isSameLength([0.3, 90.4, 23.7, 119.2], [42.6, 23.6, 95.5, 6.3]));
     assert(isSameLength("abc", "xyz"));
+    assert(isSameLength("abc", "xyz", [1, 2, 3]));
 
     int[] a;
     int[] b;
     assert(isSameLength(a, b));
+    assert(isSameLength(a, b, a, a, b, b, b));
 
     assert(!isSameLength([1, 2, 3], [4, 5]));
+    assert(!isSameLength([1, 2, 3], [4, 5, 6], [7, 8]));
     assert(!isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]));
     assert(!isSameLength("abcd", "xyz"));
+    assert(!isSameLength("abcd", "xyz", "123"));
+    assert(!isSameLength("abcd", "xyz", "1234"));
 }
 
 // Test CTFE
 @safe @nogc pure @betterC unittest
 {
-    enum result1 = isSameLength([1, 2, 3], [4, 5, 6]);
-    static assert(result1);
-
-    enum result2 = isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]);
-    static assert(!result2);
+    static assert(isSameLength([1, 2, 3], [4, 5, 6]));
+    static assert(isSameLength([1, 2, 3], [4, 5, 6], [7, 8, 9]));
+    static assert(!isSameLength([0.3, 90.4, 23.7], [42.6, 23.6, 95.5, 6.3]));
+    static assert(!isSameLength([1], [0.3, 90.4], [42]));
 }
 
 @safe @nogc pure unittest
 {
     import std.range : only;
     assert(isSameLength(only(1, 2, 3), only(4, 5, 6)));
+    assert(isSameLength(only(1, 2, 3), only(4, 5, 6), only(7, 8, 9)));
     assert(isSameLength(only(0.3, 90.4, 23.7, 119.2), only(42.6, 23.6, 95.5, 6.3)));
     assert(!isSameLength(only(1, 3, 3), only(4, 5)));
+    assert(!isSameLength(only(1, 3, 3), only(1, 3, 3), only(4, 5)));
+    assert(!isSameLength(only(1, 3, 3), only(4, 5), only(1, 3, 3)));
 }
 
 @safe nothrow pure unittest
@@ -2187,6 +2195,8 @@ if (allSatisfy!(isInputRange, Ranges))
     assert(!isSameLength(filter!"a > 1"([1, 2, 3]), [4, 5, 6]));
 
     assert(isSameLength(filter!"a > 1"([1, 2, 3]), filter!"a > 4"([4, 5, 6])));
+    assert(isSameLength(filter!"a > 1"([1, 2, 3]),
+        filter!"a > 4"([4, 5, 6]), filter!"a >= 5"([4, 5, 6])));
 }
 
 // Still functional but not documented anymore.
