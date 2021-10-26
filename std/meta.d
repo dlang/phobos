@@ -690,7 +690,7 @@ template staticMap(alias fun, args...)
     static assert(staticMap!(id, A.a) == AliasSeq!("a"));
 }
 
-// regression test for https://issues.dlang.org/show_bug.cgi?id=21088git
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21088
 @system unittest // typeid opEquals is @system
 {
     enum getTypeId(T) = typeid(T);
