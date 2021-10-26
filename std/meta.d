@@ -622,29 +622,40 @@ template DerivedToFront(TList...)
     static assert(is(TL2 == AliasSeq!(C, C, C, B, B, B, A, A, A)));
 }
 
-private enum staticMapExpandFactor = 150;
-private string generateCases()
-{
-    string[staticMapExpandFactor] chunks;
-    chunks[0] = q{};
-    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
-    string ret = `AliasSeq!(`;
-    foreach (chunk; chunks)
-        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
-    return ret ~ `)`;
-}
-private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
-
 /**
-Evaluates to $(D AliasSeq!(F!(Args[0]), F!(Args[1]), ..., F!(Args[$ - 1]))).
+Evaluates to `AliasSeq!(fun!(args[0]), fun!(args[1]), ..., fun!(args[$ - 1]))`.
  */
-template staticMap(alias F, Args ...)
+template staticMap(alias fun, args...)
 {
-    static if (Args.length < staticMapExpandFactor)
-        mixin(staticMapBasicCases[Args.length]);
-    else
-        alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
+    version (__staticMap_simplest_but_buggy)
+    {
+        // @@@ BUG @@@
+        // The following straightforward implementation exposes a bug.
+        // See issue https://issues.dlang.org/show_bug.cgi?id=22421 and unittest below.
+        alias staticMap = AliasSeq!();
+        static foreach (arg; args)
+             staticMap = AliasSeq!(staticMap, fun!arg);
+    }
+    else version (__staticMap_simple_but_slow)
+    {
+        // This has a performance bug. Appending to the staticMap seems to be quadratic.
+        alias staticMap = AliasSeq!();
+        static foreach (i; 0 .. args.length)
+            staticMap = AliasSeq!(staticMap, fun!(args[i]));
+    }
+    else // Current best-of-breed implementation imitates quicksort
+    {
+        static if (args.length <= 8)
+        {
+            alias staticMap = AliasSeq!();
+            static foreach (i; 0 .. args.length)
+                staticMap = AliasSeq!(staticMap, fun!(args[i]));
+        }
+        else
+        {
+            alias staticMap = AliasSeq!(staticMap!(fun, args[0 .. $ / 2]), staticMap!(fun, args[$ / 2 .. $]));
+        }
+    }
 }
 
 ///
@@ -669,6 +680,14 @@ template staticMap(alias F, Args ...)
 
     alias T = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort, long);
     static assert(is(T == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort, long)));
+
+    // @@@ BUG @@@ The test below exposes failure of the straightforward use.
+    // See @adamdruppe's comment to https://github.com/dlang/phobos/pull/8039
+    template id(alias what) {
+            enum id = __traits(identifier, what);
+    }
+    enum A { a }
+    static assert(staticMap!(id, A.a) == AliasSeq!("a"));
 }
 
 // regression test for https://issues.dlang.org/show_bug.cgi?id=21088
