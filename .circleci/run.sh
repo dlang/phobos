@@ -113,6 +113,12 @@ coverage()
     sed -i 's/^ *[0-9]*\(|.*nocoverage.*\)$/       \1/' ./*.lst
 }
 
+# Upload coverage reports to CodeCov
+codecov()
+{
+    OS_NAME=linux source ../dmd/ci/codecov.sh
+}
+
 # extract publictests and run them independently
 publictests()
 {
@@ -144,6 +150,7 @@ case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
+    codecov) codecov ;;
     publictests) publictests ;;
     style_lint) echo "style_lint is now run at Buildkite";;
     # has_public_example has been removed and is kept for compatibility with older PRs
