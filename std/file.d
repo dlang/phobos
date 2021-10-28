@@ -400,25 +400,23 @@ version (Posix) private void[] readImpl(scope const(char)[] name, scope const(FS
         : result[0 .. size.get];
 }
 
+version (Windows)
+private extern (Windows) @nogc nothrow
+{
+    pragma(mangle, CreateFileW.mangleof)
+    HANDLE trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess,
+        DWORD dwShareMode, SECURITY_ATTRIBUTES* lpSecurityAttributes,
+        DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes,
+        HANDLE hTemplateFile)  @trusted;
+
+    pragma(mangle, CloseHandle.mangleof) BOOL trustedCloseHandle(HANDLE) @trusted;
+}
 
 version (Windows) private void[] readImpl(scope const(char)[] name, scope const(FSChar)* namez,
                                           size_t upTo = size_t.max) @trusted
 {
     import core.memory : GC;
     import std.algorithm.comparison : min;
-    static trustedCreateFileW(scope const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
-                              SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-                              DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
-    {
-        return CreateFileW(namez, dwDesiredAccess, dwShareMode,
-                           lpSecurityAttributes, dwCreationDisposition,
-                           dwFlagsAndAttributes, hTemplateFile);
-
-    }
-    static trustedCloseHandle(HANDLE hObject)
-    {
-        return CloseHandle(hObject);
-    }
     static trustedGetFileSize(HANDLE hFile, out ulong fileSize)
     {
         DWORD sizeHigh;
@@ -1125,6 +1123,9 @@ version (Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure 
     return li.QuadPart;
 }
 
+version (Posix) private extern (C) pragma(mangle, stat.mangleof)
+int trustedStat(const(FSChar)* namez, ref stat_t buf) @nogc nothrow @trusted;
+
 /**
 Get size of file `name` in bytes.
 
@@ -1148,10 +1149,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     {
         auto namez = name.tempCString();
 
-        static trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
             alias names = name;
         else
@@ -1253,10 +1250,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     {
         auto namez = name.tempCString();
 
-        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         stat_t statbuf = void;
 
         static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
@@ -1679,10 +1672,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
-        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         stat_t statbuf = void;
 
         static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
@@ -1770,10 +1759,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
     else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
-        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         stat_t statbuf = void;
 
         return trustedStat(namez, statbuf) != 0 ?
@@ -2042,10 +2027,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     else version (Posix)
     {
         auto namez = name.tempCString!FSChar();
-        static auto trustedStat(const(FSChar)* namez, ref stat_t buf) @trusted
-        {
-            return stat(namez, &buf);
-        }
         stat_t statbuf = void;
 
         static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
