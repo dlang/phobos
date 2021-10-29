@@ -2478,7 +2478,12 @@ private:
 }
 
 /**
- * Get an alias to a specific overload of a method.
+ * Get an alias to a specific overload within an overload set.
+ *
+ * The `getOverload` template aliases itself to the overload that matches the
+ * given `attrs` and `ParamTypes`.
+ *
+ * It is an error if this does not resolve to exactly one overload.
  *
  * Params:
  *    overloadSet = alias to the method's overload set
@@ -2497,16 +2502,10 @@ template getOverload(alias overloadSet, FunctionAttribute attrs, ParamTypes...)
     private alias matches = Filter!(isMatch, __traits(getOverloads,
         __traits(parent, overloadSet), __traits(identifier, overloadSet)));
 
-    static assert(matches.length <= 1, "getOverload matched more than one overload.");
+    static assert(matches.length == 1,
+        "getOverload did not match exactly one overload.");
 
-    static if (matches.length != 0)
-        alias getOverload = matches[0];
-    else
-    {
-        pragma(msg, "No matching overload found for " ~
-            __traits(identifier, overloadSet) ~ ParamTypes.stringof);
-        alias getOverload = AliasSeq!();
-    }
+    alias getOverload = matches[0];
 }
 
 /// ditto
