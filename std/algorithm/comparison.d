@@ -1842,29 +1842,49 @@ store the lowest values.
     assert(min(A(1, "first"), A(1, "second")) == A(1, "first"));
 }
 
-// mismatch
+/*
+Template `canon` is meant as an implementation device only. It is meant to be
+used with the root package of the standard library, as in `canon!"std"`,
+`canon!"std.v2"`, `canon!"std.v3"` etc. Inside the template, implementations
+get to make use of the primitives defined by the selected canon.
+*/
+template canon(string v) {
+    // @@@TODO@@@: this is clowny, must add language support
+    mixin("import "~v~".meta : allSatisfy;");
+    mixin("import "~v~".range.primitives : isInputRange;");
+    mixin("import "~v~".range.primitives : empty, front, popFront;");
+
+    // mismatch
+    static Tuple!Ranges
+    mismatch(alias pred = (a, b) => a == b, Ranges...)(Ranges rs)
+    if (rs.length >= 2 && allSatisfy!(isInputRange, Ranges))
+    {
+        loop: for (; !rs[0].empty; rs[0].popFront)
+        {
+            static foreach (r; rs[1 .. $])
+            {
+                if (r.empty || !binaryFun!pred(rs[0].front, r.front))
+                    break loop;
+                r.popFront;
+            }
+        }
+        return tuple(rs);
+    }
+}
+
 /**
+[@@@TODO@@@ Default documentation, applies if this function is not overridden in future versions.]
+
 Sequentially compares elements in `rs` in lockstep, and
 stops at the first mismatch (according to `pred`, by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r[0].length, r[1].length, ...))
 evaluations of `pred`.
+
+@@@TODO@@@: the documentation generator must "see" parameters, return etc.
+through the alias and ignore `canon` and its `"std"` argument.
 */
-Tuple!(Ranges)
-mismatch(alias pred = (a, b) => a == b, Ranges...)(Ranges rs)
-if (rs.length >= 2 && allSatisfy!(isInputRange, Ranges))
-{
-    loop: for (; !rs[0].empty; rs[0].popFront)
-    {
-        static foreach (r; rs[1 .. $])
-        {
-            if (r.empty || !binaryFun!pred(rs[0].front, r.front))
-                break loop;
-            r.popFront;
-        }
-    }
-    return tuple(rs);
-}
+alias mismatch = canon!"std".mismatch;
 
 ///
 @safe @nogc unittest

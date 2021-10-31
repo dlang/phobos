@@ -204,7 +204,8 @@ STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
   format math net uni \
-  experimental range regex windows)
+  experimental range regex windows \
+  v2 v2/algorithm v2/range)
 
 # Modules broken down per package
 
@@ -238,6 +239,10 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
 PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
+# v2 additions
+PACKAGE_std_v2 = meta
+PACKAGE_std_v2_algorithm = comparison
+PACKAGE_std_v2_range = primitives
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
