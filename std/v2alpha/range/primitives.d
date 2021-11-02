@@ -1,4 +1,4 @@
-module std.v2.range.primitives;
+module std.v2alpha.range.primitives;
 
 /**
 @@@TODO@@@ Publicly imported names across modules should copy or link those

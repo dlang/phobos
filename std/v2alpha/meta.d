@@ -1,4 +1,4 @@
-module std.v2.meta;
+module std.v2alpha.meta;
 
 /**
 On an individual public import, it would be very helpful if the documentation
