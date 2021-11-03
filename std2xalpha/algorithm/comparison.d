@@ -1,4 +1,4 @@
-module std.v2alpha.algorithm.comparison;
+module std2xalpha.algorithm.comparison;
 
 // This will be an often-used idiom to fetch the prev version of a module.
 import v1 = std.algorithm.comparison;
@@ -7,7 +7,7 @@ import v1 = std.algorithm.comparison;
 [@@@TODO@@@ Documentation specific for version 2. It should be appended to the default as
 implementation notes for this specific version.]
 */
-alias mismatch = v1.canon!"std.v2alpha".mismatch;
+alias mismatch = v1.canon!"std2xalpha".mismatch;
 
 ///
 unittest

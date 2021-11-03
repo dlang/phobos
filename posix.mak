@@ -204,8 +204,10 @@ STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
   format math net uni \
-  experimental range regex windows \
-  v2alpha v2alpha/algorithm v2alpha/range)
+  experimental range regex windows)
+# std2x additions
+STD_PACKAGES += std2xalpha $(addprefix std2xalpha/, algorithm \
+  range)
 
 # Modules broken down per package
 
@@ -239,10 +241,10 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
 PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
-# v2alpha additions
-PACKAGE_std_v2alpha = meta
-PACKAGE_std_v2alpha_algorithm = comparison
-PACKAGE_std_v2alpha_range = primitives
+# std2x additions
+PACKAGE_std2xalpha = meta
+PACKAGE_std2xalpha_algorithm = comparison
+PACKAGE_std2xalpha_range = primitives
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
