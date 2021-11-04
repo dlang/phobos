@@ -5,7 +5,7 @@ module std2xalpha.range.primitives;
 names' respective documentation. Here, we reuse empty and isInputRange because
 we don't change their meaning in std2x.
 */
-public import std.range.primitives : empty, isInputRange;
+public import std.range.primitives;
 
 /**
 @@@TODO@@@ This function redefines `front` for std2x, meaning its documentation
