@@ -1842,7 +1842,7 @@ store the lowest values.
     assert(min(A(1, "first"), A(1, "second")) == A(1, "first"));
 }
 
-/*
+/**
 Template `canon` is meant as an implementation device only. It is meant to be
 used with the root package of the standard library, as in `canon!"std"`,
 `canon!"std.v2"`, `canon!"std.v3"` etc. Inside the template, implementations
@@ -1851,8 +1851,8 @@ get to make use of the primitives defined by the selected canon.
 template canon(string v) {
     // @@@TODO@@@: this is clowny, must add language support
     mixin("import "~v~".meta : allSatisfy;");
-    mixin("import "~v~".range.primitives : isInputRange;");
-    mixin("import "~v~".range.primitives : empty, front, popFront;");
+    mixin("import "~v~".range.primitives : isInputRange, empty, front, popFront;");
+    mixin("import "~v~".functional : binaryFun;");
 
     // mismatch
     static Tuple!Ranges
@@ -1870,6 +1870,33 @@ template canon(string v) {
         }
         return tuple(rs);
     }
+
+    ///
+    @safe @nogc unittest
+    {
+        int[6] x = [ 1,   5, 2, 7,   4, 3 ];
+        double[6] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
+        auto m = mismatch(x[], y[]);
+        assert(m[0] == x[3 .. $]);
+        assert(m[1] == y[3 .. $]);
+
+        auto m2 = mismatch(x[], y[], x[], y[]);
+        assert(m2[0] == x[3 .. $]);
+        assert(m2[1] == y[3 .. $]);
+        assert(m2[2] == x[3 .. $]);
+        assert(m2[3] == y[3 .. $]);
+    }
+
+    @safe @nogc unittest
+    {
+        import std.range : only;
+
+        int[3] a = [ 1, 2, 3 ];
+        int[4] b = [ 1, 2, 4, 5 ];
+        auto mm = mismatch(a[], b[]);
+        assert(equal(mm[0], only(3)));
+        assert(equal(mm[1], only(4, 5)));
+    }
 }
 
 /**
@@ -1885,33 +1912,6 @@ evaluations of `pred`.
 through the alias and ignore `canon` and its `"std"` argument.
 */
 alias mismatch = canon!"std".mismatch;
-
-///
-@safe @nogc unittest
-{
-    int[6] x = [ 1,   5, 2, 7,   4, 3 ];
-    double[6] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
-    auto m = mismatch(x[], y[]);
-    assert(m[0] == x[3 .. $]);
-    assert(m[1] == y[3 .. $]);
-
-    auto m2 = mismatch(x[], y[], x[], y[]);
-    assert(m2[0] == x[3 .. $]);
-    assert(m2[1] == y[3 .. $]);
-    assert(m2[2] == x[3 .. $]);
-    assert(m2[3] == y[3 .. $]);
-}
-
-@safe @nogc unittest
-{
-    import std.range : only;
-
-    int[3] a = [ 1, 2, 3 ];
-    int[4] b = [ 1, 2, 4, 5 ];
-    auto mm = mismatch(a[], b[]);
-    assert(equal(mm[0], only(3)));
-    assert(equal(mm[1], only(4, 5)));
-}
 
 /**
 Returns one of a collection of expressions based on the value of the switch
