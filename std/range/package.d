@@ -9888,7 +9888,9 @@ Params:
     values = the values to assemble together
 
 Returns:
-    A `RandomAccessRange` of the assembled values.
+    A `RandomAccessRange` of the assembled values. The values are implicitly
+    converted to a common type. If no values are provided, the element type
+    is `noreturn`.
 
 See_Also: $(LREF chain) to chain ranges
  */
@@ -9899,9 +9901,10 @@ if (!is(CommonType!Values == void))
 }
 
 /// ditto
-noreturn[] only()()
+auto only()()
 {
-    return typeof(return).init;
+    noreturn[] result;
+    return result;
 }
 
 ///
@@ -9923,6 +9926,17 @@ noreturn[] only()()
         .map!only       // make each letter its own range
         .joiner(".")    // join the ranges together lazily
         .equal("T.D.P.L"));
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.array : array;
+
+    // The nonexistent elements of an empty only() will implicitly convert to
+    // anything
+    double[] arr = chain(only(1,2,3), only(1.1, 2.2, 3.3), only()).array;
+    assert(arr == [1.0, 2.0, 3.0, 1.1, 2.2, 3.3]);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=20314
