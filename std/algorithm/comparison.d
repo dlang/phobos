@@ -64,7 +64,7 @@ static foreach (s; __traits(allMembers, canon!"std"))
     mixin("alias "~s~" = canon!`std`."~s~";");
 }
 
-/// $(CANON_DESCRIPTION)
+/// CANON_DESCRIPTION
 template canon(string v)
 {
     // @@@TODO@@@: this is clowny, must add language support
@@ -74,7 +74,7 @@ template canon(string v)
     mixin("import "~v~".range.primitives;");
     mixin("import "~v~".traits;");
     mixin("import "~v~".typecons : tuple, Tuple, Flag, Yes;");
-    // OK to leave this import as is.
+    // OK to leave this import as is for now.
     import std.internal.attributes : betterC;
 
 static:
@@ -829,7 +829,6 @@ static:
     }
 
     /// Example predicate that compares individual elements in reverse lexical order
-    static if (v == "std") // differences in spec
     pure @safe unittest
     {
         int result;
@@ -902,39 +901,6 @@ static:
         immutable result = cmp(a[], b[]);
         assert(result == 0, "neither should compare greater than the other!");
         assert(ctr == a.length, "opCmp should be called exactly once per pair of items!");
-    }
-
-    version(none) // @@@BUG@@@ this code results in linker error
-    nothrow pure @safe @nogc unittest
-    {
-        import std.array : staticArray;
-        // Test cmp when opCmp returns float.
-        struct F
-        {
-            float value;
-            float opCmp(const ref F rhs) const
-            {
-                return value - rhs.value;
-            }
-            bool opEquals(T)(T o) const { return false; }
-            size_t toHash() const { return 0; }
-        }
-        auto result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
-        assert(result == 0);
-        assert(is(typeof(result) == float));
-        result = cmp([F(1), F(3), F(2)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
-        assert(result > 0);
-        result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3), F(4)].staticArray[]);
-        assert(result < 0);
-        result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2)].staticArray[]);
-        assert(result > 0);
-    }
-
-    nothrow pure @safe unittest
-    {
-        // Parallelism (was broken by inferred return type "immutable int")
-        import std.parallelism : task;
-        auto t = task!cmp("foo", "bar");
     }
 
     // levenshteinDistance
@@ -1562,8 +1528,16 @@ static:
         }
         assert(min(A(1, "first"), A(1, "second")) == A(1, "first"));
     }
+
     // mismatch
-    static Tuple!Ranges
+    /**
+    Sequentially compares elements in `rs` in lockstep, and
+    stops at the first mismatch (according to `pred`, by default
+    equality). Returns a tuple with the reduced ranges that start with the
+    two mismatched values. Performs $(BIGOH min(r[0].length, r[1].length, ...))
+    evaluations of `pred`.
+    */
+    Tuple!(Ranges)
     mismatch(alias pred = (a, b) => a == b, Ranges...)(Ranges rs)
     if (rs.length >= 2 && allSatisfy!(isInputRange, Ranges))
     {
@@ -1638,7 +1612,7 @@ static:
     SwitchError) is also thrown if a void return expression was executed without
     throwing anything.
     */
-    auto predSwitch(alias pred = (a, b) => a == b, T, R ...)(T switchExpression, lazy R choices)
+    auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choices)
     {
         import core.exception : SwitchError;
         alias predicate = binaryFun!(pred);
@@ -1683,7 +1657,6 @@ static:
     }
 
     ///
-    static if (v == "std")  // no more string literals
     @safe unittest
     {
         string res = 2.predSwitch!"a < b"(
@@ -1711,7 +1684,6 @@ static:
         assertThrown!Exception(factorial(-9));
     }
 
-    static if (v == "std")  // no more string literals
     @system unittest
     {
         import core.exception : SwitchError;
@@ -1992,7 +1964,7 @@ static:
     }
 
     /// ditto
-    bool isPermutation(alias pred = (a, b) => a == b, Range1, Range2)
+    bool isPermutation(alias pred = "a == b", Range1, Range2)
     (Range1 r1, Range2 r2)
     if (is(typeof(binaryFun!(pred))) &&
         isForwardRange!Range1 &&
@@ -2093,7 +2065,6 @@ static:
         assert(!isPermutation(arr3, arr4));
     }
 
-    static if (v == "std")
     @safe pure unittest
     {
         import std.internal.test.dummyrange;
@@ -2121,13 +2092,6 @@ static:
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r11;
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r12;
         assert(isPermutation!(Yes.allocateGC)(r11, r12));
-
-        alias mytuple = Tuple!(int, int);
-
-        assert(isPermutation!"a[0] == b[0]"(
-            [mytuple(1, 4), mytuple(2, 5)],
-            [mytuple(2, 3), mytuple(1, 2)]
-        ));
     }
 
     /**
@@ -2220,7 +2184,7 @@ static:
         static assert(!__traits(compiles, either(1.0, "a")));
         static assert(!__traits(compiles, either('a', "a")));
     }
-}
+} // canon
 
 /*
 @@@BUG@@@
@@ -2232,7 +2196,6 @@ std/container/rbtree.d(1089):        `__lambda5` declared here
 std/algorithm/comparison.d(2330): Error: template instance `std.container.rbtree.__unittest_L2223_C12.RedBlackTree!(int, delegate (a, b) => a > b, false).RedBlackTree.opEquals.equalLoop!(RBRange!(RBNode!int*), RBRange!(RBNode!int*))` error instantiating
 std/container/rbtree.d(1090):        instantiated from here: `equal!(RBRange!(RBNode!int*), RBRange!(RBNode!int*))`
 std/container/rbtree.d(2227):        instantiated from here: `RedBlackTree!(int, delegate (a, b) => a > b, false)`
-
 */
 
 // equal
@@ -2243,8 +2206,8 @@ Compares two or more ranges for equality, as defined by predicate `pred`
 template equal(alias pred = "a == b")
 {
     import std.functional : binaryFun;
-    import std.range.primitives;
-    import std.traits;
+    import std.range.primitives : ElementEncodingType, empty, front, hasLength, isInfinite, isInputRange, popFront;
+    import std.traits : isArray, isAutodecodableString, isSomeChar, staticMap;
     import std.meta : allSatisfy, anySatisfy;
 
     /++
@@ -2530,4 +2493,55 @@ range of range (of range...) comparisons.
     assert("".equal(E()));
     assert(!E().equal("foo"));
     assert(!"bar".equal(E()));
+}
+
+/*
+@@@BUG@@@ Link-time error when putting any of these unittest inside canon
+Command to reproduce(run in the phobos dir):
+../dmd/generated/linux/release/64/dmd -run ../dlang.org/tools/dspec_tester.d \
+    --compiler=../dmd/generated/linux/release/64/dmd
+*/
+nothrow pure @safe @nogc unittest
+{
+    import std.array : staticArray;
+    // Test cmp when opCmp returns float.
+    struct F
+    {
+        float value;
+        float opCmp(const ref F rhs) const
+        {
+            return value - rhs.value;
+        }
+        bool opEquals(T)(T o) const { return false; }
+        size_t toHash() const { return 0; }
+    }
+    auto result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
+    assert(result == 0);
+    assert(is(typeof(result) == float));
+    result = cmp([F(1), F(3), F(2)].staticArray[], [F(1), F(2), F(3)].staticArray[]);
+    assert(result > 0);
+    result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2), F(3), F(4)].staticArray[]);
+    assert(result < 0);
+    result = cmp([F(1), F(2), F(3)].staticArray[], [F(1), F(2)].staticArray[]);
+    assert(result > 0);
+}
+
+// ditto @@@BUG@@@ above
+nothrow pure @safe unittest
+{
+    // Parallelism (was broken by inferred return type "immutable int")
+    import std.parallelism : task;
+    auto t = task!cmp("foo", "bar");
+}
+
+// ditto @@@BUG@@@ above
+unittest
+{
+    import std.typecons : Tuple;
+    alias mytuple = Tuple!(int, int);
+
+    assert(isPermutation!"a[0] == b[0]"(
+        [mytuple(1, 4), mytuple(2, 5)],
+        [mytuple(2, 3), mytuple(1, 2)]
+    ));
 }
