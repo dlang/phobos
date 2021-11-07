@@ -565,7 +565,7 @@ if (!is(immutable T == immutable bool))
 
     inout(T)[] data() inout @system
     {
-        return _data._payload;
+        return _data.refCountedStore.isInitialized ? _data._payload : [];
     }
 
     /**
@@ -2637,4 +2637,10 @@ if (is(immutable T == immutable bool))
 
     data[0] = 0;
     assert(arr[0] == 0);
+
+    arr.length = 0;
+    assert(arr.data == []);
+
+    Array!int empty;
+    assert(empty.data == []);
 }
