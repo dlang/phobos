@@ -563,7 +563,7 @@ if (!is(immutable T == immutable bool))
      * Complexity: $(BIGOH 1).
      */
 
-    T[] data() @system
+    inout(T)[] data() inout @system
     {
         return _data._payload;
     }
@@ -2628,8 +2628,12 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
+
     Array!int arr = [1, 2, 4, 5];
     int[] data = arr.data();
+
+    const Array!int arr2 = [8, 9];
+    assert(arr2.data() == [8, 9]);
 
     data[0] = 0;
     assert(arr[0] == 0);
