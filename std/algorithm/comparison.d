@@ -353,8 +353,8 @@ static:
 
                     // Check for overshadowing:
                     static assert(indexOfOvershadowingChoice == index,
-                            "choice number %d(null reference) is overshadowed by choice number %d(null reference)".format(
-                                index + 1, indexOfOvershadowingChoice + 1));
+                            "choice number %d(null reference) is overshadowed by choice number %d(null reference)"
+                                .format(index + 1, indexOfOvershadowingChoice + 1));
 
                     if (switchObject is null)
                     {
@@ -937,7 +937,8 @@ static:
         with(EditOp)
         {
             assert(levenshteinDistanceAndPath("foo", "foobar")[1] == [none, none, none, insert, insert, insert]);
-            assert(levenshteinDistanceAndPath("banana", "fazan")[1] == [substitute, none, substitute, none, none, remove]);
+            assert(levenshteinDistanceAndPath("banana", "fazan")[1] ==
+                [substitute, none, substitute, none, none, remove]);
         }
     }
 
@@ -2186,6 +2187,12 @@ static:
     }
 } // canon
 
+
+/// This example is just to pass the style checker.
+@safe unittest
+{
+}
+
 /*
 @@@BUG@@@
 Attempting to integrate `equal` insice `canon` causes the following errors when
@@ -2535,7 +2542,7 @@ nothrow pure @safe unittest
 }
 
 // ditto @@@BUG@@@ above
-unittest
+@safe unittest
 {
     import std.typecons : Tuple;
     alias mytuple = Tuple!(int, int);

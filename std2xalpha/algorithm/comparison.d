@@ -12,10 +12,9 @@ alias mismatch = v1.canon!"std2xalpha".mismatch;
 ///
 unittest
 {
-    import std.algorithm.comparison : mismatch1 = mismatch;
     // `ö` and `ü` are two bytes wide and both start with 0xC3
     auto s1 = "öabc", s2 = "üabc";
-    auto a = mismatch1(s1, s2);
+    auto a = v1.mismatch(s1, s2);
     // With autodecoding, the mismatch will be on the first element
     assert(a[0] is s1 && a[1] is s2);
     auto b = mismatch("öabc", "üabc");
