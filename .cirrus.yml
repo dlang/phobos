@@ -39,10 +39,10 @@ linux_task:
   << : *COMMON_STEPS_TEMPLATE
 
 # Mac
-mac_task:
-  name: macOS 10.15 x64
+macos_task:
+  name: macOS 11.x x64
   osx_instance:
-    image: catalina-xcode
+    image: big-sur-xcode
   timeout_in: 60m
   environment:
     OS_NAME: darwin
