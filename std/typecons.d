@@ -2792,6 +2792,15 @@ struct Nullable(T)
         }
     }
 
+    this (ref return scope inout Nullable!T rhs) inout
+    {
+        _isNull = rhs._isNull;
+        if (!_isNull)
+            _value.payload = rhs._value.payload;
+        else
+            _value = DontCallDestructorT.init;
+    }
+
     /**
      * If they are both null, then they are equal. If one is null and the other
      * is not, then they are not equal. If they are both non-null, then they are
@@ -3284,11 +3293,11 @@ auto nullable(T)(T t)
     static struct S2 //inspired from 9404
     {
         Nullable!int ni;
-        this(S2 other)
+        this(ref S2 other)
         {
             ni = other.ni;
         }
-        void opAssign(S2 other)
+        void opAssign(ref S2 other)
         {
             ni = other.ni;
         }
@@ -9565,4 +9574,22 @@ unittest
     assert((a | false) == Ternary.yes);
     assert((a ^ true) == Ternary.no);
     assert((a ^ false) == Ternary.yes);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22511
+@safe unittest
+{
+    static struct S
+    {
+        int b;
+        @disable this(this);
+        this (ref return scope inout S rhs) inout
+        {
+            this.b = rhs.b + 1;
+        }
+    }
+
+    Nullable!S s1 = S(1);
+    Nullable!S s2 = s1;
+    assert(s2.get().b > s1.get().b);
 }
