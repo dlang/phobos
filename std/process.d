@@ -4385,6 +4385,7 @@ else version (Posix)
 
     void browse(scope const(char)[] url) nothrow @nogc @safe
     {
+        const buffer = url.tempCString(); // Retain buffer until end of scope
         const(char)*[3] args;
 
         // Trusted because it's called with a zero-terminated literal
@@ -4408,7 +4409,6 @@ else version (Posix)
             }
         }
 
-        const buffer = url.tempCString(); // Retain buffer until end of scope
         args[1] = buffer;
         args[2] = null;
 
