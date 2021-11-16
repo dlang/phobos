@@ -3859,17 +3859,17 @@ else version (Windows)
             return _size;
         }
 
-        @property SysTime timeCreated() const pure nothrow scope
+        @property SysTime timeCreated() const pure nothrow return scope
         {
             return cast(SysTime)_timeCreated;
         }
 
-        @property SysTime timeLastAccessed() const pure nothrow scope
+        @property SysTime timeLastAccessed() const pure nothrow return scope
         {
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property SysTime timeLastModified() const pure nothrow scope
+        @property SysTime timeLastModified() const pure nothrow return scope
         {
             return cast(SysTime)_timeLastModified;
         }
