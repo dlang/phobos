@@ -2239,7 +2239,7 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         U stripped;
     }
 
-    void opAssign(T another) pure nothrow @nogc
+    void opAssign(return scope T another) pure nothrow @nogc
     {
         // If `T` defines `opCast` we must infer the safety
         static if (hasMember!(T, "opCast"))
@@ -2271,7 +2271,7 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         opAssign(initializer);
     }
 
-    @property inout(T) get() @trusted pure nothrow @nogc inout
+    @property inout(T) get() @trusted pure nothrow @nogc return scope inout
     {
         return original;
     }
