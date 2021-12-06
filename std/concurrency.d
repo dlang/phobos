@@ -2149,16 +2149,14 @@ private
 
                     if (msg.convertsTo!(Args))
                     {
-                        alias RT = ReturnType!(t);
-                        static if (is(RT == bool))
+                        static if (is(ReturnType!(t) == bool))
                         {
                             return msg.map(op);
                         }
                         else
                         {
                             msg.map(op);
-                            static if (!is(immutable RT == immutable noreturn))
-                                return true;
+                            return true;
                         }
                     }
                 }
@@ -2747,8 +2745,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
             if (!atomicLoad!(MemoryOrder.raw)(flag))
             {
                 var = init;
-                static if (!is(immutable typeof(var) == immutable noreturn))
-                    atomicStore!(MemoryOrder.rel)(flag, true);
+                atomicStore!(MemoryOrder.rel)(flag, true);
             }
         }
     }
@@ -2829,27 +2826,4 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     auto result1 = receiveOnly!(const Aggregate)();
     immutable expected = Aggregate(42, [1, 2, 3, 4, 5]);
     assert(result1 == expected);
-}
-
-// Noreturn support
-@system unittest
-{
-    static noreturn foo(int) { throw new Exception(""); }
-
-    if (false) spawn(&foo, 1);
-    if (false) spawnLinked(&foo, 1);
-
-    if (false) receive(&foo);
-    if (false) receiveTimeout(Duration.init, &foo);
-
-    // Wrapped in __traits(compiles) to skip codegen which crashes dmd's backend
-    static assert(__traits(compiles, receiveOnly!noreturn()                 ));
-    static assert(__traits(compiles, send(Tid.init, noreturn.init)          ));
-    static assert(__traits(compiles, prioritySend(Tid.init, noreturn.init)  ));
-    static assert(__traits(compiles, yield(noreturn.init)                   ));
-
-    static assert(__traits(compiles, {
-        __gshared noreturn n;
-        initOnce!n(noreturn.init);
-    }));
 }
