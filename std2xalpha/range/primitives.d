@@ -19,6 +19,13 @@ if (!is(T[] == void[]))
     return a[0];
 }
 
+///
+unittest
+{
+    string s = "ä"; // 0xC3 0xA4 in UTF8
+    assert(s.front == 0xC3);
+}
+
 /**
 @@@TODO@@@ This function redefines `popFront` for std2x, meaning its documentation
 will override the documentation of `popFront` found in std. The difference is of
@@ -29,4 +36,14 @@ if (!is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
     a = a[1 .. $];
+}
+
+///
+unittest
+{
+    string s = "ä";
+    s.popFront;
+    assert(s.length == 1);
+    assert(s[0] == 0xA4);
+    assert(s.front == 0xA4);
 }
