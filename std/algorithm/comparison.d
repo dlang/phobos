@@ -151,7 +151,7 @@ static:
         assert("bar".among!("foo", "bar", "baz") == 2);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.meta : AliasSeq;
 
@@ -384,7 +384,7 @@ static:
     }
 
     ///
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         import std.algorithm.iteration : map;
         import std.format : format;
@@ -415,7 +415,7 @@ static:
     }
 
     /// Using with void handlers:
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         import std.exception : assertThrown;
 
@@ -436,7 +436,7 @@ static:
         )();
     }
 
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         import core.exception : SwitchError;
         import std.exception : assertThrown;
@@ -509,7 +509,7 @@ static:
                             )());
     }
 
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         interface I { }
         class B : I { }
@@ -527,7 +527,7 @@ static:
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=22384
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         // Use explicit methods to enforce return types
         static void objectSkip(Object) {}
@@ -615,7 +615,7 @@ static:
         assert(x == -1);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int a = 1;
         short b = 6;
@@ -792,7 +792,7 @@ static:
     }
 
     ///
-    pure @safe unittest
+    version (D_BetterC) {} else pure @safe unittest
     {
         int result;
 
@@ -829,7 +829,7 @@ static:
     }
 
     /// Example predicate that compares individual elements in reverse lexical order
-    pure @safe unittest
+    version (D_BetterC) {} else pure @safe unittest
     {
         int result;
 
@@ -867,7 +867,7 @@ static:
 
     // cmp for string with custom predicate fails if distinct chars can compare equal
     // https://issues.dlang.org/show_bug.cgi?id=18286
-    @nogc nothrow pure @safe unittest
+    version (D_BetterC) {} else @nogc nothrow pure @safe unittest
     {
         static bool ltCi(dchar a, dchar b)// less than, case insensitive
         {
@@ -883,7 +883,7 @@ static:
 
     // for non-string ranges check that opCmp is evaluated only once per pair.
     // https://issues.dlang.org/show_bug.cgi?id=18280
-    @nogc nothrow @safe unittest
+    version (D_BetterC) {} else @nogc nothrow @safe unittest
     {
         static int ctr = 0;
         struct S
@@ -932,7 +932,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         with(EditOp)
         {
@@ -1184,7 +1184,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.uni : toUpper;
@@ -1200,7 +1200,7 @@ static:
         assert(levenshteinDistance("ID", "I♥D") == 1);
     }
 
-    @safe @nogc nothrow unittest
+    version (D_BetterC) {} else @safe @nogc nothrow unittest
     {
         assert(levenshteinDistance("cat"d, "rat"d) == 1);
     }
@@ -1215,7 +1215,7 @@ static:
         return levenshteinDistance!(equals, Types)(s, t);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static struct S { string s; alias s this; }
         assert(levenshteinDistance(S("cat"), S("rat")) == 1);
@@ -1223,7 +1223,7 @@ static:
         assert(levenshteinDistance(S("cat"), "rat") == 1);
     }
 
-    @safe @nogc nothrow unittest
+    version (D_BetterC) {} else @safe @nogc nothrow unittest
     {
         static struct S { dstring s; alias s this; }
         assert(levenshteinDistance(S("cat"d), S("rat"d)) == 1);
@@ -1257,7 +1257,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         string a = "Saturday", b = "Sundays";
         auto p = levenshteinDistanceAndPath(a, b);
@@ -1265,7 +1265,7 @@ static:
         assert(equal(p[1], "nrrnsnnni"));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         assert(levenshteinDistance("a", "a") == 0);
         assert(levenshteinDistance("a", "b") == 1);
@@ -1286,7 +1286,7 @@ static:
         return levenshteinDistanceAndPath!(equals, Types)(s, t);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static struct S { string s; alias s this; }
         assert(levenshteinDistanceAndPath(S("cat"), S("rat"))[0] == 1);
@@ -1372,7 +1372,7 @@ static:
         assert(e == 2);
     }
 
-    @safe unittest  // not @nogc due to `Date`
+    version (D_BetterC) {} else @safe unittest  // not @nogc due to `Date`
     {
         int a = 5;
         short b = 6;
@@ -1504,7 +1504,7 @@ static:
     }
 
     /// User-defined types that support comparison with < are supported.
-    @safe unittest  // not @nogc due to `Date`
+    version (D_BetterC) {} else @safe unittest  // not @nogc due to `Date`
     {
         import std.datetime;
         assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
@@ -1518,7 +1518,7 @@ static:
     }
 
     // min must be stable: when in doubt, return the first argument.
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         assert(min(1.0, double.nan) == 1.0);
         assert(min(double.nan, 1.0) is double.nan);
@@ -1555,7 +1555,7 @@ static:
     }
 
     ///
-    @safe @nogc unittest
+    version (D_BetterC) {} else @safe @nogc unittest
     {
         int[6] x = [ 1,   5, 2, 7,   4, 3 ];
         double[6] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
@@ -1570,7 +1570,7 @@ static:
         assert(m2[3] == y[3 .. $]);
     }
 
-    @safe @nogc unittest
+    version (D_BetterC) {} else @safe @nogc unittest
     {
         import std.range : only;
 
@@ -1658,7 +1658,7 @@ static:
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         string res = 2.predSwitch!"a < b"(
             1, "less than 1",
@@ -1685,7 +1685,7 @@ static:
         assertThrown!Exception(factorial(-9));
     }
 
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         import core.exception : SwitchError;
         import std.exception : assertThrown;
@@ -1809,7 +1809,7 @@ static:
     }
 
     ///
-    @safe nothrow pure unittest
+    version (D_BetterC) {} else @safe nothrow pure unittest
     {
         assert(isSameLength([1, 2, 3], [4, 5, 6]));
         assert(isSameLength([1, 2, 3], [4, 5, 6], [7, 8, 9]));
@@ -1839,7 +1839,7 @@ static:
         static assert(!isSameLength([1], [0.3, 90.4], [42]));
     }
 
-    @safe @nogc pure unittest
+    version (D_BetterC) {} else @safe @nogc pure unittest
     {
         import std.range : only;
         assert(isSameLength(only(1, 2, 3), only(4, 5, 6)));
@@ -1850,7 +1850,7 @@ static:
         assert(!isSameLength(only(1, 3, 3), only(4, 5), only(1, 3, 3)));
     }
 
-    @safe nothrow pure unittest
+    version (D_BetterC) {} else @safe nothrow pure unittest
     {
         import std.internal.test.dummyrange;
 
@@ -2037,7 +2037,7 @@ static:
     }
 
     ///
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         import std.typecons : Yes;
 
@@ -2055,7 +2055,7 @@ static:
     }
 
     // Test @nogc inference
-    @safe @nogc pure unittest
+    version (D_BetterC) {} else @safe @nogc pure unittest
     {
         static immutable arr1 = [1, 2, 3];
         static immutable arr2 = [3, 2, 1];
@@ -2066,7 +2066,7 @@ static:
         assert(!isPermutation(arr3, arr4));
     }
 
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         import std.internal.test.dummyrange;
 
@@ -2153,7 +2153,7 @@ static:
     }
 
     ///
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         immutable p = 1;
         immutable q = 2;
@@ -2168,7 +2168,7 @@ static:
     }
 
     ///
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         string r = null;
         assert(either(r, "a") == "a");
