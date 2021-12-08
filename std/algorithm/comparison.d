@@ -101,10 +101,10 @@ static:
         (Value value, Values values)
     if (Values.length != 0)
     {
-        foreach (uint i, ref v; values)
+        foreach (uint i, ref w; values)
         {
-            import std.functional : binaryFun;
-            if (binaryFun!pred(value, v)) return i + 1;
+            mixin("import "~v~".functional : binaryFun;");
+            if (binaryFun!pred(value, w)) return i + 1;
         }
         return 0;
     }
@@ -1343,7 +1343,6 @@ static:
             alias Result = CommonType!(T0, T1);
 
         // Perform the computation.
-        import std.functional : lessThan;
         immutable chooseB = lessThan!(T0, T1)(a, b);
         return cast(Result) (chooseB ? b : a);
     }
@@ -1453,7 +1452,6 @@ static:
             alias Result = CommonType!(T0, T1);
 
         // Engage!
-        import std.functional : lessThan;
         immutable chooseB = lessThan!(T1, T0)(b, a);
         return cast(Result) (chooseB ? b : a);
     }
