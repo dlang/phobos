@@ -901,6 +901,8 @@ static:
         immutable result = cmp(a[], b[]);
         assert(result == 0, "neither should compare greater than the other!");
         assert(ctr == a.length, "opCmp should be called exactly once per pair of items!");
+        // This unittest may be invoked several times depending on versions tested.
+        ctr = 0;
     }
 
     // levenshteinDistance
