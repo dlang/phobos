@@ -745,6 +745,12 @@ if (isInputRange!R && !isInfinite!R)
     assert([1, 2, 3].count([2, 3]) == 1);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=22582
+@safe unittest
+{
+    assert([1, 2, 3].count!"a & 1" == 2);
+}
+
 /++
     Counts elements in the given
     $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
