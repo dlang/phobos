@@ -1186,6 +1186,7 @@ static:
     }
 
     ///
+    version (NoAutodecodeStrings) {} else
     version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.iteration : filter;
