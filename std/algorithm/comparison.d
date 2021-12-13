@@ -386,7 +386,9 @@ static:
     ///
     version (D_BetterC) {} else @system unittest
     {
-        mixin("import "~v~".algorithm.iteration : map;");
+        // @@@BUG@@@ https://issues.dlang.org/show_bug.cgi?id=22596
+        // mixin("import "~v~".algorithm.iteration : map;");
+        import std.algorithm.iteration : map;
         import std.format : format;
 
         class A
@@ -1189,7 +1191,9 @@ static:
     version (NoAutodecodeStrings) {} else
     version (D_BetterC) {} else @safe unittest
     {
-        mixin("import "~v~".algorithm.iteration : filter;");
+        // @@@BUG@@@ https://issues.dlang.org/show_bug.cgi?id=22596
+        // mixin("import "~v~".algorithm.iteration : filter;");
+        import std.algorithm.iteration : filter;
         import std.uni : toUpper;
 
         assert(levenshteinDistance("cat", "rat") == 1);
@@ -1879,7 +1883,9 @@ static:
         auto r12 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6, 7, 8]);
         assert(!isSameLength(r11, r12));
 
-        mixin("import "~v~".algorithm.iteration : filter;");
+        // @@@BUG@@@ https://issues.dlang.org/show_bug.cgi?id=22596
+        // mixin("import "~v~".algorithm.iteration : filter;");
+        import std.algorithm.iteration : filter;
 
         assert(isSameLength(filter!"a >= 1"([1, 2, 3]), [4, 5, 6]));
         assert(!isSameLength(filter!"a > 1"([1, 2, 3]), [4, 5, 6]));
