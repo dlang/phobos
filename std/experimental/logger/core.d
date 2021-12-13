@@ -1618,7 +1618,11 @@ abstract class Logger
 
 private __gshared Logger stdSharedDefaultLogger;
 private shared Logger stdSharedLogger;
-private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
+version (StdUnittest)
+    private enum _defaultLogLevel = LogLevel.all;
+else
+    private enum _defaultLogLevel = LogLevel.warning;
+private shared LogLevel stdLoggerGlobalLogLevel = _defaultLogLevel;
 
 /* This method returns the global default Logger.
  * Marked @trusted because of excessive reliance on __gshared data
