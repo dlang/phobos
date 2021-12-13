@@ -243,7 +243,7 @@ PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
 # std2x additions
 PACKAGE_std2xalpha = functional meta traits typecons
-PACKAGE_std2xalpha_algorithm = comparison
+PACKAGE_std2xalpha_algorithm = comparison iteration
 PACKAGE_std2xalpha_range = primitives
 
 # Modules in std (including those in packages)
