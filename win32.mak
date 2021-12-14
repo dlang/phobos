@@ -367,7 +367,6 @@ SRC_ZLIB= \
 	etc\c\zlib\compress.c \
 	etc\c\zlib\crc32.c \
 	etc\c\zlib\deflate.c \
-	etc\c\zlib\example.c \
 	etc\c\zlib\gzclose.c \
 	etc\c\zlib\gzlib.c \
 	etc\c\zlib\gzread.c \
@@ -376,18 +375,9 @@ SRC_ZLIB= \
 	etc\c\zlib\inffast.c \
 	etc\c\zlib\inflate.c \
 	etc\c\zlib\inftrees.c \
-	etc\c\zlib\minigzip.c \
 	etc\c\zlib\trees.c \
 	etc\c\zlib\uncompr.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\algorithm.txt \
-	etc\c\zlib\zlib.3 \
-	etc\c\zlib\ChangeLog \
-	etc\c\zlib\README \
-	etc\c\zlib\win32.mak \
-	etc\c\zlib\win64.mak \
-	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak
+	etc\c\zlib\zutil.c
 
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
