@@ -2551,7 +2551,7 @@ if (isAutodecodableString!(T[]))
 /*
 Implements `length` for a range by forwarding it to `member`.
 */
-package(std) mixin template ImplementLength(alias member)
+mixin template ImplementLength(alias member)
 {
     static if (hasLength!(typeof(member)))
     {

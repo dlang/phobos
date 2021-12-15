@@ -77,50 +77,210 @@ import std.range.primitives;
 import std.traits;
 import std.typecons : Flag, Yes, No;
 
-/++
-`cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
-on each construction or call to $(REF_ALTTEXT popFront, popFront, std,range,primitives),
-to store the result in a _cache.
-The result is then directly returned when $(REF_ALTTEXT front, front, std,range,primitives) is called,
-rather than re-evaluated.
+alias
+    cache = canon!"std".cache,
+    cacheBidirectional = canon!"std".cacheBidirectional;
 
-This can be a useful function to place in a chain, after functions
-that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
-In particular, it can be placed after a call to $(LREF map), or before a call
-$(REF filter, std,range) or $(REF tee, std,range)
-
-`cache` may provide
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
-iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
-call to `cacheBidirectional`. Furthermore, a bidirectional _cache will
-evaluate the "center" element twice, when there is only one element left in
-the range.
-
-`cache` does not provide random access primitives,
-as `cache` would be unable to _cache the random accesses.
-If `Range` provides slicing primitives,
-then `cache` will provide the same slicing primitives,
-but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,range,primitives)
-trait also checks for random access).
-
-Params:
-    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-
-Returns:
-    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with the cached values of range
-+/
-auto cache(Range)(Range range)
-if (isInputRange!Range)
+/// CANON_DESCRIPTION
+template canon(string v)
 {
-    return _Cache!(Range, false)(range);
+    mixin("import "~v~".range.primitives;");
+
+    /++
+    `cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
+    on each construction or call to $(REF_ALTTEXT popFront, popFront, std,range,primitives),
+    to store the result in a _cache.
+    The result is then directly returned when $(REF_ALTTEXT front, front, std,range,primitives) is called,
+    rather than re-evaluated.
+
+    This can be a useful function to place in a chain, after functions
+    that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
+    In particular, it can be placed after a call to $(LREF map), or before a call
+    $(REF filter, std,range) or $(REF tee, std,range)
+
+    `cache` may provide
+    $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+    iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
+    call to `cacheBidirectional`. Furthermore, a bidirectional _cache will
+    evaluate the "center" element twice, when there is only one element left in
+    the range.
+
+    `cache` does not provide random access primitives,
+    as `cache` would be unable to _cache the random accesses.
+    If `Range` provides slicing primitives,
+    then `cache` will provide the same slicing primitives,
+    but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,range,primitives)
+    trait also checks for random access).
+
+    Params:
+        range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+
+    Returns:
+        An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with the cached values of range
+    +/
+    auto cache(Range)(Range range)
+    if (isInputRange!Range)
+    {
+        return _Cache!(Range, false)(range);
+    }
+
+    /// ditto
+    auto cacheBidirectional(Range)(Range range)
+    if (isBidirectionalRange!Range)
+    {
+        return _Cache!(Range, true)(range);
+    }
+
+    static private struct _Cache(R, bool bidir)
+    {
+        import core.exception : RangeError;
+
+        private
+        {
+            import std.algorithm.internal : algoFormat;
+            import std.meta : AliasSeq;
+
+            alias E  = ElementType!R;
+            alias UE = Unqual!E;
+
+            R source;
+
+            static if (bidir) alias CacheTypes = AliasSeq!(UE, UE);
+            else              alias CacheTypes = AliasSeq!UE;
+            CacheTypes caches;
+
+            static assert(isAssignable!(UE, E) && is(UE : E),
+                algoFormat(
+                    "Cannot instantiate range with %s because %s elements are not assignable to %s.",
+                    R.stringof,
+                    E.stringof,
+                    UE.stringof
+                )
+            );
+        }
+
+        this(R range)
+        {
+            source = range;
+            if (!range.empty)
+            {
+                caches[0] = source.front;
+                static if (bidir)
+                    caches[1] = source.back;
+            }
+            else
+            {
+                // needed, because the compiler cannot deduce, that 'caches' is initialized
+                // see https://issues.dlang.org/show_bug.cgi?id=15891
+                caches[0] = UE.init;
+                static if (bidir)
+                    caches[1] = UE.init;
+            }
+        }
+
+        static if (isInfinite!R)
+            enum empty = false;
+        else
+            bool empty() @property
+            {
+                return source.empty;
+            }
+
+        mixin ImplementLength!source;
+
+        E front() @property
+        {
+            version (assert) if (empty) throw new RangeError();
+            return caches[0];
+        }
+        static if (bidir) E back() @property
+        {
+            version (assert) if (empty) throw new RangeError();
+            return caches[1];
+        }
+
+        void popFront()
+        {
+            version (assert) if (empty) throw new RangeError();
+            source.popFront();
+            if (!source.empty)
+                caches[0] = source.front;
+            else
+            {
+                // see https://issues.dlang.org/show_bug.cgi?id=15891
+                caches[0] = UE.init;
+                static if (bidir)
+                    caches[1] = UE.init;
+            }
+        }
+        static if (bidir) void popBack()
+        {
+            version (assert) if (empty) throw new RangeError();
+            source.popBack();
+            if (!source.empty)
+                caches[1] = source.back;
+            else
+            {
+                // see https://issues.dlang.org/show_bug.cgi?id=15891
+                caches[0] = UE.init;
+                caches[1] = UE.init;
+            }
+        }
+
+        static if (isForwardRange!R)
+        {
+            private this(R source, ref CacheTypes caches)
+            {
+                this.source = source;
+                this.caches = caches;
+            }
+            typeof(this) save() @property
+            {
+                return typeof(this)(source.save, caches);
+            }
+        }
+
+        static if (hasSlicing!R)
+        {
+            enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
+
+            static if (hasEndSlicing)
+            {
+                private static struct DollarToken{}
+                enum opDollar = DollarToken.init;
+
+                auto opSlice(size_t low, DollarToken)
+                {
+                    return typeof(this)(source[low .. $]);
+                }
+            }
+
+            static if (!isInfinite!R)
+            {
+                typeof(this) opSlice(size_t low, size_t high)
+                {
+                    return typeof(this)(source[low .. high]);
+                }
+            }
+            else static if (hasEndSlicing)
+            {
+                auto opSlice(size_t low, size_t high)
+                in
+                {
+                    assert(low <= high, "Bounds error when slicing cache.");
+                }
+                do
+                {
+                    import std.range : takeExactly;
+                    return this[low .. $].takeExactly(high - low);
+                }
+            }
+        }
+    }
 }
 
-/// ditto
-auto cacheBidirectional(Range)(Range range)
-if (isBidirectionalRange!Range)
-{
-    return _Cache!(Range, true)(range);
-}
+// @@@BUG@@@: for some reason placing the unittests below inside the canon template above
+// causes linker errors.
 
 ///
 @safe unittest
@@ -138,9 +298,9 @@ if (isBidirectionalRange!Range)
     }
     // Without cache, with array (greedy)
     auto result1 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
-                             .filter!(a => a[1] < 0)()
-                             .map!(a => a[0])()
-                             .array();
+                            .filter!(a => a[1] < 0)()
+                            .map!(a => a[0])()
+                            .array();
 
     // the values of x that have a negative y are:
     assert(equal(result1, [-3, -2, 2]));
@@ -152,9 +312,9 @@ if (isBidirectionalRange!Range)
     counter = 0;
     // Without array, with cache (lazy)
     auto result2 = iota(-4, 5).map!(a =>tuple(a, fun(a)))()
-                             .cache()
-                             .filter!(a => a[1] < 0)()
-                             .map!(a => a[0])();
+                            .cache()
+                            .filter!(a => a[1] < 0)()
+                            .map!(a => a[0])();
 
     // the values of x that have a negative y are:
     assert(equal(result2, [-3, -2, 2]));
@@ -273,153 +433,6 @@ same cost or side effects.
     assert(r.source.initialized == true);
 }
 
-private struct _Cache(R, bool bidir)
-{
-    import core.exception : RangeError;
-
-    private
-    {
-        import std.algorithm.internal : algoFormat;
-        import std.meta : AliasSeq;
-
-        alias E  = ElementType!R;
-        alias UE = Unqual!E;
-
-        R source;
-
-        static if (bidir) alias CacheTypes = AliasSeq!(UE, UE);
-        else              alias CacheTypes = AliasSeq!UE;
-        CacheTypes caches;
-
-        static assert(isAssignable!(UE, E) && is(UE : E),
-            algoFormat(
-                "Cannot instantiate range with %s because %s elements are not assignable to %s.",
-                R.stringof,
-                E.stringof,
-                UE.stringof
-            )
-        );
-    }
-
-    this(R range)
-    {
-        source = range;
-        if (!range.empty)
-        {
-            caches[0] = source.front;
-            static if (bidir)
-                caches[1] = source.back;
-        }
-        else
-        {
-            // needed, because the compiler cannot deduce, that 'caches' is initialized
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            static if (bidir)
-                caches[1] = UE.init;
-        }
-    }
-
-    static if (isInfinite!R)
-        enum empty = false;
-    else
-        bool empty() @property
-        {
-            return source.empty;
-        }
-
-    mixin ImplementLength!source;
-
-    E front() @property
-    {
-        version (assert) if (empty) throw new RangeError();
-        return caches[0];
-    }
-    static if (bidir) E back() @property
-    {
-        version (assert) if (empty) throw new RangeError();
-        return caches[1];
-    }
-
-    void popFront()
-    {
-        version (assert) if (empty) throw new RangeError();
-        source.popFront();
-        if (!source.empty)
-            caches[0] = source.front;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            static if (bidir)
-                caches[1] = UE.init;
-        }
-    }
-    static if (bidir) void popBack()
-    {
-        version (assert) if (empty) throw new RangeError();
-        source.popBack();
-        if (!source.empty)
-            caches[1] = source.back;
-        else
-        {
-            // see https://issues.dlang.org/show_bug.cgi?id=15891
-            caches[0] = UE.init;
-            caches[1] = UE.init;
-        }
-    }
-
-    static if (isForwardRange!R)
-    {
-        private this(R source, ref CacheTypes caches)
-        {
-            this.source = source;
-            this.caches = caches;
-        }
-        typeof(this) save() @property
-        {
-            return typeof(this)(source.save, caches);
-        }
-    }
-
-    static if (hasSlicing!R)
-    {
-        enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
-
-        static if (hasEndSlicing)
-        {
-            private static struct DollarToken{}
-            enum opDollar = DollarToken.init;
-
-            auto opSlice(size_t low, DollarToken)
-            {
-                return typeof(this)(source[low .. $]);
-            }
-        }
-
-        static if (!isInfinite!R)
-        {
-            typeof(this) opSlice(size_t low, size_t high)
-            {
-                return typeof(this)(source[low .. high]);
-            }
-        }
-        else static if (hasEndSlicing)
-        {
-            auto opSlice(size_t low, size_t high)
-            in
-            {
-                assert(low <= high, "Bounds error when slicing cache.");
-            }
-            do
-            {
-                import std.range : takeExactly;
-                return this[low .. $].takeExactly(high - low);
-            }
-        }
-    }
-}
-
 /**
 Implements the homonym function (also known as `transform`) present
 in many languages of functional flavor. The call `map!(fun)(range)`
@@ -534,6 +547,7 @@ it separately:
 
 private struct MapResult(alias fun, Range)
 {
+    import std.range.primitives : hasLvalueElements, hasAssignableElements;
     alias R = Unqual!Range;
     R _input;
 
@@ -595,6 +609,7 @@ private struct MapResult(alias fun, Range)
         }
     }
 
+    import std.range.primitives : ImplementLength;
     mixin ImplementLength!_input;
 
     static if (hasSlicing!R)
@@ -783,6 +798,7 @@ private struct MapResult(alias fun, Range)
 @safe unittest
 {
     import std.range : iota;
+    import std.range.primitives : walkLength;
 
     // https://issues.dlang.org/show_bug.cgi?id=10130 - map of iota with const step.
     const step = 2;
@@ -1812,6 +1828,7 @@ if (isInputRange!R)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : popFrontN;
     import std.typecons : tuple;
 
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
@@ -2201,6 +2218,8 @@ if (isForwardRange!Range)
 //Testing inferring @system correctly
 @safe unittest
 {
+    import std.range.primitives : walkLength;
+
     struct DeadlySave
     {
         int front;
@@ -3599,6 +3618,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
+    import std.range : hasAssignableElements;
+
     static struct Result
     {
     private:
@@ -4043,7 +4064,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : popBackN;
 
     auto arrs = [
         [[1], [2], [3], [4], [5]],
@@ -4182,6 +4202,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 @safe unittest
 {
     import std.range : repeat;
+    import std.range.primitives : hasLvalueElements, hasAssignableElements;
 
     class AssignableRange
     {
@@ -4998,6 +5019,7 @@ if (fun.length >= 1)
                 }
             }
 
+            import std.range.primitives : ImplementLength;
             mixin ImplementLength!source;
         }
 
@@ -5994,6 +6016,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.algorithm.comparison : equal;
     import std.array : split;
     import std.conv : text;
+    import std.range.primitives : walkLength;
 
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
