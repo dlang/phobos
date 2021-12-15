@@ -1,5 +1,6 @@
 module std2xalpha.range.primitives;
 
+// Still deciding which is better.
 version = std_use_public_import;
 
 /**
@@ -39,7 +40,6 @@ else
     alias empty = v1.empty;
     alias save = v1.save;
     alias autodecodeStrings = v1.autodecodeStrings;
-    alias back = v1.back;
     alias ImplementLength = v1.ImplementLength;
 }
 
@@ -60,6 +60,25 @@ unittest
 {
     string s = "ä"; // 0xC3 0xA4 in UTF8
     assert(s.front == 0xC3);
+}
+
+/**
+@@@TODO@@@ This function redefines `back` for std2x, meaning its documentation
+will override the documentation of `back` found in std. The difference is of
+course that the new `back` does not autodecode.
+*/
+@property ref inout(T) back(T)(return scope inout(T)[] a) @safe pure nothrow @nogc
+if (!is(T[] == void[]))
+{
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
+    return a[$ - 1];
+}
+
+///
+unittest
+{
+    string s = "ä"; // 0xC3 0xA4 in UTF8
+    assert(s.back == 0xA4);
 }
 
 /**
@@ -113,3 +132,17 @@ course that the new `ElementType` does not support autodecoding, so it's the sam
 `ElementEncodingType`.
 */
 alias ElementType(R) = ElementEncodingType!R;
+
+///
+unittest
+{
+    // Standard arrays: returns the type of the elements of the array
+    static assert(is(ElementType!(int[]) == int));
+    static assert(is(ElementType!(immutable(int)[]) == immutable int));
+    // Accessing .front retrieves the undecoded char
+    static assert(is(ElementType!(char[])  == char));
+    static assert(is(ElementType!(dchar[]) == dchar));
+    // Ditto
+    static assert(is(ElementType!(string) == immutable char));
+    static assert(is(ElementType!(dstring) == immutable(dchar)));
+}

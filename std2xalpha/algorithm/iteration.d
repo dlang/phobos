@@ -9,7 +9,6 @@ alias
 
 // Unchanged for now
 alias
-    cacheBidirectional = v1.cacheBidirectional,
     map = v1.map,
     each = v1.each,
     filter = v1.filter,
@@ -34,11 +33,29 @@ alias
 ///
 unittest
 {
-    //import old = std.algorithm.iteration;
-    // `ö` and `ü` are two bytes wide and both start with 0xC3
-    auto s1 = "öabc", s2 = "üabc";
-    auto c1 = cache(s1);
-    auto x = c1.front;
-    static assert(is(typeof(x) == immutable char));
-    assert(c1.front == 0xc3);
+    import old = std.algorithm.iteration;
+    auto s = "öabc"; // ö in UTF8 is 0xC3 0xB6
+    auto c0 = old.cache(s);
+    auto c1 = cache(s);
+    auto x0 = c0.front;
+    auto x1 = c1.front;
+    static assert(is(typeof(x0) == dchar), typeof(x0));
+    static assert(is(typeof(x1) == immutable char));
+    assert(x0 == 'ö');
+    assert(x1 == 0xc3);
+}
+
+///
+unittest
+{
+    import old = std.algorithm.iteration;
+    auto s = "öabcö"; // ö in UTF8 is 0xC3 0xB6
+    auto c0 = old.cacheBidirectional(s);
+    auto c1 = cacheBidirectional(s);
+    auto x0 = c0.back;
+    auto x1 = c1.back;
+    static assert(is(typeof(x0) == dchar));
+    static assert(is(typeof(x1) == immutable char));
+    assert(x0 == 'ö');
+    assert(x1 == 0xb6);
 }
