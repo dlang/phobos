@@ -81,7 +81,10 @@ alias
     cache = canon!"std".cache,
     cacheBidirectional = canon!"std".cacheBidirectional;
 
-/// CANON_DESCRIPTION
+/**
+CANON_DESCRIPTION
+Params: v = the target version, e.g. `"std"` or `"std22"`.
+*/
 template canon(string v)
 {
     mixin("import "~v~".range.primitives;");

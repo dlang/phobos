@@ -1,50 +1,46 @@
 module std2xalpha.range.primitives;
 
-// Still deciding which is better.
-version = std_use_public_import;
-
-/**
+/*
 @@@TODO@@@ Publicly imported names across modules should copy or link those
 names' respective documentation. Here, we reuse empty and isInputRange because
 we don't change their meaning in std2x.
 */
-version (std_use_public_import)
-{
-    public import std.range.primitives;
-}
-else
-{
-    import v1 = std.range.primitives;
-    // Unchanged in this version.
-    alias isInputRange = v1.isInputRange;
-    // TODO
-    alias put = v1.put;
-    // Unchanged in this version.
-    alias isOutputRange = v1.isOutputRange;
-    // Unchanged in this version.
-    alias isForwardRange = v1.isForwardRange;
-    // Unchanged in this version.
-    alias isBidirectionalRange = v1.isBidirectionalRange;
-    alias hasMobileElements = v1.hasMobileElements;
-    alias ElementEncodingType = v1.ElementEncodingType;
-    alias hasSwappableElements = v1.hasSwappableElements;
-    alias hasAssignableElements = v1.hasAssignableElements;
-    alias hasLvalueElements = v1.hasLvalueElements;
-    alias isInfinite = v1.isInfinite;
-    alias hasSlicing = v1.hasSlicing;
-    alias walkLength = v1.walkLength;
-    alias popFrontN = v1.popFrontN;
-    alias popBackN = v1.popBackN;
-    alias popFrontExactly = v1.popFrontExactly;
-    alias popBackExactly = v1.popBackExactly;
-    alias moveFront = v1.moveFront;
-    alias moveBack = v1.moveBack;
-    alias moveAt = v1.moveAt;
-    alias empty = v1.empty;
-    alias save = v1.save;
-    alias autodecodeStrings = v1.autodecodeStrings;
-    alias ImplementLength = v1.ImplementLength;
-}
+import v1 = std.range.primitives;
+
+alias theCanon = v1.canon!"std2xalpha";
+
+alias isInputRange = theCanon.isInputRange;
+alias put = theCanon.put;
+//alias isNativeOutputRange = theCanon.isNativeOutputRange;
+alias isOutputRange = theCanon.isOutputRange;
+alias isForwardRange = theCanon.isForwardRange;
+alias isBidirectionalRange = theCanon.isBidirectionalRange;
+//alias isRandomAccessRange = theCanon.isRandomAccessRange;
+alias hasMobileElements = theCanon.hasMobileElements;
+//alias ElementType = theCanon.ElementType;
+alias ElementEncodingType = theCanon.ElementEncodingType;
+alias hasSwappableElements = theCanon.hasSwappableElements;
+alias hasAssignableElements = theCanon.hasAssignableElements;
+alias hasLvalueElements = theCanon.hasLvalueElements;
+//alias hasLength = theCanon.hasLength;
+alias isInfinite = theCanon.isInfinite;
+alias hasSlicing = theCanon.hasSlicing;
+alias walkLength = theCanon.walkLength;
+alias popFrontN = theCanon.popFrontN;
+alias popBackN = theCanon.popBackN;
+alias popFrontExactly = theCanon.popFrontExactly;
+alias popBackExactly = theCanon.popBackExactly;
+alias moveFront = theCanon.moveFront;
+alias moveBack = theCanon.moveBack;
+alias moveAt = theCanon.moveAt;
+alias empty = theCanon.empty;
+alias save = theCanon.save;
+// alias popFront = theCanon.popFront;
+// alias popBack = theCanon.popBack;
+alias autodecodeStrings = theCanon.autodecodeStrings;
+// alias front = theCanon.front;
+// alias back = theCanon.back;
+alias ImplementLength = theCanon.ImplementLength;
 
 /**
 @@@TODO@@@ This function redefines `front` for std2x, meaning its documentation
