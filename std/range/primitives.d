@@ -1030,7 +1030,7 @@ See_Also:
  */
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
-    && is(ReturnType!((R r) => r.back) == ElementType!R);
+    && is(ReturnType!((R r) => r.back) == ReturnType!((R r) => r.front));
 
 ///
 @safe unittest
@@ -1561,14 +1561,8 @@ characters, but instead the number of encoding units, and as such is not useful
 with range-oriented algorithms. To use strings as random-access ranges with
 length, use $(REF representation, std, string) or $(REF byCodeUnit, std, utf).
 */
-template hasLength(R)
-{
-    static if (is(typeof(((R* r) => r.length)(null)) Length))
-        enum bool hasLength = is(Length == size_t) &&
-                              !(isAutodecodableString!R && !isAggregateType!R);
-    else
-        enum bool hasLength = false;
-}
+enum bool hasLength(R) = is(typeof(((R* r) => r.length)(null)) == size_t)
+        && (!isAutodecodableString!R || isAggregateType!R);
 
 ///
 @safe unittest

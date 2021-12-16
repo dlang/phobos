@@ -15,18 +15,21 @@ version (std_use_public_import)
 else
 {
     import v1 = std.range.primitives;
+    // Unchanged in this version.
     alias isInputRange = v1.isInputRange;
+    // TODO
     alias put = v1.put;
+    // Unchanged in this version.
     alias isOutputRange = v1.isOutputRange;
+    // Unchanged in this version.
     alias isForwardRange = v1.isForwardRange;
+    // Unchanged in this version.
     alias isBidirectionalRange = v1.isBidirectionalRange;
-    alias isRandomAccessRange = v1.isRandomAccessRange;
     alias hasMobileElements = v1.hasMobileElements;
     alias ElementEncodingType = v1.ElementEncodingType;
     alias hasSwappableElements = v1.hasSwappableElements;
     alias hasAssignableElements = v1.hasAssignableElements;
     alias hasLvalueElements = v1.hasLvalueElements;
-    alias hasLength = v1.hasLength;
     alias isInfinite = v1.isInfinite;
     alias hasSlicing = v1.hasSlicing;
     alias walkLength = v1.walkLength;
@@ -145,4 +148,40 @@ unittest
     // Ditto
     static assert(is(ElementType!(string) == immutable char));
     static assert(is(ElementType!(dstring) == immutable(dchar)));
+}
+
+/**
+@@@TODO@@@ This alias redefines `isRandomAccessRange` for std2x. The difference is of
+course that the new `isRandomAccessRange` does not support autodecoding, so string
+types are random access ranges.
+*/
+enum bool isRandomAccessRange(R) =
+    is(typeof(imported!"std2xalpha.traits".lvalueOf!R[1]) == ElementType!R)
+    && isForwardRange!R
+    && (isBidirectionalRange!R || isInfinite!R)
+    && (hasLength!R || isInfinite!R)
+    && (isInfinite!R || !is(typeof(imported!"std2xalpha.traits".lvalueOf!R[$ - 1]))
+        || is(typeof(imported!"std2xalpha.traits".lvalueOf!R[$ - 1]) == ElementType!R))
+;
+
+///
+@safe unittest
+{
+    static assert(isForwardRange!string);
+    static assert(isBidirectionalRange!string);
+    static assert(isRandomAccessRange!string);
+}
+
+/**
+@@@TODO@@@ This redefines `hasLength` for std2x. The difference is of
+course that the new `hasLength` does not support autodecoding, so string
+types do have length, as they should.
+*/
+enum bool hasLength(R) = is(typeof(((R* r) => r.length)(null)) == size_t);
+
+///
+@safe unittest
+{
+    static assert(hasLength!string);
+    static assert(hasLength!wstring);
 }
