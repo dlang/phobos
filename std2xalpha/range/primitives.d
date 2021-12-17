@@ -25,7 +25,7 @@ alias hasLvalueElements = theCanon.hasLvalueElements;
 //alias hasLength = theCanon.hasLength;
 alias isInfinite = theCanon.isInfinite;
 alias hasSlicing = theCanon.hasSlicing;
-alias walkLength = theCanon.walkLength;
+//alias walkLength = theCanon.walkLength;
 alias popFrontN = theCanon.popFrontN;
 alias popBackN = theCanon.popBackN;
 alias popFrontExactly = theCanon.popFrontExactly;
@@ -180,4 +180,40 @@ enum bool hasLength(R) = is(typeof(((R* r) => r.length)(null)) == size_t);
 {
     static assert(hasLength!string);
     static assert(hasLength!wstring);
+}
+
+/**
+@@@TODO@@@ This redefines `walkLength` for std2x. The difference is of
+course that the new `walkLength` does not support autodecoding, so string
+types have length computed in constant time.
+*/
+auto walkLength(Range)(Range range)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    static if (hasLength!Range)
+        return range.length;
+    else
+    {
+        size_t result;
+        for ( ; !range.empty ; range.popFront() )
+            ++result;
+        return result;
+    }
+}
+
+/// ditto
+auto walkLength(Range)(Range range, const size_t upTo)
+if (isInputRange!Range)
+{
+    static if (hasLength!Range)
+        return range.length;
+    else static if (isInfinite!Range)
+        return upTo;
+    else
+    {
+        size_t result;
+        for ( ; result < upTo && !range.empty ; range.popFront() )
+            ++result;
+        return result;
+    }
 }
