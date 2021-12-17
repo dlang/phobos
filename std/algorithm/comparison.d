@@ -1202,6 +1202,7 @@ static:
     }
 
     ///
+    static if (v != "std") {} else
     version (NoAutodecodeStrings) {} else
     version (D_BetterC) {} else @safe unittest
     {
