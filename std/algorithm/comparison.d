@@ -59,10 +59,24 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.comparison;
 
 // Expose all symbols from canon!"std" into the std namespace.
-static foreach (s; __traits(allMembers, canon!"std"))
-{
-    mixin("alias "~s~" = canon!`std`."~s~";");
-}
+alias among = canon!"std".among;
+private alias indexOfFirstOvershadowingChoiceOnLast = canon!"std".indexOfFirstOvershadowingChoiceOnLast;
+alias castSwitch = canon!"std".castSwitch;
+alias clamp = canon!"std".clamp;
+alias cmp = canon!"std".cmp;
+//alias equal = canon!"std".equal;
+alias EditOp = canon!"std".EditOp;
+alias Levenshtein = canon!"std".Levenshtein;
+alias levenshteinDistance = canon!"std".levenshteinDistance;
+alias levenshteinDistanceAndPath = canon!"std".levenshteinDistanceAndPath;
+alias max = canon!"std".max;
+alias min = canon!"std".min;
+alias mismatch = canon!"std".mismatch;
+alias predSwitch = canon!"std".predSwitch;
+alias isSameLength = canon!"std".isSameLength;
+alias AllocateGC = canon!"std".AllocateGC;
+alias isPermutation = canon!"std".isPermutation;
+alias either = canon!"std".either;
 
 /// CANON_DESCRIPTION
 template canon(string v)
