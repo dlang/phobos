@@ -219,7 +219,7 @@ template canon(string v)
         && is(typeof((R r) => r.popFront));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A {}
         struct B
@@ -270,7 +270,7 @@ template canon(string v)
         static assert(!isInputRange!VoidFront);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -350,7 +350,7 @@ template canon(string v)
         }
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!isNativeOutputRange!(int,     int));
         static assert( isNativeOutputRange!(int[],   int));
@@ -478,7 +478,7 @@ template canon(string v)
     * `T`, use the global `put` to handle outputting a `T[]` to the range
     * or vice-versa.
     */
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         import std.traits : isSomeChar;
 
@@ -504,7 +504,7 @@ template canon(string v)
     *
     * Be sure to save the position of the array before calling `put`.
     */
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         int[] a = [1, 2, 3], b = [10, 20];
         auto c = a;
@@ -522,7 +522,7 @@ template canon(string v)
     * Note that putting the same width character as the target buffer type is
     * `nothrow`, but transcoding can throw a $(REF UTFException, std, utf).
     */
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         // the elements must be mutable, so using string or const(char)[]
         // won't compile
@@ -532,7 +532,7 @@ template canon(string v)
         assert(s1 == "Hello, World!");
     }
 
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         // same thing, just using same character width.
         char[] s1 = new char[13];
@@ -542,7 +542,7 @@ template canon(string v)
     }
 
 
-    @safe pure nothrow @nogc unittest
+    version (D_BetterC) {} else @safe pure nothrow @nogc unittest
     {
         static struct R() { void put(scope const(char)[]) {} }
         R!() r;
@@ -596,21 +596,21 @@ template canon(string v)
         }
     }
 
-    pure @safe unittest
+    version (D_BetterC) {} else pure @safe unittest
     {
         auto f = delegate (const(char)[]) {};
         putChar(f, cast(dchar)'a');
     }
 
 
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         static struct R() { void put(scope const(char)[]) {} }
         R!() r;
         putChar(r, 'a');
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A {}
         static assert(!isInputRange!(A));
@@ -622,7 +622,7 @@ template canon(string v)
         put(b, 5);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[] a = new int[10];
         int b;
@@ -630,14 +630,14 @@ template canon(string v)
         put(a, b);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         void myprint(scope const(char)[] s) { }
         auto r = &myprint;
         put(r, 'a');
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[] a = new int[10];
         static assert(!__traits(compiles, put(a, 1.0L)));
@@ -653,7 +653,7 @@ template canon(string v)
         assert(a.length == 6);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         char[] a = new char[10];
         static assert(!__traits(compiles, put(a, 1.0L)));
@@ -667,7 +667,7 @@ template canon(string v)
         static assert(__traits(compiles, put(a, "ABC"d)));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // attempt putting into narrow strings by transcoding
         char[] a = new char[10];
@@ -718,7 +718,7 @@ template canon(string v)
         assert(aw.length == 8);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[][] a = new int[][10];
         int[]   b = new int[10];
@@ -730,7 +730,7 @@ template canon(string v)
         static assert(!__traits(compiles, put(a, c)));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[][] a = new int[][](3);
         int[]   b = [1];
@@ -745,7 +745,7 @@ template canon(string v)
         assert(a == [[2], [2], [2]]);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // Test fix for bug 7476.
         struct LockingTextWriter
@@ -764,7 +764,7 @@ template canon(string v)
         put(w, re);
     }
 
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         import std.conv : to;
         import std.meta : AliasSeq;
@@ -827,7 +827,7 @@ template canon(string v)
         }}
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static struct CharRange
         {
@@ -845,7 +845,7 @@ template canon(string v)
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=9823
-    @system unittest
+    version (D_BetterC) {} else @system unittest
     {
         const(char)[] r;
         void delegate(const(char)[]) dg = (s) { r = s; };
@@ -854,7 +854,7 @@ template canon(string v)
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=10571
-    @safe unittest
+    version (D_BetterC) {} else version (D_BetterC) {} else @safe unittest
     {
         import std.format.write : formattedWrite;
         string buf;
@@ -862,7 +862,7 @@ template canon(string v)
         assert(buf == "hello");
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.format.write : formattedWrite;
         import std.meta : AliasSeq;
@@ -930,7 +930,7 @@ template canon(string v)
     package(std) enum bool isNativeOutputRange(R, E) =
         is(typeof(doPut(lvalueOf!R, lvalueOf!E)));
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[] r = new int[](4);
         static assert(isInputRange!(int[]));
@@ -956,7 +956,7 @@ template canon(string v)
         is(typeof(put(lvalueOf!R, lvalueOf!E)));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         void myprint(scope const(char)[] s) { }
         static assert(isOutputRange!(typeof(&myprint), char));
@@ -966,7 +966,7 @@ template canon(string v)
         static assert( isOutputRange!(dchar[], dchar));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.array;
         import std.stdio : writeln;
@@ -1031,14 +1031,14 @@ template canon(string v)
         && is(ReturnType!((R r) => r.save) == R);
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!isForwardRange!(int));
         static assert( isForwardRange!(int[]));
         static assert( isForwardRange!(inout(int)[]));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // BUG 14544
         struct R14544
@@ -1074,7 +1074,7 @@ template canon(string v)
         && is(ReturnType!((R r) => r.back) == ReturnType!((R r) => r.front));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         alias R = int[];
         R r = [0,1];
@@ -1085,7 +1085,7 @@ template canon(string v)
         static assert(is(typeof(t) == typeof(w))); // same type for front and back
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A {}
         struct B
@@ -1143,7 +1143,7 @@ template canon(string v)
             || is(typeof(lvalueOf!R[$ - 1]) == ElementType!R));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.traits : isAggregateType, isAutodecodableString;
 
@@ -1172,7 +1172,7 @@ template canon(string v)
         }
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A {}
         struct B
@@ -1224,7 +1224,7 @@ template canon(string v)
         static assert( isRandomAccessRange!(inout(int)[]));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // Test fix for bug 6935.
         struct R
@@ -1281,7 +1281,7 @@ template canon(string v)
             || is(typeof(moveAt(lvalueOf!R, 0)) == ElementType!R));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.range : iota, repeat;
@@ -1320,7 +1320,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : iota;
 
@@ -1340,14 +1340,14 @@ template canon(string v)
         static assert(is(ElementType!(typeof(range)) == int));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(is(ElementType!(byte[]) == byte));
         static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
         static assert(is(ElementType!(wstring) == dchar));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         enum XYZ : string { a = "foo" }
         auto x = XYZ.a.front;
@@ -1362,7 +1362,7 @@ template canon(string v)
         static assert(is(ElementType!(inout(int[])) == inout(int)));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(is(ElementType!(int[5]) == int));
         static assert(is(ElementType!(int[0]) == int));
@@ -1371,7 +1371,7 @@ template canon(string v)
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=11336
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static struct S
         {
@@ -1381,7 +1381,7 @@ template canon(string v)
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=11401
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // ElementType should also work for non-@propety 'front'
         struct E { ushort id; }
@@ -1408,7 +1408,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : iota;
         // internally the range stores the encoded type
@@ -1422,7 +1422,7 @@ template canon(string v)
         static assert(is(ElementEncodingType!(typeof(range)) == int));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(is(ElementEncodingType!(wchar[]) == wchar));
         static assert(is(ElementEncodingType!(dchar[]) == dchar));
@@ -1431,7 +1431,7 @@ template canon(string v)
         static assert(is(ElementEncodingType!(int[])  == int));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         enum XYZ : string { a = "foo" }
         auto x = XYZ.a.front;
@@ -1449,7 +1449,7 @@ template canon(string v)
         static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(is(ElementEncodingType!(int[5]) == int));
         static assert(is(ElementEncodingType!(int[0]) == int));
@@ -1482,7 +1482,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!hasSwappableElements!(const int[]));
         static assert(!hasSwappableElements!(const(int)[]));
@@ -1516,7 +1516,7 @@ template canon(string v)
             || is(typeof(lvalueOf!R[0] = lvalueOf!R.front)));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!hasAssignableElements!(const int[]));
         static assert(!hasAssignableElements!(const(int)[]));
@@ -1558,7 +1558,7 @@ template canon(string v)
     if (1);
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : iota, chain;
 
@@ -1577,7 +1577,7 @@ template canon(string v)
         static assert( hasLvalueElements!(typeof(c)));
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         // bugfix 6336
         struct S { immutable int value; }
@@ -1606,7 +1606,7 @@ template canon(string v)
             && (!isAutodecodableString!R || isAggregateType!R);
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!hasLength!(char[]));
         static assert( hasLength!(int[]));
@@ -1619,7 +1619,7 @@ template canon(string v)
     }
 
     // test combinations which are invalid on some platforms
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A { ulong length; }
         struct B { @property uint length() { return 0; } }
@@ -1637,7 +1637,7 @@ template canon(string v)
     }
 
     // test combinations which are invalid on all platforms
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct A { long length; }
         struct B { int length; }
@@ -1673,7 +1673,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : Repeat;
         static assert(!isInfinite!(int[]));
@@ -1723,7 +1723,7 @@ template canon(string v)
         }));
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : takeExactly;
         static assert( hasSlicing!(int[]));
@@ -1846,7 +1846,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.range : iota;
 
@@ -1857,7 +1857,7 @@ template canon(string v)
         assert(10.iota.walkLength(5) == 10);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : recurrence, take;
@@ -1972,7 +1972,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[] a = [ 1, 2, 3, 4, 5 ];
         a.popFrontN(2);
@@ -1982,7 +1982,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -1993,7 +1993,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         int[] a = [ 1, 2, 3, 4, 5 ];
         a.popBackN(2);
@@ -2003,7 +2003,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2065,7 +2065,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.algorithm.iteration : filterBidirectional;
@@ -2117,7 +2117,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         auto a = [ 1, 2, 3 ];
         assert(moveFront(a) == 1);
@@ -2136,7 +2136,7 @@ template canon(string v)
         assert(moveFront(r) == 43);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct R
         {
@@ -2175,7 +2175,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         struct TestRange
         {
@@ -2221,7 +2221,7 @@ template canon(string v)
     }
 
     ///
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         auto a = [1,2,3,4];
         foreach (idx, it; a)
@@ -2230,7 +2230,7 @@ template canon(string v)
         }
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.internal.test.dummyrange;
 
@@ -2264,7 +2264,7 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         auto a = [ 1, 2, 3 ];
         assert(!a.empty);
@@ -2289,7 +2289,7 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         auto a = [ 1, 2, 3 ];
         auto b = a.save;
@@ -2312,14 +2312,14 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         auto a = [ 1, 2, 3 ];
         a.popFront();
         assert(a == [ 2, 3 ]);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!is(typeof({          int[4] a; popFront(a); })));
         static assert(!is(typeof({ immutable int[] a; popFront(a); })));
@@ -2356,7 +2356,7 @@ template canon(string v)
         else static assert(0, "Bad template constraint.");
     }
 
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         import std.meta : AliasSeq;
 
@@ -2392,7 +2392,7 @@ template canon(string v)
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=16090
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         string s = "\u00E4";
         assert(s.length == 2);
@@ -2402,7 +2402,7 @@ template canon(string v)
         assert(s.empty);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         wstring s = "\U00010000";
         assert(s.length == 2);
@@ -2427,14 +2427,14 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         auto a = [ 1, 2, 3 ];
         a.popBack();
         assert(a == [ 1, 2 ]);
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         static assert(!is(typeof({ immutable int[] a; popBack(a); })));
         static assert(!is(typeof({          int[4] a; popBack(a); })));
@@ -2450,7 +2450,7 @@ template canon(string v)
         a = a[0 .. $ - strideBack(a, $)];
     }
 
-    @safe pure unittest
+    version (D_BetterC) {} else @safe pure unittest
     {
         import std.meta : AliasSeq;
 
@@ -2509,13 +2509,13 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         int[] a = [ 1, 2, 3 ];
         assert(a.front == 1);
     }
 
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         auto a = [ 1, 2 ];
         a.front = 4;
@@ -2555,7 +2555,7 @@ template canon(string v)
     }
 
     ///
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         int[] a = [ 1, 2, 3 ];
         assert(a.back == 3);
@@ -2563,7 +2563,7 @@ template canon(string v)
         assert(a.back == 7);
     }
 
-    @safe pure nothrow unittest
+    version (D_BetterC) {} else @safe pure nothrow unittest
     {
         immutable b = [ 1, 2, 3 ];
         assert(b.back == 3);
@@ -2598,7 +2598,7 @@ template canon(string v)
         }
     }
 
-    @safe unittest
+    version (D_BetterC) {} else @safe unittest
     {
         import std.meta : AliasSeq;
 
