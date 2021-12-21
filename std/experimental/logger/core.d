@@ -1618,11 +1618,7 @@ abstract class Logger
 
 private __gshared Logger stdSharedDefaultLogger;
 private shared Logger stdSharedLogger;
-version (StdUnittest)
-    private enum _defaultLogLevel = LogLevel.all;
-else
-    private enum _defaultLogLevel = LogLevel.warning;
-private shared LogLevel stdLoggerGlobalLogLevel = _defaultLogLevel;
+private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
 
 /* This method returns the global default Logger.
  * Marked @trusted because of excessive reliance on __gshared data
@@ -1637,7 +1633,7 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     import std.concurrency : initOnce;
     initOnce!stdSharedDefaultLogger({
         auto buffer = cast(ubyte[]) _buffer;
-        return emplace!FileLogger(buffer, stderr, LogLevel.all);
+        return emplace!FileLogger(buffer, stderr, LogLevel.warning);
     }());
 
     return stdSharedDefaultLogger;
@@ -2011,7 +2007,7 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
 
     auto oldunspecificLogger = sharedLog;
 
-    assert(oldunspecificLogger.logLevel == LogLevel.all,
+    assert(oldunspecificLogger.logLevel == LogLevel.warning,
          to!string(oldunspecificLogger.logLevel));
 
     assert(l.logLevel == LogLevel.all);
@@ -3067,7 +3063,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 {
     auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
-    assert(dl.logLevel == LogLevel.all);
+    assert(dl.logLevel == LogLevel.warning);
     assert(globalLogLevel == LogLevel.all);
 
     auto tl = cast(StdForwardLogger) stdThreadLocalLog;
