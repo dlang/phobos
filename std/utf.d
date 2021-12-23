@@ -1168,7 +1168,7 @@ do
 
 /// ditto
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-auto ref S str, ref size_t index) @trusted pure
+auto ref scope S str, ref size_t index) @trusted pure
 if (isSomeString!S)
 in
 {
@@ -1274,7 +1274,7 @@ do
 
 /// ditto
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-ref S str, out size_t numCodeUnits) @trusted pure
+ref scope S str, out size_t numCodeUnits) @trusted pure
 if (isSomeString!S)
 in
 {
