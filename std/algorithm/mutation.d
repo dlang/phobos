@@ -874,7 +874,7 @@ Params:
 
 See_Also:
         $(LREF fill)
-        $(LREF uninitializeFill)
+        $(LREF uninitializedFill)
  */
 void initializeAll(Range)(Range range)
 if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
