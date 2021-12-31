@@ -80,7 +80,7 @@ enum unbounded = size_t.max;
 The alignment that is guaranteed to accommodate any D object allocation on the
 current platform.
 */
-enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.alignof);
+enum uint platformAlignment = double.alignof < real.alignof ? real.alignof : double.alignof;
 
 /**
 The default good size allocation is deduced as `n` rounded up to the
