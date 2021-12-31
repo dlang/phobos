@@ -92,6 +92,15 @@ size_t goodAllocSize(A)(auto ref A a, size_t n)
 }
 
 /*
+Return true if number is a power of two
+*/
+@safe @nogc nothrow pure
+package bool isPowerOfTwo(T)(T x)
+{
+	return (x != 0) && ((x & (~x + 1)) == x);
+}
+
+/*
 Returns s rounded up to a multiple of base.
 */
 @safe @nogc nothrow pure
@@ -101,6 +110,8 @@ package size_t roundUpToMultipleOf(size_t s, uint base)
     auto rem = s % base;
     return rem ? s + base - rem : s;
 }
+
+
 
 @safe @nogc nothrow pure
 unittest
@@ -117,8 +128,7 @@ Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundUpToAlignment(size_t n, uint alignment)
 {
-    import std.math.traits : isPowerOf2;
-    assert(alignment.isPowerOf2);
+    assert(isPowerOfTwo(alignment));
     immutable uint slack = cast(uint) n & (alignment - 1);
     const result = slack
         ? n + alignment - slack
@@ -142,8 +152,7 @@ Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundDownToAlignment(size_t n, uint alignment)
 {
-    import std.math.traits : isPowerOf2;
-    assert(alignment.isPowerOf2);
+    assert(isPowerOfTwo(alignment));
     return n & ~size_t(alignment - 1);
 }
 
