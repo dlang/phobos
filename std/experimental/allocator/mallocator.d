@@ -346,8 +346,7 @@ version (LDC_AddressSanitizer)
         {
             return false;
         }
-        import std.algorithm.comparison : min;
-        const upTo = min(s, b.length);
+        const upTo = b.length < s ? b.length : s;
         p[0 .. upTo] = b[0 .. upTo];
         deallocate(b);
         b = p;
