@@ -1622,6 +1622,42 @@ pure nothrow @nogc
     assert(v != b);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=22647
+// Can compare with 'null'
+@system unittest
+{
+    static struct Bar
+    {
+        int* ptr;
+        alias ptr this;
+    }
+
+    static class Foo {}
+    int* iptr;
+    int[] arr;
+
+    Variant v = Foo.init; // 'null'
+    assert(v != null); // can only compare objects with 'null' by using 'is'
+
+    v = iptr;
+    assert(v == null); // pointers can be compared with 'null'
+
+    v = arr;
+    assert(v == null); // arrays can be compared with 'null'
+
+    v = "";
+    assert(v == null); // strings are arrays, an empty string is considered 'null'
+
+    v = Bar.init;
+    assert(v == null); // works with alias this
+
+    v = [3];
+    assert(v != null);
+    assert(v > null);
+    assert(v >= null);
+    assert(!(v < null));
+}
+
 /**
 _Algebraic data type restricted to a closed set of possible
 types. It's an alias for $(LREF VariantN) with an
