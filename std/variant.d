@@ -472,6 +472,20 @@ private:
                 auto rhsPA = getPtr(&temp.store);
                 return compare(rhsPA, zis, selector);
             }
+            // Generate the function below only if the Variant's type is
+            // comparable with 'null'
+            static if (__traits(compiles, () => A.init == null))
+            {
+                if (rhsType == typeid(null))
+                {
+                    // if rhsType is typeof(null), then we're comparing with 'null'
+                    // this takes into account 'opEquals' and 'opCmp'
+                    // all types that can compare with null have to following properties:
+                    // if it's 'null' then it's equal to null, otherwise it's always greater
+                    // than 'null'
+                    return *zis == null ? 0 : 1;
+                }
+            }
             return ptrdiff_t.min; // dunno
         case OpID.toString:
             auto target = cast(string*) parm;
