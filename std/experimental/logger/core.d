@@ -1639,7 +1639,8 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     return stdSharedDefaultLogger;
 }
 
-/** This property sets and gets the default `Logger`.
+/** This property sets and gets the default `Logger`. Unless set to another
+logger by the user, the default logger's log level is LogLevel.warning.
 
 Example:
 -------------
