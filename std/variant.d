@@ -2052,10 +2052,10 @@ static class VariantException : Exception
 
     assert(v == 2);
     assert(v < 3);
-    static assert(!__traits(compiles, {v == long.max;}));
-    static assert(!__traits(compiles, {v == null;}));
-    static assert(!__traits(compiles, {v < long.max;}));
-    static assert(!__traits(compiles, {v > null;}));
+    static assert(!__traits(compiles, () => v == long.max));
+    static assert(!__traits(compiles, () => v == null));
+    static assert(!__traits(compiles, () => v < long.max));
+    static assert(!__traits(compiles, () => v > null));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=1558
