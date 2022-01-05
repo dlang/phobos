@@ -3973,12 +3973,12 @@ string expandTilde(string inputPath) @safe nothrow
             is joined to path[char_pos .. length] if char_pos is smaller
             than length, otherwise path is not appended to c_path.
         */
-        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) @trusted nothrow
+        static string combineCPathWithDPath(const(char)* c_path, string path, size_t char_pos) @trusted nothrow
         {
             import core.stdc.string : strlen;
             import std.exception : assumeUnique;
 
-            assert(c_path != null);
+            assert(c_path !is null);
             assert(path.length > 0);
             assert(char_pos >= 0);
 
@@ -4014,14 +4014,16 @@ string expandTilde(string inputPath) @safe nothrow
         static string expandFromEnvironment(string path) @safe nothrow
         {
             import core.stdc.stdlib : getenv;
+            import core.stdc.string : strdup;
 
             assert(path.length >= 1);
             assert(path[0] == '~');
 
             // Get HOME and use that to replace the tilde.
-            auto home = () @trusted { return getenv("HOME"); } ();
-            if (home == null)
+            const(char)* home = () @trusted { return getenv("HOME"); } ();
+            if (home is null)
                 return path;
+            home = () @trusted { return strdup(home); } ();
 
             return combineCPathWithDPath(home, path, 1);
         }
