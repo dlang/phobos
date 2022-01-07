@@ -957,7 +957,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-If the file is not opened, returns `true`. Otherwise, returns
+If the file is closed or not yet opened, returns `true`. Otherwise, returns
 $(HTTP cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
@@ -1013,8 +1013,8 @@ Throws: `ErrnoException` on failure if closing the file.
     }
 
 /**
-If the file was unopened, succeeds vacuously. Otherwise closes the
-file (by calling $(HTTP
+If the file was closed or not yet opened, succeeds vacuously. Otherwise
+closes the file (by calling $(HTTP
 cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from `detach` in that it
@@ -1042,7 +1042,7 @@ Throws: `ErrnoException` on error.
     }
 
 /**
-If the file is not opened, succeeds vacuously. Otherwise, returns
+If the file is closed or not yet opened, succeeds vacuously. Otherwise, returns
 $(HTTP cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
