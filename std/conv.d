@@ -654,11 +654,11 @@ if (isImplicitlyConvertible!(S, T) &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13551
-T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value)
 if (isTuple!T)
 {
     T t;
-    static foreach(i; 0 .. T.length)
+    static foreach (i; 0 .. T.length)
     {
         t[i] = value[i].to!(typeof(T[i]));
     }
