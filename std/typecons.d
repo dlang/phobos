@@ -76,36 +76,42 @@ import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
 
-///
+/// Value tuples
 @safe unittest
 {
-    // value tuples
     alias Coord = Tuple!(int, "x", int, "y", int, "z");
     Coord c;
     c[1] = 1;       // access by index
     c.z = 1;        // access by given name
     assert(c == Coord(0, 1, 1));
 
-    // names can be omitted
-    alias DicEntry = Tuple!(string, string);
+    // names can be omitted, types can be mixed
+    alias DictEntry = Tuple!(string, int);
+    auto dict = DictEntry("seven", 7);
 
-    // tuples can also be constructed on instantiation
+    // element types can be inferred
     assert(tuple(2, 3, 4)[1] == 3);
-    // construction on instantiation works with names too
-    assert(tuple!("x", "y", "z")(2, 3, 4).y == 3);
+    // type inference works with names too
+    auto tup = tuple!("x", "y", "z")(2, 3, 4);
+    assert(tup.y == 3);
+}
 
-    // Rebindable references to const and immutable objects
+/// Rebindable references to const and immutable objects
+@safe unittest
+{
+    class Widget
     {
-        class Widget { void foo() const @safe {} }
-        const w1 = new Widget, w2 = new Widget;
-        w1.foo();
-        // w1 = w2 would not work; can't rebind const object
-        auto r = Rebindable!(const Widget)(w1);
-        // invoke method as if r were a Widget object
-        r.foo();
-        // rebind r to refer to another object
-        r = w2;
+        void foo() const @safe {}
     }
+    const w1 = new Widget, w2 = new Widget;
+    w1.foo();
+    // w1 = w2 would not work; can't rebind const object
+
+    auto r = Rebindable!(const Widget)(w1);
+    // invoke method as if r were a Widget object
+    r.foo();
+    // rebind r to refer to another object
+    r = w2;
 }
 
 /**
