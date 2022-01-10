@@ -1184,6 +1184,30 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 }
 
+@safe @nogc pure nothrow unittest {
+    // Hook that ignores all problems.
+    static struct Ignore
+    {
+        @nogc nothrow pure @safe static:
+        Dst onBadCast(Dst, Src)(Src src) { return cast(Dst) src; }
+        Lhs onLowerBound(Rhs, T)(Rhs rhs, T bound) { return cast(T) rhs; }
+        T onUpperBound(Rhs, T)(Rhs rhs, T bound) { return cast(T) rhs; }
+        bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs) { return lhs == rhs; }
+        int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs) { return (lhs > rhs) - (lhs < rhs); }
+        typeof(~Lhs()) onOverflow(string x, Lhs)(ref Lhs lhs) { return mixin(x ~ "lhs"); }
+        typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+        {
+            static if (x == "/")
+                return typeof(lhs / rhs).min;
+            else
+                return mixin("lhs" ~ x ~ "rhs");
+        }
+    }
+
+    auto x = Checked!(int, Ignore)(5) + 7;
+}
+
+
 /**
 
 Convenience function that turns an integral into the corresponding `Checked`
