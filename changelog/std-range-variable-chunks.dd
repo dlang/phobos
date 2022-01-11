@@ -1,4 +1,4 @@
-Split range into variable chunk sizes
+Split a range into variable chunk sizes
 
 Now a range can be split into differently sized chunks by providing a source
 range and a range of partitioners specifying where this range should be split.
@@ -11,17 +11,17 @@ auto source = [1, 2, 3, 4, 5, 6, 7];
 auto indexes = [1, 3, 6];
 auto sizes = [1, 2, 3]
 // source has more elements than the highest index
-assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4, 5, 6], [7]]);
+assert(chunks!ByIndex(source, indexes).array) == [[1], [2, 3], [4, 5, 6], [7]]);
 // source has more elements than sum of lengths
-assert(array(chunks!(ByLength)(source, sizes)) == [[1], [2, 3], [4, 5, 6], [7]]);
+assert(chunks!ByLength(source, sizes).array) == [[1], [2, 3], [4, 5, 6], [7]]);
 
 source = [1, 2, 3, 4];
 indexes = [1, 3, 6, 10];
 auto sizes = [1, 2, 3, 4]
 // source has fewer elements than the highest index
-assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4]]);
+assert(chunks!ByIndex(source, indexes).array) == [[1], [2, 3], [4]]);
 // source has fewer elements than sum of lengths
-assert(array(chunks!(ByIndex)(source, indexes)) == [[1], [2, 3], [4]]);
+assert(chunks!ByIndex(source, indexes).array) == [[1], [2, 3], [4]]);
 
 ```
 
@@ -34,7 +34,7 @@ int i, j;
 auto inputRangeSource1 = generate!(() => ++i).take(11);
 auto inputRangeSource2 = generate!(() => ++i).take(11);
 import std.algorithm.iteration : cumulativeFold;
-auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!("a + b");
+auto inputRangeIndexes = generate!(() => ++j).take(5).cumulativeFold!((a, b) => a + b);
 auto inputRangeLengths = generate!(() => ++j).take(5);
 auto chunkedByIndex = inputRangeSource1.chunks!(ByIndex)(inputRangeIndexes);
 auto chunkedByLength = inputRangeSource2.chunks!(ByLength)(inputRangeLengths);

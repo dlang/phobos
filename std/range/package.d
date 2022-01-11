@@ -8600,7 +8600,7 @@ enum Partitioning {
 }
 
 /**
-This range splits a `source` range into chunks as specified in the `partitioners` range.
+Splits a `source` range into chunks as specified in the `partitioners` range.
 The partitioners are considered to be either the desired lengths of the chunks or the
 indexes where the source range will be cut to create the chunks. The partitioning type can
 be controlled by setting the compile time argument `partitionType` to either `Partitioning.ByLength` or
