@@ -665,9 +665,9 @@ if (isTuple!T)
     return t;
 }
 
-unittest
+@safe unittest
 {
-    import std.typecons: Tuple;
+    import std.typecons : Tuple;
 
     auto test = ["10", "20", "30"];
     assert(test.to!(Tuple!(int, int, int)) == Tuple!(int, int, int)(10, 20, 30));
