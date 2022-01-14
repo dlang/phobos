@@ -117,44 +117,33 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
-        const length = r.length;
+        auto length = r.length;
         if (length == 0)
             return null;
 
         import core.internal.lifetime : emplaceRef;
 
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
+        import core.memory : GC;
+        /*
+            https://issues.dlang.org/show_bug.cgi?id=22185
+
+            Ranges with a length get a buffer preallocated for them based on that length,
+            if anything makes the `emplaceRef` throws then the buffer is registed with the GC and 
+            waiting to be collected but full of uninitialized memory. This tells the GC to collect if an exception 
+            is thrown.
+        */
+        scope(failure)
+            (() @trusted => GC.clrAttr(result.ptr, GC.BlkAttr.FINALIZE))();
 
         // Every element of the uninitialized array must be initialized
-        size_t cnt; //Number of elements that have been initialized
-        try
+        size_t i;
+        foreach (e; r)
         {
-            foreach (e; r)
-            {
-                emplaceRef!E(result[cnt], e);
-                ++cnt;
-            }
-        } catch (Exception e)
-        {
-            //https://issues.dlang.org/show_bug.cgi?id=22185
-            //Make any uninitialized elements safely destructible.
-            foreach (ref elem; result[cnt..$])
-            {
-                import core.internal.lifetime : emplaceInitializer;
-                emplaceInitializer(elem);
-            }
-            throw e;
+            emplaceRef!E(result[i], e);
+            ++i;
         }
-        /*
-            https://issues.dlang.org/show_bug.cgi?id=22673
-
-            We preallocated an array, we should ensure that enough range elements
-            were gathered such that every slot in the array is filled. If not, the GC
-            will collect the allocated array, leading to the `length - cnt` left over elements
-            being collected too - despite their contents having no guarantee of destructibility.
-         */
-        assert(length == cnt, "Range .length property was not equal to number of elements yielded by the range before becoming empty");
-        return (() @trusted => cast(E[]) result)();
+        return (() @trusted => cast(E[]) result)()[0..i];
     }
     else
     {
@@ -281,19 +270,55 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableStrin
     )));
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=20937
-@safe pure nothrow unittest
+//https://issues.dlang.org/show_bug.cgi?id=22185
+@safe unittest 
 {
-    struct S {int* x;}
-    struct R
+    import std.traits;
+    import std.range.primitives;
+    import std.exception : assertThrown;
+    import std.range;
+    static uint countConstructorRuns = 0;
+    static uint countDestructorRuns = 0;
+    struct ThrowingRange
     {
-        immutable(S) front;
-        bool empty;
-        @safe pure nothrow void popFront(){empty = true;}
+        struct ElemType
+        {
+            this(ref return scope const ElemType copy)
+            {
+                if(countConstructorRuns == 3)
+                    throw new Exception("killed");
+                ++countConstructorRuns;
+                
+            }
+            int x = 420;
+            ~this()
+            {
+                assert(x == 420);
+                ++countDestructorRuns;
+            }
+        }
+        const(ElemType) front()
+        {
+            ElemType x;
+            return x;
+        }
+        this(int set)
+        {
+            this.x = set;
+        }
+        void popFront() { x --;}
+        int x;
+        bool empty() { return x == 0;}
+        enum size_t length = 200;
     }
-    R().array;
+    static assert(hasLength!ThrowingRange);
+    import core.memory : GC;
+    auto tmp = ThrowingRange(6);
+    assertThrown(array(tmp));
+    (() @trusted => GC.collect())();
+    assert(countConstructorRuns == 3);
+    assert(countDestructorRuns == 5);
 }
-
 /**
 Convert a narrow autodecoding string to an array type that fully supports
 random access.  This is handled as a special case and always returns an array
@@ -460,90 +485,6 @@ if (isAutodecodableString!String)
         auto r = S(1).repeat(2).array();
         assert(equal(r, [S(1), S(1)]));
     });
-}
-//https://issues.dlang.org/show_bug.cgi?id=22673
-unittest
-{
-    struct LyingRange
-    {
-        enum size_t length = 100;
-        enum theRealLength = 50;
-        size_t idx = 0;
-        bool empty()
-        {
-            return idx <= theRealLength;
-        }
-        void popFront()
-        {
-            ++idx;
-        }
-        size_t front()
-        {
-            return idx;
-        }
-    }
-    static assert(hasLength!LyingRange);
-    LyingRange rng;
-    import std.exception : assertThrown;
-    assertThrown!Error(array(rng));
-}
-//https://issues.dlang.org/show_bug.cgi?id=22185
-unittest
-{
-    import std.stdio;
-    static struct ThrowingCopy
-    {
-        int x = 420;
-        this(ref return scope ThrowingCopy rhs)
-        {
-            rhs.x = 420;
-            //
-            throw new Exception("This throws");
-        }
-        ~this()
-        {
-            /*
-                Any time this destructor runs, it should be running on "valid"
-                data. This is is mimicked by having a .init other than 0 (the value the memory
-                practically will be from the GC).
-            */
-            if (x != 420) {
-                //This will only trigger during GC finalization so avoid writefln for now.
-                printf("Destructor failure in ThrowingCopy(%d) @ %p", x, &this);
-                assert(x == 420, "unittest destructor failed");
-            }
-        }
-    }
-    static struct LyingThrowingRange
-    {
-        enum size_t length = 100;
-        enum size_t evilRealLength = 50;
-        size_t idx;
-        ThrowingCopy front()
-        {
-            return ThrowingCopy(12);
-        }
-        bool empty()
-        {
-            return idx == evilRealLength;
-        }
-        void popFront()
-        {
-            ++idx;
-        }
-    }
-    static assert(hasLength!LyingThrowingRange);
-    import std.exception : assertThrown;
-    {
-        assertThrown(array(LyingThrowingRange()));
-    }
-    import core.memory : GC;
-    /*
-        Force a collection early. Doesn't always actually finalize the bad objects
-        but trying to collect soon after the allocation is thrown away means any potential failures
-        will happen earlier.
-    */
-    GC.collect();
 }
 
 /**
@@ -1045,11 +986,6 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 // from rt/lifetime.d
 private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
 
-// from rt/tracegc.d
-version (D_ProfileGC)
-private extern (C) void[] _d_newarrayUTrace(string file, size_t line,
-    string funcname, const scope TypeInfo ti, size_t length) pure nothrow;
-
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
@@ -1103,15 +1039,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
               _d_newarrayU returns a void[], but with the length set according
               to E.sizeof.
             +/
-            version (D_ProfileGC)
-            {
-                // FIXME: file, line, function should be propagated from the
-                // caller, not here.
-                *(cast(void[]*)&ret) = _d_newarrayUTrace(__FILE__, __LINE__,
-                    __FUNCTION__, typeid(E[]), size);
-            }
-            else
-                *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
+            *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
             static if (minimallyInitialized && hasIndirections!E)
                 // _d_newarrayU would have asserted if the multiplication below
                 // had overflowed, so we don't have to check it again.
@@ -1741,7 +1669,7 @@ private template isInputRangeOrConvertible(E)
         `true` if $(D lhs.ptr == rhs.ptr), `false` otherwise.
   +/
 @safe
-pure nothrow @nogc bool sameHead(T)(in T[] lhs, in T[] rhs)
+pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr == rhs.ptr;
 }
@@ -1769,7 +1697,7 @@ pure nothrow @nogc bool sameHead(T)(in T[] lhs, in T[] rhs)
         `false` otherwise.
   +/
 @trusted
-pure nothrow @nogc bool sameTail(T)(in T[] lhs, in T[] rhs)
+pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
 }
@@ -3624,14 +3552,13 @@ if (isDynamicArray!A)
         }
         else
         {
-            import core.lifetime : emplace;
+            import core.internal.lifetime : emplaceRef;
 
             ensureAddable(1);
             immutable len = _data.arr.length;
 
             auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            auto itemUnqual = (() @trusted => & cast() item)();
-            emplace(&bigData[len], *itemUnqual);
+            emplaceRef!(Unqual!T)(bigData[len], cast() item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -4763,6 +4690,9 @@ if (isInputRange!T && is(ElementType!T : U))
     auto ret = (() @trusted
     {
         Unqual!U[n] theArray = void;
+        int i = 0;
+        if(i)
+            theArray[] = U.init;
         return theArray;
     }());
 
