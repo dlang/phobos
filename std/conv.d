@@ -50,7 +50,7 @@ module std.conv;
 public import std.ascii : LetterCase;
 
 import std.meta;
-import std.range.primitives;
+import std.range;
 import std.traits;
 import std.typecons : Flag, Yes, No, tuple, isTuple;
 
@@ -1996,7 +1996,7 @@ if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
 
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
-if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
+if (isSomeFiniteCharInputRange!S &&
     isIntegral!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)

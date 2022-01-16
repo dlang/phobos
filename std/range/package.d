@@ -13521,3 +13521,49 @@ pure @safe unittest
 
     assert([1, 2, 3, 4].padRight(0, 10)[7 .. 9].equal([0, 0]));
 }
+
+/**
+This simplifies a commonly used idiom in phobos for accepting any kind of string
+parameter. The type `R` can for example be a simple string, chained string using
+$(REF chain, std,range), $(REF chainPath, std,path) or any other input range of
+characters.
+
+Only finite length character ranges are allowed with this constraint.
+
+This template is equivalent to:
+---
+isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R)
+---
+
+See_Also:
+$(REF isInputRange, std,range,primitives),
+$(REF isInfinite, std,range,primitives),
+$(LREF isSomeChar),
+$(REF ElementEncodingType, std,range,primitives)
+*/
+template isSomeFiniteCharInputRange(R)
+{
+    import std.traits : isSomeChar;
+
+    enum isSomeFiniteCharInputRange = isInputRange!R && !isInfinite!R
+        && isSomeChar!(ElementEncodingType!R);
+}
+
+///
+@safe unittest
+{
+    import std.path : chainPath;
+    import std.range : chain;
+
+    void someLibraryMethod(R)(R argument)
+    if (isSomeFiniteCharInputRange!R)
+    {
+        // implementation detail, would iterate over each character of argument
+    }
+
+    someLibraryMethod("simple strings work");
+    someLibraryMethod(chain("chained", " ", "strings", " ", "work"));
+    someLibraryMethod(chainPath("chained", "paths", "work"));
+    // you can also use custom structs implementing a char range
+}
+
