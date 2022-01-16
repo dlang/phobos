@@ -13555,7 +13555,8 @@ template isSomeFiniteCharInputRange(R)
     import std.path : chainPath;
     import std.range : chain;
 
-    void someLibraryMethod(R)(R argument) if (isSomeFiniteCharInputRange!R)
+    void someLibraryMethod(R)(R argument)
+    if (isSomeFiniteCharInputRange!R)
     {
         // implementation detail, would iterate over each character of argument
     }
