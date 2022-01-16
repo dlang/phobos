@@ -507,7 +507,8 @@ unittest
                 data. This is is mimicked by having a .init other than 0 (the value the memory
                 practically will be from the GC).
             */
-            if (x != 420) {
+            if (x != 420)
+            {
                 //This will only trigger during GC finalization so avoid writefln for now.
                 printf("Destructor failure in ThrowingCopy(%d) @ %p", x, &this);
                 assert(x == 420, "unittest destructor failed");
