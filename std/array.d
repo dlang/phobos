@@ -462,7 +462,7 @@ if (isAutodecodableString!String)
     });
 }
 //https://issues.dlang.org/show_bug.cgi?id=22673
-unittest
+@system unittest
 {
     struct LyingRange
     {
@@ -488,7 +488,7 @@ unittest
     assertThrown!Error(array(rng));
 }
 //https://issues.dlang.org/show_bug.cgi?id=22185
-unittest
+@system unittest
 {
     import std.stdio;
     static struct ThrowingCopy
