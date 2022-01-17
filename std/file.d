@@ -3392,7 +3392,7 @@ version (Posix) @system unittest // input range of dchars
 version (Windows) string getcwd() @trusted
 {
     import std.conv : to;
-    import std.experimental.checkedint : checked;
+    import std.checkedint : checked;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
