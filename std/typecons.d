@@ -5113,6 +5113,46 @@ private static:
         static abstract class C_9 : K {}
         auto o = new BlackHole!C_9;
     }+/
+    // test `parent` alias
+    {
+        interface I_11
+        {
+            void simple(int) @safe;
+            int anotherSimple(string);
+            int overloaded(int);
+            /+ XXX [BUG 19715]
+            void overloaded(string) @safe;
+            +/
+        }
+
+        static class C_11
+        {
+            import std.traits : Parameters, ReturnType;
+            import std.meta : Alias;
+
+            protected ReturnType!fn _impl(alias fn)(Parameters!fn)
+            if (is(Alias!(__traits(parent, fn)) == interface))
+            {
+                static if (!is(typeof(return) == void))
+                    return typeof(return).init;
+            }
+        }
+
+        template tpl(I, alias fn)
+        if (is(I == interface) && __traits(isSame, __traits(parent, fn), I))
+        {
+            enum string tpl = q{
+                enum bool haveReturn = !is(typeof(return) == void);
+
+                static if (is(typeof(return) == void))
+                    _impl!parent(args);
+                else
+                    return _impl!parent(args);
+            };
+        }
+
+        auto o = new AutoImplement!(I_11, C_11, tpl);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17177
@@ -5194,6 +5234,7 @@ version (StdUnittest)
         void bar(int a) { }
     }
 }
+
 @system unittest
 {
     auto foo = new issue10647_DoNothing!issue10647_Foo();
@@ -5430,8 +5471,8 @@ private static:
             if (!isCtor)
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
-                if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    preamble ~= `alias parent = __traits(getMember, super, "` ~ name ~ `");`;
+                static if (WITH_BASE_CLASS)
+                    preamble ~= `alias parent = __traits(getMember, ` ~ Policy.BASE_CLASS_ID ~ `, "` ~ name ~ `");`;
             }
 
             // Function body
