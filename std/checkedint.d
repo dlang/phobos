@@ -257,6 +257,10 @@ import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 Checked integral type wraps an integral `T` and customizes its behavior with the
 help of a `Hook` type. The type wrapped must be one of the predefined integrals
 (unqualified), or another instance of `Checked`.
+
+Params:
+    T    = type that is wrapped in the `Checked` type
+    Hook = hook type that customizes the behavior of the `Checked` type
 */
 struct Checked(T, Hook = Abort)
 if (isIntegral!T || is(T == Checked!(U, H), U, H))
@@ -287,7 +291,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     // get
     /**
-    Returns a copy of the underlying value.
+    Returns:
+        A copy of the underlying value.
     */
     auto get() inout { return payload; }
     ///
@@ -317,12 +322,20 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
     else
+    {
+        /// ditto
         enum Checked!(T, Hook) min = Checked(T.min);
-    /// ditto
+    }
     static if (hasMember!(Hook, "max"))
+    {
+        /// ditto
         enum Checked!(T, Hook) max = Checked(Hook.max!T);
+    }
     else
+    {
+        /// ditto
         enum Checked!(T, Hook) max = Checked(T.max);
+    }
 
     /**
     Constructor taking a value properly convertible to the underlying type. `U`
@@ -352,6 +365,12 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     /**
     Assignment operator. Has the same constraints as the constructor.
+
+    Params:
+        rhs = The value to assign
+
+    Returns:
+        A reference to `this`
     */
     ref Checked opAssign(U)(U rhs) return
     if (is(typeof(Checked!(T, Hook)(rhs))))
@@ -410,11 +429,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     // opCast
     /**
-    Casting operator to integral, `bool`, or floating point type. If `Hook`
-    defines `hookOpCast`, the call immediately returns
-    `hook.hookOpCast!U(get)`. Otherwise, casting to `bool` yields $(D
-    get != 0) and casting to another integral that can represent all
-    values of `T` returns `get` promoted to `U`.
+    Casting operator to integral, `bool`, or floating point type.
 
     If a cast to a floating-point type is requested and `Hook` defines
     `onBadCast`, the cast is verified by ensuring $(D get == cast(T)
@@ -428,6 +443,14 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     are not arithmetically equal, `hook.onBadCast!U(get)` is
     returned.
 
+    Params:
+        U = The type to cast to
+
+    Returns:
+        If `Hook`     defines `hookOpCast`, the call immediately returns
+        `hook.hookOpCast!U(get)`. Otherwise, casting to `bool` yields $(D
+        get != 0) and casting to another integral that can represent all
+        values of `T` returns `get` promoted to `U`.
     */
     U opCast(U, this _)()
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
@@ -472,14 +495,19 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     // opEquals
     /**
-    Compares `this` against `rhs` for equality. If `Hook` defines
-    `hookOpEquals`, the function forwards to $(D
-    hook.hookOpEquals(get, rhs)). Otherwise, the result of the
-    built-in operation $(D get == rhs) is returned.
+    Compares `this` against `rhs` for equality.
 
     If `U` is also an instance of `Checked`, both hooks (left- and right-hand
     side) are introspected for the method `hookOpEquals`. If both define it,
     priority is given to the left-hand side.
+
+    Params:
+        rhs = Right-hand side to compare for equality
+
+    Returns:
+        If `Hook` defines `hookOpEquals`, the function forwards to $(D
+        hook.hookOpEquals(get, rhs)). Otherwise, the result of the
+        built-in operation $(D get == rhs) is returned.
 
     */
     bool opEquals(U, this _)(U rhs)
@@ -564,6 +592,10 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     implement `hookToHash`, but it has state, a hash will be generated for
     the `Hook` using the built-in function and it will be xored with the
     hash of the `payload`.
+
+    Returns:
+        The hash of `this` instance.
+
     */
     size_t toHash() const nothrow @safe
     {
@@ -672,6 +704,20 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     side) are introspected for the method `hookOpCmp`. If both define it,
     priority is given to the left-hand side.
 
+    Params:
+        rhs   = The right-hand side operand
+        U     = either the type of `rhs` or the underlying type
+                if `rhs` is a `Checked` instance
+        Hook1 = If `rhs` is a `Checked` instance, `Hook1` represents
+                the instance's behavior hook
+
+    Returns:
+        The result of `hookOpCmp` if `hook` defines `hookOpCmp`. If
+        `U` is an instance of `Checked` and `hook` does not define
+        `hookOpCmp`, result of `rhs.hook.hookOpCmp` is returned.
+        If none of the instances specify the behavior via `hookOpCmp`,
+        `-1` is returned if `lhs` is lesser than `rhs`, `1` if `lhs`
+        is greater than `rhs` and `0` on equality.
     */
     auto opCmp(U, this _)(const U rhs) //const pure @safe nothrow @nogc
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
@@ -794,6 +840,12 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     32 or 64 bits and is equal to the most negative value. This is because that
     value has no positive negation.
 
+    Params:
+        op = The unary operator
+
+    Returns:
+        A `Checked` instance representing the result of the unary
+        operation
     */
     auto opUnary(string op, this _)()
     if (op == "+" || op == "-" || op == "~")
@@ -882,6 +934,17 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     define `hookOpBinary`, the left-hand side hook has priority. If both define
     `onOverflow`, a compile-time error occurs.
 
+    Params:
+        op    = The binary operator
+        rhs   = The right hand side operand
+        U     = If `rhs` is a `Checked` instance, `U` represents
+                the underlying instance type
+        Hook1 = If `rhs` is a `Checked` instance, `Hook1` represents
+                the instance's behavior hook
+
+    Returns:
+        A `Checked` instance representing the result of the binary
+        operation
     */
     auto opBinary(string op, Rhs)(const Rhs rhs)
     if (isIntegral!Rhs || isFloatingPoint!Rhs || is(Rhs == bool))
@@ -1008,6 +1071,14 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     Defines binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`,
     `>>`, and `>>>` for the case when a built-in numeric or Boolean type is on
     the left-hand side, and a `Checked` instance is on the right-hand side.
+
+    Params:
+        op  = The binary operator
+        lhs = The left hand side operand
+
+    Returns:
+        A `Checked` instance representing the result of the binary
+        operation
 
     */
     auto opBinaryRight(string op, Lhs)(const Lhs lhs)
@@ -1184,7 +1255,9 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     }
 }
 
-@safe @nogc pure nothrow unittest {
+///
+@safe @nogc pure nothrow unittest
+{
     // Hook that ignores all problems.
     static struct Ignore
     {
@@ -1214,6 +1287,13 @@ Convenience function that turns an integral into the corresponding `Checked`
 instance by using template argument deduction. The hook type may be specified
 (by default `Abort`).
 
+Params:
+    Hook  = type that customizes the behavior, by default `Abort`
+    T     = type represetinfg the underlying represantion of the `Checked` instance
+    value = the actual value of the representation
+
+Returns:
+    A `Checked` instance customized by the provided `Hook` and `value`
 */
 Checked!(T, Hook) checked(Hook = Abort, T)(const T value)
 if (is(typeof(Checked!(T, Hook)(value))))
@@ -1271,12 +1351,12 @@ static:
     and the destination type is `Dst`.
 
     Params:
-    src = The source of the cast
+        src = Souce operand
 
-    Returns: Nominally the result is the desired value of the cast operation,
-    which will be forwarded as the result of the cast. For `Abort`, the
-    function never returns because it aborts the program.
-
+    Returns:
+        Nominally the result is the desired value of the cast operation,
+        which will be forwarded as the result of the cast. For `Abort`, the
+        function never returns because it aborts the program.
     */
     Dst onBadCast(Dst, Src)(Src src)
     {
@@ -1397,6 +1477,7 @@ static:
     }
 }
 
+///
 @safe unittest
 {
     void test(T)()
@@ -1428,6 +1509,11 @@ struct Throw
     */
     static class CheckFailure : Exception
     {
+        /**
+        Params:
+            f    = format specifier
+            vals = actual values for the format specifier
+        */
         this(T...)(string f, T vals)
         {
             import std.format : format;
@@ -1442,12 +1528,15 @@ struct Throw
     and the destination type is `Dst`.
 
     Params:
-    src = The source of the cast
+        src = source operand
 
-    Returns: Nominally the result is the desired value of the cast operation,
-    which will be forwarded as the result of the cast. For `Throw`, the
-    function never returns because it throws an exception.
+    Returns:
+        Nominally the result is the desired value of the cast operation,
+        which will be forwarded as the result of the cast. For `Throw`, the
+        function never returns because it throws an exception.
 
+    Throws:
+        `CheckFailure` on bad cast
     */
     static Dst onBadCast(Dst, Src)(Src src)
     {
@@ -1460,13 +1549,17 @@ struct Throw
     Called automatically upon a bounds error.
 
     Params:
-    rhs = The right-hand side value in the assignment, after the operator has
-    been evaluated
-    bound = The value of the bound being violated
+        rhs = The right-hand side value in the assignment, after the operator has
+        been evaluated
+        bound = The value of the bound being violated
 
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Throw`, the function never returns because
-    it throws.
+    Returns:
+        Nominally the result is the desired value of the operator, which
+        will be forwarded as result. For `Throw`, the function never returns because
+        it throws.
+
+    Throws:
+        `CheckFailure` on overflow
 
     */
     static T onLowerBound(Rhs, T)(Rhs rhs, T bound)
@@ -1547,13 +1640,17 @@ struct Throw
     Called automatically upon an overflow during a unary or binary operation.
 
     Params:
-    x = The operator, e.g. `-`
-    lhs = The left-hand side (or sole) argument
-    rhs = The right-hand side type involved in the operator
+        x = The operator, e.g. `-`
+        lhs = The left-hand side (or sole) argument
+        rhs = The right-hand side type involved in the operator
 
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Throw`, the function never returns because
-    it throws an exception.
+    Returns:
+        Nominally the result is the desired value of the operator, which
+        will be forwarded as result. For `Throw`, the function never returns because
+        it throws an exception.
+
+    Throws:
+        `CheckFailure` on overflow
 
     */
     static typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
@@ -1737,13 +1834,14 @@ static:
     Called automatically upon an overflow during a unary or binary operation.
 
     Params:
-    x = The operator involved
-    Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
-      the operator is `Checked!int`
-    Rhs = The right-hand side type involved in the operator
+        x   = The operator involved
+        Lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+              the operator is `Checked!int`
+        Rhs = The right-hand side type involved in the operator
 
-    Returns: $(D mixin(x ~ "lhs")) for unary, $(D mixin("lhs" ~ x ~ "rhs")) for
-    binary
+    Returns:
+        $(D mixin(x ~ "lhs")) for unary, $(D mixin("lhs" ~ x ~ "rhs")) for
+        binary
 
     */
     typeof(~Lhs()) onOverflow(string x, Lhs)(ref Lhs lhs)
@@ -2326,9 +2424,11 @@ static:
 /**
 Queries whether a $(D Checked!(T, WithNaN)) object is not a number (NaN).
 
-Params: x = the `Checked` instance queried
+Params:
+    x = the `Checked` instance queried
 
-Returns: `true` if `x` is a NaN, `false` otherwise
+Returns:
+    `true` if `x` is a NaN, `false` otherwise
 */
 bool isNaN(T)(const Checked!(T, WithNaN) x)
 {
@@ -2429,12 +2529,12 @@ static:
     Returns: `Lhs.max` if $(D rhs >= 0), `Lhs.min` otherwise.
 
     */
-    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
+    T onLowerBound(Rhs, T)(Rhs, T bound)
     {
         return bound;
     }
     /// ditto
-    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    T onUpperBound(Rhs, T)(Rhs, T bound)
     {
         return bound;
     }
@@ -2463,15 +2563,15 @@ static:
     negative value, or shifted right by a large positive value))
 
     Params:
-    x = The operator involved in the `opAssign` operation
-    Lhs = The left-hand side of the operator (`Lhs` is the first argument to
-    `Checked`)
-    Rhs = The right-hand side type in the operator
+        x   = The operator involved in the `opAssign` operation
+        Lhs = The left-hand side type of the operator (`Lhs` is the first argument to
+              `Checked`)
+        Rhs = The right-hand side type in the operator
 
     Returns: The saturated result of the operator.
 
     */
-    auto onOverflow(string x, Lhs)(Lhs lhs)
+    auto onOverflow(string x, Lhs)(Lhs)
     {
         static assert(x == "-" || x == "++" || x == "--");
         return x == "--" ? Lhs.min : Lhs.max;
@@ -2923,12 +3023,12 @@ version (StdUnittest) private struct CountOverflows
         ++calls;
         return mixin("lhs" ~ op ~ "rhs");
     }
-    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
+    T onLowerBound(Rhs, T)(Rhs rhs, T)
     {
         ++calls;
         return cast(T) rhs;
     }
-    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    T onUpperBound(Rhs, T)(Rhs rhs, T)
     {
         ++calls;
         return cast(T) rhs;
