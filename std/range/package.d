@@ -1498,7 +1498,7 @@ private struct ChooseResult(Ranges...)
             static foreach(i; 0 .. rs.length)
             {
                 case i:
-                this.rs[i] = rs[i];
+                emplace(&this.rs[i], rs[i]);
                 break sw;
             }
 
