@@ -4042,7 +4042,7 @@ template apply(alias fun)
     import std.functional : unaryFun;
 
     auto apply(T)(auto ref T t)
-    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    if (isInstanceOf!(Nullable, T))
     {
         alias FunType = typeof(unaryFun!fun(T.init.get));
 
