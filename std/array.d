@@ -153,7 +153,8 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
             will collect the allocated array, leading to the `length - cnt` left over elements
             being collected too - despite their contents having no guarantee of destructibility.
          */
-        assert(length == cnt, "Range .length property was not equal to number of elements yielded by the range before becoming empty");
+        assert(length == cnt,
+               "Range .length property was not equal to the length yielded by the range before becoming empty");
         return (() @trusted => cast(E[]) result)();
     }
     else
