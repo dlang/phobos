@@ -6133,7 +6133,7 @@ template BuiltinTypeOf(T)
             alias X = OriginalType!T;
         static if (__traits(isArithmetic, X) && !is(X == __vector) ||
                 __traits(isStaticArray, X) || is(X == E[], E) ||
-                __traits(isAssociativeArray, X))
+                __traits(isAssociativeArray, X) || is(X == typeof(null)))
             alias BuiltinTypeOf = X;
         else
             static assert(0);
@@ -7093,6 +7093,7 @@ enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
     static assert( isBuiltinType!string);
     static assert( isBuiltinType!(int[]));
     static assert( isBuiltinType!(C[string]));
+    static assert( isBuiltinType!(typeof(null)));
     static assert(!isBuiltinType!C);
     static assert(!isBuiltinType!U);
     static assert(!isBuiltinType!S);
