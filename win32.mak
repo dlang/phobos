@@ -19,7 +19,7 @@
 #	or just use the supplied minit.obj
 
 ## Memory model (32 or 64)
-MODEL=32
+MODEL=32omf
 
 ## Copy command
 
@@ -41,13 +41,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
+DFLAGS=-m$(MODEL) -conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
+UDFLAGS=-m$(MODEL) -unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -60,7 +60,7 @@ MAKE=make
 DMD_DIR=../dmd
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
+DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/32/dmd
 
 ## Zlib library
 
@@ -532,7 +532,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak zlib.lib CC=$(CC) LIB=$(AR)
+	$(MAKE) -f win32.mak zlib.lib CC=$(CC) LIB=$(AR)
 	cd ..\..\..
 
 ######################################################
@@ -545,7 +545,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak clean
+	$(MAKE) -f win32.mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
@@ -560,10 +560,5 @@ install: phobos.zip
 auto-tester-build:
 	echo "Windows builds have been disabled on auto-tester"
 
-JOBS=$(NUMBER_OF_PROCESSORS)
-GMAKE=gmake
-
 auto-tester-test:
 	echo "Windows builds have been disabled on auto-tester"
-	#$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
-	#CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)
