@@ -208,7 +208,7 @@ STD_PACKAGES = std $(addprefix std/,\
 
 # Modules broken down per package
 
-PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+PACKAGE_std = array ascii base64 bigint bitmanip checkedint compiler complex concurrency \
   conv csv demangle encoding exception file \
   functional getopt json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
