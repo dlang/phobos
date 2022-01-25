@@ -6117,7 +6117,13 @@ enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
     static assert( isBoolean!bool);
     enum EB : bool { a = true }
     static assert( isBoolean!EB);
-    static assert(!isBoolean!(SubTypeOf!bool));
+
+    struct SubTypeOfBool
+    {
+        bool val;
+        alias val this;
+    }
+    static assert(!isBoolean!(SubTypeOfBool));
 }
 
 @safe unittest

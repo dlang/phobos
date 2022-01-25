@@ -646,7 +646,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 # Check and run @betterC tests
