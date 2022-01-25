@@ -1465,9 +1465,9 @@ private struct ChooseResult(Ranges...)
     {
         ref getI(size_t i)(return ref ChooseResult r) @trusted { return r.rs[i]; }
 
-        switch(r.chosenI)
+        switch (r.chosenI)
         {
-            static foreach(candI; 0 .. rs.length)
+            static foreach (candI; 0 .. rs.length)
             {
                 case candI: return foo(getI!candI(r), extraArgs);
             }
@@ -1486,16 +1486,16 @@ private struct ChooseResult(Ranges...)
         this.chosenI = chosen;
 
         // Otherwise the compiler will complain about skipping these fields
-        static foreach(i; 0 .. rs.length)
+        static foreach (i; 0 .. rs.length)
         {
             this.rs[i] = Ranges[i].init;
         }
 
         // The relevant field needs to be initialized last so it will overwrite
         // the other initializations and not the other way around.
-        sw: switch(chosenI)
+        sw: switch (chosenI)
         {
-            static foreach(i; 0 .. rs.length)
+            static foreach (i; 0 .. rs.length)
             {
                 case i:
                 emplace(&this.rs[i], rs[i]);
@@ -1509,7 +1509,7 @@ private struct ChooseResult(Ranges...)
     // Some legacy code may still call this with typeof(choose(/*...*/))(/*...*/)
     // without this overload the regular constructor would invert the meaning of
     // the boolean
-    static if(rs.length == 2)
+    static if (rs.length == 2)
     pragma(inline, true)
     deprecated("Call with size_t (0 = first), or use the choose function")
     this(bool firstChosen, Ranges rs)
@@ -1530,9 +1530,9 @@ private struct ChooseResult(Ranges...)
         }
         chosenI = r.chosenI;
 
-        sw: switch(chosenI)
+        sw: switch (chosenI)
         {
-            static foreach(candI; 0 .. rs.length)
+            static foreach (candI; 0 .. rs.length)
             {
                 case candI: getI!candI(this) = getI!candI(r);
                 break sw;
