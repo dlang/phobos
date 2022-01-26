@@ -2759,6 +2759,9 @@ Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling `nullify` can nullify it again.
 
 Practically `Nullable!T` stores a `T` and a `bool`.
+
+See also:
+    $(LREF apply), an alternative way to use the payload.
  */
 struct Nullable(T)
 {
@@ -4161,13 +4164,15 @@ if (is (typeof(nullValue) == T))
     assert(ntts.to!string() == "2.5");
 }
 
-// apply
-/**
-Unpacks the content of a `Nullable`, performs an operation and packs it again. Does nothing if isNull.
 
-When called on a `Nullable`, `apply` will unpack the value contained in the `Nullable`,
-pass it to the function you provide and wrap the result in another `Nullable` (if necessary).
-If the `Nullable` is null, `apply` will return null itself.
+/**
+Unpacks the content of a $(LREF Nullable), performs an operation and packs it
+again. Does nothing if isNull.
+
+When called on a `Nullable`, `apply` will unpack the value contained in the
+`Nullable`, pass it to the function you provide and wrap the result in
+another `Nullable` (if necessary). If the `Nullable` is null, `apply` will
+return null itself.
 
 Params:
     t = a `Nullable`
@@ -4177,8 +4182,10 @@ Returns:
     `fun(t.get).nullable` if `!t.isNull`, else `Nullable.init`.
 
 See also:
-    $(HTTPS en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad, The `Maybe` monad)
- */
+    $(HTTPS
+    en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad,
+    The `Maybe` monad)
+*/
 template apply(alias fun)
 {
     import std.functional : unaryFun;
@@ -4215,6 +4222,8 @@ template apply(alias fun)
             return ReturnType.init;
         }
     }
+
+
 }
 
 ///
@@ -6607,9 +6616,15 @@ still be valid during the destructor call.  This allows the `T` to
 deallocate or clean up any non-GC resources immediately after the
 reference count has reached zero.
 
-If not using -preview=dip1000, `RefCounted` is unsafe and should be
+Without -preview=dip1000, `RefCounted` is unsafe and should be
 used with care. No references to the payload should be escaped outside
 the `RefCounted` object.
+
+With -preview=dip1000, `RefCounted` is safe if it's payload is accessed only
+with the $(LREF borrow) function. Scope semantics can also prevent accidental
+escaping of `refCountedPayload`, but it's still up to the user to not destroy
+the last counted reference while the payload is in use. Due to that,
+`refCountedPayload` remains accessible only in `@system` code.
 
 The `autoInit` option makes the object ensure the store is
 automatically initialized. Leaving $(D autoInit ==
@@ -6622,6 +6637,9 @@ pointer dereference.
 
 If `T.this()` is annotated with `@disable` then `autoInit` must be
 `RefCountedAutoInitialize.no` in order to compile.
+
+See_Also:
+  $(LREF OldRefCounted)
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
@@ -6641,6 +6659,19 @@ if (!is(T == class) && !(is(T == interface)))
         pragma(mangle, "free") void pureFree( void *ptr );
         static if (enableGCScan)
             import core.memory : GC;
+    }
+
+    pragma(inline, true) private void checkInit()()
+    if (autoInit == RefCountedAutoInitialize.yes)
+    {
+        _refCounted.ensureInitialized();
+    }
+
+    pragma(inline, true) private void checkInit()() inout
+    if (autoInit == RefCountedAutoInitialize.no)
+    {
+        assert(_refCounted.isInitialized,
+            "Attempted to use an uninitialized payload.");
     }
 
     /// `RefCounted` storage implementation.
@@ -6728,6 +6759,7 @@ if (!is(T == class) && !(is(T == interface)))
            This function is unavailable if `T.this()` is annotated with
            `@disable`.
         */
+        @safe pure nothrow
         void ensureInitialized()()
         {
             // By checking for `@disable this()` and failing early we can
@@ -6766,7 +6798,7 @@ Postcondition: `refCountedStore.isInitialized`
     }
 
     /// Ditto
-    this(T val)
+    this(return scope T val)
     {
         _refCounted.move(val);
     }
@@ -6789,18 +6821,30 @@ to deallocate the corresponding resource.
  */
     ~this()
     {
+        import std.traits : dip1000Enabled;
+
+        // This prevents the same reference from decrementing the count twice.
+        scope(exit) _refCounted = _refCounted.init;
+
         if (!_refCounted.isInitialized) return;
         assert(_refCounted._store._count > 0);
-        if (--_refCounted._store._count)
-            return;
+        if (--_refCounted._store._count) return;
         // Done, destroy and deallocate
         .destroy(_refCounted._store._payload);
-        () @trusted { _refCounted.deallocateStore(); }();
+
+        static if (dip1000Enabled)
+        {
+            () @trusted { _refCounted.deallocateStore(); }();
+        }
+        else _refCounted.deallocateStore();
     }
 
 /**
-Assignment operators
- */
+Assignment operators.
+
+Note: You may not assign a new payload to an uninitialized RefCounted, if auto
+initialization is off. Assigning another counted reference is still okay.
+*/
     void opAssign(typeof(this) rhs)
     {
         import std.algorithm.mutation : swap;
@@ -6813,14 +6857,7 @@ Assignment operators
     {
         import std.algorithm.mutation : move;
 
-        static if (autoInit == RefCountedAutoInitialize.yes)
-        {
-            _refCounted.ensureInitialized();
-        }
-        else
-        {
-            assert(_refCounted.isInitialized);
-        }
+        checkInit();
         move(rhs, _refCounted._store._payload);
     }
 
@@ -6838,14 +6875,14 @@ Assignment operators
         $(BLUE The first overload exists only if $(D autoInit == RefCountedAutoInitialize.yes).)
         So if $(D autoInit == RefCountedAutoInitialize.no)
         or called for a constant or immutable object, then
-        `refCountedPayload` will also be qualified as safe and nothrow
+        `refCountedPayload` will also be qualified as nothrow
         (but will still assert if not initialized).
          */
-        @property @trusted
+        @property @system
         ref T refCountedPayload() return;
 
         /// ditto
-        @property nothrow @safe pure @nogc
+        @property nothrow @system pure @nogc
         ref inout(T) refCountedPayload() inout return;
     }
     else
@@ -6853,19 +6890,21 @@ Assignment operators
         static if (autoInit == RefCountedAutoInitialize.yes)
         {
             //Can't use inout here because of potential mutation
-            @property
+            @property @system
             ref T refCountedPayload() return
             {
-                _refCounted.ensureInitialized();
+                checkInit();
                 return _refCounted._store._payload;
             }
         }
-
-        @property nothrow @safe pure @nogc
-        ref inout(T) refCountedPayload() inout return
+        else
         {
-            assert(_refCounted.isInitialized, "Attempted to access an uninitialized payload.");
-            return _refCounted._store._payload;
+            @property nothrow @system pure @nogc
+            ref inout(T) refCountedPayload() inout return
+            {
+                checkInit();
+                return _refCounted._store._payload;
+            }
         }
     }
 
@@ -6897,7 +6936,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@betterC pure @safe nothrow @nogc unittest
+@betterC pure @system nothrow @nogc unittest
 {
     // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
@@ -6911,8 +6950,9 @@ assert(refCountedStore.isInitialized)).
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
-
-@betterC pure @safe nothrow @nogc unittest
+// This test can't be betterC because the test extractor won't see the private
+// `initialize` method accessed here
+pure @safe nothrow @nogc unittest
 {
     auto rc1 = RefCounted!(int, RefCountedAutoInitialize.no)(5);
     rc1._refCounted.initialize();
@@ -6959,7 +6999,7 @@ pure @system unittest
            "https://issues.dlang.org/show_bug.cgi?id=4356 still unfixed");
 }
 
-@betterC pure @system nothrow @nogc unittest
+@betterC pure @safe nothrow @nogc unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -6998,7 +7038,7 @@ pure @system unittest
 }
 
 // gc_addRange coverage
-@betterC @system pure unittest
+@betterC @safe pure unittest
 {
     struct S { int* p; }
 
@@ -7056,6 +7096,172 @@ pure @system unittest
     cast(void) to!string(RefCounted!(A, RefCountedAutoInitialize.no).init);
 }
 
+// We tried to make `refCountedPayload` `@safe` in
+// https://github.com/dlang/phobos/pull/8368 . It proved impossible, but it may
+// be possible in the future. This test checks for false `@safe` issues we
+// encountered.
+@safe unittest
+{
+    struct Container
+    {
+        int[] data;
+    }
+
+    int[] getArr1 (scope Container local)
+    {
+        // allowed because the argument is inferred as return scope.
+        return local.data;
+    }
+
+    int[] getArr2 (scope Container local)
+    {
+        RefCounted!Container rc = local;
+        // Escapes a reference to expired reference counted struct
+        // don't do this!
+        return rc.refCountedPayload().data;
+    }
+
+    int destroyFirstAndUseLater()
+    {
+        auto rc = RefCounted!int(123);
+        int* ptr = &rc.refCountedPayload();
+        destroy(rc);
+        return *ptr;
+    }
+
+    // This is here mainly to test that safety gets inferred correctly for the
+    // next tests
+    static assert(isSafe!getArr1);
+    // https://github.com/dlang/phobos/pull/8101#issuecomment-843017282
+    // This got apparently fixed automatically by compiler updates.
+    static assert(!isSafe!getArr2);
+    // As of writing, this is the issue that is still preventing payload access
+    // from being `@safe`
+    static assert(!isSafe!destroyFirstAndUseLater);
+}
+
+/**
+Borrows the payload of $(LREF RefCounted) for use in `fun`. Inferred as `@safe`
+if `fun` is `@safe` and does not escape a reference to the payload.
+The reference count will be incremented for the duration of the operation,
+so destroying the last reference will not leave dangling references in
+`fun`.
+
+Params:
+  fun = A callable accepting the payload either by value or by reference.
+  refCount = The counted reference to the payload.
+Returns:
+  The return value of `fun`, if any. `ref` in the return value will be
+  forwarded.
+Issues:
+  For yet unknown reason, code that uses this function with UFCS syntax
+  will not be inferred as `@safe`. It will still compile if the code is
+  explicitly marked `@safe` and nothing in `fun` prevents that.
+*/
+template borrow(alias fun)
+{
+    import std.functional : unaryFun;
+
+    auto ref borrow(RC)(RC refCount) if
+    (
+        isInstanceOf!(RefCounted, RC)
+        && is(typeof(unaryFun!fun(refCount.refCountedPayload)))
+    )
+    {
+        refCount.checkInit();
+
+        // If `fun` escapes a reference to the payload, it will be inferred
+        // as unsafe due to the scope storage class here.
+        scope plPtr = &refCount._refCounted._store._payload;
+        return unaryFun!fun(*plPtr);
+
+        // We destroy our copy of the reference here, automatically destroying
+        // the payload if `fun` destroyed the last reference outside.
+    }
+}
+
+/// This example can be marked `@safe` with `-preview=dip1000`.
+@safe pure nothrow unittest
+{
+    auto rcInt = refCounted(5);
+    assert(rcInt.borrow!(theInt => theInt) == 5);
+    auto sameInt = rcInt;
+    assert(sameInt.borrow!"a" == 5);
+
+    // using `ref` in the function
+    auto arr = [0, 1, 2, 3, 4, 5, 6];
+    sameInt.borrow!(ref (x) => arr[x]) = 10;
+    assert(arr == [0, 1, 2, 3, 4, 10, 6]);
+
+    // modifying the payload via an alias
+    sameInt.borrow!"a*=2";
+    assert(rcInt.borrow!"a" == 10);
+}
+
+// Some memory safety penetration testing.
+@system unittest
+{
+    int* globalPtr;
+    int torpedoesFired = 0;
+    struct Destroyer { ~this() @safe { torpedoesFired++; } }
+
+    alias RcInt = typeof(refCounted(0));
+    auto standardUsage(RcInt arg)
+    {
+        return borrow!((ref x) => x)(arg);
+    }
+    ref harmlessRefReturn(RcInt arg)
+    {
+        return borrow!(ref (ref x) => *globalPtr = x)(arg);
+    }
+    ref problematicRefReturn(RcInt arg)
+    {
+        return borrow!(ref (ref x) => x)(arg);
+    }
+    auto sideChannelEscape(RcInt arg)
+    {
+        return borrow!((ref x)
+        {
+            globalPtr = &x;
+            return x;
+        })(arg);
+    }
+    auto destroyDuringApply()
+    {
+        auto rc = refCounted(Destroyer());
+        return borrow!((ref x)
+        {
+            // Destroys the last reference to the payload, decrementing it's
+            // reference count.
+            rc.__dtor();
+            // Destroy again! rc should be set to it's init value so that this
+            // won't decrement the reference count of the original payload.
+            rc.__dtor();
+            // The internal reference count increment done for duration of
+            // `apply` should make sure that the payload destructor is not yet
+            // run, and this value thus not incremented.
+            return torpedoesFired;
+        })(rc);
+    }
+
+    // First, let's verify the dangerous functions really do what they are
+    // supposed to do.
+    auto testRc = refCounted(42);
+    assert(sideChannelEscape(testRc) == 42);
+    assert(&problematicRefReturn(testRc) == globalPtr);
+
+    // Now, are the @safe attributes inferred correctly?
+    assert(isSafe!standardUsage);
+    assert(isSafe!harmlessRefReturn);
+    assert(!isSafe!problematicRefReturn);
+    assert(!isSafe!sideChannelEscape);
+    assert(isSafe!destroyDuringApply);
+
+    // Finally, we test protection against early destruction during `apply`.
+    auto torpedoesUpToReturn = destroyDuringApply();
+    assert(torpedoesFired == torpedoesUpToReturn + 1);
+}
+
 /**
  * Initializes a `RefCounted` with `val`. The template parameter
  * `T` of `RefCounted` is inferred from `val`.
@@ -7067,6 +7273,7 @@ pure @system unittest
  * Returns:
  *   An initialized `RefCounted` containing `val`.
  * See_Also:
+ *   $(LREF oldRefCounted)
  *   $(HTTP en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
  */
 RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
@@ -9833,4 +10040,279 @@ unittest
     assert(s1.get().b == 2);
     Nullable!S s2 = s1;
     assert(s2.get().b == 3);
+}
+
+/// The old version of $(LREF RefCounted), before $(LREF borrow) and fully
+/// `@safe` usage of `RefCounted` existed. Old code may be relying on `@safe`ty
+/// of some of the member functions which cannot be safe in the new scheme, and
+/// can avoid immediate breakage by using this. `RefCounted` should be
+/// preferred, as this type is likely to be deprecated in the future.
+struct OldRefCounted(T, RefCountedAutoInitialize autoInit =
+    RefCountedAutoInitialize.yes)
+{
+    version (D_BetterC)
+    {
+        private enum enableGCScan = false;
+    }
+    else
+    {
+        private enum enableGCScan = hasIndirections!T;
+    }
+
+    // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
+    extern(C) private pure nothrow @nogc static
+    {
+        pragma(mangle, "free") void pureFree( void *ptr );
+        static if (enableGCScan)
+        {
+            pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
+            pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
+        }
+    }
+
+    struct RefCountedStore
+    {
+        private struct Impl
+        {
+            T _payload;
+            size_t _count;
+        }
+
+        private Impl* _store;
+
+        private void initialize(A...)(auto ref A args)
+        {
+            import core.lifetime : emplace, forward;
+
+            allocateStore();
+            version (D_Exceptions) scope(failure) deallocateStore();
+            emplace(&_store._payload, forward!args);
+            _store._count = 1;
+        }
+
+        private void move(ref T source) nothrow pure
+        {
+            import std.algorithm.mutation : moveEmplace;
+
+            allocateStore();
+            moveEmplace(source, _store._payload);
+            _store._count = 1;
+        }
+
+        // 'nothrow': can only generate an Error
+        private void allocateStore() nothrow pure
+        {
+            static if (enableGCScan)
+            {
+                import std.internal.memory : enforceCalloc;
+                _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
+            }
+            else
+            {
+                import std.internal.memory : enforceMalloc;
+                _store = cast(Impl*) enforceMalloc(Impl.sizeof);
+            }
+        }
+
+        private void deallocateStore() nothrow pure
+        {
+            static if (enableGCScan)
+            {
+                pureGcRemoveRange(&this._store._payload);
+            }
+            pureFree(_store);
+            _store = null;
+        }
+
+        @property nothrow @safe pure @nogc
+        bool isInitialized() const
+        {
+            return _store !is null;
+        }
+
+        @property nothrow @safe pure @nogc
+        size_t refCount() const
+        {
+            return isInitialized ? _store._count : 0;
+        }
+
+        void ensureInitialized()()
+        {
+            // By checking for `@disable this()` and failing early we can
+            // produce a clearer error message.
+            static assert(__traits(compiles, { static T t; }),
+                "Cannot automatically initialize `" ~ fullyQualifiedName!T ~
+                "` because `" ~ fullyQualifiedName!T ~
+                ".this()` is annotated with `@disable`.");
+            if (!isInitialized) initialize();
+        }
+
+    }
+    RefCountedStore _refCounted;
+
+    @property nothrow @safe
+    ref inout(RefCountedStore) refCountedStore() inout
+    {
+        return _refCounted;
+    }
+
+    this(A...)(auto ref A args) if (A.length > 0)
+    out
+    {
+        assert(refCountedStore.isInitialized);
+    }
+    do
+    {
+        import core.lifetime : forward;
+        _refCounted.initialize(forward!args);
+    }
+
+    this(T val)
+    {
+        _refCounted.move(val);
+    }
+
+    this(this) @safe pure nothrow @nogc
+    {
+        if (!_refCounted.isInitialized) return;
+        ++_refCounted._store._count;
+    }
+
+    ~this()
+    {
+        if (!_refCounted.isInitialized) return;
+        assert(_refCounted._store._count > 0);
+        if (--_refCounted._store._count)
+            return;
+        // Done, destroy and deallocate
+        .destroy(_refCounted._store._payload);
+        _refCounted.deallocateStore();
+    }
+
+    void opAssign(typeof(this) rhs)
+    {
+        import std.algorithm.mutation : swap;
+
+        swap(_refCounted._store, rhs._refCounted._store);
+    }
+
+    void opAssign(T rhs)
+    {
+        import std.algorithm.mutation : move;
+
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            _refCounted.ensureInitialized();
+        }
+        else
+        {
+            assert(_refCounted.isInitialized);
+        }
+        move(rhs, _refCounted._store._payload);
+    }
+
+    static if (autoInit == RefCountedAutoInitialize.yes)
+    {
+        //Can't use inout here because of potential mutation
+        @property
+        ref T refCountedPayload() return
+        {
+            _refCounted.ensureInitialized();
+            return _refCounted._store._payload;
+        }
+    }
+
+    @property nothrow @safe pure @nogc
+    ref inout(T) refCountedPayload() inout return
+    {
+        assert(_refCounted.isInitialized, "Attempted to access an uninitialized payload.");
+        return _refCounted._store._payload;
+    }
+
+    alias refCountedPayload this;
+
+    static if (is(T == struct) && !is(typeof((ref T t) => t.toString())))
+    {
+        string toString(this This)()
+        {
+            import std.conv : to;
+
+            static if (autoInit)
+                return to!string(refCountedPayload);
+            else
+            {
+                if (!_refCounted.isInitialized)
+                    return This.stringof ~ "(RefCountedStore(null))";
+                else
+                    return to!string(_refCounted._store._payload);
+            }
+        }
+    }
+}
+
+///
+@betterC pure @system nothrow @nogc unittest
+{
+    auto rc1 = OldRefCounted!int(5);
+    assert(rc1 == 5);
+    auto rc2 = rc1;
+    rc2 = 42;
+    assert(rc1 == 42);
+}
+
+/**
+ * Like $(LREF refCounted) but used to initialize $(LREF OldRefCounted) instead.
+ * Use only for backwards compatibility, otherwise use `refCounted`. This
+ * function is likely to be deprecated in the future.
+ */
+OldRefCounted!(T, RefCountedAutoInitialize.no) oldRefCounted(T)(T val)
+{
+    typeof(return) res;
+    res._refCounted.move(val);
+    return res;
+}
+
+///
+@system unittest
+{
+    static struct File
+    {
+        static size_t nDestroyed;
+        string name;
+        @disable this(this); // not copyable
+        ~this() { name = null; ++nDestroyed; }
+    }
+
+    auto file = File("name");
+    assert(file.name == "name");
+    static assert(!__traits(compiles, {auto file2 = file;}));
+    assert(File.nDestroyed == 0);
+
+    {
+        import std.algorithm.mutation : move;
+        auto rcFile = oldRefCounted(move(file));
+        assert(rcFile.name == "name");
+        assert(File.nDestroyed == 1);
+        assert(file.name == null);
+
+        auto rcFile2 = rcFile;
+        assert(rcFile.refCountedStore.refCount == 2);
+        assert(File.nDestroyed == 1);
+    }
+
+    assert(File.nDestroyed == 2);
+}
+
+// We don't comprehensively test the old reference counter since it's not
+// expected to change anymore, but we still do this to weed out the most basic
+// copy/paste errors.
+@system unittest
+{
+    auto s1 = oldRefCounted(1);
+    auto s2 = s1;
+    s2 = 5;
+    assert(s1 == 5);
+    static assert(is(typeof(s2)
+        == OldRefCounted!(int, RefCountedAutoInitialize.no)));
 }

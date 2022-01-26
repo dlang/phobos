@@ -70,7 +70,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     import std.algorithm.sorting : HeapOps;
     import std.exception : enforce;
     import std.functional : binaryFun;
-    import std.typecons : RefCounted, RefCountedAutoInitialize;
+    import std.typecons : OldRefCounted, RefCountedAutoInitialize;
 
     static if (isRandomAccessRange!Store)
         alias Range = Store;
@@ -89,7 +89,9 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         Store _store;
         size_t _length;
     }
-    private RefCounted!(Data, RefCountedAutoInitialize.no) _payload;
+    // TODO: migrate to use the RefCounted. The problem is that some member
+    // functions here become @system with a naive switch.
+    private OldRefCounted!(Data, RefCountedAutoInitialize.no) _payload;
     // Comparison predicate
     private alias comp = binaryFun!(less);
     // Convenience accessors

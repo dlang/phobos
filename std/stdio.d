@@ -2331,13 +2331,13 @@ Allows to directly use range operations on lines of a file.
     private struct ByLineImpl(Char, Terminator)
     {
     private:
-        import std.typecons : RefCounted, RefCountedAutoInitialize;
+        import std.typecons : OldRefCounted, RefCountedAutoInitialize;
 
         /* Ref-counting stops the source range's Impl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
          * then accessing range.front again. */
-        alias PImpl = RefCounted!(Impl, RefCountedAutoInitialize.no);
+        alias PImpl = OldRefCounted!(Impl, RefCountedAutoInitialize.no);
         PImpl impl;
 
         static if (isScalarType!Terminator)
@@ -2553,13 +2553,13 @@ the contents may well have changed).
     private struct ByLineCopy(Char, Terminator)
     {
     private:
-        import std.typecons : RefCounted, RefCountedAutoInitialize;
+        import std.typecons : OldRefCounted, RefCountedAutoInitialize;
 
         /* Ref-counting stops the source range's ByLineCopyImpl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
          * then accessing range.front again. */
-        alias Impl = RefCounted!(ByLineCopyImpl!(Char, Terminator),
+        alias Impl = OldRefCounted!(ByLineCopyImpl!(Char, Terminator),
             RefCountedAutoInitialize.no);
         Impl impl;
 

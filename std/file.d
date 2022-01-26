@@ -4442,6 +4442,11 @@ version (Windows) @safe unittest
     Throws:
         $(LREF FileException) if there is an error (including if the given
         file is not a directory).
+
+    ABI note:
+        This function is currently a zero-argument template, because it has to
+        be compiled together with client code. Otherwise the binary name
+        mangling would be wrong for code without -DIP1000.
  +/
 void rmdirRecurse(scope const(char)[] pathname) @safe
 {
@@ -4465,9 +4470,9 @@ void rmdirRecurse(ref scope DirEntry de) @safe
     }
     else
     {
-        // dirEntries is @system because it uses a DirIterator with a
-        // RefCounted variable, but here, no references to the payload is
-        // escaped to the outside, so this should be @trusted
+        // dirEntries is @system without DIP1000 because it uses
+        // a DirIterator with a RefCounted variable, but here, no references
+        // to the payload is escaped to the outside, so this should be @trusted
         () @trusted {
             // all children, recursively depth-first
             foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
@@ -4863,20 +4868,27 @@ private struct DirIteratorImpl
     }
 }
 
-struct DirIterator
+// Must be a template, because the destructor is unsafe or safe depending on
+// whether `-preview=dip1000` is in use. Otherwise, linking errors would
+// result.
+struct DirIterator(bool useDIP1000)
 {
-@safe:
+    static assert(useDIP1000 == dip1000Enabled,
+        "Please don't override useDIP1000 to disagree with compiler switch.");
+
 private:
     RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
 public:
-    @property bool empty() { return impl.empty; }
-    @property DirEntry front() { return impl.front; }
-    void popFront() { impl.popFront(); }
+    @property bool empty() @trusted { return impl.empty; }
+    @property DirEntry front() @trusted { return impl.front; }
+    void popFront() @trusted { impl.popFront(); }
 }
+
 /++
     Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     of `DirEntry` that lazily iterates a given directory,
@@ -4890,6 +4902,11 @@ public:
     operating system / filesystem, and may not follow any particular sorting.
 
     Params:
+        useDIP1000 = used to instantiate this function separately for code with
+                     and without -preview=dip1000 compiler switch, because it
+                     affects the ABI of this function. Set automatically -
+                     don't touch.
+
         path = The directory to iterate over.
                If empty, the current directory will be iterated.
 
@@ -4955,9 +4972,11 @@ foreach (d; dFiles)
     writeln(d.name);
 --------------------
  +/
-auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
+
+auto dirEntries(bool useDIP1000 = dip1000Enabled)
+    (string path, SpanMode mode, bool followSymlink = true)
 {
-    return DirIterator(path, mode, followSymlink);
+    return DirIterator!useDIP1000(path, mode, followSymlink);
 }
 
 /// Duplicate functionality of D1's `std.file.listdir()`:
@@ -4976,13 +4995,14 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
             .array;
     }
 
-    void main(string[] args)
+    // Can be safe only with -preview=dip1000
+    @safe void main(string[] args)
     {
         import std.stdio;
 
         string[] files = listdir(args[1]);
         writefln("%s", files);
-     }
+    }
 }
 
 @system unittest
@@ -5057,14 +5077,15 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Ditto
-auto dirEntries(string path, string pattern, SpanMode mode,
+auto dirEntries(bool useDIP1000 = dip1000Enabled)
+    (string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
     import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(DirIterator(path, mode, followSymlink));
+    return filter!f(DirIterator!useDIP1000(path, mode, followSymlink));
 }
 
 @safe unittest
@@ -5145,7 +5166,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 
 // Make sure that dirEntries does not butcher Unicode file names
 // https://issues.dlang.org/show_bug.cgi?id=17962
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;

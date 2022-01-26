@@ -1,0 +1,52 @@
+Added `borrow` for `RefCounted`. `@safe` with `-preview=dip1000`.
+
+`std.typecons.RefCounted` has so far been only available for `@system` code,
+because of possibility of escaping a reference to it's payload past the end of
+it's lifetime. We have added a `borrow` function, that lets one to safely
+access and modify the payload. `-dip1000` prevents escaping a reference to it
+in `@safe` code.
+
+-------
+@safe pure nothrow void fun()
+{
+    import std.typecons;
+
+    auto rcInt = refCounted(5);
+    assert(rcInt.borrow!(theInt => theInt) == 5);
+    auto sameInt = rcInt;
+    assert(sameInt.borrow!"a" == 5);
+
+    // using `ref` in the function
+    auto arr = [0, 1, 2, 3, 4, 5, 6];
+    sameInt.borrow!(ref (x) => arr[x]) = 10;
+    assert(arr == [0, 1, 2, 3, 4, 10, 6]);
+
+    // modifying the payload via an alias
+    sameInt.borrow!"a*=2";
+    assert(rcInt.borrow!"a" == 10);
+}
+-------
+
+Direct access to the payload unfortunately remains `@system`, though. While
+`-dip1000` prevents escaping the reference, it is possible to destroy the last
+reference before the end of it's scope:
+
+-------
+int destroyFirstAndUseLater()
+{
+    import std.typecons;
+
+    auto rc = RefCounted!int(123);
+    int* ptr = &rc.refCountedPayload();
+    destroy(rc);
+    return *ptr; // Reads from freed memory. Don't do this.
+}
+-------
+
+As a side effect, $(LREF dirEntries, std, file) is now also `@safe` with
+`-preview=dip1000`.
+
+Some member functions of `RefCounted` that were `@safe` are not anymore.
+`OldRefCounted` type and `oldRefCounted` function have been added for the old
+behaviour. However, please be aware that those are intended only for easing
+migration and are likely to be deprecated in the future.

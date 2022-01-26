@@ -392,7 +392,7 @@ if (!is(immutable T == immutable bool))
     import core.memory : GC;
 
     import std.exception : enforce;
-    import std.typecons : RefCounted, RefCountedAutoInitialize;
+    import std.typecons : RefCounted = OldRefCounted, RefCountedAutoInitialize;
 
     // This structure is not copyable.
     private struct Payload
