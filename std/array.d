@@ -117,7 +117,7 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
-        auto length = r.length;
+        const length = r.length;
         if (length == 0)
             return null;
 
@@ -126,12 +126,35 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
         // Every element of the uninitialized array must be initialized
-        size_t i;
-        foreach (e; r)
+        size_t cnt; //Number of elements that have been initialized
+        try
         {
-            emplaceRef!E(result[i], e);
-            ++i;
+            foreach (e; r)
+            {
+                emplaceRef!E(result[cnt], e);
+                ++cnt;
+            }
+        } catch (Exception e)
+        {
+            //https://issues.dlang.org/show_bug.cgi?id=22185
+            //Make any uninitialized elements safely destructible.
+            foreach (ref elem; result[cnt..$])
+            {
+                import core.internal.lifetime : emplaceInitializer;
+                emplaceInitializer(elem);
+            }
+            throw e;
         }
+        /*
+            https://issues.dlang.org/show_bug.cgi?id=22673
+
+            We preallocated an array, we should ensure that enough range elements
+            were gathered such that every slot in the array is filled. If not, the GC
+            will collect the allocated array, leading to the `length - cnt` left over elements
+            being collected too - despite their contents having no guarantee of destructibility.
+         */
+        assert(length == cnt,
+               "Range .length property was not equal to the length yielded by the range before becoming empty");
         return (() @trusted => cast(E[]) result)();
     }
     else
@@ -438,6 +461,91 @@ if (isAutodecodableString!String)
         auto r = S(1).repeat(2).array();
         assert(equal(r, [S(1), S(1)]));
     });
+}
+//https://issues.dlang.org/show_bug.cgi?id=22673
+@system unittest
+{
+    struct LyingRange
+    {
+        enum size_t length = 100;
+        enum theRealLength = 50;
+        size_t idx = 0;
+        bool empty()
+        {
+            return idx <= theRealLength;
+        }
+        void popFront()
+        {
+            ++idx;
+        }
+        size_t front()
+        {
+            return idx;
+        }
+    }
+    static assert(hasLength!LyingRange);
+    LyingRange rng;
+    import std.exception : assertThrown;
+    assertThrown!Error(array(rng));
+}
+//https://issues.dlang.org/show_bug.cgi?id=22185
+@system unittest
+{
+    import std.stdio;
+    static struct ThrowingCopy
+    {
+        int x = 420;
+        this(ref return scope ThrowingCopy rhs)
+        {
+            rhs.x = 420;
+            //
+            throw new Exception("This throws");
+        }
+        ~this()
+        {
+            /*
+                Any time this destructor runs, it should be running on "valid"
+                data. This is is mimicked by having a .init other than 0 (the value the memory
+                practically will be from the GC).
+            */
+            if (x != 420)
+            {
+                //This will only trigger during GC finalization so avoid writefln for now.
+                printf("Destructor failure in ThrowingCopy(%d) @ %p", x, &this);
+                assert(x == 420, "unittest destructor failed");
+            }
+        }
+    }
+    static struct LyingThrowingRange
+    {
+        enum size_t length = 100;
+        enum size_t evilRealLength = 50;
+        size_t idx;
+        ThrowingCopy front()
+        {
+            return ThrowingCopy(12);
+        }
+        bool empty()
+        {
+            return idx == evilRealLength;
+        }
+        void popFront()
+        {
+            ++idx;
+        }
+    }
+    static assert(hasLength!LyingThrowingRange);
+    import std.exception : assertThrown;
+    {
+        assertThrown(array(LyingThrowingRange()));
+    }
+    import core.memory : GC;
+    /*
+        Force a collection early. Doesn't always actually finalize the bad objects
+        but trying to collect soon after the allocation is thrown away means any potential failures
+        will happen earlier.
+    */
+    GC.collect();
 }
 
 /**
