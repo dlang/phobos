@@ -1,4 +1,6 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos.lib for Win32 OMF
+# MS COFF builds use win64.mak for 32 and 64 bit
+#
 # Prerequisites:
 #	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
 #	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
@@ -18,8 +20,8 @@
 #	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
 #	or just use the supplied minit.obj
 
-## Memory model (32 or 64)
-MODEL=32omf
+# Ignored, only the default value is supported
+# MODEL=32omf
 
 ## Copy command
 
@@ -41,13 +43,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-m$(MODEL) -conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
+DFLAGS=-m32omf -conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-m$(MODEL) -unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
+UDFLAGS=-m32omf -unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
 
 ## C compiler
 
