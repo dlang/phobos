@@ -835,6 +835,35 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
+Enum type used with $(LREF each) to choose whether to continue or stop
+iteration.
+
+$(UL
+    $(LI `Continue.no`: stop iteration.)
+    $(LI `Continue.yes`: continue iteration.)
+)
+*/
+alias Continue = Flag!"each";
+
+///
+@safe unittest
+{
+    import std.math : isNaN, isClose;
+
+    double[] nums = [1.23, 4.56, double.nan, 7.89, 10.11];
+    double total = 0;
+
+    // Sum until the first NaN
+    nums.each!((double num) {
+        if (num.isNaN) { return Continue.no; }
+        total += num;
+        return Continue.yes;
+    });
+
+    assert(total.isClose(1.23 + 4.56));
+}
+
+/**
 Eagerly iterates over `r` and calls `fun` with _each element.
 
 If no function to call is specified, `each` defaults to doing nothing but
@@ -845,16 +874,15 @@ by specifying a lambda with a `lazy` parameter.
 parallel, std,parallelism).
 
 Normally the entire range is iterated. If partial iteration (early stopping) is
-desired, `fun` needs to return a value of type $(REF Flag,
-std,typecons)`!"each"` (`Yes.each` to continue iteration, or `No.each` to stop
-iteration).
+desired, `fun` needs to return a value of type $(LREF Continue): `Continue.yes`
+to continue iteration, or `Continue.no` to stop iteration.
 
 Params:
     fun = function to apply to _each element of the range
     r = range or iterable over which `each` iterates
 
-Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
-stopping.
+Returns: `Continue.yes` if the entire range was iterated; `Continue.no` in case
+of early stopping.
 
 See_Also: $(REF tee, std,range)
  */
@@ -905,7 +933,7 @@ public:
     Params:
         r = range or iterable over which each iterates
      */
-    Flag!"each" each(Range)(Range r)
+    Continue each(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
         __traits(compiles, typeof(r.front).length)))
@@ -917,13 +945,13 @@ public:
             {
                 while (!r.empty)
                 {
-                    static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                    static if (!is(typeof(unaryFun!fun(r.front)) == Continue))
                     {
                         cast(void) unaryFun!fun(r.front);
                     }
                     else
                     {
-                        if (unaryFun!fun(r.front) == No.each) return No.each;
+                        if (unaryFun!fun(r.front) == Continue.no) return Continue.no;
                     }
 
                     r.popFront();
@@ -934,13 +962,13 @@ public:
                 size_t i = 0;
                 while (!r.empty)
                 {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Flag!"each"))
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) == Continue))
                     {
                         cast(void) binaryFun!BinaryArgs(i, r.front);
                     }
                     else
                     {
-                        if (binaryFun!BinaryArgs(i, r.front) == No.each) return No.each;
+                        if (binaryFun!BinaryArgs(i, r.front) == Continue.no) return Continue.no;
                     }
                     r.popFront();
                     i++;
@@ -952,21 +980,21 @@ public:
             // range interface with >2 parameters.
             for (auto range = r; !range.empty; range.popFront())
             {
-                static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
+                static if (!is(typeof(fun(r.front.expand)) == Continue))
                 {
                     cast(void) fun(range.front.expand);
                 }
                 else
                 {
-                    if (fun(range.front.expand)) return No.each;
+                    if (fun(range.front.expand)) return Continue.no;
                 }
             }
         }
-        return Yes.each;
+        return Continue.yes;
     }
 
     /// ditto
-    Flag!"each" each(Iterable)(auto ref Iterable r)
+    Continue each(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -978,13 +1006,13 @@ public:
                 {
                     foreach (ref e; r)
                     {
-                        static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
+                        static if (!is(typeof(unaryFun!fun(e)) == Continue))
                         {
                             cast(void) unaryFun!fun(e);
                         }
                         else
                         {
-                            if (unaryFun!fun(e) == No.each) return No.each;
+                            if (unaryFun!fun(e) == Continue.no) return Continue.no;
                         }
                     }
                 }
@@ -994,13 +1022,13 @@ public:
                 debug(each) pragma(msg, "Using foreach BINARY for ", Iterable.stringof);
                 foreach (ref a, ref b; r)
                 {
-                    static if (!is(typeof(binaryFun!fun(a, b)) == Flag!"each"))
+                    static if (!is(typeof(binaryFun!fun(a, b)) == Continue))
                     {
                         cast(void) binaryFun!fun(a, b);
                     }
                     else
                     {
-                        if (binaryFun!fun(a, b) == No.each) return No.each;
+                        if (binaryFun!fun(a, b) == Continue.no) return Continue.no;
                     }
                 }
             }
@@ -1009,13 +1037,13 @@ public:
                 debug(each) pragma(msg, "Using foreach INDEX for ", Iterable.stringof);
                 foreach (i, ref e; r)
                 {
-                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Continue))
                     {
                         cast(void) binaryFun!BinaryArgs(i, e);
                     }
                     else
                     {
-                        if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
+                        if (binaryFun!BinaryArgs(i, e) == Continue.no) return Continue.no;
                     }
                 }
             }
@@ -1023,16 +1051,16 @@ public:
             {
                 static assert(0, "Invalid foreach iteratable type " ~ Iterable.stringof ~ " met.");
             }
-            return Yes.each;
+            return Continue.yes;
         }
         else
         {
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
-            auto result = Yes.each;
+            auto result = Continue.yes;
             auto dg(Parameters!(Parameters!(r.opApply)) params)
             {
-                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Continue))
                 {
                     fun(params);
                     return 0; // tells opApply to continue iteration
@@ -1040,7 +1068,7 @@ public:
                 else
                 {
                     result = fun(params);
-                    return result == Yes.each ? 0 : -1;
+                    return result == Continue.yes ? 0 : -1;
                 }
             }
             r.opApply(&dg);
@@ -1060,7 +1088,7 @@ public:
     assert(arr == [0, 1, 2, 3, 4]);
 
     // stop iterating early
-    iota(5).each!((n) { arr ~= n; return No.each; });
+    iota(5).each!((n) { arr ~= n; return Continue.no; });
     assert(arr == [0, 1, 2, 3, 4, 0]);
 
     // If the range supports it, the value can be mutated in place
