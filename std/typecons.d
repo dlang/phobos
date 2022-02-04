@@ -2229,6 +2229,35 @@ enum isTuple(T) = __traits(compiles,
     static assert(!isTuple!(S));
 }
 
+
+/**
+   Destructuring bind for tuples.
+
+   Calls `fun` with the tuple's members, thus allowing to bind
+   individual tuple members to names.
+
+    Params:
+        fun   = A function which will be called with the tuple's members.
+        tuple = The tuple to expand and bind.
+
+    Returns:
+        The return value of `fun(tuple.expand)`.
+*/
+auto bind(alias fun, T)(auto ref T tuple)
+if (isTuple!T)
+{
+    return fun(tuple.expand);
+}
+
+///
+@safe unittest
+{
+    auto t = tuple(1, 2);
+    auto sum = t.bind!((one, two) => one + two);
+    assert(sum == 3);
+}
+
+
 // used by both Rebindable and UnqualRef
 private mixin template RebindableCommon(T, U, alias This)
 if (is(T == class) || is(T == interface) || isAssociativeArray!T)
