@@ -5352,7 +5352,7 @@ string tempDir() @trusted
     import std.algorithm.searching : endsWith;
     import std.path : dirSeparator;
     assert(tempDir.endsWith(dirSeparator));
-    
+
     // https://issues.dlang.org/show_bug.cgi?id=22738
     assert(!tempDir.endsWith(dirSeparator ~ dirSeparator));
 }
