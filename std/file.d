@@ -5274,14 +5274,14 @@ Returns:
 */
 string tempDir() @trusted
 {
-    // We must check that the end of a path is not a seperator, before adding another
+    // We must check that the end of a path is not a separator, before adding another
     // If we don't we end up with https://issues.dlang.org/show_bug.cgi?id=22738
-    static string addSeperator(string input)
+    static string addSeparator(string input)
     {
         import std.path : dirSeparator;
         import std.algorithm.searching : endsWith;
 
-        // It is very rare a directory path will reach this point with a directory seperator at the end
+        // It is very rare a directory path will reach this point with a directory separator at the end
         // However on OSX this can happen, so we must verify least we break user code i.e. https://github.com/dlang/dub/pull/2208
         if (!input.endsWith(dirSeparator))
             return input ~ dirSeparator;
@@ -5308,7 +5308,7 @@ string tempDir() @trusted
             static string findExistingDir(T...)(lazy T alternatives)
             {
                 foreach (dir; alternatives)
-                    if (!dir.empty && exists(dir)) return addSeperator(dir);
+                    if (!dir.empty && exists(dir)) return addSeparator(dir);
                 return null;
             }
 
@@ -5323,7 +5323,7 @@ string tempDir() @trusted
 
         if (cache is null)
         {
-            cache = addSeperator(getcwd());
+            cache = addSeparator(getcwd());
         }
     }
     return cache;
