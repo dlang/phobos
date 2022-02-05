@@ -5282,7 +5282,7 @@ string tempDir() @trusted
         import std.algorithm.searching : endsWith;
 
         // It is very rare a directory path will reach this point with a directory separator at the end
-        // However on OSX this can happen, so we must verify least we break user code i.e. https://github.com/dlang/dub/pull/2208
+        // However on OSX this can happen, so we must verify lest we break user code i.e. https://github.com/dlang/dub/pull/2208
         if (!input.endsWith(dirSeparator))
             return input ~ dirSeparator;
         else
