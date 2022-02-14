@@ -302,18 +302,17 @@ if (args.length >= 1)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the first occurrence,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from `args[1 .. $]` with the first occurrence,
+ * if any, of `args[0]` removed.
  */
-template Erase(T, TList...)
+template Erase(args...)
+if (args.length >= 1)
 {
-    alias Erase = GenericErase!(T, TList).result;
-}
-
-/// Ditto
-template Erase(alias T, TList...)
-{
-    alias Erase = GenericErase!(T, TList).result;
+    private enum pos = staticIndexOf!(args[0], args[1 .. $]);
+    static if (pos < 0)
+        alias Erase = args[1 .. $];
+    else
+        alias Erase = AliasSeq!(args[1 .. pos + 1], args[pos + 2 .. $]);
 }
 
 ///
@@ -322,29 +321,6 @@ template Erase(alias T, TList...)
     alias Types = AliasSeq!(int, long, double, char);
     alias TL = Erase!(long, Types);
     static assert(is(TL == AliasSeq!(int, double, char)));
-}
-
-// [internal]
-private template GenericErase(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $] ;
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(e, head))
-            alias result = tail;
-        else
-            alias result = AliasSeq!(head, GenericErase!(e, tail).result);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -360,54 +336,23 @@ if (args.length >= 1)
 
 
 /**
- * Returns an `AliasSeq` created from TList with the all occurrences,
- * if any, of T removed.
+ * Returns an `AliasSeq` created from `args[1 .. $]` with all occurrences,
+ * if any, of `args[0]` removed.
  */
-template EraseAll(T, TList...)
+template EraseAll(args...)
+if (args.length >= 1)
 {
-    alias EraseAll = GenericEraseAll!(T, TList).result;
-}
-
-/// Ditto
-template EraseAll(alias T, TList...)
-{
-    alias EraseAll = GenericEraseAll!(T, TList).result;
+    alias EraseAll = AliasSeq!();
+    static foreach (arg; args[1 .. $])
+        static if (!isSame!(args[0], arg))
+            EraseAll = AliasSeq!(EraseAll, arg);
 }
 
 ///
 @safe unittest
 {
     alias Types = AliasSeq!(int, long, long, int);
-
-    alias TL = EraseAll!(long, Types);
-    static assert(is(TL == AliasSeq!(int, int)));
-}
-
-// [internal]
-private template GenericEraseAll(args...)
-if (args.length >= 1)
-{
-    alias e     = OldAlias!(args[0]);
-    alias tuple = args[1 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = AliasSeq!(
-            GenericEraseAll!(e, tail[0..$/2]).result,
-            GenericEraseAll!(e, tail[$/2..$]).result
-            );
-
-        static if (isSame!(e, head))
-            alias result = next;
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
+    static assert(is(EraseAll!(long, Types) == AliasSeq!(int, int)));
 }
 
 @safe unittest
@@ -422,47 +367,32 @@ if (args.length >= 1)
 }
 
 /*
- * Erase any occurrence of the first `TList[0 .. N]` elements from `TList[N .. $]`.
+ * Returns `items[0 .. $ - 1]` if `item[$ - 1]` found in `items[0 .. $ - 1]`, and
+ * `items` otherwise.
  *
  * Params:
- *   N = number of elements to delete from the `TList`
- *   TList = sequence of aliases
+ *   items = list to be processed
  *
- * See_Also: $(LREF EraseAll)
+ * See_Also: $(LREF NoDuplicates)
  */
-private template EraseAllN(uint N, TList...)
+private template AppendUnique(items...)
 {
-    static if (N == 1)
-    {
-        alias EraseAllN = EraseAll!(TList[0], TList[1 .. $]);
-    }
+    alias head = items[0 .. $ - 1];
+    static if (staticIndexOf!(items[$ - 1], head) >= 0)
+        alias AppendUnique = head;
     else
-    {
-        static if (N & 1)
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 + 1 .. N],
-                    EraseAllN!(N / 2 + 1, TList[0 .. N / 2 + 1], TList[N .. $]));
-        else
-            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 .. N],
-                    EraseAllN!(N / 2, TList[0 .. N / 2], TList[N .. $]));
-    }
+        alias AppendUnique = items;
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the all duplicate
+ * Returns an `AliasSeq` created from `args` with all duplicate
  * types removed.
  */
-template NoDuplicates(TList...)
+template NoDuplicates(args...)
 {
-    static if (TList.length >= 2)
-    {
-        alias fst = NoDuplicates!(TList[0 .. $/2]);
-        alias snd = NoDuplicates!(TList[$/2 .. $]);
-        alias NoDuplicates = AliasSeq!(fst, EraseAllN!(fst.length, fst, snd));
-    }
-    else
-    {
-        alias NoDuplicates = TList;
-    }
+    alias NoDuplicates = AliasSeq!();
+    static foreach (arg; args)
+        NoDuplicates = AppendUnique!(NoDuplicates, arg);
 }
 
 ///
@@ -581,30 +511,19 @@ if (args.length >= 2)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with all occurrences
- * of T, if found, replaced with U.
+ * Returns an `AliasSeq` created from `args[2 .. $]` with all occurrences
+ * of `args[0]`, if any, replaced with `args[1]`.
  */
-template ReplaceAll(T, U, TList...)
+template ReplaceAll(args...)
 {
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(alias T, U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
-}
-
-/// Ditto
-template ReplaceAll(alias T, alias U, TList...)
-{
-    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
+    alias ReplaceAll = AliasSeq!();
+    static foreach (arg; args[2 .. $])
+    {
+        static if (isSame!(args[0], arg))
+            ReplaceAll = AliasSeq!(ReplaceAll, args[1]);
+        else
+            ReplaceAll = AliasSeq!(ReplaceAll, arg);
+    }
 }
 
 ///
@@ -614,31 +533,6 @@ template ReplaceAll(alias T, alias U, TList...)
 
     alias TL = ReplaceAll!(long, char, Types);
     static assert(is(TL == AliasSeq!(int, char, char, int, float)));
-}
-
-// [internal]
-private template GenericReplaceAll(args...)
-if (args.length >= 2)
-{
-    alias from  = OldAlias!(args[0]);
-    alias to    = OldAlias!(args[1]);
-    alias tuple = args[2 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-        alias next = GenericReplaceAll!(from, to, tail).result;
-
-        static if (isSame!(from, head))
-            alias result = AliasSeq!(to, next);
-        else
-            alias result = AliasSeq!(head, next);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
 }
 
 @safe unittest
@@ -661,51 +555,13 @@ if (args.length >= 2)
 }
 
 /**
- * Returns an `AliasSeq` created from TList with the order reversed.
+ * Returns an `AliasSeq` created from `args` with the order reversed.
  */
-template Reverse(TList...)
+template Reverse(args...)
 {
-    static if (TList.length <= 1)
-    {
-        alias Reverse = TList;
-    }
-    /* Cases 2 to 8 are to speed up compile times
-     */
-    else static if (TList.length == 2)
-    {
-        alias Reverse = AliasSeq!(TList[1], TList[0]);
-    }
-    else static if (TList.length == 3)
-    {
-        alias Reverse = AliasSeq!(TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 4)
-    {
-        alias Reverse = AliasSeq!(TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 5)
-    {
-        alias Reverse = AliasSeq!(TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 6)
-    {
-        alias Reverse = AliasSeq!(TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 7)
-    {
-        alias Reverse = AliasSeq!(TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else static if (TList.length == 8)
-    {
-        alias Reverse = AliasSeq!(TList[7], TList[6], TList[5], TList[4], TList[3], TList[2], TList[1], TList[0]);
-    }
-    else
-    {
-        alias Reverse =
-            AliasSeq!(
-                Reverse!(TList[$/2 ..  $ ]),
-                Reverse!(TList[ 0  .. $/2]));
-    }
+    alias Reverse = AliasSeq!();
+    static foreach_reverse (arg; args)
+        Reverse = AliasSeq!(Reverse, arg);
 }
 
 ///
@@ -718,17 +574,15 @@ template Reverse(TList...)
 }
 
 /**
- * Returns the type from TList that is the most derived from type T.
- * If none are found, T is returned.
+ * Returns the type from `TList` that is the most derived from type `T`.
+ * If no such type is found, `T` is returned.
  */
 template MostDerived(T, TList...)
 {
-    static if (TList.length == 0)
-        alias MostDerived = T;
-    else static if (is(TList[0] : T))
-        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
-    else
-        alias MostDerived = MostDerived!(T, TList[1 .. $]);
+    import std.traits : Select;
+    alias MostDerived = T;
+    static foreach (U; TList)
+        MostDerived = Select!(is(U : MostDerived), U, MostDerived);
 }
 
 ///
@@ -749,14 +603,8 @@ template MostDerived(T, TList...)
  */
 template DerivedToFront(TList...)
 {
-    static if (TList.length == 0)
-        alias DerivedToFront = TList;
-    else
-        alias DerivedToFront =
-            AliasSeq!(MostDerived!(TList[0], TList[1 .. $]),
-                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
-                                TList[0],
-                                TList[1 .. $])));
+    private enum cmp(T, U) = is(T : U);
+    alias DerivedToFront = staticSort!(cmp, TList);
 }
 
 ///
@@ -769,31 +617,45 @@ template DerivedToFront(TList...)
 
     alias TL = DerivedToFront!(Types);
     static assert(is(TL == AliasSeq!(C, B, A)));
-}
 
-private enum staticMapExpandFactor = 150;
-private string generateCases()
-{
-    string[staticMapExpandFactor] chunks;
-    chunks[0] = q{};
-    static foreach (enum i; 0 .. staticMapExpandFactor - 1)
-        chunks[i + 1] = chunks[i] ~ `F!(Args[` ~ i.stringof ~ `]),`;
-    string ret = `AliasSeq!(`;
-    foreach (chunk; chunks)
-        ret ~= `q{alias staticMap = AliasSeq!(` ~ chunk ~ `);},`;
-    return ret ~ `)`;
+    alias TL2 = DerivedToFront!(A, A, A, B, B, B, C, C, C);
+    static assert(is(TL2 == AliasSeq!(C, C, C, B, B, B, A, A, A)));
 }
-private alias staticMapBasicCases = AliasSeq!(mixin(generateCases()));
 
 /**
-Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to `AliasSeq!(fun!(args[0]), fun!(args[1]), ..., fun!(args[$ - 1]))`.
  */
-template staticMap(alias F, Args ...)
+template staticMap(alias fun, args...)
 {
-    static if (Args.length < staticMapExpandFactor)
-        mixin(staticMapBasicCases[Args.length]);
-    else
-        alias staticMap = AliasSeq!(staticMap!(F, Args[0 .. $/2]), staticMap!(F, Args[$/2 .. $]));
+    version (__staticMap_simplest_but_buggy)
+    {
+        // @@@ BUG @@@
+        // The following straightforward implementation exposes a bug.
+        // See issue https://issues.dlang.org/show_bug.cgi?id=22421 and unittest below.
+        alias staticMap = AliasSeq!();
+        static foreach (arg; args)
+             staticMap = AliasSeq!(staticMap, fun!arg);
+    }
+    else version (__staticMap_simple_but_slow)
+    {
+        // This has a performance bug. Appending to the staticMap seems to be quadratic.
+        alias staticMap = AliasSeq!();
+        static foreach (i; 0 .. args.length)
+            staticMap = AliasSeq!(staticMap, fun!(args[i]));
+    }
+    else // Current best-of-breed implementation imitates quicksort
+    {
+        static if (args.length <= 8)
+        {
+            alias staticMap = AliasSeq!();
+            static foreach (i; 0 .. args.length)
+                staticMap = AliasSeq!(staticMap, fun!(args[i]));
+        }
+        else
+        {
+            alias staticMap = AliasSeq!(staticMap!(fun, args[0 .. $ / 2]), staticMap!(fun, args[$ / 2 .. $]));
+        }
+    }
 }
 
 ///
@@ -818,6 +680,14 @@ template staticMap(alias F, Args ...)
 
     alias T = staticMap!(Unqual, int, const int, immutable int, uint, ubyte, byte, short, ushort, long);
     static assert(is(T == AliasSeq!(int, int, int, uint, ubyte, byte, short, ushort, long)));
+
+    // @@@ BUG @@@ The test below exposes failure of the straightforward use.
+    // See @adamdruppe's comment to https://github.com/dlang/phobos/pull/8039
+    template id(alias what) {
+            enum id = __traits(identifier, what);
+    }
+    enum A { a }
+    static assert(staticMap!(id, A.a) == AliasSeq!("a"));
 }
 
 // regression test for https://issues.dlang.org/show_bug.cgi?id=21088
@@ -829,17 +699,25 @@ template staticMap(alias F, Args ...)
     assert(A == typeid(int));
 }
 
-/**
-Tests whether all given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+version (StdDdoc)
+{
+    /**
+       Tests whether all given items satisfy a template predicate, i.e. evaluates to
+       $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
-Evaluation is $(I not) short-circuited if a false result is encountered; the
-template predicate must be instantiable with all the given items.
- */
-template allSatisfy(alias F, T...)
+       Evaluation is $(I not) short-circuited if a false result is encountered; the
+       template predicate must be instantiable with all the given items.
+    */
+    template allSatisfy(alias F, T...)
+    {
+        import core.internal.traits : allSat = allSatisfy;
+        alias allSatisfy = allSat!(F, T);
+    }
+}
+else
 {
     import core.internal.traits : allSat = allSatisfy;
-    alias allSatisfy = allSat!(F, T);
+    alias allSatisfy = allSat;
 }
 
 ///
@@ -851,17 +729,25 @@ template allSatisfy(alias F, T...)
     static assert( allSatisfy!(isIntegral, int, long));
 }
 
-/**
-Tests whether any given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+version (StdDdoc)
+{
+    /**
+       Tests whether any given items satisfy a template predicate, i.e. evaluates to
+       $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
-Evaluation is short-circuited if a true result is encountered; the
-template predicate must be instantiable with one of the given items.
- */
-template anySatisfy(alias F, T...)
+       Evaluation is short-circuited if a true result is encountered; the
+       template predicate must be instantiable with one of the given items.
+    */
+    template anySatisfy(alias F, T...)
+    {
+        import core.internal.traits : anySat = anySatisfy;
+        alias anySatisfy = anySat!(F, T);
+    }
+}
+else
 {
     import core.internal.traits : anySat = anySatisfy;
-    alias anySatisfy = anySat!(F, T);
+    alias anySatisfy = anySat;
 }
 
 ///
@@ -873,170 +759,16 @@ template anySatisfy(alias F, T...)
     static assert( anySatisfy!(isIntegral, int, double));
 }
 
-private alias FilterShortCode = AliasSeq!(
-    q{
-        alias Filter = Nothing;
-    },
-    q{
-        static if (pred!(TList[0]))
-            alias Filter = AliasSeq!(TList[0]);
-        else
-            alias Filter = Nothing;
-    },
-    q{
-        static if (pred!(TList[0]))
-        {
-            static if (pred!(TList[1]))
-                alias Filter = AliasSeq!(TList[0], TList[1]);
-            else
-                alias Filter = AliasSeq!(TList[0]);
-        }
-        else
-        {
-            static if (pred!(TList[1]))
-                alias Filter = AliasSeq!(TList[1]);
-            else
-                alias Filter = Nothing;
-        }
-    },
-    q{
-        static if (pred!(TList[0]))
-        {
-            static if (pred!(TList[1]))
-            {
-                static if (pred!(TList[2]))
-                    alias Filter = AliasSeq!(TList[0], TList[1], TList[2]);
-                else
-                    alias Filter = AliasSeq!(TList[0], TList[1]);
-            }
-            else
-            {
-                static if (pred!(TList[2]))
-                    alias Filter = AliasSeq!(TList[0], TList[2]);
-                else
-                    alias Filter = AliasSeq!(TList[0]);
-            }
-        }
-        else
-        {
-            static if (pred!(TList[1]))
-            {
-                static if (pred!(TList[2]))
-                    alias Filter = AliasSeq!(TList[1], TList[2]);
-                else
-                    alias Filter = AliasSeq!(TList[1]);
-            }
-            else
-            {
-                static if (pred!(TList[2]))
-                    alias Filter = AliasSeq!(TList[2]);
-                else
-                    alias Filter = Nothing;
-            }
-        }
-    },
-    q{
-        static if (pred!(TList[0]))
-        {
-            static if (pred!(TList[1]))
-            {
-                static if (pred!(TList[2]))
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[0], TList[1], TList[2], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[0], TList[1], TList[2]);
-                }
-                else
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[0], TList[1], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[0], TList[1]);
-                }
-            }
-            else
-            {
-                static if (pred!(TList[2]))
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[0], TList[2], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[0], TList[2]);
-                }
-                else
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[0], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[0]);
-                }
-            }
-        }
-        else
-        {
-            static if (pred!(TList[1]))
-            {
-                static if (pred!(TList[2]))
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[1], TList[2], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[1], TList[2]);
-                }
-                else
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[1], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[1]);
-                }
-            }
-            else
-            {
-                static if (pred!(TList[2]))
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[2], TList[3]);
-                    else
-                        alias Filter = AliasSeq!(TList[2]);
-                }
-                else
-                {
-                    static if (pred!(TList[3]))
-                        alias Filter = AliasSeq!(TList[3]);
-                    else
-                        alias Filter = Nothing;
-                }
-            }
-        }
-    }
-);
-
-private enum filterExpandFactor = FilterShortCode.length;
-
-package alias Nothing = AliasSeq!(); // yes, this really does speed up compilation!
 /**
  * Filters an `AliasSeq` using a template predicate. Returns an
  * `AliasSeq` of the elements which satisfy the predicate.
  */
-template Filter(alias pred, TList ...)
+template Filter(alias pred, args...)
 {
-    static if (TList.length < filterExpandFactor)
-    {
-        mixin(FilterShortCode[TList.length]);
-    }
-    else
-    {
-        template MaybeNothing(Q ...)
-        {
-            static if (pred!(Q[0]))
-                alias MaybeNothing = AliasSeq!(Q[0]);
-            else
-                alias MaybeNothing = Nothing;
-        }
-        alias Filter = staticMap!(MaybeNothing, TList);
-    }
+    alias Filter = AliasSeq!();
+    static foreach (arg; args)
+        static if (pred!arg)
+            Filter = AliasSeq!(Filter, arg);
 }
 
 ///
@@ -1106,6 +838,7 @@ template templateNot(alias pred)
     static assert(allSatisfy!(isNoPointer, string, char, float));
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
@@ -1157,6 +890,7 @@ template templateAnd(Preds...)
     static assert(alwaysTrue!int);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
@@ -1215,6 +949,7 @@ template templateOr(Preds...)
     static assert(!alwaysFalse!int);
 }
 
+version (StdUnittest)
 @safe unittest
 {
     static foreach (T; AliasSeq!(int, staticMap, 42))
@@ -1465,59 +1200,30 @@ private template SmartAlias(T...)
 }
 
 /**
- * Creates an `AliasSeq` which repeats `TList` exactly `n` times.
+ * Creates an `AliasSeq` which repeats `items` exactly `n` times.
  */
-template Repeat(size_t n, TList...)
+template Repeat(size_t n, items...)
 {
     static if (n == 0)
     {
         alias Repeat = AliasSeq!();
     }
-    else static if (n == 1)
-    {
-        alias Repeat = AliasSeq!TList;
-    }
-    else static if (n == 2)
-    {
-        alias Repeat = AliasSeq!(TList, TList);
-    }
-    /* Cases 3 to 8 are to speed up compilation
-     */
-    else static if (n == 3)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList);
-    }
-    else static if (n == 4)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList);
-    }
-    else static if (n == 5)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList);
-    }
-    else static if (n == 6)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList);
-    }
-    else static if (n == 7)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList);
-    }
-    else static if (n == 8)
-    {
-        alias Repeat = AliasSeq!(TList, TList, TList, TList, TList, TList, TList, TList);
-    }
     else
     {
-        alias R = Repeat!((n - 1) / 2, TList);
-        static if ((n - 1) % 2 == 0)
+        alias Repeat = items;
+        enum log2n =
         {
-            alias Repeat = AliasSeq!(TList, R, R);
-        }
-        else
+            uint result = 0;
+            auto x = n;
+            while (x >>= 1)
+                ++result;
+            return result;
+        }();
+        static foreach (i; 0 .. log2n)
         {
-            alias Repeat = AliasSeq!(TList, TList, R, R);
+            Repeat = AliasSeq!(Repeat, Repeat);
         }
+        Repeat = AliasSeq!(Repeat, Repeat!(n - (1u << log2n), items));
     }
 }
 
@@ -1543,6 +1249,8 @@ template Repeat(size_t n, TList...)
 
     alias ImInt10 = Repeat!(10, int);
     static assert(is(ImInt10 == AliasSeq!(int, int, int, int, int, int, int, int, int, int)));
+
+    alias Big = Repeat!(1_000_000, int);
 }
 
 
@@ -1567,28 +1275,18 @@ template Repeat(size_t n, TList...)
  *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
  *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
- *     Seq = The  $(LREF AliasSeq) to sort
+ *     items = The  $(LREF AliasSeq) to sort
  *
  * Returns: The sorted alias sequence
  */
-template staticSort(alias cmp, Seq...)
+template staticSort(alias cmp, items...)
 {
-    static if (Seq.length < 2)
-    {
-        alias staticSort = Seq;
-    }
+    static if (items.length < 2)
+        alias staticSort = items;
     else
-    {
-        private alias btm = staticSort!(cmp, Seq[0 .. $ / 2]);
-        private alias top = staticSort!(cmp, Seq[$ / 2 .. $]);
-
-        static if (isLessEq!(cmp, btm[$ - 1], top[0]))
-            alias staticSort = AliasSeq!(btm, top); // already ascending
-        else static if (isLessEq!(cmp, top[$ - 1], btm[0]))
-            alias staticSort = AliasSeq!(top, btm); // already descending
-        else
-            alias staticSort = staticMerge!(cmp, Seq.length / 2, btm, top);
-    }
+        alias staticSort = staticMerge!(cmp, items.length / 2,
+            staticSort!(cmp, items[0 .. $ / 2]),
+            staticSort!(cmp, items[$ / 2 .. $]));
 }
 
 ///
@@ -1608,25 +1306,21 @@ template staticSort(alias cmp, Seq...)
         Types)));
 }
 
-private template staticMerge(alias cmp, int half, Seq...)
+private template staticMerge(alias cmp, uint mid, items...)
 {
-    static if (half == 0 || half == Seq.length)
+    enum run =
     {
-        alias staticMerge = Seq;
-    }
+        static if (mid < items.length)
+            static foreach (i, item; items[0 .. mid])
+                static if (!isLessEq!(cmp, item, items[mid]))
+                    if (__ctfe) return i;
+        return mid;
+    }();
+    static if (run == mid)
+        alias staticMerge = items;
     else
-    {
-        static if (isLessEq!(cmp, Seq[0], Seq[half]))
-        {
-            alias staticMerge = AliasSeq!(Seq[0],
-                staticMerge!(cmp, half - 1, Seq[1 .. $]));
-        }
-        else
-        {
-            alias staticMerge = AliasSeq!(Seq[half],
-                staticMerge!(cmp, half, Seq[0 .. half], Seq[half + 1 .. $]));
-        }
-    }
+        alias staticMerge = AliasSeq!(items[0 .. run], items[mid],
+            staticMerge!(cmp, mid - run, items[run .. mid], items[mid + 1 .. $]));
 }
 
 private template isLessEq(alias cmp, Seq...)
@@ -1691,23 +1385,16 @@ Returns: An `AliasSeq` filtered by the selected stride.
 template Stride(int stepSize, Args...)
 if (stepSize != 0)
 {
-    static if (Args.length == 0)
+    alias Stride = AliasSeq!();
+    static if (stepSize > 0)
     {
-        alias Stride = AliasSeq!();
-    }
-    else static if (stepSize > 0)
-    {
-        static if (stepSize >= Args.length)
-            alias Stride = AliasSeq!(Args[0]);
-        else
-            alias Stride = AliasSeq!(Args[0], Stride!(stepSize, Args[stepSize .. $]));
+        static foreach (i; 0 .. (Args.length + stepSize - 1) / stepSize)
+            Stride = AliasSeq!(Stride, Args[i * stepSize]);
     }
     else
     {
-        static if (-stepSize >= Args.length)
-            alias Stride = AliasSeq!(Args[$ - 1]);
-        else
-            alias Stride = AliasSeq!(Args[$ - 1], Stride!(stepSize, Args[0 .. $ + stepSize]));
+        static foreach (i; 0 .. (Args.length - stepSize - 1) / -stepSize)
+            Stride = AliasSeq!(Stride, Args[$ - 1 + i * stepSize]);
     }
 }
 

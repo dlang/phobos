@@ -955,16 +955,46 @@ uint totalCPUsImpl() @nogc nothrow @trusted
     }
     else version (linux)
     {
-        import core.sys.linux.sched : CPU_COUNT, cpu_set_t, sched_getaffinity;
+        import core.stdc.stdlib : calloc;
+        import core.stdc.string : memset;
+        import core.sys.linux.sched : CPU_ALLOC_SIZE, CPU_FREE, CPU_COUNT, CPU_COUNT_S, cpu_set_t, sched_getaffinity;
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
 
-        cpu_set_t set = void;
-        if (sched_getaffinity(0, cpu_set_t.sizeof, &set) == 0)
+        int count = 0;
+
+        /**
+         * According to ruby's source code, CPU_ALLOC() doesn't work as expected.
+         *  see: https://github.com/ruby/ruby/commit/7d9e04de496915dd9e4544ee18b1a0026dc79242
+         *
+         *  The hardcode number also comes from ruby's source code.
+         *  see: https://github.com/ruby/ruby/commit/0fa75e813ecf0f5f3dd01f89aa76d0e25ab4fcd4
+         */
+        for (int n = 64; n <= 16384; n *= 2)
         {
-            int count = CPU_COUNT(&set);
+            size_t size = CPU_ALLOC_SIZE(count);
+            if (size >= 0x400)
+            {
+                auto cpuset = cast(cpu_set_t*) calloc(1, size);
+                if (cpuset is null) break;
+                if (sched_getaffinity(0, size, cpuset) == 0)
+                {
+                    count = CPU_COUNT_S(size, cpuset);
+                }
+                CPU_FREE(cpuset);
+            }
+            else
+            {
+                cpu_set_t cpuset;
+                if (sched_getaffinity(0, cpu_set_t.sizeof, &cpuset) == 0)
+                {
+                    count = CPU_COUNT(&cpuset);
+                }
+            }
+
             if (count > 0)
                 return cast(uint) count;
         }
+
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
     else version (Darwin)
@@ -2708,7 +2738,7 @@ public:
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
             import core.stdc.stdlib : malloc, free;
-            if (nBytesNeeded < maxStack)
+            if (nBytesNeeded <= maxStack)
             {
                 tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
             }
@@ -3015,11 +3045,11 @@ public:
     Since the underlying data for this struct is heap-allocated, this struct
     has reference semantics when passed between functions.
 
-    The main uses cases for `WorkerLocalStorageStorage` are:
+    The main uses cases for `WorkerLocalStorage` are:
 
     1.  Performing parallel reductions with an imperative, as opposed to
         functional, programming style.  In this case, it's useful to treat
-        `WorkerLocalStorageStorage` as local to each thread for only the parallel
+        `WorkerLocalStorage` as local to each thread for only the parallel
         portion of an algorithm.
 
     2.  Recycling temporary buffers across iterations of a parallel foreach loop.

@@ -1,9 +1,8 @@
 # Makefile for zlib
 
-MODEL=32
 CC=gcc
 LD=link
-CFLAGS=-O -m$(MODEL)
+CFLAGS=-I. -O -g -DHAVE_UNISTD_H -DHAVE_STDARG_H
 LDFLAGS=
 O=.o
 
@@ -17,7 +16,7 @@ O=.o
 OBJS = adler32$(O) compress$(O) crc32$(O) deflate$(O) gzclose$(O) gzlib$(O) gzread$(O) \
 	gzwrite$(O) infback$(O) inffast$(O) inflate$(O) inftrees$(O) trees$(O) uncompr$(O) zutil$(O)
 
-all:  zlib.a example minigzip
+all:  zlib.a example infcover minigzip
 
 adler32.o: zutil.h zlib.h zconf.h
 	"$(CC)" -c $(CFLAGS) $*.c
@@ -38,12 +37,6 @@ gzwrite.o: zlib.h zconf.h gzguts.h
 	"$(CC)" -c $(CFLAGS) $*.c
 
 compress.o: zlib.h zconf.h
-	"$(CC)" -c $(CFLAGS) $*.c
-
-example.o: zlib.h zconf.h
-	"$(CC)" -c $(CFLAGS) $*.c
-
-minigzip.o: zlib.h zconf.h
 	"$(CC)" -c $(CFLAGS) $*.c
 
 uncompr.o: zlib.h zconf.h
@@ -71,25 +64,32 @@ trees.o: deflate.h zutil.h zlib.h zconf.h trees.h
 	"$(CC)" -c $(CFLAGS) $*.c
 
 
-example.o: example.c zlib.h zconf.h
-	"$(CC)" -c $(cvarsdll) $(CFLAGS) $*.c
+example.o: test/example.c zlib.h zconf.h
+	"$(CC)" -c $(cvarsdll) $(CFLAGS) test/$*.c
 
-minigzip.o: minigzip.c zlib.h zconf.h
-	"$(CC)" -c $(cvarsdll) $(CFLAGS) $*.c
+infcover.o: test/infcover.c zlib.h zconf.h
+	"$(CC)" -c $(cvarsdll) $(CFLAGS) test/$*.c
+
+minigzip.o: test/minigzip.c zlib.h zconf.h
+	"$(CC)" -c $(cvarsdll) $(CFLAGS) test/$*.c
 
 zlib.a: $(OBJS)
 	ar -r $@ $(OBJS)
 
 example: example.o zlib.a
-	"$(CC)" $(CFLAGS) -o $@ example.o zlib.a -g
+	"$(CC)" $(LDFLAGS) -o $@ example.o zlib.a
+
+infcover: infcover.o zlib.a
+	"$(CC)" $(LDFLAGS) -o $@ infcover.o zlib.a
 
 minigzip: minigzip.o zlib.a
-	"$(CC)" $(CFLAGS) -o $@ minigzip.o zlib.a -g
+	"$(CC)" $(LDFLAGS) -o $@ minigzip.o zlib.a
 
-test: example minigzip
+test: example infcover minigzip
 	./example
-	echo hello world | minigzip | minigzip -d
+	./infcover
+	echo hello world | ./minigzip | ./minigzip -d
 
 clean:
-	"$(RM)" $(OBJS) zlib.a example.o example minigzip minigzip.o test foo.gz
+	$(RM) $(OBJS) zlib.a example.o example infcover.o infcover minigzip.o minigzip foo.gz
 

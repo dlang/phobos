@@ -484,7 +484,7 @@ private template isSpawnable(F, T...)
             enum isParamsImplicitlyConvertible = false;
     }
 
-    enum isSpawnable = isCallable!F && is(ReturnType!F == void)
+    enum isSpawnable = isCallable!F && is(ReturnType!F : void)
             && isParamsImplicitlyConvertible!(F, void function(T))
             && (isFunctionPointer!F || !hasUnsharedAliasing!F);
 }
@@ -1573,10 +1573,9 @@ private:
             this.outer.yield();
         }
 
-        private bool notified;
+        bool notified;
     }
 
-private:
     void dispatch()
     {
         import std.algorithm.mutation : remove;
@@ -1600,7 +1599,6 @@ private:
         }
     }
 
-private:
     Fiber[] m_fibers;
     size_t m_pos;
 }
@@ -1919,48 +1917,53 @@ void yield(T)(T value)
     import core.exception;
     import std.exception;
 
-    static void testScheduler(Scheduler s)
-    {
-        scheduler = s;
-        scheduler.start({
-            auto tid = spawn({
-                int i;
-
-                try
+    auto mainTid = thisTid;
+    alias testdg = () {
+        auto tid = spawn(
+        (Tid mainTid) {
+            int i;
+            scope (failure) mainTid.send(false);
+            try
+            {
+                for (i = 1; i < 10; i++)
                 {
-                    for (i = 1; i < 10; i++)
+                    if (receiveOnly!int() != i)
                     {
-                        assertNotThrown!AssertError(assert(receiveOnly!int() == i));
+                        mainTid.send(false);
+                        break;
                     }
                 }
-                catch (OwnerTerminated e)
-                {
-
-                }
-
-                // i will advance 1 past the last value expected
-                assert(i == 4);
-            });
-
-            auto r = new Generator!int({
-                assertThrown!Exception(yield(2.0));
-                yield(); // ensure this is a no-op
-                yield(1);
-                yield(); // also once something has been yielded
-                yield(2);
-                yield(3);
-            });
-
-            foreach (e; r)
-            {
-                tid.send(e);
             }
+            catch (OwnerTerminated e)
+            {
+                // i will advance 1 past the last value expected
+                mainTid.send(i == 4);
+            }
+        }, mainTid);
+        auto r = new Generator!int(
+        {
+            assertThrown!Exception(yield(2.0));
+            yield(); // ensure this is a no-op
+            yield(1);
+            yield(); // also once something has been yielded
+            yield(2);
+            yield(3);
         });
-        scheduler = null;
-    }
 
-    testScheduler(new ThreadScheduler);
-    testScheduler(new FiberScheduler);
+        foreach (e; r)
+        {
+            tid.send(e);
+        }
+    };
+
+    scheduler = new ThreadScheduler;
+    scheduler.spawn(testdg);
+    assert(receiveOnly!bool());
+
+    scheduler = new FiberScheduler;
+    scheduler.start(testdg);
+    assert(receiveOnly!bool());
+    scheduler = null;
 }
 ///
 @system unittest
@@ -2146,14 +2149,16 @@ private
 
                     if (msg.convertsTo!(Args))
                     {
-                        static if (is(ReturnType!(t) == bool))
+                        alias RT = ReturnType!(t);
+                        static if (is(RT == bool))
                         {
                             return msg.map(op);
                         }
                         else
                         {
                             msg.map(op);
-                            return true;
+                            static if (!is(immutable RT == immutable noreturn))
+                                return true;
                         }
                     }
                 }
@@ -2742,7 +2747,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
             if (!atomicLoad!(MemoryOrder.raw)(flag))
             {
                 var = init;
-                atomicStore!(MemoryOrder.rel)(flag, true);
+                static if (!is(immutable typeof(var) == immutable noreturn))
+                    atomicStore!(MemoryOrder.rel)(flag, true);
             }
         }
     }
@@ -2823,4 +2829,27 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     auto result1 = receiveOnly!(const Aggregate)();
     immutable expected = Aggregate(42, [1, 2, 3, 4, 5]);
     assert(result1 == expected);
+}
+
+// Noreturn support
+@system unittest
+{
+    static noreturn foo(int) { throw new Exception(""); }
+
+    if (false) spawn(&foo, 1);
+    if (false) spawnLinked(&foo, 1);
+
+    if (false) receive(&foo);
+    if (false) receiveTimeout(Duration.init, &foo);
+
+    // Wrapped in __traits(compiles) to skip codegen which crashes dmd's backend
+    static assert(__traits(compiles, receiveOnly!noreturn()                 ));
+    static assert(__traits(compiles, send(Tid.init, noreturn.init)          ));
+    static assert(__traits(compiles, prioritySend(Tid.init, noreturn.init)  ));
+    static assert(__traits(compiles, yield(noreturn.init)                   ));
+
+    static assert(__traits(compiles, {
+        __gshared noreturn n;
+        initOnce!n(noreturn.init);
+    }));
 }

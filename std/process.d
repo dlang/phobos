@@ -106,9 +106,8 @@ version (Windows)
 }
 
 import std.internal.cstring;
-import std.range.primitives;
+import std.range;
 import std.stdio;
-import std.traits : isSomeChar;
 
 version (OSX)
     version = Darwin;
@@ -276,7 +275,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    inout(char)[] opIndexAssign(return inout char[] value, scope const(char)[] name) @trusted
+    inout(char)[] opIndexAssign(return scope inout char[] value, scope const(char)[] name) @trusted
     {
         version (Posix)
         {
@@ -1498,10 +1497,10 @@ package(std) string searchPathFor(scope const(char)[] executable)
     @safe
 {
     import std.algorithm.iteration : splitter;
-    import std.conv : text;
+    import std.conv : to;
     import std.path : chainPath;
 
-    string result;
+    typeof(return) result;
 
     environment.getImpl("PATH",
         (scope const(char)[] path)
@@ -1514,7 +1513,7 @@ package(std) string searchPathFor(scope const(char)[] executable)
                 auto execPath = chainPath(dir, executable);
                 if (isExecutable(execPath))
                 {
-                    result = text(execPath);
+                    result = execPath.to!(typeof(result));
                     return;
                 }
             }
@@ -1527,7 +1526,7 @@ package(std) string searchPathFor(scope const(char)[] executable)
 // current user.
 version (Posix)
 private bool isExecutable(R)(R path) @trusted nothrow @nogc
-if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+if (isSomeFiniteCharInputRange!R)
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
@@ -1580,6 +1579,7 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
 // calls, but we make do...
 version (Posix) @system unittest
 {
+    import core.stdc.errno : errno;
     import core.sys.posix.fcntl : open, O_RDONLY;
     import core.sys.posix.unistd : close;
     import std.algorithm.searching : canFind, findSplitBefore;
@@ -1594,7 +1594,20 @@ version (Posix) @system unittest
     scope(exit) std.file.rmdirRecurse(directory);
     auto path = buildPath(directory, "tmp");
     std.file.write(path, null);
+    errno = 0;
     auto fd = open(path.tempCString, O_RDONLY);
+    if (fd == -1)
+    {
+        import core.stdc.string : strerror;
+        import std.stdio : stderr;
+        import std.string : fromStringz;
+
+        // For the CI logs
+        stderr.writefln("%s: could not open '%s': %s",
+            __FUNCTION__, path, strerror(errno).fromStringz);
+        // TODO: should we retry here instead?
+        return;
+    }
     scope(exit) close(fd);
 
     // command >&2 (or any other number) checks whethether that number
@@ -1642,7 +1655,12 @@ version (Posix) @system unittest
         if (lsofRes.status == 0)
         {
             assert(!lsofRes.output.canFind(path));
-            assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+            auto lsofOut = execute(lsof.path, null, Config.inheritFDs).output;
+            if (!lsofOut.canFind(path))
+            {
+                std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+                    ": Warning: unexpected lsof output:", lsofOut);
+            }
             return;
         }
 
@@ -2159,6 +2177,11 @@ struct Config
         /**
         A function that is called before `exec` in $(LREF spawnProcess).
         It returns `true` if succeeded and otherwise returns `false`.
+
+        $(RED Warning:
+            Please note that the code in this function must only use
+            async-signal-safe functions.)
+
         On Windows, this member is not available.
         */
         bool function() nothrow @nogc @safe preExecFunction;
@@ -4361,6 +4384,7 @@ else version (Posix)
 
     void browse(scope const(char)[] url) nothrow @nogc @safe
     {
+        const buffer = url.tempCString(); // Retain buffer until end of scope
         const(char)*[3] args;
 
         // Trusted because it's called with a zero-terminated literal
@@ -4384,7 +4408,6 @@ else version (Posix)
             }
         }
 
-        const buffer = url.tempCString(); // Retain buffer until end of scope
         args[1] = buffer;
         args[2] = null;
 

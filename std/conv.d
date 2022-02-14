@@ -50,9 +50,9 @@ module std.conv;
 public import std.ascii : LetterCase;
 
 import std.meta;
-import std.range.primitives;
+import std.range;
 import std.traits;
-import std.typecons : Flag, Yes, No, tuple;
+import std.typecons : Flag, Yes, No, tuple, isTuple;
 
 // Same as std.string.format, but "self-importing".
 // Helps reduce code and imports, particularly in static asserts.
@@ -462,8 +462,6 @@ template to(T)
         int* x; // make S a type with pointers
         string toString() const scope
         {
-            static int g = 0; // force toString to be impure for:
-            g++; // https://issues.dlang.org/show_bug.cgi?id=20150
             return "S";
         }
     }
@@ -653,6 +651,32 @@ if (isImplicitlyConvertible!(S, T) &&
             assertThrown!ConvOverflowException(to!Uint(sn));
         }}
     }}
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=13551
+private T toImpl(T, S)(S value)
+if (isTuple!T)
+{
+    T t;
+    static foreach (i; 0 .. T.length)
+    {
+        t[i] = value[i].to!(typeof(T[i]));
+    }
+    return t;
+}
+
+@safe unittest
+{
+    import std.typecons : Tuple;
+
+    auto test = ["10", "20", "30"];
+    assert(test.to!(Tuple!(int, int, int)) == Tuple!(int, int, int)(10, 20, 30));
+
+    auto test1 = [1, 2];
+    assert(test1.to!(Tuple!(int, int)) == Tuple!(int, int)(1, 2));
+
+    auto test2 = [1.0, 2.0, 3.0];
+    assert(test2.to!(Tuple!(int, int, int)) == Tuple!(int, int, int)(1, 2, 3));
 }
 
 /*
@@ -1972,7 +1996,7 @@ if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
 
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
-if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
+if (isSomeFiniteCharInputRange!S &&
     isIntegral!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
@@ -2379,7 +2403,7 @@ Throws:
     A $(LREF ConvException) If an overflow occurred during conversion or
     if no character of the input was meaningfully converted.
 */
-auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s)
+auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref scope Source s)
 if (isSomeChar!(ElementType!Source) &&
     isIntegral!Target && !is(Target == enum))
 {
@@ -2484,7 +2508,7 @@ if (isSomeChar!(ElementType!Source) &&
                 v = -v;
 
             static if (isNarrowString!Source)
-                s = cast(Source) source;
+                s = s[$-source.length..$];
 
             static if (doCount)
             {

@@ -235,7 +235,7 @@ public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
 import std.internal.attributes : betterC;
-import std.meta : allSatisfy, staticMap;
+import std.meta : allSatisfy, anySatisfy, staticMap;
 import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
     isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
 
@@ -902,7 +902,7 @@ if (Ranges.length > 0 &&
         private:
             alias R = staticMap!(Unqual, Ranges);
             alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
-            private template sameET(A)
+            template sameET(A)
             {
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }
@@ -1412,7 +1412,8 @@ auto choose(R1, R2)(bool condition, return scope R1 r1, return scope R2 r2)
 if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     !is(CommonType!(ElementType!(Unqual!R1), ElementType!(Unqual!R2)) == void))
 {
-    return ChooseResult!(R1, R2)(condition, r1, r2);
+    size_t choice = condition? 0: 1;
+    return ChooseResult!(R1, R2)(choice, r1, r2);
 }
 
 ///
@@ -1447,76 +1448,102 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
 }
 
 
-private struct ChooseResult(R1, R2)
+private struct ChooseResult(Ranges...)
 {
-    import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
+    import std.meta : aliasSeqOf, ApplyLeft;
+    import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor,
+        lvalueOf;
 
     private union
     {
-        R1 r1;
-        R2 r2;
+        Ranges rs;
     }
-    private bool r1Chosen;
+    private size_t chosenI;
 
-    private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
-            auto ref ExtraArgs extraArgs)
+    private static auto ref actOnChosen(alias foo, ExtraArgs ...)
+        (ref ChooseResult r, auto ref ExtraArgs extraArgs)
     {
-        if (r.r1Chosen)
+        ref getI(size_t i)(return ref ChooseResult r) @trusted { return r.rs[i]; }
+
+        switch (r.chosenI)
         {
-            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
-            return foo(get1(r), extraArgs);
-        }
-        else
-        {
-            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
-            return foo(get2(r), extraArgs);
+            static foreach (candI; 0 .. rs.length)
+            {
+                case candI: return foo(getI!candI(r), extraArgs);
+            }
+
+            default: assert(false);
         }
     }
 
-    this(bool r1Chosen, return scope R1 r1, return scope R2 r2) @trusted
+    // @trusted because of assignment of r which overlap each other
+    this(size_t chosen, return scope Ranges rs) @trusted
     {
-        // @trusted because of assignment of r1 and r2 which overlap each other
         import core.lifetime : emplace;
 
-        // This should be the only place r1Chosen is ever assigned
+        // This should be the only place chosenI is ever assigned
         // independently
-        this.r1Chosen = r1Chosen;
-        if (r1Chosen)
+        this.chosenI = chosen;
+
+        // Otherwise the compiler will complain about skipping these fields
+        static foreach (i; 0 .. rs.length)
         {
-            this.r2 = R2.init;
-            emplace(&this.r1, r1);
+            this.rs[i] = Ranges[i].init;
         }
-        else
+
+        // The relevant field needs to be initialized last so it will overwrite
+        // the other initializations and not the other way around.
+        sw: switch (chosenI)
         {
-            this.r1 = R1.init;
-            emplace(&this.r2, r2);
+            static foreach (i; 0 .. rs.length)
+            {
+                case i:
+                emplace(&this.rs[i], rs[i]);
+                break sw;
+            }
+
+            default: assert(false);
         }
+    }
+
+    // Some legacy code may still call this with typeof(choose(/*...*/))(/*...*/)
+    // without this overload the regular constructor would invert the meaning of
+    // the boolean
+    static if (rs.length == 2)
+    pragma(inline, true)
+    deprecated("Call with size_t (0 = first), or use the choose function")
+    this(bool firstChosen, Ranges rs)
+    {
+        import core.lifetime : move;
+        this(cast(size_t)(firstChosen? 0: 1), rs[0].move, rs[1].move);
     }
 
     void opAssign(ChooseResult r)
     {
-        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
-            if (r1Chosen != r.r1Chosen)
-            {
-                // destroy the current item
-                actOnChosen!((ref r) => destroy(r))(this);
-            }
-        r1Chosen = r.r1Chosen;
-        if (r1Chosen)
+        ref getI(size_t i)(return ref ChooseResult r) @trusted { return r.rs[i]; }
+
+        static if (anySatisfy!(hasElaborateDestructor, Ranges))
+            if (chosenI != r.chosenI)
         {
-            ref get1(return ref ChooseResult r) @trusted { return r.r1; }
-            get1(this) = get1(r);
+            // destroy the current item
+            actOnChosen!((ref r) => destroy(r))(this);
         }
-        else
+        chosenI = r.chosenI;
+
+        sw: switch (chosenI)
         {
-            ref get2(return ref ChooseResult r) @trusted { return r.r2; }
-            get2(this) = get2(r);
+            static foreach (candI; 0 .. rs.length)
+            {
+                case candI: getI!candI(this) = getI!candI(r);
+                break sw;
+            }
+
+            default: assert(false);
         }
     }
 
     // Carefully defined postblit to postblit the appropriate range
-    static if (hasElaborateCopyConstructor!R1
-        || hasElaborateCopyConstructor!R2)
+    static if (anySatisfy!(hasElaborateCopyConstructor, Ranges))
     this(this)
     {
         actOnChosen!((ref r) {
@@ -1524,20 +1551,18 @@ private struct ChooseResult(R1, R2)
             })(this);
     }
 
-    static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+    static if (anySatisfy!(hasElaborateDestructor, Ranges))
     ~this()
     {
         actOnChosen!((ref r) => destroy(r))(this);
     }
 
-    static if (isInfinite!R1 && isInfinite!R2)
-        // Propagate infiniteness.
-        enum bool empty = false;
-    else
-        @property bool empty()
-        {
-            return actOnChosen!(r => r.empty)(this);
-        }
+    // Propagate infiniteness.
+    static if (allSatisfy!(isInfinite, Ranges)) enum bool empty = false;
+    else @property bool empty()
+    {
+        return actOnChosen!(r => r.empty)(this);
+    }
 
     @property auto ref front()
     {
@@ -1550,34 +1575,38 @@ private struct ChooseResult(R1, R2)
         return actOnChosen!((ref r) { r.popFront; })(this);
     }
 
-    static if (isForwardRange!R1 && isForwardRange!R2)
-    @property auto save() return scope
+    static if (allSatisfy!(isForwardRange, Ranges))
+    @property auto save() // return scope inferred
     {
-        if (r1Chosen)
+        auto saveOrInit(size_t i)()
         {
-            ref R1 getR1() @trusted { return r1; }
-            return ChooseResult(r1Chosen, getR1.save, R2.init);
+            ref getI() @trusted { return rs[i]; }
+            if (i == chosenI) return getI().save;
+            else return Ranges[i].init;
         }
-        else
+
+        return typeof(this)(chosenI, staticMap!(saveOrInit,
+            aliasSeqOf!(rs.length.iota)));
+    }
+
+    template front(T)
+    {
+        private enum overloadValidFor(alias r) = is(typeof(r.front = T.init));
+
+        static if (allSatisfy!(overloadValidFor, rs))
+        void front(T v)
         {
-            ref R2 getR2() @trusted { return r2; }
-            return ChooseResult(r1Chosen, R1.init, getR2.save);
+            actOnChosen!((ref r, T v) { r.front = v; })(this, v);
         }
     }
 
-    @property void front(T)(T v)
-    if (is(typeof({ r1.front = v; r2.front = v; })))
+    static if (allSatisfy!(hasMobileElements, Ranges))
+    auto moveFront()
     {
-        actOnChosen!((ref r, T v) { r.front = v; })(this, v);
+        return actOnChosen!((ref r) => r.moveFront)(this);
     }
 
-    static if (hasMobileElements!R1 && hasMobileElements!R2)
-        auto moveFront()
-        {
-            return actOnChosen!((ref r) => r.moveFront)(this);
-        }
-
-    static if (isBidirectionalRange!R1 && isBidirectionalRange!R2)
+    static if (allSatisfy!(isBidirectionalRange, Ranges))
     {
         @property auto ref back()
         {
@@ -1590,20 +1619,25 @@ private struct ChooseResult(R1, R2)
             actOnChosen!((ref r) { r.popBack; })(this);
         }
 
-        static if (hasMobileElements!R1 && hasMobileElements!R2)
-            auto moveBack()
-            {
-                return actOnChosen!((ref r) => r.moveBack)(this);
-            }
-
-        @property void back(T)(T v)
-        if (is(typeof({ r1.back = v; r2.back = v; })))
+        static if (allSatisfy!(hasMobileElements, Ranges))
+        auto moveBack()
         {
-            actOnChosen!((ref r, T v) { r.back = v; })(this, v);
+            return actOnChosen!((ref r) => r.moveBack)(this);
+        }
+
+        template back(T)
+        {
+            private enum overloadValidFor(alias r) = is(typeof(r.back = T.init));
+
+            static if (allSatisfy!(overloadValidFor, rs))
+            void back(T v)
+            {
+                actOnChosen!((ref r, T v) { r.back = v; })(this, v);
+            }
         }
     }
 
-    static if (hasLength!R1 && hasLength!R2)
+    static if (allSatisfy!(hasLength, Ranges))
     {
         @property size_t length()
         {
@@ -1612,7 +1646,7 @@ private struct ChooseResult(R1, R2)
         alias opDollar = length;
     }
 
-    static if (isRandomAccessRange!R1 && isRandomAccessRange!R2)
+    static if (allSatisfy!(isRandomAccessRange, Ranges))
     {
         auto ref opIndex(size_t index)
         {
@@ -1620,33 +1654,41 @@ private struct ChooseResult(R1, R2)
             return actOnChosen!get(this, index);
         }
 
-        static if (hasMobileElements!R1 && hasMobileElements!R2)
+        static if (allSatisfy!(hasMobileElements, Ranges))
             auto moveAt(size_t index)
             {
                 return actOnChosen!((ref r, size_t index) => r.moveAt(index))
                     (this, index);
             }
 
-        void opIndexAssign(T)(T v, size_t index)
-        if (is(typeof({ r1[1] = v; r2[1] = v; })))
+        private enum indexAssignable(T, R) = is(typeof(lvalueOf!R[1] = T.init));
+
+        template opIndexAssign(T)
+        if (allSatisfy!(ApplyLeft!(indexAssignable, T), Ranges))
         {
-            return actOnChosen!((ref r, size_t index, T v) { r[index] = v; })
-                (this, index, v);
+            void opIndexAssign(T v, size_t index)
+            {
+                return actOnChosen!((ref r, size_t index, T v) { r[index] = v; })
+                    (this, index, v);
+            }
         }
     }
 
-    static if (hasSlicing!R1 && hasSlicing!R2)
-        auto opSlice(size_t begin, size_t end)
+    static if (allSatisfy!(hasSlicing, Ranges))
+    auto opSlice(size_t begin, size_t end)
+    {
+        alias Slice(R) = typeof(R.init[0 .. 1]);
+        alias Slices = staticMap!(Slice, Ranges);
+
+        auto sliceOrInit(size_t i)()
         {
-            alias Slice1 = typeof(R1.init[0 .. 1]);
-            alias Slice2 = typeof(R2.init[0 .. 1]);
-            return actOnChosen!((r, size_t begin, size_t end) {
-                    static if (is(typeof(r) == Slice1))
-                        return choose(true, r[begin .. end], Slice2.init);
-                    else
-                        return choose(false, Slice1.init, r[begin .. end]);
-                })(this, begin, end);
+            ref getI() @trusted { return rs[i]; }
+            return i == chosenI? getI()[begin .. end]: Slices[i].init;
         }
+
+        return chooseAmong(chosenI, staticMap!(sliceOrInit,
+            aliasSeqOf!(rs.length.iota)));
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18657
@@ -1668,8 +1710,9 @@ pure @safe unittest
         int front;
         bool empty;
         void popFront() {}
-        @property R save() { p = q; return this; }
-            // `p = q;` is only there to prevent inference of `scope return`.
+        // `p = q;` is only there to prevent inference of `scope return`.
+        @property @safe R save() { p = q; return this; }
+
     }
     R r;
     choose(true, r, r).save;
@@ -1801,10 +1844,7 @@ if (Ranges.length >= 2
         && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges))
         && !is(CommonType!(staticMap!(ElementType, Ranges)) == void))
 {
-    static if (Ranges.length == 2)
-        return choose(index == 0, rs[0], rs[1]);
-    else
-        return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
+        return ChooseResult!Ranges(index, rs);
 }
 
 ///
@@ -8427,7 +8467,7 @@ if (isForwardRange!Source && hasLength!Source)
     /// Ditto
     @property bool empty()
     {
-        return _source.empty;
+        return _chunkCount == 0;
     }
 
     /// Ditto
@@ -9713,9 +9753,18 @@ if (Values.length > 1)
 {
     private enum arity = Values.length;
 
+    private alias UnqualValues = staticMap!(Unqual, Values);
+
     private this(return scope ref Values values)
     {
-        this.values = values;
+        ref @trusted unqual(T)(ref T x){return cast() x;}
+
+        // TODO: this calls any possible copy constructors without qualifiers.
+        // Find a way to initialize values using qualified copy constructors.
+        static foreach (i; 0 .. Values.length)
+        {
+            this.values[i] = unqual(values[i]);
+        }
         this.backIndex = arity;
     }
 
@@ -9760,7 +9809,7 @@ if (Values.length > 1)
 
     alias opDollar = length;
 
-    CommonType!Values opIndex(size_t idx)
+    @trusted CommonType!Values opIndex(size_t idx)
     {
         // when i + idx points to elements popped
         // with popBack
@@ -9768,7 +9817,7 @@ if (Values.length > 1)
         final switch (frontIndex + idx)
             static foreach (i, T; Values)
             case i:
-                return values[i];
+                return cast(T) values[i];
     }
 
     OnlyResult opSlice()
@@ -9800,12 +9849,15 @@ if (Values.length > 1)
     {
         import std.traits : hasElaborateAssign;
         static if (hasElaborateAssign!T)
-            private Values values;
+            private UnqualValues values;
         else
-            private Values values = void;
+            private UnqualValues values = void;
     }
     else
-        private Values values;
+        // These may alias to shared or immutable data. Do not let the user
+        // to access these directly, and do not allow mutation without checking
+        // the qualifier.
+        private UnqualValues values;
 }
 
 // Specialize for single-element results
@@ -9814,12 +9866,12 @@ private struct OnlyResult(T)
     @property T front()
     {
         assert(!empty, "Attempting to fetch the front of an empty Only range");
-        return _value;
+        return fetchFront();
     }
     @property T back()
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
-        return _value;
+        return fetchFront();
     }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
@@ -9838,14 +9890,17 @@ private struct OnlyResult(T)
 
     private this()(return scope auto ref T value)
     {
-        this._value = value;
+        ref @trusted unqual(ref T x){return cast() x;}
+        // TODO: this calls the possible copy constructor without qualifiers.
+        // Find a way to initialize value using a qualified copy constructor.
+        this._value = unqual(value);
         this._empty = false;
     }
 
     T opIndex(size_t i)
     {
         assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
-        return _value;
+        return fetchFront();
     }
 
     OnlyResult opSlice()
@@ -9868,35 +9923,14 @@ private struct OnlyResult(T)
         return copy;
     }
 
+    // This may alias to shared or immutable data. Do not let the user
+    // to access this directly, and do not allow mutation without checking
+    // the qualifier.
     private Unqual!T _value;
     private bool _empty = true;
-}
-
-// Specialize for the empty range
-private struct OnlyResult()
-{
-    private static struct EmptyElementType {}
-
-    bool empty() @property { return true; }
-    size_t length() const @property { return 0; }
-    alias opDollar = length;
-    EmptyElementType front() @property { assert(false); }
-    void popFront() { assert(false); }
-    EmptyElementType back() @property { assert(false); }
-    void popBack() { assert(false); }
-    OnlyResult save() @property { return this; }
-
-    EmptyElementType opIndex(size_t i)
+    private @trusted T fetchFront()
     {
-        assert(false);
-    }
-
-    OnlyResult opSlice() { return this; }
-
-    OnlyResult opSlice(size_t from, size_t to)
-    {
-        assert(from == 0 && to == 0);
-        return this;
+        return *cast(T*)&_value;
     }
 }
 
@@ -9921,9 +9955,18 @@ Returns:
 See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(return scope Values values)
-if (!is(CommonType!Values == void) || Values.length == 0)
+if (!is(CommonType!Values == void))
 {
     return OnlyResult!Values(values);
+}
+
+/// ditto
+auto only()()
+{
+    // cannot use noreturn due to issue 22383
+    struct EmptyElementType {}
+    EmptyElementType[] result;
+    return result;
 }
 
 ///
@@ -10155,6 +10198,19 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     } ();
 
     assert(range.join == "Hello World");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=21022
+@safe pure nothrow unittest
+{
+    struct S
+    {
+        int* mem;
+    }
+
+    immutable S x;
+    immutable(S)[] arr;
+    auto r1 = arr.chain(x.only, only(x, x));
 }
 
 /**
@@ -12740,8 +12796,12 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 
         import std.exception : assertThrown;
 
-        // Check out of bounds error
-        assertThrown!Error(bw[2 * bitsNum - 1]);
+        version (D_NoBoundsChecks) {}
+        else
+        {
+            // Check out of bounds error
+            assertThrown!Error(bw[2 * bitsNum - 1]);
+        }
 
         bw[2] = true;
         assert(bw[2] == true);
@@ -13501,3 +13561,49 @@ pure @safe unittest
 
     assert([1, 2, 3, 4].padRight(0, 10)[7 .. 9].equal([0, 0]));
 }
+
+/**
+This simplifies a commonly used idiom in phobos for accepting any kind of string
+parameter. The type `R` can for example be a simple string, chained string using
+$(REF chain, std,range), $(REF chainPath, std,path) or any other input range of
+characters.
+
+Only finite length character ranges are allowed with this constraint.
+
+This template is equivalent to:
+---
+isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R)
+---
+
+See_Also:
+$(REF isInputRange, std,range,primitives),
+$(REF isInfinite, std,range,primitives),
+$(LREF isSomeChar),
+$(REF ElementEncodingType, std,range,primitives)
+*/
+template isSomeFiniteCharInputRange(R)
+{
+    import std.traits : isSomeChar;
+
+    enum isSomeFiniteCharInputRange = isInputRange!R && !isInfinite!R
+        && isSomeChar!(ElementEncodingType!R);
+}
+
+///
+@safe unittest
+{
+    import std.path : chainPath;
+    import std.range : chain;
+
+    void someLibraryMethod(R)(R argument)
+    if (isSomeFiniteCharInputRange!R)
+    {
+        // implementation detail, would iterate over each character of argument
+    }
+
+    someLibraryMethod("simple strings work");
+    someLibraryMethod(chain("chained", " ", "strings", " ", "work"));
+    someLibraryMethod(chainPath("chained", "paths", "work"));
+    // you can also use custom structs implementing a char range
+}
+

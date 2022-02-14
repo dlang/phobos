@@ -2844,6 +2844,19 @@ public:
     assert(format("%b", b) == "1_00001111_00001111");
 }
 
+@system unittest
+{
+    BitArray a;
+    a.length = 5;
+    foreach (ref bool b; a)
+    {
+        assert(b == 0);
+        b = 1;
+    }
+    foreach (bool b; a)
+        assert(b == 1);
+}
+
 /++
     Swaps the endianness of the given integral value or character.
   +/
@@ -2935,12 +2948,12 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 private union EndianSwapper(T)
 if (canSwapEndianness!T)
 {
-    Unqual!T value;
+    T value;
     ubyte[T.sizeof] array;
 
-    static if (is(FloatingPointTypeOf!(Unqual!T) == float))
+    static if (is(immutable FloatingPointTypeOf!(T) == immutable float))
         uint  intValue;
-    else static if (is(FloatingPointTypeOf!(Unqual!T) == double))
+    else static if (is(immutable FloatingPointTypeOf!(T) == immutable double))
         ulong intValue;
 
 }

@@ -1,4 +1,6 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos.lib for Win32 OMF
+# MS COFF builds use win64.mak for 32 and 64 bit
+#
 # Prerequisites:
 #	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
 #	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
@@ -18,8 +20,8 @@
 #	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
 #	or just use the supplied minit.obj
 
-## Memory model (32 or 64)
-MODEL=32
+# Ignored, only the default value is supported
+# MODEL=32omf
 
 ## Copy command
 
@@ -41,13 +43,13 @@ DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -I$(DRUNTIME)\import
+DFLAGS=-m32omf -conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -I$(DRUNTIME)\import
+UDFLAGS=-m32omf -unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -60,7 +62,7 @@ MAKE=make
 DMD_DIR=../dmd
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
+DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/32/dmd
 
 ## Zlib library
 
@@ -94,7 +96,7 @@ test.exe : test.obj $(LIB)
 
 SRC= \
 	unittest.d \
-	index.d
+	index.dd
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
@@ -275,7 +277,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\checkedint.d std\experimental\typecons.d
+	std\checkedint.d std\experimental\checkedint.d std\experimental\typecons.d
 
 SRC_STD_UNI = std\uni\package.d \
 
@@ -367,7 +369,6 @@ SRC_ZLIB= \
 	etc\c\zlib\compress.c \
 	etc\c\zlib\crc32.c \
 	etc\c\zlib\deflate.c \
-	etc\c\zlib\example.c \
 	etc\c\zlib\gzclose.c \
 	etc\c\zlib\gzlib.c \
 	etc\c\zlib\gzread.c \
@@ -376,18 +377,9 @@ SRC_ZLIB= \
 	etc\c\zlib\inffast.c \
 	etc\c\zlib\inflate.c \
 	etc\c\zlib\inftrees.c \
-	etc\c\zlib\minigzip.c \
 	etc\c\zlib\trees.c \
 	etc\c\zlib\uncompr.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\algorithm.txt \
-	etc\c\zlib\zlib.3 \
-	etc\c\zlib\ChangeLog \
-	etc\c\zlib\README \
-	etc\c\zlib\win32.mak \
-	etc\c\zlib\win64.mak \
-	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak
+	etc\c\zlib\zutil.c
 
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
@@ -542,7 +534,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak zlib.lib CC=$(CC) LIB=$(AR)
+	$(MAKE) -f win32.mak zlib.lib CC=$(CC) LIB=$(AR)
 	cd ..\..\..
 
 ######################################################
@@ -555,7 +547,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak clean
+	$(MAKE) -f win32.mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
@@ -570,10 +562,5 @@ install: phobos.zip
 auto-tester-build:
 	echo "Windows builds have been disabled on auto-tester"
 
-JOBS=$(NUMBER_OF_PROCESSORS)
-GMAKE=gmake
-
 auto-tester-test:
 	echo "Windows builds have been disabled on auto-tester"
-	#$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
-	#CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)

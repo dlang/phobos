@@ -262,6 +262,8 @@ private enum isHashable(T) = __traits(compiles,
 
 private enum hasPostblit(T) = __traits(hasPostblit, T);
 
+private enum isInout(T) = is(T == inout);
+
 /**
  * A [tagged union](https://en.wikipedia.org/wiki/Tagged_union) that can hold a
  * single value from any of a specified set of types.
@@ -365,24 +367,15 @@ public:
         {
             import core.lifetime : forward;
 
-            storage = ()
+            static if (isCopyable!T)
             {
-                static if (isCopyable!T)
-                {
-                    mixin("Storage newStorage = { ",
-                        // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                        Storage.memberName!T, ": (__ctfe ? value : forward!value)",
-                    " };");
-                }
-                else
-                {
-                    mixin("Storage newStorage = { ",
-                        Storage.memberName!T, " : forward!value",
-                    " };");
-                }
-
-                return newStorage;
-            }();
+                // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                __traits(getMember, storage, Storage.memberName!T) = __ctfe ? value : forward!value;
+            }
+            else
+            {
+                __traits(getMember, storage, Storage.memberName!T) = forward!value;
+            }
 
             tag = tid;
         }
@@ -394,15 +387,7 @@ public:
                 /// ditto
                 this(const(T) value) const
                 {
-                    storage = ()
-                    {
-                        mixin("const(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
-                        " };");
-
-                        return newStorage;
-                    }();
-
+                    __traits(getMember, storage, Storage.memberName!T) = value;
                     tag = tid;
                 }
             }
@@ -419,15 +404,7 @@ public:
                 /// ditto
                 this(immutable(T) value) immutable
                 {
-                    storage = ()
-                    {
-                        mixin("immutable(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
-                        " };");
-
-                        return newStorage;
-                    }();
-
+                    __traits(getMember, storage, Storage.memberName!T) = value;
                     tag = tid;
                 }
             }
@@ -444,6 +421,7 @@ public:
         (
             allSatisfy!(isCopyable, Map!(InoutOf, Types))
             && !anySatisfy!(hasPostblit, Map!(InoutOf, Types))
+            && allSatisfy!(isInout, Map!(InoutOf, Types))
         )
         {
             /// Constructs a `SumType` that's a copy of another `SumType`.
@@ -1505,6 +1483,35 @@ version (D_BetterC) {} else
     sm = "this should be @safe";
 }
 
+// Pointers to local variables
+// https://issues.dlang.org/show_bug.cgi?id=22117
+@safe unittest
+{
+    int n = 123;
+    immutable int ni = 456;
+
+    SumType!(int*) s = &n;
+    const SumType!(int*) sc = &n;
+    immutable SumType!(int*) si = &ni;
+}
+
+// Immutable member type with copy constructor
+// https://issues.dlang.org/show_bug.cgi?id=22572
+@safe unittest
+{
+    static struct CopyConstruct
+    {
+        this(ref inout CopyConstruct other) inout {}
+    }
+
+    static immutable struct Value
+    {
+        CopyConstruct c;
+    }
+
+    SumType!Value s;
+}
+
 /// True if `T` is an instance of the `SumType` template, otherwise false.
 private enum bool isSumTypeInstance(T) = is(T == SumType!Args, Args...);
 
@@ -1713,7 +1720,6 @@ template match(handlers...)
  * Throws:
  *   [MatchException], if the currently-held type has no matching handler.
  *
- * See_Also: `std.variant.tryVisit`
  * See_Also: $(REF tryVisit, std,variant)
  */
 version (D_Exceptions)

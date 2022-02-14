@@ -76,36 +76,42 @@ import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
 
-///
+/// Value tuples
 @safe unittest
 {
-    // value tuples
     alias Coord = Tuple!(int, "x", int, "y", int, "z");
     Coord c;
     c[1] = 1;       // access by index
     c.z = 1;        // access by given name
     assert(c == Coord(0, 1, 1));
 
-    // names can be omitted
-    alias DicEntry = Tuple!(string, string);
+    // names can be omitted, types can be mixed
+    alias DictEntry = Tuple!(string, int);
+    auto dict = DictEntry("seven", 7);
 
-    // tuples can also be constructed on instantiation
+    // element types can be inferred
     assert(tuple(2, 3, 4)[1] == 3);
-    // construction on instantiation works with names too
-    assert(tuple!("x", "y", "z")(2, 3, 4).y == 3);
+    // type inference works with names too
+    auto tup = tuple!("x", "y", "z")(2, 3, 4);
+    assert(tup.y == 3);
+}
 
-    // Rebindable references to const and immutable objects
+/// Rebindable references to const and immutable objects
+@safe unittest
+{
+    class Widget
     {
-        class Widget { void foo() const @safe {} }
-        const w1 = new Widget, w2 = new Widget;
-        w1.foo();
-        // w1 = w2 would not work; can't rebind const object
-        auto r = Rebindable!(const Widget)(w1);
-        // invoke method as if r were a Widget object
-        r.foo();
-        // rebind r to refer to another object
-        r = w2;
+        void foo() const @safe {}
     }
+    const w1 = new Widget, w2 = new Widget;
+    w1.foo();
+    // w1 = w2 would not work; can't rebind const object
+
+    auto r = Rebindable!(const Widget)(w1);
+    // invoke method as if r were a Widget object
+    r.foo();
+    // rebind r to refer to another object
+    r = w2;
 }
 
 /**
@@ -448,6 +454,90 @@ private enum bool distinctFieldNames(names...) = __traits(compiles,
     static assert(!distinctFieldNames!(int, "int"));
 }
 
+
+// Parse (type,name) pairs (FieldSpecs) out of the specified
+// arguments. Some fields would have name, others not.
+private template parseSpecs(Specs...)
+{
+    static if (Specs.length == 0)
+    {
+        alias parseSpecs = AliasSeq!();
+    }
+    else static if (is(Specs[0]))
+    {
+        static if (is(typeof(Specs[1]) : string))
+        {
+            alias parseSpecs =
+                AliasSeq!(FieldSpec!(Specs[0 .. 2]),
+                          parseSpecs!(Specs[2 .. $]));
+        }
+        else
+        {
+            alias parseSpecs =
+                AliasSeq!(FieldSpec!(Specs[0]),
+                          parseSpecs!(Specs[1 .. $]));
+        }
+    }
+    else
+    {
+        static assert(0, "Attempted to instantiate Tuple with an "
+                        ~"invalid argument: "~ Specs[0].stringof);
+    }
+}
+
+private template FieldSpec(T, string s = "")
+{
+    alias Type = T;
+    alias name = s;
+}
+
+// Used with staticMap.
+private alias extractType(alias spec) = spec.Type;
+private alias extractName(alias spec) = spec.name;
+private template expandSpec(alias spec)
+{
+    static if (spec.name.length == 0)
+        alias expandSpec = AliasSeq!(spec.Type);
+    else
+        alias expandSpec = AliasSeq!(spec.Type, spec.name);
+}
+
+
+private enum areCompatibleTuples(Tup1, Tup2, string op) =
+    isTuple!(OriginalType!Tup2) && Tup1.Types.length == Tup2.Types.length && is(typeof(
+    (ref Tup1 tup1, ref Tup2 tup2)
+    {
+        static foreach (i; 0 .. Tup1.Types.length)
+        {{
+            auto lhs = typeof(tup1.field[i]).init;
+            auto rhs = typeof(tup2.field[i]).init;
+            static if (op == "=")
+                lhs = rhs;
+            else
+                auto result = mixin("lhs "~op~" rhs");
+        }}
+    }));
+
+private enum areBuildCompatibleTuples(Tup1, Tup2) =
+    isTuple!Tup2 && Tup1.Types.length == Tup2.Types.length && is(typeof(
+    {
+        static foreach (i; 0 .. Tup1.Types.length)
+            static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
+    }));
+
+// Returns `true` iff a `T` can be initialized from a `U`.
+private enum isBuildable(T, U) = is(typeof(
+    {
+        U u = U.init;
+        T t = u;
+    }));
+// Helper for partial instantiation
+private template isBuildableFrom(U)
+{
+    enum isBuildableFrom(T) = isBuildable!(T, U);
+}
+
+
 /**
 _Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an `int` and a `string`. `Tuple` can be used to bundle
@@ -466,47 +556,7 @@ if (distinctFieldNames!(Specs))
 {
     import std.meta : staticMap;
 
-    // Parse (type,name) pairs (FieldSpecs) out of the specified
-    // arguments. Some fields would have name, others not.
-    template parseSpecs(Specs...)
-    {
-        static if (Specs.length == 0)
-        {
-            alias parseSpecs = AliasSeq!();
-        }
-        else static if (is(Specs[0]))
-        {
-            static if (is(typeof(Specs[1]) : string))
-            {
-                alias parseSpecs =
-                    AliasSeq!(FieldSpec!(Specs[0 .. 2]),
-                              parseSpecs!(Specs[2 .. $]));
-            }
-            else
-            {
-                alias parseSpecs =
-                    AliasSeq!(FieldSpec!(Specs[0]),
-                              parseSpecs!(Specs[1 .. $]));
-            }
-        }
-        else
-        {
-            static assert(0, "Attempted to instantiate Tuple with an "
-                            ~"invalid argument: "~ Specs[0].stringof);
-        }
-    }
-
-    template FieldSpec(T, string s = "")
-    {
-        alias Type = T;
-        alias name = s;
-    }
-
     alias fieldSpecs = parseSpecs!Specs;
-
-    // Used with staticMap.
-    alias extractType(alias spec) = spec.Type;
-    alias extractName(alias spec) = spec.name;
 
     // Generates named fields as follows:
     //    alias name_0 = Identity!(field[0]);
@@ -533,52 +583,6 @@ if (distinctFieldNames!(Specs))
     // names if any.
     alias sliceSpecs(size_t from, size_t to) =
         staticMap!(expandSpec, fieldSpecs[from .. to]);
-
-    template expandSpec(alias spec)
-    {
-        static if (spec.name.length == 0)
-        {
-            alias expandSpec = AliasSeq!(spec.Type);
-        }
-        else
-        {
-            alias expandSpec = AliasSeq!(spec.Type, spec.name);
-        }
-    }
-
-    enum areCompatibleTuples(Tup1, Tup2, string op) = isTuple!(OriginalType!Tup2) && is(typeof(
-    (ref Tup1 tup1, ref Tup2 tup2)
-    {
-        static assert(tup1.field.length == tup2.field.length);
-        static foreach (i; 0 .. Tup1.Types.length)
-        {{
-            auto lhs = typeof(tup1.field[i]).init;
-            auto rhs = typeof(tup2.field[i]).init;
-            static if (op == "=")
-                lhs = rhs;
-            else
-                auto result = mixin("lhs "~op~" rhs");
-        }}
-    }));
-
-    enum areBuildCompatibleTuples(Tup1, Tup2) = isTuple!Tup2 && is(typeof(
-    {
-        static assert(Tup1.Types.length == Tup2.Types.length);
-        static foreach (i; 0 .. Tup1.Types.length)
-            static assert(isBuildable!(Tup1.Types[i], Tup2.Types[i]));
-    }));
-
-    /+ Returns `true` iff a `T` can be initialized from a `U`. +/
-    enum isBuildable(T, U) =  is(typeof(
-    {
-        U u = U.init;
-        T t = u;
-    }));
-    /+ Helper for partial instantiation +/
-    template isBuildableFrom(U)
-    {
-        enum isBuildableFrom(T) = isBuildable!(T, U);
-    }
 
     struct Tuple
     {
@@ -1359,8 +1363,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Types.length == 0)
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             import std.format : format;
 
@@ -1381,8 +1384,7 @@ if (distinctFieldNames!(Specs))
         }
 
         ///
-        static if (Types.length == 0)
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             import std.exception : assertThrown;
             import std.format : format, FormatException;
@@ -2243,7 +2245,7 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         U stripped;
     }
 
-    void opAssign(T another) pure nothrow @nogc
+    void opAssign(return scope T another) pure nothrow @nogc
     {
         // If `T` defines `opCast` we must infer the safety
         static if (hasMember!(T, "opCast"))
@@ -2275,7 +2277,7 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
         opAssign(initializer);
     }
 
-    @property inout(T) get() @trusted pure nothrow @nogc inout
+    @property inout(T) get() @trusted pure nothrow @nogc return scope inout
     {
         return original;
     }
@@ -2762,7 +2764,11 @@ struct Nullable(T)
 {
     private union DontCallDestructorT
     {
-        T payload;
+        import std.traits : hasIndirections;
+        static if (hasIndirections!T)
+            T payload;
+        else
+            T payload = void;
     }
 
     private DontCallDestructorT _value = DontCallDestructorT.init;
@@ -3040,7 +3046,7 @@ struct Nullable(T)
 
         if (_isNull)
         {
-            // trusted since payload is known to be T.init here.
+            // trusted since payload is known to be uninitialized.
             () @trusted { moveEmplace(copy.payload, _value.payload); }();
         }
         else
@@ -4047,7 +4053,7 @@ template apply(alias fun)
     import std.functional : unaryFun;
 
     auto apply(T)(auto ref T t)
-    if (isInstanceOf!(Nullable, T) && is(typeof(unaryFun!fun(T.init.get))))
+    if (isInstanceOf!(Nullable, T))
     {
         alias FunType = typeof(unaryFun!fun(T.init.get));
 
@@ -5118,6 +5124,46 @@ private static:
         static abstract class C_9 : K {}
         auto o = new BlackHole!C_9;
     }+/
+    // test `parent` alias
+    {
+        interface I_11
+        {
+            void simple(int) @safe;
+            int anotherSimple(string);
+            int overloaded(int);
+            /+ XXX [BUG 19715]
+            void overloaded(string) @safe;
+            +/
+        }
+
+        static class C_11
+        {
+            import std.traits : Parameters, ReturnType;
+            import std.meta : Alias;
+
+            protected ReturnType!fn _impl(alias fn)(Parameters!fn)
+            if (is(Alias!(__traits(parent, fn)) == interface))
+            {
+                static if (!is(typeof(return) == void))
+                    return typeof(return).init;
+            }
+        }
+
+        template tpl(I, alias fn)
+        if (is(I == interface) && __traits(isSame, __traits(parent, fn), I))
+        {
+            enum string tpl = q{
+                enum bool haveReturn = !is(typeof(return) == void);
+
+                static if (is(typeof(return) == void))
+                    _impl!parent(args);
+                else
+                    return _impl!parent(args);
+            };
+        }
+
+        auto o = new AutoImplement!(I_11, C_11, tpl);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17177
@@ -5199,6 +5245,7 @@ version (StdUnittest)
         void bar(int a) { }
     }
 }
+
 @system unittest
 {
     auto foo = new issue10647_DoNothing!issue10647_Foo();
@@ -5435,8 +5482,8 @@ private static:
             if (!isCtor)
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
-                if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    preamble ~= `alias parent = __traits(getMember, super, "` ~ name ~ `");`;
+                static if (WITH_BASE_CLASS)
+                    preamble ~= `alias parent = __traits(getMember, ` ~ Policy.BASE_CLASS_ID ~ `, "` ~ name ~ `");`;
             }
 
             // Function body
@@ -6870,9 +6917,10 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 {
     static struct File
     {
+        static size_t nDestroyed;
         string name;
         @disable this(this); // not copyable
-        ~this() { name = null; }
+        ~this() { name = null; ++nDestroyed; }
     }
 
     auto file = File("name");
@@ -6880,14 +6928,37 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
     // file cannot be copied and has unique ownership
     static assert(!__traits(compiles, {auto file2 = file;}));
 
+    assert(File.nDestroyed == 0);
+
     // make the file refcounted to share ownership
-    import std.algorithm.mutation : move;
-    auto rcFile = refCounted(move(file));
-    assert(rcFile.name == "name");
-    assert(file.name == null);
-    auto rcFile2 = rcFile;
-    assert(rcFile.refCountedStore.refCount == 2);
-    // file gets properly closed when last reference is dropped
+    // Note:
+    //   We write a compound statement (brace-delimited scope) in which all `RefCounted!File` handles are created and deleted.
+    //   This allows us to see (after the scope) what happens after all handles have been destroyed.
+    {
+        // We move the content of `file` to a separate (and heap-allocated) `File` object,
+        // managed-and-accessed via one-or-multiple (initially: one) `RefCounted!File` objects ("handles").
+        // This "moving":
+        //   (1) invokes `file`'s destructor (=> `File.nDestroyed` is incremented from 0 to 1 and `file.name` becomes `null`);
+        //   (2) overwrites `file` with `File.init` (=> `file.name` becomes `null`).
+        // It appears that writing `name = null;` in the destructor is redundant,
+        // but please note that (2) is only performed if `File` defines a destructor (or post-blit operator),
+        // and in the absence of the `nDestroyed` instrumentation there would have been no reason to define a destructor.
+        import std.algorithm.mutation : move;
+        auto rcFile = refCounted(move(file));
+        assert(rcFile.name == "name");
+        assert(File.nDestroyed == 1);
+        assert(file.name == null);
+
+        // We create another `RefCounted!File` handle to the same separate `File` object.
+        // While any of the handles is still alive, the `File` object is kept alive (=> `File.nDestroyed` is not modified).
+        auto rcFile2 = rcFile;
+        assert(rcFile.refCountedStore.refCount == 2);
+        assert(File.nDestroyed == 1);
+    }
+    // The separate `File` object is deleted when the last `RefCounted!File` handle is destroyed
+    // (i.e. at the closing brace of the compound statement above, which destroys both handles: `rcFile` and `rcFile2`)
+    // (=> `File.nDestroyed` is incremented again, from 1 to 2):
+    assert(File.nDestroyed == 2);
 }
 
 /**
@@ -6958,7 +7029,7 @@ mixin template Proxy(alias a)
             static if (is(typeof(a.opCmp(b))))
                 return a.opCmp(b);
             else static if (is(typeof(b.opCmp(a))))
-                return -b.opCmp(b);
+                return -b.opCmp(a);
             else
                 return a < b ? -1 : a > b ? +1 : 0;
         }
@@ -9106,9 +9177,14 @@ template ReplaceTypeUnless(alias pred, From, To, T...)
         {
             template replaceTemplateArgs(T...)
             {
-                static if (is(typeof(T[0])))    // template argument is value or symbol
-                    enum replaceTemplateArgs = T[0];
-                else
+                static if (is(typeof(T[0]))) {   // template argument is value or symbol
+                    static if (__traits(compiles, { alias _ = T[0]; }))
+                        // it's a symbol
+                        alias replaceTemplateArgs = T[0];
+                    else
+                        // it's a value
+                        enum replaceTemplateArgs = T[0];
+                } else
                     alias replaceTemplateArgs = ReplaceTypeUnless!(pred, From, To, T[0]);
             }
             alias ReplaceTypeUnless = U!(staticMap!(replaceTemplateArgs, V));
@@ -9359,6 +9435,14 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
     interface I(T) {}
     class C : I!int {}
     static assert(is(ReplaceType!(int, string, C) == C));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22325
+@safe unittest
+{
+    static struct Foo(alias f) {}
+    static void bar() {}
+    alias _ = ReplaceType!(int, int, Foo!bar);
 }
 
 /**

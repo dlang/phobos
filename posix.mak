@@ -74,7 +74,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=9364d6f15f4a610fda49a693dbc18608bfc701bb
+DSCANNER_HASH=308bdfd1c18c435c94b712f3c941d787884ef1f3
 DSCANNER_DIR=$(ROOT_OF_THEM_ALL)/dscanner-$(DSCANNER_HASH)
 
 # Set DRUNTIME name and full path
@@ -135,7 +135,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields $(MODEL_FLAG) $(PIC)
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -146,8 +146,8 @@ ifdef ENABLE_COVERAGE
 override DFLAGS  += -cov=ctfe
 endif
 
-ifdef NO_AUTODECODE
-override DFLAGS += -version=NoAutodecodeStrings
+ifdef NO_BOUNDSCHECKS
+override DFLAGS += -boundscheck=off
 endif
 
 ifdef NO_AUTODECODE
@@ -208,7 +208,7 @@ STD_PACKAGES = std $(addprefix std/,\
 
 # Modules broken down per package
 
-PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+PACKAGE_std = array ascii base64 bigint bitmanip checkedint compiler complex concurrency \
   conv csv demangle encoding exception file \
   functional getopt json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
@@ -505,14 +505,14 @@ $(JSON) : $(ALL_D_FILES)
 # the following variables will be set by dlang.org:
 #     DOC_OUTPUT_DIR, STDDOC
 ###########################################################
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.dd $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # D file to html, e.g. std/conv.d -> std_conv.html
 # But "package.d" is special cased: std/range/package.d -> std_range.html
-D2HTML=$(foreach p,$1,$(if $(subst package.d,,$(notdir $p)),$(subst /,_,$(subst .d,.html,$p)),$(subst /,_,$(subst /package.d,.html,$p))))
+D2HTML=$(foreach p,$1,$(if $(subst package.d,,$(notdir $p)),$(subst /,_,$(subst .d,.html,$(subst .dd,.html,$p))),$(subst /,_,$(subst /package.d,.html,$p))))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
@@ -544,7 +544,7 @@ $(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak
-CWS_TOCHECK += $(ALL_D_FILES) index.d
+CWS_TOCHECK += $(ALL_D_FILES) index.dd
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
@@ -646,7 +646,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 # Check and run @betterC tests

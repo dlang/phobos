@@ -70,7 +70,7 @@ $(TR $(TD Objects) $(TD
 
   ...
   // multi-pattern regex
-  auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
+  auto multi = regex([`\d+,\d+`, `([a-z]+):(\d+)`]);
   auto m = "abc:43 12,34".matchAll(multi);
   assert(m.front.whichPattern == 2);
   assert(m.front[1] == "abc");
@@ -80,9 +80,17 @@ $(TR $(TD Objects) $(TD
   assert(m.front[1] == "12");
   ...
 
-  // The result of the `matchAll/matchFirst` is directly testable with if/assert/while.
-  // e.g. test if a string consists of letters:
-  assert(matchFirst("Letter", `^\p{L}+$`));
+  // The result of `matchAll/matchFirst` is directly testable with `if/assert/while`,
+  // e.g. test if a string consists of letters only:
+  assert(matchFirst("LettersOnly", `^\p{L}+$`));
+
+  // And we can take advantage of the ability to define a variable in the $(LINK2 https://dlang.org/spec/statement.html#IfCondition `IfCondition`):
+  if (const auto captures = matchFirst("At l34st one digit, but maybe more...", `((\d)(\d*))`))
+  {
+      assert(captures[2] == "3");
+      assert(captures[3] == "4");
+      assert(captures[1] == "34");
+  }
   ---
 
   $(SECTION Syntax and general information)
@@ -161,6 +169,10 @@ $(TR $(TD Objects) $(TD
     $(REG_ROW +, Matches previous character/subexpression 1 or more times.
       Greedy version - tries as many times as possible.)
     $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
+      Lazy version  - stops as early as possible.)
+    $(REG_ROW ?, Matches previous character/subexpression 0 or 1 time.
+      Greedy version - tries as many times as possible.)
+    $(REG_ROW ??, Matches previous character/subexpression 0 or 1 time.
       Lazy version  - stops as early as possible.)
     $(REG_ROW {n}, Matches previous character/subexpression exactly n times. )
     $(REG_ROW {n$(COMMA)}, Matches previous character/subexpression n times or more.
@@ -1736,4 +1748,10 @@ auto escaper(Range)(Range r)
       auto s2 = "";
       assert(s2.escaper.equal(""));
     }}
+}
+
+@system unittest
+{
+    assert("ab".matchFirst(regex(`a?b?`)).hit == "ab");
+    assert("ab".matchFirst(regex(`a??b?`)).hit == "");
 }
