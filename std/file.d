@@ -4635,7 +4635,7 @@ private struct DirIteratorImpl
             import std.path : chainPath;
             auto searchPattern = chainPath(directory, "*.*");
 
-            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, WIN32_FIND_DATAW* findinfo) @trusted
+            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, scope WIN32_FIND_DATAW* findinfo) @trusted
             {
                 return FindFirstFileW(pattern.tempCString!FSChar(), findinfo);
             }
@@ -4653,7 +4653,7 @@ private struct DirIteratorImpl
             return toNext(true, &_findinfo);
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @trusted
+        bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
 
