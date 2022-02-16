@@ -420,11 +420,11 @@ public:
     {
         static if (op == "+")
         {
-            data = BigUint.addOrSub(data, y.data, sign != y.sign, &sign);
+            data = BigUint.addOrSub(data, y.data, sign != y.sign, sign);
         }
         else static if (op == "-")
         {
-            data = BigUint.addOrSub(data, y.data, sign == y.sign, &sign);
+            data = BigUint.addOrSub(data, y.data, sign == y.sign, sign);
         }
         else static if (op == "*")
         {
