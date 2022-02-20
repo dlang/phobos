@@ -54,6 +54,8 @@ version (Windows)
     enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
+    /// On Windows, those two are equivalent
+    private enum SO_REUSEPORT = SO_REUSEADDR;
 
     private int _lasterr() nothrow @nogc
     {
@@ -2576,6 +2578,16 @@ enum SocketOption: int
     DEBUG =                SO_DEBUG,            /// Record debugging information
     BROADCAST =            SO_BROADCAST,        /// Allow transmission of broadcast messages
     REUSEADDR =            SO_REUSEADDR,        /// Allow local reuse of address
+    /**
+     * Allow local reuse of port
+     *
+     * On Windows, this is equivalent to `SocketOption.REUSEADDR`.
+     * On Linux, this ensures fair distribution of incoming connections accross threads.
+     *
+     * See_Also:
+     *   https://lwn.net/Articles/542629/
+     */
+    REUSEPORT =            SO_REUSEPORT,
     LINGER =               SO_LINGER,           /// Linger on close if unsent data is present
     OOBINLINE =            SO_OOBINLINE,        /// Receive out-of-band data in band
     SNDBUF =               SO_SNDBUF,           /// Send buffer size
