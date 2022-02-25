@@ -9107,27 +9107,31 @@ if (F.length == 1 && isCallable!F)
 
         //check if the function is a member function
         static if (isType!(__traits(parent, F)) && !hasFunctionAttributes!(F, "immutable"))
-            return false;
-
-        alias STC = ParameterStorageClass;
-
-        static foreach (i, param; Parameters!F)
         {
-            if (!is(param == immutable)
-                    && (isRefType!param || hasAliasing!param
-                    || ParameterStorageClassTuple!F[i] == STC.ref_
-                    || ParameterStorageClassTuple!F[i] == STC.out_))
-                return false;
-        }
-
-        alias rt = ReturnType!F;
-
-        if (is(rt == immutable))
-            return true;
-        else if (isRefType!rt || hasAliasing!rt || hasFunctionAttributes!(F, "ref"))
             return false;
+        }
         else
-            return true;
+        {
+            alias STC = ParameterStorageClass;
+
+            foreach (i, param; Parameters!F)
+            {
+                 if (!is(param == immutable)
+                        && (isRefType!param || hasAliasing!param
+                        || ParameterStorageClassTuple!F[i] == STC.ref_
+                        || ParameterStorageClassTuple!F[i] == STC.out_))
+                    return false;
+            }
+
+            alias rt = ReturnType!F;
+
+            if (is(rt == immutable))
+                return true;
+            else if (isRefType!rt || hasAliasing!rt || hasFunctionAttributes!(F, "ref"))
+                return false;
+            else
+                return true;
+        }
     }
 
     private bool isRefType(T)()
