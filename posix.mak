@@ -205,6 +205,9 @@ STD_PACKAGES = std $(addprefix std/,\
   experimental/allocator/building_blocks experimental/logger \
   format math net uni \
   experimental range regex windows)
+# std2x additions
+STD_PACKAGES += std2xalpha $(addprefix std2xalpha/, algorithm \
+  range)
 
 # Modules broken down per package
 
@@ -238,6 +241,10 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
 PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
+# std2x additions
+PACKAGE_std2xalpha = functional meta traits typecons
+PACKAGE_std2xalpha_algorithm = comparison iteration
+PACKAGE_std2xalpha_range = primitives
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))

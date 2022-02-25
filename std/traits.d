@@ -6823,7 +6823,8 @@ template isConvertibleToString(T)
     assert(isConvertibleToString!S);
 }
 
-package template convertToString(T)
+// public undocumented so it works in both std and std2x
+template convertToString(T)
 {
     static if (isConvertibleToString!T)
         alias convertToString = StringTypeOf!T;
