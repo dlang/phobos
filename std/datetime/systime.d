@@ -7668,7 +7668,7 @@ public:
         $(LREF SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
       +/
-    @property SysTime endOfMonth() @safe const nothrow scope
+    @property SysTime endOfMonth() @safe const nothrow return scope
     {
         immutable hnsecs = adjTime;
         immutable days = getUnitsFromHNSecs!"days"(hnsecs);
