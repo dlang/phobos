@@ -6269,7 +6269,7 @@ public:
             duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF SysTime).
       +/
-    SysTime opBinary(string op)(Duration duration) @safe const pure nothrow scope
+    SysTime opBinary(string op)(Duration duration) @safe const pure nothrow return scope
         if (op == "+" || op == "-")
     {
         SysTime retval = SysTime(this._stdTime, this._timezone);
