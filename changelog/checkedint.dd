@@ -1,5 +1,0 @@
-Move checkedint out of experimental.
-
-std.experimental.checkedint is now std.checkedint. The old name
-is still available and publicly imports the new one, and is also
-deprecated.
