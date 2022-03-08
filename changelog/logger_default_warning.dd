@@ -1,4 +1,0 @@
-Change default log level for std.experimental.logger to LogLevel.warning
-
-`std.experimental.logger.core.sharedLog` now returns by default a
-logger with its log level set to LogLevel.warning.
