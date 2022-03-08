@@ -1,0 +1,5 @@
+std.experimental.logger default level changed to `info` instead of `warning`
+
+In the 2.099.0 release, the default log level $(LINK2 https://dlang.org/changelog/2.099.0.html#logger_default_warning, was changed to warning).
+
+However, this was erroneously assumed to include `info` (informational) logs as well. Now it does include `info` log messages.
