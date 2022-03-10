@@ -1,0 +1,24 @@
+New function `bind` in `std.functional`
+
+It is used to pass the fields of a struct as arguments to a function. For
+example, it can be used in a range pipeline to give names to the elements of a
+$(REF Tuple, std, typecons):
+
+---
+import std.stdio;
+import std.range;
+import std.algorithm;
+import std.functional;
+
+void printWithLineNumbers(File f)
+{
+    f.byLine
+        .enumerate
+        .each!(bind!((num, line) {
+            writefln("%8d %s", num, line);
+        }));
+}
+---
+
+See $(REF_ALTTEXT the standard library documentation, bind, std, functional)
+for more information.
