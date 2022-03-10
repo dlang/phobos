@@ -1671,7 +1671,6 @@ if (
                 }
             }
 
-            index += i + 1;
             static if (i == 3)
             {
                 if (d > dchar.max)
@@ -1682,6 +1681,7 @@ if (
                         throw invalidUTF();
                 }
             }
+            index += i + 1;
             return d;
         }
     }
