@@ -2000,8 +2000,7 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.none;
     }
     else static if (is(typeof(
-        {
-            T val = void;
+        (T val) {
             const FormatSpec!Char f;
             static struct S {void put(scope Char s){}}
             S s;
@@ -2015,8 +2014,7 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.customPutWriterFormatSpec;
     }
     else static if (is(typeof(
-        {
-            T val = void;
+        (T val) {
             static struct S {void put(scope Char s){}}
             S s;
             val.toString(s);
@@ -2026,36 +2024,36 @@ template hasToString(T, Char)
     {
         enum hasToString = HasToStringResult.customPutWriter;
     }
-    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
+    else static if (is(typeof((T val) { FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
     {
         enum hasToString = HasToStringResult.constCharSinkFormatSpec;
     }
-    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}, "%s"); })))
+    else static if (is(typeof((T val) { val.toString((scope const(char)[] s){}, "%s"); })))
     {
         enum hasToString = HasToStringResult.constCharSinkFormatString;
     }
-    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}); })))
+    else static if (is(typeof((T val) { val.toString((scope const(char)[] s){}); })))
     {
         enum hasToString = HasToStringResult.constCharSink;
     }
 
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; FormatSpec!Char f; val.toString((in char[] s){}, f); })))
+                    is(typeof((T val) { FormatSpec!Char f; val.toString((in char[] s){}, f); })))
     {
         enum hasToString = HasToStringResult.inCharSinkFormatSpec;
     }
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; val.toString((in char[] s){}, "%s"); })))
+                    is(typeof((T val) { val.toString((in char[] s){}, "%s"); })))
     {
         enum hasToString = HasToStringResult.inCharSinkFormatString;
     }
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; val.toString((in char[] s){}); })))
+                    is(typeof((T val) { val.toString((in char[] s){}); })))
     {
         enum hasToString = HasToStringResult.inCharSink;
     }
 
-    else static if (is(typeof({ T val = void; return val.toString(); }()) S) && isSomeString!S)
+    else static if (is(ReturnType!((T val) { return val.toString(); }) S) && isSomeString!S)
     {
         enum hasToString = HasToStringResult.hasSomeToString;
     }
@@ -2274,6 +2272,26 @@ template hasToString(T, Char)
             static assert(hasToString!(M, char) == inCharSinkFormatSpec);
             static assert(hasToString!(N, char) == inCharSinkFormatString);
             static assert(hasToString!(O, char) == inCharSink);
+        }
+
+        // https://issues.dlang.org/show_bug.cgi?id=22873
+        static assert(hasToString!(inout(A), char) == customPutWriter);
+        static assert(hasToString!(inout(B), char) == constCharSinkFormatSpec);
+        static assert(hasToString!(inout(C), char) == constCharSinkFormatString);
+        static assert(hasToString!(inout(D), char) == constCharSink);
+        static assert(hasToString!(inout(E), char) == hasSomeToString);
+        static assert(hasToString!(inout(F), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(G), char) == customPutWriter);
+        static assert(hasToString!(inout(H), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(I), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(J), char) == hasSomeToString);
+        static assert(hasToString!(inout(K), char) == constCharSinkFormatSpec);
+        static assert(hasToString!(inout(L), char) == none);
+        static if (hasPreviewIn)
+        {
+            static assert(hasToString!(inout(M), char) == inCharSinkFormatSpec);
+            static assert(hasToString!(inout(N), char) == inCharSinkFormatString);
+            static assert(hasToString!(inout(O), char) == inCharSink);
         }
     }
 }
