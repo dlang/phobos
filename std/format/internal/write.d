@@ -2171,6 +2171,113 @@ template hasToString(T, Char)
     }
 }
 
+// const toString methods
+@safe unittest
+{
+    import std.range.primitives : isOutputRange;
+
+    static struct A
+    {
+        void toString(Writer)(ref Writer w) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct B
+    {
+        void toString(scope void delegate(scope const(char)[]) sink, scope FormatSpec!char fmt) const {}
+    }
+    static struct C
+    {
+        void toString(scope void delegate(scope const(char)[]) sink, string fmt) const {}
+    }
+    static struct D
+    {
+        void toString(scope void delegate(scope const(char)[]) sink) const {}
+    }
+    static struct E
+    {
+        string toString() const {return "";}
+    }
+    static struct F
+    {
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct G
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w) const if (isOutputRange!(Writer, string)) {}
+    }
+    static struct H
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct I
+    {
+        void toString(Writer)(ref Writer w) const if (isOutputRange!(Writer, string)) {}
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct J
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w, scope ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct K
+    {
+        void toString(Writer)(Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct L
+    {
+        void toString(Writer)(ref Writer w, scope const FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct M
+    {
+        void toString(scope void delegate(in char[]) sink, in FormatSpec!char fmt) const {}
+    }
+    static struct N
+    {
+        void toString(scope void delegate(in char[]) sink, string fmt) const {}
+    }
+    static struct O
+    {
+        void toString(scope void delegate(in char[]) sink) const {}
+    }
+
+    with(HasToStringResult)
+    {
+        static assert(hasToString!(A, char) == customPutWriter);
+        static assert(hasToString!(B, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(C, char) == constCharSinkFormatString);
+        static assert(hasToString!(D, char) == constCharSink);
+        static assert(hasToString!(E, char) == hasSomeToString);
+        static assert(hasToString!(F, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(G, char) == customPutWriter);
+        static assert(hasToString!(H, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(I, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(J, char) == hasSomeToString);
+        static assert(hasToString!(K, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(L, char) == none);
+        static if (hasPreviewIn)
+        {
+            static assert(hasToString!(M, char) == inCharSinkFormatSpec);
+            static assert(hasToString!(N, char) == inCharSinkFormatString);
+            static assert(hasToString!(O, char) == inCharSink);
+        }
+    }
+}
+
 // object formatting with toString
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, scope const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
