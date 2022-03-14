@@ -3105,7 +3105,7 @@ if (isSomeString!Source && !is(Source == enum) &&
  *     A $(LREF ConvException) if `source` is empty, if no number could be
  *     parsed, or if an overflow occurred.
  */
-auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source)
+auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref scope Source source)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
     isFloatingPoint!Target && !is(Target == enum))
 {
@@ -3120,6 +3120,12 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     else
     {
         alias p = source;
+    }
+
+    void advanceSource() @trusted {
+        // p is assigned from source.representation above so the cast is valid
+        static if (isNarrowString!Source)
+            source = cast(Source) p;
     }
 
     static immutable real[14] negtab =
@@ -3137,6 +3143,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     }
 
     enforce(!p.empty, bailOut());
+
 
     size_t count = 0;
     bool sign = false;
@@ -3168,8 +3175,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         // skip past the last 'f'
         ++count;
         p.popFront();
-        static if (isNarrowString!Source)
-            source = cast(Source) p;
+        advanceSource;
         static if (doCount)
         {
             return tuple!("data", "count")(sign ? -Target.infinity : Target.infinity, count);
@@ -3189,8 +3195,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         p.popFront();
         if (p.empty)
         {
-            static if (isNarrowString!Source)
-                source = cast(Source) p;
+            advanceSource;
             static if (doCount)
             {
                 return tuple!("data", "count")(cast (Target) (sign ? -0.0 : 0.0), count);
@@ -3222,8 +3227,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         // skip past the last 'n'
         ++count;
         p.popFront();
-        static if (isNarrowString!Source)
-            source = cast(Source) p;
+        advanceSource;
         static if (doCount)
         {
             return tuple!("data", "count")(Target.nan, count);
@@ -3418,8 +3422,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     // if overflow occurred
     enforce(ldval != real.infinity, new ConvException("Range error"));
 
-    static if (isNarrowString!Source)
-        source = cast(Source) p;
+    advanceSource;
     static if (doCount)
     {
         return tuple!("data", "count")(cast (Target) (sign ? -ldval : ldval), count);
@@ -3429,6 +3432,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         return cast (Target) (sign ? -ldval : ldval);
     }
 }
+
 
 ///
 @safe unittest
