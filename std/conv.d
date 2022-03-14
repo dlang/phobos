@@ -1724,7 +1724,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-private T toImpl(T, S)(S value)
+private T toImpl(T, S)(S value) @safe
 if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     isAssociativeArray!T && !is(T == enum))
 {
@@ -1739,10 +1739,10 @@ if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     foreach (k1, v1; value)
     {
         // Cast values temporarily to Unqual!V2 to store them to result variable
-        result[to!K2(k1)] = cast(Unqual!V2) to!V2(v1);
+        result[to!K2(k1)] = to!(Unqual!V2)(v1);
     }
     // Cast back to original type
-    return cast(T) result;
+    return () @trusted { return cast(T) result; }();
 }
 
 @safe unittest
