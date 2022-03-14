@@ -1724,7 +1724,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-private T toImpl(T, S)(S value) @safe
+private T toImpl(T, S)(S value)
 if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     isAssociativeArray!T && !is(T == enum))
 {
