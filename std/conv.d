@@ -1160,7 +1160,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
         int val;
         bool flag;
 
-        string toString() @safe { return text(val, ":", flag); }
+        string toString() { return text(val, ":", flag); }
 
         @disable this(this);
     }
