@@ -3122,7 +3122,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         alias p = source;
     }
 
-    void advanceSource() @trusted {
+    void advanceSource() @trusted
+    {
         // p is assigned from source.representation above so the cast is valid
         static if (isNarrowString!Source)
             source = cast(Source) p;
@@ -3175,7 +3176,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         // skip past the last 'f'
         ++count;
         p.popFront();
-        advanceSource;
+        advanceSource();
         static if (doCount)
         {
             return tuple!("data", "count")(sign ? -Target.infinity : Target.infinity, count);
@@ -3195,7 +3196,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         p.popFront();
         if (p.empty)
         {
-            advanceSource;
+            advanceSource();
             static if (doCount)
             {
                 return tuple!("data", "count")(cast (Target) (sign ? -0.0 : 0.0), count);
@@ -3227,7 +3228,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         // skip past the last 'n'
         ++count;
         p.popFront();
-        advanceSource;
+        advanceSource();
         static if (doCount)
         {
             return tuple!("data", "count")(Target.nan, count);
@@ -3422,7 +3423,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     // if overflow occurred
     enforce(ldval != real.infinity, new ConvException("Range error"));
 
-    advanceSource;
+    advanceSource();
     static if (doCount)
     {
         return tuple!("data", "count")(cast (Target) (sign ? -ldval : ldval), count);
