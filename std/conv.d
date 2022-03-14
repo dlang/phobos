@@ -1153,14 +1153,14 @@ if (!(isImplicitlyConvertible!(S, T) &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=16108
-@system unittest
+@safe unittest
 {
     static struct A
     {
         int val;
         bool flag;
 
-        string toString() { return text(val, ":", flag); }
+        string toString() @safe { return text(val, ":", flag); }
 
         @disable this(this);
     }
@@ -1341,12 +1341,12 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-@system unittest
+@safe unittest
 {
     // Conversion representing class object with string
     class A
     {
-        override string toString() const { return "an A"; }
+        override string toString() @safe const { return "an A"; }
     }
     A a;
     assert(to!string(a) == "null");
@@ -1354,7 +1354,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     assert(to!string(a) == "an A");
 
     // https://issues.dlang.org/show_bug.cgi?id=7660
-    class C { override string toString() const { return "C"; } }
+    class C { override string toString() @safe const { return "C"; } }
     struct S { C c; alias c this; }
     S s; s.c = new C();
     assert(to!string(s) == "C");
