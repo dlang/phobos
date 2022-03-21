@@ -478,6 +478,17 @@ if (isFloatingPoint!T)
         }
         return this;
     }
+
+    auto toNative()
+    {
+        import core.stdc.config;
+        static if (is(T == float))
+            return c_complex_float(re, im);
+        else static if (is(T == double))
+            return c_complex_double(re, im);
+        else
+            return c_complex_real(re, im);
+    }
 }
 
 @safe pure nothrow unittest
@@ -1908,5 +1919,16 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
              assert(abs(ref2 - res4) < eps);
              assert(abs(res3 - res4) < eps);
          }
+    }}
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         auto c = Complex!T(123, 456);
+         auto n = c.toNative();
+         assert(c.re == n.re && c.im == n.im);
     }}
 }
