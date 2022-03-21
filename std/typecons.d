@@ -8793,19 +8793,6 @@ private:
     enum isBaseEnumType(T) = is(E == T);
     alias Base = OriginalType!E;
     Base mValue;
-    static struct Negation
-    {
-    @safe @nogc pure nothrow:
-    private:
-        Base mValue;
-
-        // Prevent non-copy construction outside the module.
-        @disable this();
-        this(Base value)
-        {
-            mValue = value;
-        }
-    }
 
 public:
     this(E flag)
@@ -8830,10 +8817,10 @@ public:
         return mValue;
     }
 
-    Negation opUnary(string op)() const
+    auto opUnary(string op)() const
         if (op == "~")
     {
-        return Negation(~mValue);
+        return BitFlags(cast(E) cast(Base) ~mValue);
     }
 
     auto ref opAssign(T...)(T flags)
@@ -8877,12 +8864,6 @@ public:
         return this;
     }
 
-    auto ref opOpAssign(string op: "&")(Negation negatedFlags)
-    {
-        mValue &= negatedFlags.mValue;
-        return this;
-    }
-
     auto opBinary(string op)(BitFlags flags) const
         if (op == "|" || op == "&")
     {
@@ -8896,13 +8877,6 @@ public:
     {
         BitFlags result = this;
         result.opOpAssign!op(flag);
-        return result;
-    }
-
-    auto opBinary(string op: "&")(Negation negatedFlags) const
-    {
-        BitFlags result = this;
-        result.opOpAssign!op(negatedFlags);
         return result;
     }
 
@@ -9102,6 +9076,34 @@ public:
     flags.A = true;
     flags.BC = false;
     assert(flags.A && !flags.B && !flags.C);
+}
+
+// Negation of BitFlags should work with any base type.
+// Double-negation of BitFlags should work.
+@safe @nogc pure nothrow unittest
+{
+    static foreach (alias Base; AliasSeq!(
+        byte,
+        ubyte,
+        short,
+        ushort,
+        int,
+        uint,
+        long,
+        ulong,
+    ))
+    {{
+        enum Enum : Base
+        {
+            A = 1 << 0,
+            B = 1 << 1,
+            C = 1 << 2,
+        }
+
+        auto flags = BitFlags!Enum(Enum.A);
+
+        assert(flags == ~~flags);
+    }}
 }
 
 private enum false_(T) = false;
