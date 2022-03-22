@@ -720,7 +720,7 @@ public:
 
         Returns: The `this` of this `SysTime`.
       +/
-    ref SysTime opAssign()(auto ref const(SysTime) rhs) return scope @safe pure nothrow
+    ref SysTime opAssign()(auto ref const(SysTime) rhs) scope return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
