@@ -5983,3 +5983,14 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         }
     }
 }
+
+// Converts an unsigned integer to a compile-time string constant.
+package enum toCtString(ulong n) = n.stringof[0 .. $ - "LU".length];
+
+// Check that .stringof does what we expect, since it's not guaranteed by the
+// language spec.
+@safe /*@betterC*/ unittest
+{
+    assert(toCtString!0 == "0");
+    assert(toCtString!123456 == "123456");
+}
