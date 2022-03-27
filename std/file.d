@@ -214,7 +214,7 @@ class FileException : Exception
                           string file = __FILE__,
                           size_t line = __LINE__) @safe
     {
-        this(name, sysErrorString(errno), file, line, errno);
+        this(name, generateSysErrorMsg(errno), file, line, errno);
     }
     else version (Posix) this(scope const(char)[] name,
                              uint errno = .errno,
