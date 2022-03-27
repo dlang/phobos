@@ -68,6 +68,7 @@ version (Windows):
 import core.sys.windows.winbase, core.sys.windows.winnt;
 import std.array : appender, Appender;
 import std.conv : to, toTextRange, text;
+import std.exception;
 import std.windows.charset;
 
 string sysErrorString(
@@ -78,14 +79,23 @@ string sysErrorString(
 {
     auto buf = appender!string();
 
-    if (!putSysError(errCode, buf, MAKELANGID(langId, subLangId)))
-    {
-        throw new Exception(
-            "failed getting error string for WinAPI error code: " ~
-            sysErrorString(GetLastError()));
-    }
+    wenforce(
+        // Ignore unlikely UTF decoding errors, always report the actual error (`errCode`)
+        putSysError(errCode, buf, MAKELANGID(langId, subLangId)).ifThrown(false),
+        text("Could not fetch error string for WinAPI code ", errCode)
+    );
 
     return buf.data;
+}
+
+@safe unittest
+{
+    import std.algorithm.searching;
+
+    assert(sysErrorString(ERROR_PATH_NOT_FOUND) !is null);
+
+    const msg = collectExceptionMsg!WindowsException(sysErrorString(DWORD.max));
+    assert(msg.startsWith(`Could not fetch error string for WinAPI code 4294967295: `));
 }
 
 bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
@@ -203,7 +213,6 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 @system unittest
 {
     import std.algorithm.searching : startsWith, endsWith;
-    import std.exception;
     import std.string;
 
     auto e = collectException!WindowsException(
