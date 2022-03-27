@@ -43,7 +43,7 @@ version (StdDdoc)
     {
         private alias DWORD = int;
         final @property DWORD code(); /// `GetLastError`'s return value.
-        this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted;
+        this(DWORD code, string str=null, string file = null, size_t line = 0) nothrow @trusted;
     }
 
     /++
@@ -66,9 +66,8 @@ else:
 version (Windows):
 
 import core.sys.windows.winbase, core.sys.windows.winnt;
-import std.array : appender;
-import std.conv : to;
-import std.format.write : formattedWrite;
+import std.array : appender, Appender;
+import std.conv : to, toTextRange, text;
 import std.windows.charset;
 
 string sysErrorString(
@@ -114,7 +113,6 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
         return false;
 }
 
-
 class WindowsException : Exception
 {
     import core.sys.windows.windef : DWORD;
@@ -122,11 +120,11 @@ class WindowsException : Exception
     final @property DWORD code() { return _code; } /// `GetLastError`'s return value.
     private DWORD _code;
 
-    this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
+    this(DWORD code, string str=null, string file = null, size_t line = 0) nothrow @trusted
     {
         _code = code;
 
-        auto buf = appender!string();
+        auto buf = appender!(char[]);
 
         if (str != null)
         {
@@ -135,16 +133,41 @@ class WindowsException : Exception
                 buf.put(": ");
         }
 
-        if (code)
+        if (code && writeErrorMessage(code, buf))
         {
-            auto success = putSysError(code, buf);
-            formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+            buf.put(" (error ");
+            toTextRange(code, buf);
+            buf.put(')');
         }
 
-        super(buf.data, file, line);
+        super(cast(immutable) buf.data, file, line);
     }
 }
 
+/// Writes the error string associated to `code` into `buf`.
+/// Writes `Error <code>` when the error message lookup fails
+private bool writeErrorMessage(DWORD code, ref Appender!(char[]) buf) nothrow
+{
+    bool success;
+    try
+    {
+        // Reset the buffer to undo partial changes
+        const len = buf[].length;
+        scope (failure) buf.shrinkTo(len);
+
+        success = putSysError(code, buf);
+    }
+    catch (Exception) {}
+
+    // Write the error code instead if we couldn't find the string
+    if (!success)
+    {
+        buf.put("Error ");
+        toTextRange(code, buf);
+    }
+
+    return success;
+}
 
 T wenforce(T, S)(T value, lazy S msg = null,
 string file = __FILE__, size_t line = __LINE__)
@@ -177,7 +200,6 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
     throw new WindowsException(GetLastError(), names, file, line);
 }
 
-version (Windows)
 @system unittest
 {
     import std.algorithm.searching : startsWith, endsWith;
@@ -198,4 +220,15 @@ version (Windows)
 
     e = new WindowsException(0, "Test");
     assert(e.msg == "Test");
+}
+
+@safe nothrow unittest
+{
+    import std.algorithm.searching : endsWith;
+
+    auto e = new WindowsException(ERROR_FILE_NOT_FOUND);
+    assert(e.msg.endsWith("(error 2)"));
+
+    e = new WindowsException(DWORD.max);
+    assert(e.msg == "Error 4294967295");
 }
