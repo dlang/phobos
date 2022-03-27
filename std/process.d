@@ -299,10 +299,9 @@ static:
         }
         else version (Windows)
         {
-            import std.exception : enforce;
-            enforce(
+            import std.windows.syserror : wenforce;
+            wenforce(
                 SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
-                sysErrorString(GetLastError())
             );
             return value;
         }

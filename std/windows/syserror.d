@@ -169,7 +169,7 @@ private bool writeErrorMessage(DWORD code, ref Appender!(char[]) buf) nothrow
     return success;
 }
 
-T wenforce(T, S)(T value, lazy S msg = null,
+T wenforce(T, S = string)(T value, lazy S msg = null,
 string file = __FILE__, size_t line = __LINE__)
 if (isSomeString!S)
 {

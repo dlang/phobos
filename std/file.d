@@ -3471,7 +3471,7 @@ else version (Posix) string getcwd() @trusted
         while (true)
         {
             auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
-            enforce(len, sysErrorString(GetLastError()));
+            wenforce(len);
             if (len != buffer.length)
                 return to!(string)(buffer[0 .. len]);
             buffer.length *= 2;
