@@ -169,7 +169,7 @@ private bool writeErrorMessage(DWORD code, ref Appender!(char[]) buf) nothrow
     return success;
 }
 
-T wenforce(T, S)(T value, lazy S msg = null,
+T wenforce(T, S = string)(T value, lazy S msg = null,
 string file = __FILE__, size_t line = __LINE__)
 if (isSomeString!S)
 {
@@ -231,4 +231,19 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 
     e = new WindowsException(DWORD.max);
     assert(e.msg == "Error 4294967295");
+}
+
+/// Tries to translate an error code from the Windows API to the corresponding
+/// error message. Returns `Error <code>` on failure
+package (std) string generateSysErrorMsg(DWORD errCode = GetLastError()) nothrow @trusted
+{
+    auto buf = appender!(char[]);
+    cast(void) writeErrorMessage(errCode, buf);
+    return cast(immutable) buf[];
+}
+
+nothrow @safe unittest
+{
+    assert(generateSysErrorMsg(ERROR_PATH_NOT_FOUND) !is null);
+    assert(generateSysErrorMsg(DWORD.max) == "Error 4294967295");
 }
