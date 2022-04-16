@@ -3519,6 +3519,74 @@ if (isDynamicArray!A)
         return cast(typeof(return))(_data ? _data.arr : null);
     }
 
+    /**
+     * Returns: The current length of the array
+     */
+    @property size_t length() const
+    {
+        return _data ? _data.arr.length : 0U;
+    }
+
+    /**
+     * Set a new length for the array
+     * Params:
+     *    a = The new length
+     */
+    @property void length(size_t newLength) @trusted
+    {
+        import core.stdc.string : memset, memcpy;
+        static void doInitialize(void *start, void *end, const void[] initializer)
+        {
+            if (initializer.length == 1)
+            {
+                memset(start, *(cast(ubyte*)initializer.ptr), end - start);
+            }
+            else
+            {
+                auto q = initializer.ptr;
+                immutable initsize = initializer.length;
+                for (; start < end; start += initsize)
+                    memcpy(start, q, initsize);
+            }
+        }
+
+        static if (!__traits(isZeroInit, T))
+            static immutable initializer = T.init;
+
+        if (_data)
+        {
+            if (newLength > _data.arr.length)
+            {
+                immutable oldLength = _data.arr.length;
+                reserve(newLength - oldLength);
+                _data.arr = _data.arr.ptr[0 .. newLength];
+                static if (__traits(isZeroInit, T))
+                    memset(_data.arr.ptr + oldLength, 0, (newLength - oldLength) * T.sizeof);
+                else
+                    doInitialize(
+                        _data.arr.ptr + oldLength,
+                        _data.arr.ptr + newLength,
+                        (cast(void*)&initializer)[0 .. T.sizeof]
+                    );
+                return;
+            }
+            _data.arr = _data.arr.ptr[0 .. newLength];
+            return;
+        }
+
+        reserve(newLength);
+        _data.arr = _data.arr.ptr[0 .. newLength];
+
+        static if (__traits(isZeroInit, T))
+            memset(_data.arr.ptr, 0, newLength * T.sizeof);
+        else
+            doInitialize(
+                _data.arr.ptr,
+                _data.arr.ptr + newLength,
+                (cast(void*)&initializer)[0 .. T.sizeof]
+            );
+    }
+
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems)
     {
@@ -3912,6 +3980,28 @@ if (isDynamicArray!A)
     static assert(!__traits(compiles, () pure { test!false(); }));
 }
 
+@safe pure nothrow unittest
+{
+    Appender!(int[]) appender;
+    assert(appender.length == 0);
+    appender.length = 2; // initial expand
+    assert(appender.length == 2);
+
+    appender ~= [1, 2, 3];
+    assert(appender.length == 5);
+    appender.length = 6; // expand
+    assert(appender[] == [0, 0, 1, 2, 3, 0]);
+    assert(appender.length == 6);
+
+    appender.length = 4; // shrink
+    assert(appender[] == [0, 0, 1, 2]);
+    assert(appender.length == 4);
+
+    appender.length = 4; // keep (noop)
+    assert(appender[] == [0, 0, 1, 2]);
+    assert(appender.length == 4);
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=19572
 @safe pure nothrow unittest
 {
@@ -4053,6 +4143,25 @@ if (isDynamicArray!A)
     @property inout(T)[] data() inout
     {
         return impl[];
+    }
+
+    /**
+     * Returns: The current length of the array
+     */
+    @property size_t length() const
+    {
+        return impl.length;
+    }
+
+    /**
+     * Set a new length for the array
+     * Params:
+     *    a = The new length
+     */
+    @property void length(size_t newLength)
+    {
+        scope(exit) *this.arr = impl[];
+        impl.length = newLength;
     }
 
     /**
@@ -4541,11 +4650,15 @@ unittest
     int[] a = [1, 2];
     auto app2 = appender(&a);
     assert(app2[] == [1, 2]);
+    assert(app2.length == 2);
     assert(a == [1, 2]);
     app2 ~= 3;
     app2 ~= [4, 5, 6];
     assert(app2[] == [1, 2, 3, 4, 5, 6]);
     assert(a == [1, 2, 3, 4, 5, 6]);
+    app2.length = 3;
+    assert(app2[] == [1, 2, 3]);
+    assert(a == [1, 2, 3]);
 
     app2.reserve(5);
     assert(app2.capacity >= 5);
