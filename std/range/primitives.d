@@ -118,6 +118,7 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu), David Simcha, and
 */
 module std.range.primitives;
 
+import std.internal.attributes : betterC;
 import std.traits;
 
 /**
@@ -169,15 +170,26 @@ Params:
 Returns:
     `true` if R is an input range, `false` if not
  */
-enum bool isInputRange(R) =
-    is(typeof(R.init) == R)
-    && is(ReturnType!((R r) => r.empty) == bool)
-    && is(typeof((return ref R r) => r.front))
-    && !is(ReturnType!((R r) => r.front) == void)
-    && is(typeof((R r) => r.popFront));
+template isInputRange(R)
+{
+    static if (isArray!R)
+        enum bool isInputRange =
+            is(typeof(R.init) == R)
+            && is(ReturnType!((R r) => r.empty) == bool)
+            && is(typeof((return ref R r) => r[0]))
+            && !is(ReturnType!((R r) => r[0]) == void)
+            && is(typeof((R r) => r.popFront));
+    else
+        enum bool isInputRange =
+            is(typeof(R.init) == R)
+            && is(ReturnType!((R r) => r.empty) == bool)
+            && is(typeof((return ref R r) => r.front))
+            && !is(ReturnType!((R r) => r.front) == void)
+            && is(typeof((R r) => r.popFront));
+}
 
 ///
-@safe unittest
+@safe @betterC unittest
 {
     struct A {}
     struct B
@@ -228,7 +240,7 @@ enum bool isInputRange(R) =
     static assert(!isInputRange!VoidFront);
 }
 
-@safe unittest
+@safe @betterC unittest
 {
     import std.algorithm.comparison : equal;
 
