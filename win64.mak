@@ -145,6 +145,7 @@ SRC_STD_3d= \
 	std\typecons.d
 
 SRC_STD_4= \
+	std\int128.d \
 	std\uuid.d
 
 SRC_STD_6a=std\variant.d

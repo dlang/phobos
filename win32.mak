@@ -139,6 +139,7 @@ SRC_STD_3a= \
 	std\concurrency.d
 
 SRC_STD_4= \
+	std\int128.d \
 	std\uuid.d
 
 SRC_STD_6= \
@@ -457,6 +458,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=89 $(UDFLAGS) -main -run std\utf.d
 	$(DMD) -conf= -cov=ctfe -cov=93 $(UDFLAGS) -main -run std\csv.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\complex.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\int128.d
 	$(DMD) -conf= -cov=ctfe -cov=70 $(UDFLAGS) -main -run std\numeric.d
 	$(DMD) -conf= -cov=ctfe -cov=94 $(UDFLAGS) -main -run std\bigint.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\bitmanip.d
