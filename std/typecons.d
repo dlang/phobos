@@ -9418,6 +9418,8 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
             result ~= " shared";
         static if (attributes & FunctionAttribute.return_)
             result ~= " return";
+        static if (attributes & FunctionAttribute.live)
+            result ~= " @live";
 
         return result;
     }
