@@ -13,6 +13,7 @@ include:
 
 License: Boost License 1.0
 Authors: Paul Backus
+Source: $(PHOBOSSRC std/sumtype.d)
 +/
 module std.sumtype;
 
@@ -233,23 +234,13 @@ import std.meta : anySatisfy, allSatisfy;
 import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
 import std.traits : isAssignable, isCopyable, isStaticArray, isRvalueAssignable;
 import std.traits : ConstOf, ImmutableOf, InoutOf, TemplateArgsOf;
-import std.traits : CommonType;
+import std.traits : CommonType, DeducedParameterType;
 import std.typecons : ReplaceTypeUnless;
 import std.typecons : Flag;
+import std.conv : toCtString;
 
 /// Placeholder used to refer to the enclosing [SumType].
 struct This {}
-
-// Converts an unsigned integer to a compile-time string constant.
-private enum toCtString(ulong n) = n.stringof[0 .. $ - "LU".length];
-
-// Check that .stringof does what we expect, since it's not guaranteed by the
-// language spec.
-@safe unittest
-{
-    assert(toCtString!0 == "0");
-    assert(toCtString!123456 == "123456");
-}
 
 // True if a variable of type T can appear on the lhs of an assignment
 private enum isAssignableTo(T) =
@@ -358,6 +349,10 @@ public:
 
         /// ditto
         this(immutable(T) value) immutable;
+
+        /// ditto
+        this(Value)(Value value) inout
+        if (is(Value == DeducedParameterType!(inout(T))));
     }
 
     static foreach (tid, T; Types)
@@ -412,6 +407,25 @@ public:
         else
         {
             @disable this(immutable(T) value) immutable;
+        }
+
+        static if (isCopyable!(inout(T)))
+        {
+            static if (IndexOf!(inout(T), Map!(InoutOf, Types)) == tid)
+            {
+                /// ditto
+                this(Value)(Value value) inout
+                if (is(Value == DeducedParameterType!(inout(T))))
+                {
+                    __traits(getMember, storage, Storage.memberName!T) = value;
+                    tag = tid;
+                }
+            }
+        }
+        else
+        {
+            @disable this(Value)(Value value) inout
+            if (is(Value == DeducedParameterType!(inout(T))));
         }
     }
 
@@ -533,15 +547,35 @@ public:
         /**
          * Assigns a value to a `SumType`.
          *
-         * Assigning to a `SumType` is `@system` if any of the
-         * `SumType`'s members contain pointers or references, since
-         * those members may be reachable through external references,
-         * and overwriting them could therefore lead to memory
-         * corruption.
+         * If any of the `SumType`'s members other than the one being assigned
+         * to contain pointers or references, it is possible for the assignment
+         * to cause memory corruption (see the
+         * ["Memory corruption" example](#memory-corruption) below for an
+         * illustration of how). Therefore, such assignments are considered
+         * `@system`.
          *
          * An individual assignment can be `@trusted` if the caller can
-         * guarantee that there are no outstanding references to $(I any)
-         * of the `SumType`'s members when the assignment occurs.
+         * guarantee that there are no outstanding references to any `SumType`
+         * members that contain pointers or references at the time the
+         * assignment occurs.
+         *
+         * Examples:
+         *
+         * $(DIVID memory-corruption, $(H3 Memory corruption))
+         *
+         * This example shows how assignment to a `SumType` can be used to
+         * cause memory corruption in `@system` code. In `@safe` code, the
+         * assignment `s = 123` would not be allowed.
+         *
+         * ---
+         * SumType!(int*, int) s = new int;
+         * s.tryMatch!(
+         *     (ref int* p) {
+         *         s = 123; // overwrites `p`
+         *         return *p; // undefined behavior
+         *     }
+         * );
+         * ---
          */
         ref SumType opAssign(T rhs);
     }
@@ -553,14 +587,35 @@ public:
             /**
              * Assigns a value to a `SumType`.
              *
-             * Assigning to a `SumType` is `@system` if any of the `SumType`'s
-             * $(I other) members contain pointers or references, since those
-             * members may be reachable through external references, and
-             * overwriting them could therefore lead to memory corruption.
+             * If any of the `SumType`'s members other than the one being assigned
+             * to contain pointers or references, it is possible for the assignment
+             * to cause memory corruption (see the
+             * ["Memory corruption" example](#memory-corruption) below for an
+             * illustration of how). Therefore, such assignments are considered
+             * `@system`.
              *
              * An individual assignment can be `@trusted` if the caller can
-             * guarantee that, when the assignment occurs, there are no
-             * outstanding references to any such members.
+             * guarantee that there are no outstanding references to any `SumType`
+             * members that contain pointers or references at the time the
+             * assignment occurs.
+             *
+             * Examples:
+             *
+             * $(DIVID memory-corruption, $(H3 Memory corruption))
+             *
+             * This example shows how assignment to a `SumType` can be used to
+             * cause memory corruption in `@system` code. In `@safe` code, the
+             * assignment `s = 123` would not be allowed.
+             *
+             * ---
+             * SumType!(int*, int) s = new int;
+             * s.tryMatch!(
+             *     (ref int* p) {
+             *         s = 123; // overwrites `p`
+             *         return *p; // undefined behavior
+             *     }
+             * );
+             * ---
              */
             ref SumType opAssign(T rhs)
             {
@@ -1510,6 +1565,16 @@ version (D_BetterC) {} else
     }
 
     SumType!Value s;
+}
+
+// Construction of inout-qualified SumTypes
+// https://issues.dlang.org/show_bug.cgi?id=22901
+@safe unittest
+{
+    static inout(SumType!(int[])) example(inout(int[]) arr)
+    {
+        return inout(SumType!(int[]))(arr);
+    }
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.

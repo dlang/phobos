@@ -1,0 +1,14 @@
+`Nullable` in `std.typecons` can now act as a range
+
+`Nullable` now offers an alternative 0 or 1 element range interface.
+
+---
+import std.stdio;
+import std.algorithm;
+import std.typecons;
+
+void printValues(Nullable!int[] values)
+{
+    values.joiner.each!writeln();
+}
+---

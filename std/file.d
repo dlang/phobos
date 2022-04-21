@@ -214,7 +214,7 @@ class FileException : Exception
                           string file = __FILE__,
                           size_t line = __LINE__) @safe
     {
-        this(name, sysErrorString(errno), file, line, errno);
+        this(name, generateSysErrorMsg(errno), file, line, errno);
     }
     else version (Posix) this(scope const(char)[] name,
                              uint errno = .errno,
@@ -425,10 +425,10 @@ version (Windows) private void[] readImpl(scope const(char)[] name, scope const(
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
     }
-    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead)
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, size_t nNumberOfBytesToRead)
     {
         // Read by chunks of size < 4GB (Windows API limit)
-        ulong totalNumRead = 0;
+        size_t totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
@@ -3471,7 +3471,7 @@ else version (Posix) string getcwd() @trusted
         while (true)
         {
             auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
-            enforce(len, sysErrorString(GetLastError()));
+            wenforce(len);
             if (len != buffer.length)
                 return to!(string)(buffer[0 .. len]);
             buffer.length *= 2;
@@ -3573,6 +3573,10 @@ else version (Posix) string getcwd() @trusted
 
         // Only Solaris 10 and later
         return readLink(format("/proc/%d/path/a.out", getpid()));
+    }
+    else version (Hurd)
+    {
+        return readLink("/proc/self/exe");
     }
     else
         static assert(0, "thisExePath is not supported on this platform");
@@ -4635,7 +4639,7 @@ private struct DirIteratorImpl
             import std.path : chainPath;
             auto searchPattern = chainPath(directory, "*.*");
 
-            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, WIN32_FIND_DATAW* findinfo) @trusted
+            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, scope WIN32_FIND_DATAW* findinfo) @trusted
             {
                 return FindFirstFileW(pattern.tempCString!FSChar(), findinfo);
             }
@@ -4653,7 +4657,7 @@ private struct DirIteratorImpl
             return toNext(true, &_findinfo);
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @trusted
+        bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
 
