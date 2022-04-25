@@ -370,7 +370,7 @@ public alias StaticRegex = Regex;
 
     Throws: `RegexException` if there were any errors during compilation.
 +/
-@trusted public auto regex(S : C[], C)(const S[] patterns, const(char)[] flags="")
+@trusted public auto regex(S : C[], C)(const(S)[] patterns, const(char)[] flags="")
 if (isSomeString!(S))
 {
     import std.array : appender;
@@ -385,7 +385,7 @@ if (isSomeString!(S))
             if (i != 0)
                 app.put("|");
             app.put("(?:");
-            app.put(patterns[i]);
+            app.put(p);
             // terminator for the pattern
             // to detect if the pattern unexpectedly ends
             app.put("\\");
@@ -424,11 +424,22 @@ if (isSomeString!(S))
         S str = "abc:43 12,34";
         auto m = str.matchAll(multi);
         assert(m.front.whichPattern == 1);
+        assert(m.front.length == 3);
+        assert(m.front[0] == "abc:43");
         assert(m.front[1] == "abc");
         assert(m.front[2] == "43");
         m.popFront();
         assert(m.front.whichPattern == 2);
+        // [2022-04-24] TODO:
+        //    There is only one saved sub-expression i.e. only one pair of parentheses in `(\d+),\d+`.
+        //    Therefore, we might expect `m.front.length == 2`.
+        //    But what we get instead is `m.front.length == 3 && m.front [2] == ""`.
+        //    Is this correct, please ?
+        //assert(m.front.length == 2);
+        assert(m.front[0] == "12,34");
         assert(m.front[1] == "12");
+        m.popFront();
+        assert(m.empty);
     }
 
     import std.meta : AliasSeq;
@@ -545,6 +556,12 @@ private:
     int _nMatch;
     uint _f, _b;
 
+    void internalCheck() const nothrow pure
+    {
+        assert(_f <= _b);
+        assert(_nMatch || _f == _b && ! _b);
+    }
+
     this(R input, uint n, const(NamedGroup)[] named)
     {
         _input = input;
@@ -593,14 +610,14 @@ public:
     ///Range interface.
     @property R front()
     {
-        assert(_nMatch, "attempted to get front of an empty match");
+        assert(!empty, "attempted to get front of an empty match");
         return getMatch(_f);
     }
 
     ///ditto
     @property R back()
     {
-        assert(_nMatch, "attempted to get back of an empty match");
+        assert(!empty, "attempted to get back of an empty match");
         return getMatch(_b - 1);
     }
 
@@ -619,11 +636,16 @@ public:
     }
 
     ///ditto
-    @property bool empty() const { return _nMatch == 0 || _f >= _b; }
+    @property bool empty() const
+    {
+        internalCheck();
+        return _nMatch == 0 || _f >= _b;
+    }
 
     ///ditto
     inout(R) opIndex()(size_t i) inout
     {
+        internalCheck();
         assert(_f + i < _b,text("requested submatch number ", i," is out of range"));
         return getMatch(_f + i);
     }
@@ -662,7 +684,8 @@ public:
         import std.regex;
         import std.range;
 
-        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
+        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+)\s*;`));
+        assert(c.length == 3 && c[0] == "a = 42;" && c[1] == "a" && c[2] == "42");
         assert(c["var"] == "a");
         assert(c["value"] == "42");
         popFrontN(c, 2);
@@ -678,8 +701,12 @@ public:
         return getMatch(index);
     }
 
-    ///Number of matches in this object.
-    @property size_t length() const { return _nMatch == 0 ? 0 : _b - _f;  }
+    ///Range interface. Number of matches in this object.
+    @property size_t length() const
+    {
+        internalCheck();
+        return _b - _f;
+    }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
@@ -691,10 +718,12 @@ public:
     import std.range.primitives : popFrontN;
 
     auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
+    assert(c);
     assert(c.pre == "@"); // Part of input preceding match
     assert(c.post == "#"); // Immediately after match
     assert(c.hit == c[0] && c.hit == "abc"); // The whole match
-    assert(c[2] == "b");
+    assert(c.length == 4);
+    assert(c[1] == "a" && c[2] == "b" && c[3] == "c");
     assert(c.front == "abc");
     c.popFront();
     assert(c.front == "a");
@@ -709,6 +738,7 @@ public:
     // Captures that are not matched will be null.
     c = matchFirst("ac", regex(`a(b)?c`));
     assert(c);
+    assert(c.length == 2 && c[0] == "ac" && c[1] == "");
     assert(!c[1]);
 }
 
@@ -757,6 +787,7 @@ private:
         assert(_engine.refCount == 1);
         _captures = Captures!R(this);
         _captures.matches.mutate((slice) pure { _captures._nMatch = _engine.match(slice); });
+        _captures.internalCheck();
     }
 
 public:
