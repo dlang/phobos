@@ -30,13 +30,13 @@ value for padding to the requested alignment boundary.
 
 -------
 OutBuffer buf = new OutBuffer();
-buf.write(cast(ubyte)1);
+buf.write(cast(ubyte) 1);
 buf.align2(0x55);
 assert(buf.toBytes() == "\x01\x55");
-buf.write(cast(ubyte)2);
+buf.write(cast(ubyte) 2);
 buf.align4(0x55);
 assert(buf.toBytes() == "\x01\x55\x02\x55");
-buf.write(cast(ubyte)3);
+buf.write(cast(ubyte) 3);
 buf.alignSize(8, 0x55);
 assert(buf.toBytes() == "\x01\x55\x02\x55\x03\x55\x55\x55");
 -------
