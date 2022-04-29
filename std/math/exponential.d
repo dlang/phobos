@@ -2980,6 +2980,7 @@ import std.math.constants : E;
  */
 real log(real x, real b = E) @safe pure nothrow @nogc
 {
+	import std.math.traits : isNaN, isInfinity, signbit;
 	// Special cases.
 	if (isNaN(x))
 		return x;
