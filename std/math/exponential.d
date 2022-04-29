@@ -3000,7 +3000,7 @@ real log(real x, real b = E) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-	import std.math.constants : LN2, LOG2;
+	import std.math.constants : E, LN2, LOG2;
 	
 	assert(LOG2 == log(2, 10));
 	assert(LN2 == log(2, E));
