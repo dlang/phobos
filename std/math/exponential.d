@@ -2990,6 +2990,8 @@ real log(real x, real b = E) @safe pure nothrow @nogc
 		return -real.infinity;
 	if (x < 0.0)
 		return real.nan;
+	if (b <= 0)
+		return real.nan;
 	
 	// Logarithm base-change rule.
     return log10(x)/log10(b);
