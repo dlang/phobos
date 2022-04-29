@@ -3060,6 +3060,47 @@ real log(real x) @safe pure nothrow @nogc
     assert(feqrel(log(E), 1) >= real.mant_dig - 1);
 }
 
+/***************************************************
+ * Calculate the logarithm of x for any base b.
+ *
+ *    $(TABLE_SV
+ *    $(TR $(TH x)            $(TH log(x))    $(TH divide by 0?) $(TH invalid?))
+ *    $(TR $(TD $(PLUSMN)0.0) $(TD -$(INFIN)) $(TD yes)          $(TD no))
+ *    $(TR $(TD $(LT)0.0)     $(TD $(NAN))    $(TD no)           $(TD yes))
+ *    $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no))
+ *    )
+ *
+ * Params:
+ *     x = The number to take the logarithm of.
+ *     b = The base of the logarithm.
+ *
+ * Returns:  The logarithm of x for any base b.
+ */
+real log(real x, real b) @safe pure nothrow @nogc
+{
+	// Special cases.
+	if (isNaN(x))
+		return x;
+	if (isInfinity(x) && !signbit(x))
+		return x;
+	if (x == 0.0)
+		return -real.infinity;
+	if (x < 0.0)
+		return real.nan;
+	
+	// Logarithm base-change rule.
+    return log(x)/log(b);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+	import std.math.constants : E, LN2, LOG2;
+	
+	assert(LOG2 == log(2, 10));
+	assert(LN2 == log(2, E));
+}
+
 /**************************************
  * Calculate the base-10 logarithm of x.
  *
