@@ -2960,105 +2960,7 @@ private
     }
 }
 
-/**************************************
- * Calculate the natural logarithm of x.
- *
- *    $(TABLE_SV
- *    $(TR $(TH x)            $(TH log(x))    $(TH divide by 0?) $(TH invalid?))
- *    $(TR $(TD $(PLUSMN)0.0) $(TD -$(INFIN)) $(TD yes)          $(TD no))
- *    $(TR $(TD $(LT)0.0)     $(TD $(NAN))    $(TD no)           $(TD yes))
- *    $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no))
- *    )
- */
-real log(real x) @safe pure nothrow @nogc
-{
-    import std.math.constants : LN2, LOG2, SQRT1_2;
-    import std.math.traits : isInfinity, isNaN, signbit;
-    import std.math.algebraic : poly;
-
-    version (INLINE_YL2X)
-        return core.math.yl2x(x, LN2);
-    else
-    {
-        // C1 + C2 = LN2.
-        enum real C1 = 6.93145751953125E-1L;
-        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
-
-        // Special cases.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 R(z) / S(z),
-        // where z = 2(x - 1)/(x + 1)
-        if ((exp > 2) || (exp < -2))
-        {
-            if (x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            z = x * (z * poly(z, logCoeffsR) / poly(z, logCoeffsS));
-            z += exp * C2;
-            z += x;
-            z += exp * C1;
-
-            return z;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {
-            exp -= 1;
-            x = 2.0 * x - 1.0;
-        }
-        else
-        {
-            x = x - 1.0;
-        }
-        z = x * x;
-        y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y += exp * C2;
-        z = y - 0.5 * z;
-
-        // Note, the sum of above terms does not exceed x/4,
-        // so it contributes at most about 1/4 lsb to the error.
-        z += x;
-        z += exp * C1;
-
-        return z;
-    }
-}
-
-///
-@safe pure nothrow @nogc unittest
-{
-    import std.math.operations : feqrel;
-    import std.math.constants : E;
-
-    assert(feqrel(log(E), 1) >= real.mant_dig - 1);
-}
+import std.math.constants : E;
 
 /***************************************************
  * Calculate the logarithm of x for any base b.
@@ -3076,7 +2978,7 @@ real log(real x) @safe pure nothrow @nogc
  *
  * Returns:  The logarithm of x for any base b.
  */
-real log(real x, real b) @safe pure nothrow @nogc
+real log(real x, real b = E) @safe pure nothrow @nogc
 {
 	// Special cases.
 	if (isNaN(x))
@@ -3089,16 +2991,21 @@ real log(real x, real b) @safe pure nothrow @nogc
 		return real.nan;
 	
 	// Logarithm base-change rule.
-    return log(x)/log(b);
+    return log10(x)/log10(b);
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
-	import std.math.constants : E, LN2, LOG2;
+	import std.math.constants : LN2, LOG2;
 	
 	assert(LOG2 == log(2, 10));
 	assert(LN2 == log(2, E));
+	
+    import std.math.operations : feqrel;
+    import std.math.constants : E;
+
+    assert(feqrel(log(E), 1) >= real.mant_dig - 1);
 }
 
 /**************************************

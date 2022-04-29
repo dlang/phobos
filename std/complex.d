@@ -1540,94 +1540,7 @@ Complex!T exp(T)(Complex!T x) @trusted pure nothrow @nogc // TODO: @safe
     assert(isClose(e, -1.0, 0.0, 1e-15));
 }
 
-/**
- * Calculate the natural logarithm of x.
- * The branch cut is along the negative axis.
- * Params:
- *      x = A complex number
- * Returns:
- *      The complex natural logarithm of `x`
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)                           $(TH log(x)))
- *      $(TR $(TD (-0, +0))                    $(TD (-$(INFIN), $(PI))))
- *      $(TR $(TD (+0, +0))                    $(TD (-$(INFIN), +0)))
- *      $(TR $(TD (any, +$(INFIN)))            $(TD (+$(INFIN), $(PI)/2)))
- *      $(TR $(TD (any, $(NAN)))               $(TD ($(NAN), $(NAN))))
- *      $(TR $(TD (-$(INFIN), any))            $(TD (+$(INFIN), $(PI))))
- *      $(TR $(TD (+$(INFIN), any))            $(TD (+$(INFIN), +0)))
- *      $(TR $(TD (-$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), 3$(PI)/4)))
- *      $(TR $(TD (+$(INFIN), +$(INFIN)))      $(TD (+$(INFIN), $(PI)/4)))
- *      $(TR $(TD ($(PLUSMN)$(INFIN), $(NAN))) $(TD (+$(INFIN), $(NAN))))
- *      $(TR $(TD ($(NAN), any))               $(TD ($(NAN), $(NAN))))
- *      $(TR $(TD ($(NAN), +$(INFIN)))         $(TD (+$(INFIN), $(NAN))))
- *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
- *      )
- */
-Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
-{
-    static import std.math;
-
-    // Handle special cases explicitly here for better accuracy.
-    // The order here is important, so that the correct path is chosen.
-    if (std.math.isNaN(x.re))
-    {
-        if (std.math.isInfinity(x.im))
-            return Complex!T(T.infinity, T.nan);
-        else
-            return Complex!T(T.nan, T.nan);
-    }
-    if (std.math.isInfinity(x.re))
-    {
-        if (std.math.isNaN(x.im))
-            return Complex!T(T.infinity, T.nan);
-        else if (std.math.isInfinity(x.im))
-        {
-            if (std.math.signbit(x.re))
-                return Complex!T(T.infinity, std.math.copysign(3.0 * std.math.PI_4, x.im));
-            else
-                return Complex!T(T.infinity, std.math.copysign(std.math.PI_4, x.im));
-        }
-        else
-        {
-            if (std.math.signbit(x.re))
-                return Complex!T(T.infinity, std.math.copysign(std.math.PI, x.im));
-            else
-                return Complex!T(T.infinity, std.math.copysign(0.0, x.im));
-        }
-    }
-    if (std.math.isNaN(x.im))
-        return Complex!T(T.nan, T.nan);
-    if (std.math.isInfinity(x.im))
-        return Complex!T(T.infinity, std.math.copysign(std.math.PI_2, x.im));
-    if (x.re == 0.0 && x.im == 0.0)
-    {
-        if (std.math.signbit(x.re))
-            return Complex!T(-T.infinity, std.math.copysign(std.math.PI, x.im));
-        else
-            return Complex!T(-T.infinity, std.math.copysign(0.0, x.im));
-    }
-
-    return Complex!T(std.math.log(abs(x)), arg(x));
-}
-
-///
-@safe pure nothrow @nogc unittest
-{
-    import core.math : sqrt;
-    import std.math.constants : PI;
-    import std.math.operations : isClose;
-
-    auto a = complex(2.0, 1.0);
-    assert(log(conj(a)) == conj(log(a)));
-
-    auto b = 2.0 * log10(complex(0.0, 1.0));
-    auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
-    assert(isClose(b, c, 0.0, 1e-15));
-
-    assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
-    assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
-}
+import std.math.constants : E;
 
 /*****************************************
  * Calculate the logarithm of x with base b.
@@ -1635,7 +1548,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 
  * Params:
  *     x = The complex number to take the logarithm of.
- *     b = The complex base of the logarithm.
+ *     b = The complex base of the logarithm.  Defaults to E.
  * Returns:  
  *     The complex logarithm of x with base b.
  *      $(TABLE_SV
@@ -1654,7 +1567,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
  *      $(TR $(TD ($(NAN), $(NAN)))            $(TD ($(NAN), $(NAN))))
  *      )
  */
-Complex!T log(Complex!T x, Complex!T base)
+Complex!T log(T)(Complex!T x, Complex!T b = Complex!T(E, 0))
 {
 	//Special Cases.
     if (std.math.isNaN(x.re))
@@ -1696,13 +1609,27 @@ Complex!T log(Complex!T x, Complex!T base)
     }
 	
 	//Logarithm change of base formula.
-	return log(x)/log(b);
+	return log10(x)/log10(b);
 }
 
 ///
 @safe pure nothrow @nogc unittest
 {
     assert(log10(Complex!real(-1,0)) == log(Complex!real(-1,0), Complex!real(10, 0)));
+	
+    import core.math : sqrt;
+    import std.math.constants : PI;
+    import std.math.operations : isClose;
+
+    auto a = complex(2.0, 1.0);
+    assert(log(conj(a)) == conj(log(a)));
+
+    auto b = 2.0 * log10(complex(0.0, 1.0));
+    auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
+    assert(isClose(b, c, 0.0, 1e-15));
+
+    assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
+    assert(log(complex(-1.0L, -0.0L)) == complex(0.0L, -PI));
 }
 
 @safe pure nothrow @nogc unittest
