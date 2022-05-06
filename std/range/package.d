@@ -3711,18 +3711,14 @@ Returns: an `inputRange` where each element represents another call to fun.
 auto generate(Fun)(Fun fun)
 if (isCallable!fun)
 {
-    auto gen = Generator!(Fun)(fun);
-    gen.popFront(); // prime the first element
-    return gen;
+    return Generator!(Fun)(fun);
 }
 
 /// ditto
 auto generate(alias fun)()
 if (isCallable!fun)
 {
-    auto gen = Generator!(fun)();
-    gen.popFront(); // prime the first element
-    return gen;
+    return Generator!(fun)();
 }
 
 ///
@@ -3778,6 +3774,9 @@ private:
         ReturnType!fun *elem_;
     else
         ReturnType!fun elem_;
+
+    bool valid_;
+
 public:
     /// Range primitives
     enum empty = false;
@@ -3787,12 +3786,12 @@ public:
         /// ditto
         ref front() @property
         {
+            if (!valid_)
+            {
+                elem_ = &fun();
+                valid_ = true;
+            }
             return *elem_;
-        }
-        /// ditto
-        void popFront()
-        {
-            elem_ = &fun();
         }
     }
     else
@@ -3800,13 +3799,21 @@ public:
         /// ditto
         auto front() @property
         {
+            if (!valid_)
+            {
+                elem_ = fun();
+                valid_ = true;
+            }
             return elem_;
         }
-        /// ditto
-        void popFront()
-        {
-            elem_ = fun();
-        }
+    }
+    /// ditto
+    void popFront()
+    {
+        // popFront called without calling front
+        if (!valid_)
+            cast(void) fun();
+        valid_ = false;
     }
 }
 
@@ -3864,6 +3871,22 @@ public:
     assert(f == g.front);
     g = g.drop(5); // reassign because generate caches
     assert(g.front == f + 5);
+}
+
+// verify that fun is not called more than necessary
+@safe unittest
+{
+    import std.random : uniform;
+
+    int i = 0;
+
+    const arr = generate!(() {
+        ++i;
+        return uniform(0, 2000);
+    }).take(1).array;
+
+    assert(arr.length == 1);
+    assert(i == 1, "generate called fun more than necessary");
 }
 
 /**
