@@ -39,7 +39,6 @@ import core.stdc.config;
 */
 
 nothrow:
-@nogc:
 extern (C):
 
 // Those are extern(D) as they should be mangled
