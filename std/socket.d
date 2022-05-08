@@ -122,6 +122,12 @@ version (StdUnittest)
                 writefln("Ignoring std.socket(%d) test failure (likely caused by flaky environment): %s", line, e.msg);
         }
     }
+
+    // Without debug=std_socket, still compile the slow tests, just don't run them.
+    debug (std_socket)
+        private enum runSlowTests = true;
+    else
+        private enum runSlowTests = false;
 }
 
 /// Base exception thrown by `std.socket`.
@@ -1698,7 +1704,7 @@ public:
         }
     });
 
-    debug (std_socket)
+    if (runSlowTests)
     softUnittest({
         // test failing reverse lookup
         const InternetAddress ia = new InternetAddress("255.255.255.255", 80);
@@ -2633,7 +2639,7 @@ private:
 
     @safe unittest
     {
-        debug (std_socket)
+        if (runSlowTests)
         softUnittest({
             import std.datetime.stopwatch;
             import std.typecons;
