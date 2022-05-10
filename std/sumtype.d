@@ -2575,6 +2575,27 @@ version (D_Exceptions)
     }
 }
 
+// return ref
+// issue: https://issues.dlang.org/show_bug.cgi?id=23101
+@safe unittest
+{
+    static assert(!__traits(compiles, () {
+        SumType!(int, string) st;
+        return st.match!(
+            function int* (string x) => assert(0),
+            function int* (return ref int i) => &i,
+        );
+    }));
+
+    SumType!(int, string) st;
+    static assert(__traits(compiles, () {
+        return st.match!(
+            function int* (string x) => null,
+            function int* (return ref int i) => &i,
+        );
+    }));
+}
+
 private void destroyIfOwner(T)(ref T value)
 {
     static if (hasElaborateDestructor!T)
