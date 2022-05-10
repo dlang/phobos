@@ -1830,7 +1830,7 @@ class MatchException : Exception
 template canMatch(alias handler, Ts...)
 if (Ts.length > 0)
 {
-    enum canMatch = is(typeof((Ts args) => handler(args)));
+    enum canMatch = is(typeof((ref Ts args) => handler(args)));
 }
 
 ///
