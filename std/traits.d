@@ -4839,7 +4839,7 @@ Returns class instance alignment.
 template classInstanceAlignment(T)
 if (is(T == class))
 {
-    alias classInstanceAlignment = maxAlignment!(void*, typeof(T.tupleof));
+    enum classInstanceAlignment = __traits(classInstanceAlignment, T);
 }
 
 ///
