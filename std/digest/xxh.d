@@ -741,7 +741,7 @@ private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alig
     @trusted pure nothrow @nogc
 {
     if (ptr == null)
-        assert(len == 0, "len != 0");
+        assert(len == 0, "input null ptr only allowed with len == 0");
 
     len &= 31;
     while (len >= 8)
@@ -781,7 +781,7 @@ private ulong XXH64_endian_align(const(ubyte)* input, size_t len,
 {
     ulong h64;
     if (input == null)
-        assert(len == 0, "len != 0");
+        assert(len == 0, "input null ptr only allowed with len == 0");
 
     if (len >= 32)
     {
@@ -863,7 +863,7 @@ XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) 
 {
     if (input == null)
     {
-        assert(len == 0, "len != 0");
+        assert(len == 0, "input null ptr only allowed with len == 0");
         return XXH_errorcode.XXH_OK;
     }
 
