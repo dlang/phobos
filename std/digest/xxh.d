@@ -94,6 +94,23 @@ enum XXH_FORCE_ALIGN_CHECK = true;
 enum XXH32_ENDJMP = false;
 
 private import core.bitop : rol, bswap;
+private import std.exception : enforce;
+private import object : Exception;
+
+/**
+ * Thrown on XXH errors.
+ */
+class XXHException : Exception
+{
+    import std.exception : basicExceptionCtors;
+    ///
+    mixin basicExceptionCtors;
+}
+///
+@safe unittest
+{
+    enforce!XXHException(true, "This never throws...");
+}
 
 /* *************************************
 *  Misc
@@ -463,8 +480,8 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
 }
 
 XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted pure nothrow @nogc
+in (statePtr != null, "statePtr is null")
 {
-    assert(statePtr != null, "statePtr is null");
     *statePtr = XXH32_state_t.init;
     statePtr.v[0] = seed + XXH_PRIME32_1 + XXH_PRIME32_2;
     statePtr.v[1] = seed + XXH_PRIME32_2;
@@ -474,13 +491,11 @@ XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted p
 }
 
 XXH_errorcode XXH32_update(XXH32_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
+in(input !is null && !len, "input null ptr only allowed with len == 0")
 {
-    if (input == null)
-    {
-        assert(len == 0, "input null ptr only allowed with len == 0");
+    if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
-    }
-
+    else
     {
         const(ubyte)* p = cast(const(ubyte)*) input;
         const ubyte* bEnd = p + len;
@@ -678,10 +693,8 @@ ulong XXH_get64bits(const void* p, XXH_alignment align_) @safe pure nothrow @nog
  */
 private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alignment align_)
     @trusted pure nothrow @nogc
+in(ptr !is null && !len, "input null ptr only allowed with len == 0")
 {
-    if (ptr == null)
-        assert(len == 0, "input null ptr only allowed with len == 0");
-
     len &= 31;
     while (len >= 8)
     {
@@ -716,9 +729,9 @@ private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alig
 pragma(inline, true)
 private ulong XXH64_endian_align(const(ubyte)* input, size_t len,
         ulong seed, XXH_alignment align_) @trusted pure nothrow @nogc
+in(input !is null && !len, "input null ptr only allowed with len == 0")
 {
     ulong h64;
-    assert(input !is null && !len, "input null ptr only allowed with len == 0");
 
     if (len >= 32)
     {
@@ -797,13 +810,11 @@ XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted p
 }
 
 XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
+in(input !is null && !len, "input null ptr only allowed with len == 0")
 {
-    if (input == null)
-    {
-        assert(len == 0, "input null ptr only allowed with len == 0");
+    if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
-    }
-
+    else
     {
         const(ubyte)* p = cast(const(ubyte)*) input;
         const ubyte* bEnd = p + len;
@@ -1046,8 +1057,8 @@ private ulong XXH3_mul128_fold64(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 /* Seems to produce slightly better code on GCC for some reason. */
 pragma(inline, true)
 private ulong XXH_xorshift64(ulong v64, int shift) @safe pure nothrow @nogc
+in(0 <= shift && shift < 64, "shift out of range")
 {
-    assert(0 <= shift && shift < 64, "shift out of range");
     return v64 ^ (v64 >> shift);
 }
 
@@ -1113,11 +1124,12 @@ static XXH64_hash_t XXH3_rrmxmx(ulong h64, ulong len) @safe pure nothrow @nogc
  */
 pragma(inline, true)
 private XXH64_hash_t XXH3_len_1to3_64b(const ubyte* input, size_t len,
-        const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+        const ubyte* secret, XXH64_hash_t seed)
+        @trusted pure nothrow @nogc
+in(input != null, "input == null")
+in(1 <= len && len <= 3, "len out of range")
+in(secret != null, "secret == null")
 {
-    assert(input != null, "input == null");
-    assert(1 <= len && len <= 3, "len out of range");
-    assert(secret != null, "secret == null");
     /*
      * len = 1: combined = { input[0], 0x01, input[0], input[0] }
      * len = 2: combined = { input[1], 0x02, input[0], input[1] }
@@ -1138,10 +1150,10 @@ private XXH64_hash_t XXH3_len_1to3_64b(const ubyte* input, size_t len,
 pragma(inline, true)
 private XXH64_hash_t XXH3_len_4to8_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+in(input != null, "input == null")
+in(secret != null, "secret == null")
+in(4 <= len && len <= 8, "len out of range")
 {
-    assert(input != null, "input == null");
-    assert(secret != null, "secret == null");
-    assert(4 <= len && len <= 8, "len out of range");
     seed ^= cast(ulong) bswap(cast(uint) seed) << 32;
     {
         const uint input1 = XXH_readLE32(input);
@@ -1156,10 +1168,10 @@ private XXH64_hash_t XXH3_len_4to8_64b(const ubyte* input, size_t len,
 pragma(inline, true)
 private XXH64_hash_t XXH3_len_9to16_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+in(input != null, "input == null")
+in(secret != null, "secret == null")
+in(9 <= len && len <= 16, "len out of range")
 {
-    assert(input != null, "input == null");
-    assert(secret != null, "secret == null");
-    assert(9 <= len && len <= 16, "len out of range");
     {
         const ulong bitflip1 = (XXH_readLE64(secret + 24) ^ XXH_readLE64(secret + 32)) + seed;
         const ulong bitflip2 = (XXH_readLE64(secret + 40) ^ XXH_readLE64(secret + 48)) - seed;
@@ -1186,8 +1198,8 @@ private bool XXH_unlikely(bool exp) @safe pure nothrow @nogc
 pragma(inline, true)
 private XXH64_hash_t XXH3_len_0to16_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+in(len <= 16, "len > 16")
 {
-    assert(len <= 16, "len > 16");
     {
         if (XXH_likely(len > 8))
             return XXH3_len_9to16_64b(input, len, secret, seed);
@@ -1240,11 +1252,10 @@ private ulong XXH3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed6
 pragma(inline, true)
 private XXH64_hash_t XXH3_len_17to128_64b(const(ubyte)* input, size_t len,
         const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
+in(16 < len && len <= 128, "len out of range")
 {
-    assert(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN");
     cast(void) secretSize;
-    assert(16 < len && len <= 128, "len out of range");
-
     {
         ulong acc = len * XXH_PRIME64_1;
         if (len > 32)
@@ -1276,11 +1287,11 @@ enum XXH3_MIDSIZE_LASTOFFSET = 17;
 pragma(inline, false)
 private XXH64_hash_t XXH3_len_129to240_64b(const(ubyte)* input, size_t len,
         const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
+in { const int nbRounds = cast(int) len / 16; assert(nbRounds >= 8, "nbRounds < 8"); }
+in(128 < len && len <= XXH3_MIDSIZE_MAX, "128 >= len || len > XXH3_MIDSIZE_MAX")
 {
-    assert(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN");
     cast(void) secretSize;
-    assert(128 < len && len <= XXH3_MIDSIZE_MAX, "128 >= len || len > XXH3_MIDSIZE_MAX");
-
     {
         ulong acc = len * XXH_PRIME64_1;
         const int nbRounds = cast(int) len / 16;
@@ -1290,7 +1301,6 @@ private XXH64_hash_t XXH3_len_129to240_64b(const(ubyte)* input, size_t len,
             acc += XXH3_mix16B(input + (16 * i), secret + (16 * i), seed);
         }
         acc = XXH3_avalanche(acc);
-        assert(nbRounds >= 8, "nbRounds < 8");
         for (i = 8; i < nbRounds; i++)
         {
             acc += XXH3_mix16B(input + (16 * i),
@@ -1330,12 +1340,12 @@ enum XXH_ACC_ALIGN = 8;
 pragma(inline, true)
 private void XXH3_scalarRound(void* acc, const(void)* input, const(void)* secret, size_t lane)
     @trusted pure nothrow @nogc
+in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
+in((cast(size_t) acc & (XXH_ACC_ALIGN - 1)) == 0, "(cast(size_t) acc & (XXH_ACC_ALIGN - 1)) != 0")
 {
     ulong* xacc = cast(ulong*) acc;
     ubyte* xinput = cast(ubyte*) input;
     ubyte* xsecret = cast(ubyte*) secret;
-    assert(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB");
-    assert((cast(size_t) acc & (XXH_ACC_ALIGN - 1)) == 0, "(cast(size_t) acc & (XXH_ACC_ALIGN - 1)) != 0");
     {
         const ulong data_val = XXH_readLE64(xinput + lane * 8);
         const ulong data_key = data_val ^ XXH_readLE64(xsecret + lane * 8);
@@ -1362,11 +1372,11 @@ private void XXH3_accumulate_512_scalar(void* acc, const(void)* input, const(voi
  */
 pragma(inline, true)
 private void XXH3_scalarScrambleRound(void* acc, const(void)* secret, size_t lane) @trusted pure nothrow @nogc
+in(((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) == 0, "((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) != 0")
+in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 {
     ulong* xacc = cast(ulong*) acc; /* presumed aligned */
     const ubyte* xsecret = cast(const ubyte*) secret; /* no alignment restriction */
-    assert(((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) == 0, "((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) != 0");
-    assert(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB");
     {
         const ulong key64 = XXH_readLE64(xsecret + lane * 8);
         ulong acc64 = xacc[lane];
@@ -1459,14 +1469,14 @@ private void XXH3_accumulate(ulong* acc, const ubyte* input,
 pragma(inline, true)
 private void XXH3_hashLong_internal_loop(ulong* acc, const ubyte* input, size_t len, const ubyte* secret,
         size_t secretSize, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
+in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
+in(len > XXH_STRIPE_LEN, "len <= XXH_STRIPE_LEN")
 {
     const size_t nbStripesPerBlock = (secretSize - XXH_STRIPE_LEN) / XXH_SECRET_CONSUME_RATE;
     const size_t block_len = XXH_STRIPE_LEN * nbStripesPerBlock;
     const size_t nb_blocks = (len - 1) / block_len;
 
     size_t n;
-
-    assert(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN");
 
     for (n = 0; n < nb_blocks; n++)
     {
@@ -1475,7 +1485,6 @@ private void XXH3_hashLong_internal_loop(ulong* acc, const ubyte* input, size_t 
     }
 
     /* last partial block */
-    assert(len > XXH_STRIPE_LEN, "len <= XXH_STRIPE_LEN");
     {
         const size_t nbStripes = ((len - 1) - (block_len * nb_blocks)) / XXH_STRIPE_LEN;
         assert(nbStripes <= (secretSize / XXH_SECRET_CONSUME_RATE),
@@ -1527,10 +1536,10 @@ private XXH64_hash_t XXH3_hashLong_64b_internal(const(void)* input, size_t len, 
             cast(const(ubyte)*) secret, secretSize, f_acc512, f_scramble);
 
     /* converge into final hash */
-    static assert((acc).sizeof == 64, "(acc).sizeof != 64");
+    static assert(acc.sizeof == 64, "acc.sizeof != 64");
     /* do not align on 8, so that the secret is different from the accumulator */
-    assert(secretSize >= (acc).sizeof + XXH_SECRET_MERGEACCS_START,
-            "secretSize < (acc).sizeof + XXH_SECRET_MERGEACCS_START");
+    assert(secretSize >= acc.sizeof + XXH_SECRET_MERGEACCS_START,
+            "secretSize < acc.sizeof + XXH_SECRET_MERGEACCS_START");
     return XXH3_mergeAccs(&acc[0], cast(const(ubyte)*) secret + XXH_SECRET_MERGEACCS_START,
             cast(ulong) len * XXH_PRIME64_1);
 }
@@ -1619,8 +1628,8 @@ pragma(inline, true)
 private XXH64_hash_t XXH3_64bits_internal(const(void)* input, size_t len,
         XXH64_hash_t seed64, const(void)* secret, size_t secretLen, XXH3_hashLong64_f f_hashLong)
         @safe pure nothrow @nogc
+in(secretLen >= XXH3_SECRET_SIZE_MIN, "secretLen < XXH3_SECRET_SIZE_MIN")
 {
-    assert(secretLen >= XXH3_SECRET_SIZE_MIN, "secretLen < XXH3_SECRET_SIZE_MIN");
     /*
      * If an action is to be taken if `secretLen` condition is not respected,
      * it should be done here.
@@ -1680,11 +1689,15 @@ private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 
 private void XXH3_reset_internal(XXH3_state_t* statePtr, XXH64_hash_t seed,
         const void* secret, size_t secretSize) @trusted pure nothrow @nogc
+in
 {
     const size_t initStart = XXH3_state_t.bufferedSize.offsetof;
     assert(XXH3_state_t.nbStripesPerBlock.offsetof > initStart,
             "(XXH3_state_t.nbStripesPerBlock.offsetof <= initStart");
-    assert(statePtr != null, "statePtr == null");
+}
+in(statePtr != null, "statePtr == null")
+in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
+{
     /* set members from bufferedSize to nbStripesPerBlock (excluded) to 0 */
     *statePtr = XXH3_state_t.init;
     statePtr.acc[0] = XXH_PRIME32_3;
@@ -1698,7 +1711,6 @@ private void XXH3_reset_internal(XXH3_state_t* statePtr, XXH64_hash_t seed,
     statePtr.seed = seed;
     statePtr.useSeed = (seed != 0);
     statePtr.extSecret = cast(const(ubyte)*) secret;
-    assert(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN");
     statePtr.secretLimit = secretSize - XXH_STRIPE_LEN;
     statePtr.nbStripesPerBlock = statePtr.secretLimit / XXH_SECRET_CONSUME_RATE;
 }
@@ -1758,9 +1770,9 @@ private void XXH3_consumeStripes(ulong* acc, size_t* nbStripesSoFarPtr,
         size_t nbStripesPerBlock, const ubyte* input, size_t nbStripes,
         const ubyte* secret, size_t secretLimit, XXH3_f_accumulate_512 f_acc512,
         XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
+in(nbStripes <= nbStripesPerBlock, "nbStripes > nbStripesPerBlock") /* can handle max 1 scramble per invocation */
+in(*nbStripesSoFarPtr < nbStripesPerBlock, "*nbStripesSoFarPtr >= nbStripesPerBlock")
 {
-    assert(nbStripes <= nbStripesPerBlock, "nbStripes > nbStripesPerBlock"); /* can handle max 1 scramble per invocation */
-    assert(*nbStripesSoFarPtr < nbStripesPerBlock, "*nbStripesSoFarPtr >= nbStripesPerBlock");
     if (nbStripesPerBlock - *nbStripesSoFarPtr <= nbStripes)
     {
         /* need a scrambling operation */
@@ -1788,14 +1800,12 @@ enum XXH3_STREAM_USE_STACK = 1;
 pragma(inline, true)
 private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input,
         size_t len, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
+in(state != null, "state == null")
+in(input !is null && !len, "input null ptr only allowed with len == 0")
 {
-    if (input == null)
-    {
-        assert(len == 0, "len != 0");
+    if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
-    }
-
-    assert(state != null, "state == null");
+    else
     {
         const ubyte* bEnd = input + len;
         const(ubyte)* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
@@ -2270,8 +2280,8 @@ private XXH128_hash_t XXH3_hashLong_128b_internal(const void* input, size_t len,
             secret, secretSize, f_acc512, f_scramble);
 
     /* converge into final hash */
-    static assert((acc).sizeof == 64, "acc isn't 64 bytes long");
-    assert(secretSize >= (acc).sizeof + XXH_SECRET_MERGEACCS_START, "secretSze < allowed limit.");
+    static assert(acc.sizeof == 64, "acc isn't 64 bytes long");
+    assert(secretSize >= acc.sizeof + XXH_SECRET_MERGEACCS_START, "secretSze < allowed limit.");
     {
         XXH128_hash_t h128;
         h128.low64 = XXH3_mergeAccs(&acc[0],
@@ -2431,7 +2441,7 @@ XXH128_hash_t XXH3_128bits_digest(const XXH3_state_t* state) @trusted pure nothr
     {
         align(XXH_ACC_ALIGN) XXH64_hash_t[XXH_ACC_NB] acc;
         XXH3_digest_long(&acc[0], state, secret);
-        assert(state.secretLimit + XXH_STRIPE_LEN >= (acc).sizeof + XXH_SECRET_MERGEACCS_START, "Internal error");
+        assert(state.secretLimit + XXH_STRIPE_LEN >= acc.sizeof + XXH_SECRET_MERGEACCS_START, "Internal error");
         {
             XXH128_hash_t h128;
             h128.low64 = XXH3_mergeAccs(&acc[0], secret + XXH_SECRET_MERGEACCS_START,
