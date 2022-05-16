@@ -1934,13 +1934,15 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, scope const(void)* input, size_t len) @safe pure nothrow @nogc
+XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, scope const(void)* input, size_t len)
+    @safe pure nothrow @nogc
 {
     return XXH3_update(state, cast(const(ubyte)*) input, len,
             XXH3_accumulate_512, XXH3_scrambleAcc);
 }
 
-void XXH3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, const ubyte* secret) @trusted pure nothrow @nogc
+private void XXH3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, const ubyte* secret)
+    @trusted pure nothrow @nogc
 {
     /*
      * Digest on a local copy. This way, the state remains unaltered, and it can
