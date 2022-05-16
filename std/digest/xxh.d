@@ -152,7 +152,7 @@ alias XXH128_canonical_t = XXH128_hash_t;
  * @see XXH3_createState(), XXH3_freeState().
  * @see XXH32_state_s, XXH64_state_s
  */
-struct XXH3_state_t
+align(64) struct XXH3_state_t
 {
     align(64) XXH64_hash_t[8] acc;
     /*!< The 8 accumulators. See @ref XXH32_state_s::v and @ref XXH64_state_s::v */
@@ -1752,77 +1752,6 @@ XXH64_hash_t XXH3_64bits_withSecretandSeed(const(void)* input, size_t length,
 }
 
 /* ===   XXH3 streaming   === */
-/*
- * Malloc's a pointer that is always aligned to align.
- *
- * This must be freed with `XXH_alignedFree()`.
- *
- * malloc typically guarantees 16 byte alignment on 64-bit systems and 8 byte
- * alignment on 32-bit. This isn't enough for the 32 byte aligned loads in AVX2
- * or on 32-bit, the 16 byte aligned loads in SSE2 and NEON.
- *
- * This underalignment previously caused a rather obvious crash which went
- * completely unnoticed due to XXH3_createState() not actually being tested.
- * Credit to RedSpah for noticing this bug.
- *
- * The alignment is done manually: Functions like posix_memalign or _mm_malloc
- * are avoided: To maintain portability, we would have to write a fallback
- * like this anyways, and besides, testing for the existence of library
- * functions without relying on external build tools is impossible.
- *
- * The method is simple: Overallocate, manually align, and store the offset
- * to the original behind the returned pointer.
- *
- * Align must be a power of 2 and 8 <= align <= 128.
- */
-private void* XXH_alignedMalloc(size_t s, size_t align_) @trusted nothrow @nogc
-{
-    import core.stdc.stdlib : malloc;
-
-    assert(align_ <= 128 && align_ >= 8, "align out of range"); /* range check */
-    assert((align_ & (align_ - 1)) == 0, "(align_ & (align_ - 1)) != 0"); /* power of 2 */
-    assert(s != 0 && s < (s + align_), "s == 0 || s >= (s + align_)"); /* empty/overflow */
-    { /* Overallocate to make room for manual realignment and an offset byte */
-        ubyte* base = cast(ubyte*) malloc(s + align_);
-        if (base != null)
-        {
-            /*
-             * Get the offset needed to align this pointer.
-             *
-             * Even if the returned pointer is aligned, there will always be
-             * at least one byte to store the offset to the original pointer.
-             */
-            size_t offset = align_ - (cast(size_t) base & (align_ - 1)); /* base % align */
-            /* Add the offset for the now-aligned pointer */
-            ubyte* ptr = base + offset;
-
-            assert(cast(size_t) ptr % align_ == 0, "ptr % align_ != 0");
-
-            /* Store the offset immediately before the returned pointer. */
-            ptr[-1] = cast(ubyte) offset;
-            return ptr;
-        }
-        return null;
-    }
-}
-/*
- * Frees an aligned pointer allocated by XXH_alignedMalloc(). Don't pass
- * normal malloc'd pointers, XXH_alignedMalloc has a specific data layout.
- */
-private void XXH_alignedFree(void* p) @trusted nothrow @nogc
-{
-    import core.stdc.stdlib : free;
-
-    if (p != null)
-    {
-        ubyte* ptr = cast(ubyte*) p;
-        /* Get the offset byte we added in XXH_malloc. */
-        ubyte offset = ptr[-1];
-        /* Free the original malloc'd pointer */
-        ubyte* base = ptr - offset;
-        free(base);
-    }
-}
 
 private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 {
@@ -1832,7 +1761,9 @@ private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 /*! @ingroup XXH3_family */
 XXH3_state_t* XXH3_createState() @trusted nothrow @nogc
 {
-    XXH3_state_t* state = cast(XXH3_state_t*) XXH_alignedMalloc((XXH3_state_t).sizeof, 64);
+    import core.stdc.stdlib : aligned_alloc;
+    assert(XXH3_state_t.alignof == 64, "Internal error - alignment of XXH3_state_t is not 64");
+    XXH3_state_t* state = cast(XXH3_state_t*) aligned_alloc(XXH3_state_t.alignof, (XXH3_state_t).sizeof);
     if (state == null)
         return null;
     XXH3_INITSTATE(state);
@@ -1840,9 +1771,11 @@ XXH3_state_t* XXH3_createState() @trusted nothrow @nogc
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr) @safe nothrow @nogc
+XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr) @trusted nothrow @nogc
 {
-    XXH_alignedFree(statePtr);
+    import core.stdc.stdlib : free;
+
+    free(statePtr);
     return XXH_errorcode.XXH_OK;
 }
 
