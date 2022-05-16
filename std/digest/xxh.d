@@ -2517,17 +2517,20 @@ public:
          */
     void put(scope const(ubyte)[] data...) @safe nothrow @nogc
     {
-        XXH_errorcode ec;
-        static if (digestSize == 32)
-            ec = XXH32_update(&state, &data[0], data.length);
-        else static if (digestSize == 64 && !useXXH3)
-            ec = XXH64_update(&state, &data[0], data.length);
-        else static if (digestSize == 64 && useXXH3)
-            ec = XXH3_64bits_update(&state, &data[0], data.length);
-        else static if (digestSize == 128)
-            ec = XXH3_128bits_update(&state, &data[0], data.length);
-        else
-            assert(false, "Unknown XXH bitdeep or variant");
+        XXH_errorcode ec = XXH_errorcode.XXH_OK;
+        if (data.length > 0) // digest will only change, when there is data!
+        {
+            static if (digestSize == 32)
+                ec = XXH32_update(&state, &data[0], data.length);
+            else static if (digestSize == 64 && !useXXH3)
+                ec = XXH64_update(&state, &data[0], data.length);
+            else static if (digestSize == 64 && useXXH3)
+                ec = XXH3_64bits_update(&state, &data[0], data.length);
+            else static if (digestSize == 128)
+                ec = XXH3_128bits_update(&state, &data[0], data.length);
+            else
+                assert(false, "Unknown XXH bitdeep or variant");
+        }
         assert(ec == XXH_errorcode.XXH_OK, "Update failed");
     }
 
