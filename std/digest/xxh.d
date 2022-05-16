@@ -92,11 +92,6 @@ enum XXH_SIZE_OPT = 0;
 enum XXH_FORCE_ALIGN_CHECK = true;
 enum XXH32_ENDJMP = false;
 
-version (LittleEndian)
-    private immutable bool XXH_CPU_LITTLE_ENDIAN = true;
-else
-    private immutable bool XXH_CPU_LITTLE_ENDIAN = false;
-
 private import core.bitop : rol;
 
 /* *************************************
@@ -274,12 +269,18 @@ private uint XXH_read32(const void* ptr) @trusted pure nothrow @nogc
 
 private uint XXH_readLE32(const void* ptr) @safe pure nothrow @nogc
 {
-    return XXH_CPU_LITTLE_ENDIAN ? XXH_read32(ptr) : XXH_swap32(XXH_read32(ptr));
+    version (LittleEndian)
+        return XXH_read32(ptr);
+    else
+        return XXH_swap32(XXH_read32(ptr));
 }
 
 private uint XXH_readBE32(const void* ptr) @safe pure nothrow @nogc
 {
-    return XXH_CPU_LITTLE_ENDIAN ? XXH_swap32(XXH_read32(ptr)) : XXH_read32(ptr);
+    version (LittleEndian)
+        return XXH_swap32(XXH_read32(ptr));
+    else
+        return XXH_read32(ptr);
 }
 
 private uint XXH_readLE32_align(const void* ptr, XXH_alignment align_) @trusted pure nothrow @nogc
@@ -290,8 +291,10 @@ private uint XXH_readLE32_align(const void* ptr, XXH_alignment align_) @trusted 
     }
     else
     {
-        return XXH_CPU_LITTLE_ENDIAN ? *cast(const uint*) ptr : XXH_swap32(
-                *cast(const uint*) ptr);
+        version (LittleEndian)
+            return *cast(const uint*) ptr;
+        else
+            return XXH_swap32(*cast(const uint*) ptr);
     }
 }
 
@@ -661,7 +664,7 @@ void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted
 
     static assert((XXH32_canonical_t).sizeof == (XXH32_hash_t).sizeof,
                     "(XXH32_canonical_t).sizeof != (XXH32_hash_t).sizeof");
-    static if (XXH_CPU_LITTLE_ENDIAN)
+    version (LittleEndian)
         hash = XXH_swap32(hash);
     memcpy(dst, &hash, (*dst).sizeof);
 }
@@ -692,12 +695,18 @@ private ulong XXH_swap64(ulong x) @safe pure nothrow @nogc
 
 private ulong XXH_readLE64(const void* ptr) @safe pure nothrow @nogc
 {
-    return XXH_CPU_LITTLE_ENDIAN ? XXH_read64(ptr) : XXH_swap64(XXH_read64(ptr));
+    version (LittleEndian)
+        return XXH_read64(ptr);
+    else
+        return XXH_swap64(XXH_read64(ptr));
 }
 
 private ulong XXH_readBE64(const void* ptr) @safe pure nothrow @nogc
 {
-    return XXH_CPU_LITTLE_ENDIAN ? XXH_swap64(XXH_read64(ptr)) : XXH_read64(ptr);
+    version (LittleEndian)
+        return XXH_swap64(XXH_read64(ptr));
+    else
+        return XXH_read64(ptr);
 }
 
 private ulong XXH_readLE64_align(const void* ptr, XXH_alignment align_) @trusted pure nothrow @nogc
@@ -708,8 +717,10 @@ private ulong XXH_readLE64_align(const void* ptr, XXH_alignment align_) @trusted
     }
     else
     {
-        return XXH_CPU_LITTLE_ENDIAN ? *cast(const ulong*) ptr : XXH_swap64(
-                *cast(const ulong*) ptr);
+        version (LittleEndian)
+            return *cast(const ulong*) ptr;
+        else
+            return XXH_swap64(*cast(const ulong*) ptr);
     }
 }
 
@@ -1005,7 +1016,7 @@ void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted
 
     static assert((XXH64_canonical_t).sizeof == (XXH64_hash_t).sizeof,
                     "(XXH64_canonical_t).sizeof != (XXH64_hash_t).sizeof");
-    if (XXH_CPU_LITTLE_ENDIAN)
+    version (LittleEndian)
         hash = XXH_swap64(hash);
     memcpy(dst, &hash, (*dst).sizeof);
 }
@@ -1380,7 +1391,8 @@ private void XXH_writeLE64(void* dst, ulong v64) @trusted pure nothrow @nogc
 {
     import core.stdc.string : memcpy;
 
-    if (!XXH_CPU_LITTLE_ENDIAN)
+    version (LittleEndian) {}
+    else
         v64 = XXH_swap64(v64);
     memcpy(dst, &v64, (v64).sizeof);
 }
