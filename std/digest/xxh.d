@@ -141,15 +141,13 @@ alias XXH128_canonical_t = XXH128_hash_t;
  * This allows fields to safely be changed in the future.
  *
  * @note ** This structure has a strict alignment requirement of 64 bytes!! **
- * Do not allocate this with `malloc()` or `new`,
- * it will not be sufficiently aligned.
- * Use @ref XXH3_createState() and @ref XXH3_freeState(), or stack allocation.
+ * Do not allocate this with `malloc()` or `new`, it will not be sufficiently aligned.
+ * Use D new operator or stack allocation.
  *
  * Typedef'd to @ref XXH3_state_t.
  * Do never access the members of this struct directly.
  *
  * @see XXH3_INITSTATE() for stack initialization.
- * @see XXH3_createState(), XXH3_freeState().
  * @see XXH32_state_s, XXH64_state_s
  */
 align(64) struct XXH3_state_t
@@ -525,22 +523,6 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
     }
 }
 
-XXH32_state_t* XXH32_createState() @trusted pure nothrow @nogc
-{
-    import core.memory : pureMalloc;
-
-    return cast(XXH32_state_t*) pureMalloc(XXH32_state_t.sizeof);
-
-}
-
-XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr) @trusted pure nothrow @nogc
-{
-    import core.memory : pureFree;
-
-    pureFree(statePtr);
-    return XXH_errorcode.XXH_OK;
-}
-
 void XXH32_copyState(XXH32_state_t* dstState, const XXH32_state_t* srcState) @trusted pure nothrow @nogc
 {
     import core.stdc.string : memcpy;
@@ -676,7 +658,7 @@ private ulong XXH_read64(const void* ptr) @trusted pure nothrow @nogc
     ulong val;
     version(HaveUnalignedLoads)
         val = *(cast(ulong*)ptr);
-    else    
+    else
         (cast(ubyte*)&val)[0 .. ulong.sizeof] = (cast(ubyte*) ptr)[0 .. ulong.sizeof];
     return val;
 }
@@ -873,22 +855,6 @@ XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure 
         return XXH64_endian_align(cast(const(ubyte)*) input, len, seed,
                 XXH_alignment.XXH_unaligned);
     }
-}
-
-XXH64_state_t* XXH64_createState() @trusted pure nothrow @nogc
-{
-    import core.memory : pureMalloc;
-
-    return cast(XXH64_state_t*) pureMalloc(XXH64_state_t.sizeof);
-
-}
-
-XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr) @trusted pure nothrow @nogc
-{
-    import core.memory : pureFree;
-
-    pureFree(statePtr);
-    return XXH_errorcode.XXH_OK;
 }
 
 void XXH64_copyState(XXH64_state_t* dstState, const XXH64_state_t* srcState) @trusted pure nothrow @nogc
@@ -1746,27 +1712,6 @@ private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
     (XXH3_state_ptr).seed = 0;
 }
 
-/*! @ingroup XXH3_family */
-XXH3_state_t* XXH3_createState() @trusted nothrow @nogc
-{
-    import core.stdc.stdlib : aligned_alloc;
-    assert(XXH3_state_t.alignof == 64, "Internal error - alignment of XXH3_state_t is not 64");
-    XXH3_state_t* state = cast(XXH3_state_t*) aligned_alloc(XXH3_state_t.alignof, (XXH3_state_t).sizeof);
-    if (state == null)
-        return null;
-    XXH3_INITSTATE(state);
-    return state;
-}
-
-/*! @ingroup XXH3_family */
-XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr) @trusted nothrow @nogc
-{
-    import core.stdc.stdlib : free;
-
-    free(statePtr);
-    return XXH_errorcode.XXH_OK;
-}
-
 void XXH3_copyState(XXH3_state_t* dst_state, const XXH3_state_t* src_state) @trusted pure nothrow @nogc
 {
     import core.stdc.string : memcpy;
@@ -1897,8 +1842,7 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
     assert(state != null, "state == null");
     {
         const ubyte* bEnd = input + len;
-        const(ubyte)* secret = (state.extSecret == null) ? &state
-            .customSecret[0] : &state.extSecret[0];
+        const(ubyte)* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
         static if (XXH3_STREAM_USE_STACK >= 1)
         {
             /* For some reason, gcc and MSVC seem to suffer greatly
@@ -2579,7 +2523,7 @@ struct XXHTemplate(HASH, STATE, bool useXXH3)
 {
 private:
     HASH hash;
-    STATE* state = null;
+    STATE state;
     HASH seed = HASH.init;
 
 public:
@@ -2602,16 +2546,14 @@ public:
     void put(scope const(ubyte)[] data...) @safe nothrow @nogc
     {
         XXH_errorcode ec;
-        if (state == null)
-            this.start;
         static if (digestSize == 32)
-            ec = XXH32_update(state, &data[0], data.length);
+            ec = XXH32_update(&state, &data[0], data.length);
         else static if (digestSize == 64 && !useXXH3)
-            ec = XXH64_update(state, &data[0], data.length);
+            ec = XXH64_update(&state, &data[0], data.length);
         else static if (digestSize == 64 && useXXH3)
-            ec = XXH3_64bits_update(state, &data[0], data.length);
+            ec = XXH3_64bits_update(&state, &data[0], data.length);
         else static if (digestSize == 128)
-            ec = XXH3_128bits_update(state, &data[0], data.length);
+            ec = XXH3_128bits_update(&state, &data[0], data.length);
         else
             assert(false, "Unknown XXH bitdeep or variant");
         assert(ec == XXH_errorcode.XXH_OK, "Update failed");
@@ -2633,27 +2575,23 @@ public:
         XXH_errorcode ec;
         static if (digestSize == 32)
         {
-            if (state == null)
-                state = XXH32_createState();
-            ec = XXH32_reset(state, seed);
+            assert(state.alignof == uint.alignof, "Wrong alignment for state structure");
+            ec = XXH32_reset(&state, seed);
         }
         else static if (digestSize == 64 && !useXXH3)
         {
-            if (state == null)
-                state = XXH64_createState();
-            ec = XXH64_reset(state, seed);
+            assert(state.alignof == ulong.alignof, "Wrong alignment for state structure");
+            ec = XXH64_reset(&state, seed);
         }
         else static if (digestSize == 64 && useXXH3)
         {
-            if (state == null)
-                state = XXH3_createState();
-            ec = XXH3_64bits_reset(state);
+            assert(state.alignof == 64, "Wrong alignment for state structure");
+            ec = XXH3_64bits_reset(&state);
         }
         else static if (digestSize == 128)
         {
-            if (state == null)
-                state = XXH3_createState();
-            ec = XXH3_128bits_reset(state);
+            assert(state.alignof == 64, "Wrong alignment for state structure");
+            ec = XXH3_128bits_reset(&state);
         }
         else
             assert(false, "Unknown XXH bitdeep or variant");
@@ -2669,37 +2607,28 @@ public:
         XXH_errorcode ec;
         static if (digestSize == 32)
         {
-            hash = XXH32_digest(state);
-            if (state != null)
-                ec = XXH32_freeState(state);
+            hash = XXH32_digest(&state);
             auto rc = nativeToBigEndian(hash);
         }
         else static if (digestSize == 64 && !useXXH3)
         {
-            hash = XXH64_digest(state);
-            if (state != null)
-                ec = XXH64_freeState(state);
+            hash = XXH64_digest(&state);
             auto rc = nativeToBigEndian(hash);
         }
         else static if (digestSize == 64 && useXXH3)
         {
-            hash = XXH3_64bits_digest(state);
-            if (state != null)
-                ec = XXH3_freeState(state);
+            hash = XXH3_64bits_digest(&state);
             auto rc = nativeToBigEndian(hash);
         }
         else static if (digestSize == 128)
         {
-            hash = XXH3_128bits_digest(state);
-            if (state != null)
-                ec = XXH3_freeState(state);
+            hash = XXH3_128bits_digest(&state);
             HASH rc;
             // Note: low64 and high64 are intentionally exchanged!
             rc.low64 = nativeToBigEndian(hash.high64);
             rc.high64 = nativeToBigEndian(hash.low64);
         }
         assert(ec == XXH_errorcode.XXH_OK, "freestate failed");
-        state = null;
 
         return (cast(ubyte*)&rc)[0 .. rc.sizeof];
     }
