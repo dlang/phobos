@@ -2558,7 +2558,7 @@ Note:
 
 See_Also: $(REF retro, std,range) for a lazy reverse without changing `r`
 */
-Range reverse(Range)(Range r)
+Range reverse(Range)(return scope Range r)
 if (isBidirectionalRange!Range &&
         (hasSwappableElements!Range ||
          (hasAssignableElements!Range && hasLength!Range && isRandomAccessRange!Range) ||
