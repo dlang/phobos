@@ -525,10 +525,8 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
 
 XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memset;
-
     assert(statePtr != null, "statePtr is null");
-    memset(statePtr, 0, (*statePtr).sizeof);
+    *statePtr = XXH32_state_t.init;
     statePtr.v[0] = seed + XXH_PRIME32_1 + XXH_PRIME32_2;
     statePtr.v[1] = seed + XXH_PRIME32_2;
     statePtr.v[2] = seed + 0;
@@ -852,10 +850,8 @@ XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure 
 
 XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memset;
-
     assert(statePtr != null, "statePtr == null");
-    memset(statePtr, 0, (*statePtr).sizeof);
+    *statePtr = XXH64_state_t.init;
     statePtr.v[0] = seed + XXH_PRIME64_1 + XXH_PRIME64_2;
     statePtr.v[1] = seed + XXH_PRIME64_2;
     statePtr.v[2] = seed + 0;
@@ -1701,15 +1697,12 @@ private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 private void XXH3_reset_internal(XXH3_state_t* statePtr, XXH64_hash_t seed,
         const void* secret, size_t secretSize) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memset;
-
     const size_t initStart = XXH3_state_t.bufferedSize.offsetof;
-    const size_t initLength = XXH3_state_t.nbStripesPerBlock.offsetof - initStart;
     assert(XXH3_state_t.nbStripesPerBlock.offsetof > initStart,
             "(XXH3_state_t.nbStripesPerBlock.offsetof <= initStart");
     assert(statePtr != null, "statePtr == null");
     /* set members from bufferedSize to nbStripesPerBlock (excluded) to 0 */
-    memset(cast(char*) statePtr + initStart, 0, initLength);
+    *statePtr = XXH3_state_t.init;
     statePtr.acc[0] = XXH_PRIME32_3;
     statePtr.acc[1] = XXH_PRIME64_1;
     statePtr.acc[2] = XXH_PRIME64_2;
