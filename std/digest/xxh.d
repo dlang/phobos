@@ -80,7 +80,9 @@ public import std.digest;
     hash = xxh.finish();
 }
 
-/* Port of C sources (release 0.8.1) to D language below */
+public import std.digest;
+
+/* --- Port of C sources (release 0.8.1) to D language below ---------------- */
 
 enum XXH_NO_STREAM = false;
 enum XXH_SIZE_OPT = 0;
@@ -96,12 +98,12 @@ alias xxh_u8 = ubyte;
 alias xxh_u32 = uint;
 alias xxh_u64 = ulong;
 
-private uint32_t XXH_rotl32(uint32_t x, uint r) @trusted pure nothrow @nogc
+private uint32_t XXH_rotl32(uint32_t x, uint r) @safe pure nothrow @nogc
 {
     return (((x) << (r)) | ((x) >> (32 - (r))));
 }
 
-private uint64_t XXH_rotl64(uint64_t x, uint r) @trusted pure nothrow @nogc
+private uint64_t XXH_rotl64(uint64_t x, uint r) @safe pure nothrow @nogc
 {
     return (((x) << (r)) | ((x) >> (64 - (r))));
 }
@@ -117,7 +119,7 @@ enum XXH_VERSION_NUMBER = (XXH_VERSION_MAJOR * 100 * 100 + XXH_VERSION_MINOR
             * 100 + XXH_VERSION_RELEASE);
 
 /** Get version number */
-uint XXH_versionNumber() @trusted pure nothrow @nogc
+uint XXH_versionNumber() @safe pure nothrow @nogc
 {
     return XXH_VERSION_NUMBER;
 }
@@ -253,7 +255,7 @@ struct XXH32_canonical_t
  * Param: x = The 32-bit integer to byteswap.
  * Return: x, byteswapped.
  */
-private xxh_u32 XXH_swap32(xxh_u32 x) @trusted pure nothrow @nogc
+private xxh_u32 XXH_swap32(xxh_u32 x) @safe pure nothrow @nogc
 {
     return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) | (
             (x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
@@ -278,12 +280,12 @@ private xxh_u32 XXH_read32(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-private xxh_u32 XXH_readLE32(const void* ptr) @trusted pure nothrow @nogc
+private xxh_u32 XXH_readLE32(const void* ptr) @safe pure nothrow @nogc
 {
     return XXH_CPU_LITTLE_ENDIAN ? XXH_read32(ptr) : XXH_swap32(XXH_read32(ptr));
 }
 
-private xxh_u32 XXH_readBE32(const void* ptr) @trusted pure nothrow @nogc
+private xxh_u32 XXH_readBE32(const void* ptr) @safe pure nothrow @nogc
 {
     return XXH_CPU_LITTLE_ENDIAN ? XXH_swap32(XXH_read32(ptr)) : XXH_read32(ptr);
 }
@@ -319,7 +321,7 @@ enum XXH_PRIME32_5 = 0x165667B1U; /** 0b00010110010101100110011110110001 */
  * Param: input The stripe of input to mix.
  * Return: The mixed accumulator lane.
  */
-private xxh_u32 XXH32_round(xxh_u32 acc, xxh_u32 input) @trusted pure nothrow @nogc
+private xxh_u32 XXH32_round(xxh_u32 acc, xxh_u32 input) @safe pure nothrow @nogc
 {
     acc += input * XXH_PRIME32_2;
     acc = XXH_rotl32(acc, 13);
@@ -335,7 +337,7 @@ private xxh_u32 XXH32_round(xxh_u32 acc, xxh_u32 input) @trusted pure nothrow @n
  * Param: hash = The hash to avalanche.
  * Return The avalanched hash.
  */
-private xxh_u32 XXH32_avalanche(xxh_u32 hash) @trusted pure nothrow @nogc
+private xxh_u32 XXH32_avalanche(xxh_u32 hash) @safe pure nothrow @nogc
 {
     hash ^= hash >> 15;
     hash *= XXH_PRIME32_2;
@@ -345,7 +347,7 @@ private xxh_u32 XXH32_avalanche(xxh_u32 hash) @trusted pure nothrow @nogc
     return hash;
 }
 
-private xxh_u32 XXH_get32bits(const void* p, XXH_alignment align_) @trusted pure nothrow @nogc
+private xxh_u32 XXH_get32bits(const void* p, XXH_alignment align_) @safe pure nothrow @nogc
 {
     return XXH_readLE32_align(p, align_);
 }
@@ -509,7 +511,7 @@ private xxh_u32 XXH32_endian_align(const(xxh_u8)* input, size_t len,
     return XXH32_finalize(h32, input, len & 15, align_);
 }
 
-XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @trusted pure nothrow @nogc
+XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure nothrow @nogc
 {
     static if (!XXH_NO_STREAM && XXH_SIZE_OPT >= 2)
     {
@@ -672,7 +674,7 @@ void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted
     memcpy(dst, &hash, (*dst).sizeof);
 }
 
-XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src) @trusted pure nothrow @nogc
+XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src) @safe pure nothrow @nogc
 {
     return XXH_readBE32(src);
 }
@@ -688,7 +690,7 @@ private xxh_u64 XXH_read64(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-private xxh_u64 XXH_swap64(xxh_u64 x) @trusted pure nothrow @nogc
+private xxh_u64 XXH_swap64(xxh_u64 x) @safe pure nothrow @nogc
 {
     return ((x << 56) & 0xff00000000000000) | ((x << 40) & 0x00ff000000000000) | (
             (x << 24) & 0x0000ff0000000000) | ((x << 8) & 0x000000ff00000000) | (
@@ -696,12 +698,12 @@ private xxh_u64 XXH_swap64(xxh_u64 x) @trusted pure nothrow @nogc
             (x >> 40) & 0x000000000000ff00) | ((x >> 56) & 0x00000000000000ff);
 }
 
-private xxh_u64 XXH_readLE64(const void* ptr) @trusted pure nothrow @nogc
+private xxh_u64 XXH_readLE64(const void* ptr) @safe pure nothrow @nogc
 {
     return XXH_CPU_LITTLE_ENDIAN ? XXH_read64(ptr) : XXH_swap64(XXH_read64(ptr));
 }
 
-private xxh_u64 XXH_readBE64(const void* ptr) @trusted pure nothrow @nogc
+private xxh_u64 XXH_readBE64(const void* ptr) @safe pure nothrow @nogc
 {
     return XXH_CPU_LITTLE_ENDIAN ? XXH_swap64(XXH_read64(ptr)) : XXH_read64(ptr);
 }
@@ -725,7 +727,7 @@ enum XXH_PRIME64_3 = 0x165667B19E3779F9; /*!< 0b00010110010101100110011110110001
 enum XXH_PRIME64_4 = 0x85EBCA77C2B2AE63; /*!< 0b1000010111101011110010100111011111000010101100101010111001100011 */
 enum XXH_PRIME64_5 = 0x27D4EB2F165667C5; /*!< 0b0010011111010100111010110010111100010110010101100110011111000101 */
 
-private xxh_u64 XXH64_round(xxh_u64 acc, xxh_u64 input) @trusted pure nothrow @nogc
+private xxh_u64 XXH64_round(xxh_u64 acc, xxh_u64 input) @safe pure nothrow @nogc
 {
     acc += input * XXH_PRIME64_2;
     acc = XXH_rotl64(acc, 31);
@@ -733,7 +735,7 @@ private xxh_u64 XXH64_round(xxh_u64 acc, xxh_u64 input) @trusted pure nothrow @n
     return acc;
 }
 
-private xxh_u64 XXH64_mergeRound(xxh_u64 acc, xxh_u64 val) @trusted pure nothrow @nogc
+private xxh_u64 XXH64_mergeRound(xxh_u64 acc, xxh_u64 val) @safe pure nothrow @nogc
 {
     val = XXH64_round(0, val);
     acc ^= val;
@@ -741,7 +743,7 @@ private xxh_u64 XXH64_mergeRound(xxh_u64 acc, xxh_u64 val) @trusted pure nothrow
     return acc;
 }
 
-private xxh_u64 XXH64_avalanche(xxh_u64 hash) @trusted pure nothrow @nogc
+private xxh_u64 XXH64_avalanche(xxh_u64 hash) @safe pure nothrow @nogc
 {
     hash ^= hash >> 33;
     hash *= XXH_PRIME64_2;
@@ -751,7 +753,7 @@ private xxh_u64 XXH64_avalanche(xxh_u64 hash) @trusted pure nothrow @nogc
     return hash;
 }
 
-xxh_u64 XXH_get64bits(const void* p, XXH_alignment align_) @trusted pure nothrow @nogc
+xxh_u64 XXH_get64bits(const void* p, XXH_alignment align_) @safe pure nothrow @nogc
 {
     return XXH_readLE64_align(p, align_);
 }
@@ -856,7 +858,7 @@ private xxh_u64 XXH64_endian_align(const(xxh_u8)* input, size_t len,
     return XXH64_finalize(h64, input, len, align_);
 }
 
-XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     static if (!XXH_NO_STREAM && XXH_SIZE_OPT >= 2)
     {
@@ -1017,7 +1019,7 @@ void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted
 }
 
 /*! @ingroup XXH64_family */
-XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src) @trusted pure nothrow @nogc
+XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src) @safe pure nothrow @nogc
 {
     return XXH_readBE64(src);
 }
@@ -1061,7 +1063,7 @@ align(64) private immutable xxh_u8[XXH3_SECRET_DEFAULT_SIZE] XXH3_kSecret = [
  * The other method, (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF), will AND both operands
  * and perform a full 64x64 multiply -- entirely redundant on 32-bit.
  */
-private xxh_u64 XXH_mult32to64(xxh_u32 x, xxh_u32 y) @trusted pure nothrow @nogc
+private xxh_u64 XXH_mult32to64(xxh_u32 x, xxh_u32 y) @safe pure nothrow @nogc
 {
     return (cast(xxh_u64)(x) * cast(xxh_u64)(y));
 }
@@ -1075,7 +1077,7 @@ private xxh_u64 XXH_mult32to64(xxh_u32 x, xxh_u32 y) @trusted pure nothrow @nogc
  * @param lhs , rhs The 64-bit integers to be multiplied
  * @return The 128-bit result represented in an @ref XXH128_hash_t.
  */
-private XXH128_hash_t XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs) @trusted pure nothrow @nogc
+private XXH128_hash_t XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs) @safe pure nothrow @nogc
 {
     static if (is(ucent))
     {
@@ -1120,14 +1122,14 @@ private XXH128_hash_t XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs) @trusted pure no
  * @return The low 64 bits of the product XOR'd by the high 64 bits.
  * @see XXH_mult64to128()
  */
-private xxh_u64 XXH3_mul128_fold64(xxh_u64 lhs, xxh_u64 rhs) @trusted pure nothrow @nogc
+private xxh_u64 XXH3_mul128_fold64(xxh_u64 lhs, xxh_u64 rhs) @safe pure nothrow @nogc
 {
     XXH128_hash_t product = XXH_mult64to128(lhs, rhs);
     return product.low64 ^ product.high64;
 }
 
 /*! Seems to produce slightly better code on GCC for some reason. */
-private xxh_u64 XXH_xorshift64(xxh_u64 v64, int shift) @trusted pure nothrow @nogc
+private xxh_u64 XXH_xorshift64(xxh_u64 v64, int shift) @safe pure nothrow @nogc
 {
     assert(0 <= shift && shift < 64, "shift out of range");
     return v64 ^ (v64 >> shift);
@@ -1137,7 +1139,7 @@ private xxh_u64 XXH_xorshift64(xxh_u64 v64, int shift) @trusted pure nothrow @no
  * This is a fast avalanche stage,
  * suitable when input bits are already partially mixed
  */
-private XXH64_hash_t XXH3_avalanche(xxh_u64 h64) @trusted pure nothrow @nogc
+private XXH64_hash_t XXH3_avalanche(xxh_u64 h64) @safe pure nothrow @nogc
 {
     h64 = XXH_xorshift64(h64, 37);
     h64 *= 0x165667919E3779F9;
@@ -1150,7 +1152,7 @@ private XXH64_hash_t XXH3_avalanche(xxh_u64 h64) @trusted pure nothrow @nogc
  * inspired by Pelle Evensen's rrmxmx
  * preferable when input has not been previously mixed
  */
-static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len) @trusted pure nothrow @nogc
+static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len) @safe pure nothrow @nogc
 {
     /* this mix is inspired by Pelle Evensen's rrmxmx */
     h64 ^= XXH_rotl64(h64, 49) ^ XXH_rotl64(h64, 24);
@@ -1250,12 +1252,12 @@ private XXH64_hash_t XXH3_len_9to16_64b(const xxh_u8* input, size_t len,
     }
 }
 
-private bool XXH_likely(bool exp) @trusted pure nothrow @nogc
+private bool XXH_likely(bool exp) @safe pure nothrow @nogc
 {
     return exp;
 }
 
-private bool XXH_unlikely(bool exp) @trusted pure nothrow @nogc
+private bool XXH_unlikely(bool exp) @safe pure nothrow @nogc
 {
     return exp;
 }
@@ -1424,7 +1426,7 @@ private void XXH3_scalarRound(void* acc, const(void)* input, const(void)* secret
  * @internal
  * @brief Processes a 64 byte block of data using the scalar path.
  */
-private void XXH3_accumulate_512_scalar(void* acc, const(void)* input, const(void)* secret) @trusted pure nothrow @nogc
+private void XXH3_accumulate_512_scalar(void* acc, const(void)* input, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
     for (i = 0; i < XXH_ACC_NB; i++)
@@ -1460,7 +1462,7 @@ private void XXH3_scalarScrambleRound(void* acc, const(void)* secret, size_t lan
  * @internal
  * @brief Scrambles the accumulators after a large chunk has been read
  */
-private void XXH3_scrambleAcc_scalar(void* acc, const(void)* secret) @trusted pure nothrow @nogc
+private void XXH3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
     for (i = 0; i < XXH_ACC_NB; i++)
@@ -1504,16 +1506,16 @@ private void XXH3_initCustomSecret_scalar(void* customSecret, xxh_u64 seed64) @t
     }
 }
 
-alias XXH3_f_accumulate_512 = void function(void*, const(void)*, const(void)*) @trusted pure nothrow @nogc;
-alias XXH3_f_scrambleAcc = void function(void*, const void*) @trusted pure nothrow @nogc;
-alias XXH3_f_initCustomSecret = void function(void*, xxh_u64) @trusted pure nothrow @nogc;
+alias XXH3_f_accumulate_512 = void function(void*, const(void)*, const(void)*) @safe pure nothrow @nogc;
+alias XXH3_f_scrambleAcc = void function(void*, const void*) @safe pure nothrow @nogc;
+alias XXH3_f_initCustomSecret = void function(void*, xxh_u64) @safe pure nothrow @nogc;
 
 immutable XXH3_f_accumulate_512 XXH3_accumulate_512 = &XXH3_accumulate_512_scalar;
 immutable XXH3_f_scrambleAcc XXH3_scrambleAcc = &XXH3_scrambleAcc_scalar;
 immutable XXH3_f_initCustomSecret XXH3_initCustomSecret = &XXH3_initCustomSecret_scalar;
 
 enum XXH_PREFETCH_DIST = 384;
-private void XXH_PREFETCH(const xxh_u8* ptr) @trusted pure nothrow @nogc
+private void XXH_PREFETCH(const xxh_u8* ptr) @safe pure nothrow @nogc
 {
     cast(void)(ptr);
 }
@@ -1619,7 +1621,7 @@ enum XXH_SECRET_MERGEACCS_START = 11;
  * This makes a big performance difference for "medium" keys (<1 KB) when using AVX instruction set.
  */
 private XXH64_hash_t XXH3_hashLong_64b_withSecret(const(void)* input,
-        size_t len, XXH64_hash_t seed64, const(xxh_u8)* secret, size_t secretLen) @trusted pure nothrow @nogc
+        size_t len, XXH64_hash_t seed64, const(xxh_u8)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) seed64;
     return XXH3_hashLong_64b_internal(input, len, secret, secretLen,
@@ -1633,7 +1635,7 @@ private XXH64_hash_t XXH3_hashLong_64b_withSecret(const(void)* input,
  * and provide a statically defined secret size to allow optimization of vector loop.
  */
 private XXH64_hash_t XXH3_hashLong_64b_default(const(void)* input, size_t len,
-        XXH64_hash_t seed64, const(xxh_u8)* secret, size_t secretLen) @trusted pure nothrow @nogc
+        XXH64_hash_t seed64, const(xxh_u8)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) seed64;
     cast(void) secret;
@@ -1657,7 +1659,7 @@ enum XXH_SEC_ALIGN = 8;
  */
 private XXH64_hash_t XXH3_hashLong_64b_withSeed_internal(const(void)* input, size_t len, XXH64_hash_t seed,
         XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble,
-        XXH3_f_initCustomSecret f_initSec) @trusted pure nothrow @nogc
+        XXH3_f_initCustomSecret f_initSec) @safe pure nothrow @nogc
 {
     //#if XXH_SIZE_OPT <= 0
     if (seed == 0)
@@ -1676,7 +1678,7 @@ private XXH64_hash_t XXH3_hashLong_64b_withSeed_internal(const(void)* input, siz
  * It's important for performance that XXH3_hashLong is not inlined.
  */
 private XXH64_hash_t XXH3_hashLong_64b_withSeed(const(void)* input, size_t len,
-        XXH64_hash_t seed, const(xxh_u8)* secret, size_t secretLen) @trusted pure nothrow @nogc
+        XXH64_hash_t seed, const(xxh_u8)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) secret;
     cast(void) secretLen;
@@ -1685,11 +1687,11 @@ private XXH64_hash_t XXH3_hashLong_64b_withSeed(const(void)* input, size_t len,
 }
 
 alias XXH3_hashLong64_f = XXH64_hash_t function(const(void)*, size_t,
-        XXH64_hash_t, const(xxh_u8)*, size_t) @trusted pure nothrow @nogc;
+        XXH64_hash_t, const(xxh_u8)*, size_t) @safe pure nothrow @nogc;
 
 private XXH64_hash_t XXH3_64bits_internal(const(void)* input, size_t len,
         XXH64_hash_t seed64, const(void)* secret, size_t secretLen, XXH3_hashLong64_f f_hashLong)
-        @trusted pure nothrow @nogc
+        @safe pure nothrow @nogc
 {
     assert(secretLen >= XXH3_SECRET_SIZE_MIN, "secretLen < XXH3_SECRET_SIZE_MIN");
     /*
@@ -1714,7 +1716,7 @@ private XXH64_hash_t XXH3_64bits_internal(const(void)* input, size_t len,
 /* ===   Public entry point   === */
 
 /*! @ingroup XXH3_family */
-XXH64_hash_t XXH3_64bits(const(void)* input, size_t length) @trusted pure nothrow @nogc
+XXH64_hash_t XXH3_64bits(const(void)* input, size_t length) @safe pure nothrow @nogc
 {
     return XXH3_64bits_internal(input, length, 0, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_64b_default);
@@ -1722,21 +1724,21 @@ XXH64_hash_t XXH3_64bits(const(void)* input, size_t length) @trusted pure nothro
 
 /*! @ingroup XXH3_family */
 XXH64_hash_t XXH3_64bits_withSecret(const(void)* input, size_t length,
-        const(void)* secret, size_t secretSize) @trusted pure nothrow @nogc
+        const(void)* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     return XXH3_64bits_internal(input, length, 0, secret, secretSize,
             &XXH3_hashLong_64b_withSecret);
 }
 
 /*! @ingroup XXH3_family */
-XXH64_hash_t XXH3_64bits_withSeed(const(void)* input, size_t length, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH64_hash_t XXH3_64bits_withSeed(const(void)* input, size_t length, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_64bits_internal(input, length, seed, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_64b_withSeed);
 }
 
 XXH64_hash_t XXH3_64bits_withSecretandSeed(const(void)* input, size_t length,
-        const(void)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+        const(void)* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     if (length <= XXH3_MIDSIZE_MAX)
         return XXH3_64bits_internal(input, length, seed, &XXH3_kSecret[0],
@@ -1818,7 +1820,7 @@ private void XXH_alignedFree(void* p) @trusted nothrow @nogc
     }
 }
 
-private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @trusted nothrow @nogc
+private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 {
     (XXH3_state_ptr).seed = 0;
 }
@@ -1834,7 +1836,7 @@ XXH3_state_t* XXH3_createState() @trusted nothrow @nogc
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr) @trusted nothrow @nogc
+XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr) @safe nothrow @nogc
 {
     XXH_alignedFree(statePtr);
     return XXH_errorcode.XXH_OK;
@@ -1875,7 +1877,7 @@ private void XXH3_reset_internal(XXH3_state_t* statePtr, XXH64_hash_t seed,
     statePtr.nbStripesPerBlock = statePtr.secretLimit / XXH_SECRET_CONSUME_RATE;
 }
 
-XXH_errorcode XXH3_64bits_reset(XXH3_state_t* statePtr) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_64bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nogc
 {
     if (statePtr == null)
         return XXH_errorcode.XXH_ERROR;
@@ -1884,7 +1886,7 @@ XXH_errorcode XXH3_64bits_reset(XXH3_state_t* statePtr) @trusted pure nothrow @n
 }
 
 XXH_errorcode XXH3_64bits_reset_withSecret(XXH3_state_t* statePtr,
-        const void* secret, size_t secretSize) @trusted pure nothrow @nogc
+        const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     if (statePtr == null)
         return XXH_errorcode.XXH_ERROR;
@@ -1896,7 +1898,7 @@ XXH_errorcode XXH3_64bits_reset_withSecret(XXH3_state_t* statePtr,
     return XXH_errorcode.XXH_OK;
 }
 
-XXH_errorcode XXH3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     if (statePtr == null)
         return XXH_errorcode.XXH_ERROR;
@@ -1909,7 +1911,7 @@ XXH_errorcode XXH3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t se
 }
 
 XXH_errorcode XXH3_64bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
-        const(void)* secret, size_t secretSize, XXH64_hash_t seed64) @trusted pure nothrow @nogc
+        const(void)* secret, size_t secretSize, XXH64_hash_t seed64) @safe pure nothrow @nogc
 {
     if (statePtr == null)
         return XXH_errorcode.XXH_ERROR;
@@ -2089,7 +2091,7 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, const(xxh_u8)* input,
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, const(void)* input, size_t len) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, const(void)* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_update(state, cast(const(xxh_u8)*) input, len,
             XXH3_accumulate_512, XXH3_scrambleAcc);
@@ -2443,7 +2445,7 @@ private XXH128_hash_t XXH3_hashLong_128b_internal(const void* input, size_t len,
 }
 
 private XXH128_hash_t XXH3_hashLong_128b_default(const void* input, size_t len,
-        XXH64_hash_t seed64, const void* secret, size_t secretLen) @trusted pure nothrow @nogc
+        XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) seed64;
     cast(void) secret;
@@ -2457,7 +2459,7 @@ private XXH128_hash_t XXH3_hashLong_128b_default(const void* input, size_t len,
  * to the compiler, so that it can properly optimize the vectorized loop.
  */
 private XXH128_hash_t XXH3_hashLong_128b_withSecret(const void* input,
-        size_t len, XXH64_hash_t seed64, const void* secret, size_t secretLen) @trusted pure nothrow @nogc
+        size_t len, XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) seed64;
     return XXH3_hashLong_128b_internal(input, len, cast(const xxh_u8*) secret,
@@ -2466,7 +2468,7 @@ private XXH128_hash_t XXH3_hashLong_128b_withSecret(const void* input,
 
 private XXH128_hash_t XXH3_hashLong_128b_withSeed_internal(const void* input, size_t len, XXH64_hash_t seed64,
         XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble,
-        XXH3_f_initCustomSecret f_initSec) @trusted pure nothrow @nogc
+        XXH3_f_initCustomSecret f_initSec) @safe pure nothrow @nogc
 {
     if (seed64 == 0)
         return XXH3_hashLong_128b_internal(input, len, &XXH3_kSecret[0],
@@ -2482,7 +2484,7 @@ private XXH128_hash_t XXH3_hashLong_128b_withSeed_internal(const void* input, si
  * It's important for performance that XXH3_hashLong is not inlined.
  */
 private XXH128_hash_t XXH3_hashLong_128b_withSeed(const void* input, size_t len,
-        XXH64_hash_t seed64, const void* secret, size_t secretLen) @trusted pure nothrow @nogc
+        XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
     cast(void) secret;
     cast(void) secretLen;
@@ -2491,11 +2493,11 @@ private XXH128_hash_t XXH3_hashLong_128b_withSeed(const void* input, size_t len,
 }
 
 alias XXH3_hashLong128_f = XXH128_hash_t function(const void*, size_t,
-        XXH64_hash_t, const void*, size_t) @trusted pure nothrow @nogc;
+        XXH64_hash_t, const void*, size_t) @safe pure nothrow @nogc;
 
 private XXH128_hash_t XXH3_128bits_internal(const void* input, size_t len,
         XXH64_hash_t seed64, const void* secret, size_t secretLen, XXH3_hashLong128_f f_hl128)
-        @trusted pure nothrow @nogc
+        @safe pure nothrow @nogc
 {
     assert(secretLen >= XXH3_SECRET_SIZE_MIN, "Secret length is < XXH3_SECRET_SIZE_MIN");
     /*
@@ -2519,7 +2521,7 @@ private XXH128_hash_t XXH3_128bits_internal(const void* input, size_t len,
 /* ===   Public XXH128 API   === */
 
 /*! @ingroup XXH3_family */
-XXH128_hash_t XXH3_128bits(const void* input, size_t len) @trusted pure nothrow @nogc
+XXH128_hash_t XXH3_128bits(const void* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_128bits_internal(input, len, 0, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_128b_default);
@@ -2527,14 +2529,14 @@ XXH128_hash_t XXH3_128bits(const void* input, size_t len) @trusted pure nothrow 
 
 /*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_withSecret(const void* input, size_t len,
-        const void* secret, size_t secretSize) @trusted pure nothrow @nogc
+        const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     return XXH3_128bits_internal(input, len, 0, cast(const xxh_u8*) secret,
             secretSize, &XXH3_hashLong_128b_withSecret);
 }
 
 /*! @ingroup XXH3_family */
-XXH128_hash_t XXH3_128bits_withSeed(const void* input, size_t len, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH128_hash_t XXH3_128bits_withSeed(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_128bits_internal(input, len, seed, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_128b_withSeed);
@@ -2542,7 +2544,7 @@ XXH128_hash_t XXH3_128bits_withSeed(const void* input, size_t len, XXH64_hash_t 
 
 /*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_withSecretandSeed(const void* input, size_t len,
-        const void* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+        const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     if (len <= XXH3_MIDSIZE_MAX)
         return XXH3_128bits_internal(input, len, seed, &XXH3_kSecret[0],
@@ -2551,37 +2553,37 @@ XXH128_hash_t XXH3_128bits_withSecretandSeed(const void* input, size_t len,
 }
 
 /*! @ingroup XXH3_family */
-XXH128_hash_t XXH128(const void* input, size_t len, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH128_hash_t XXH128(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_128bits_withSeed(input, len, seed);
 }
 
-XXH_errorcode XXH3_128bits_reset(XXH3_state_t* statePtr) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_128bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset(statePtr);
 }
 
 /*! @ingroup XXH3_family */
 XXH_errorcode XXH3_128bits_reset_withSecret(XXH3_state_t* statePtr,
-        const void* secret, size_t secretSize) @trusted pure nothrow @nogc
+        const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset_withSecret(statePtr, secret, secretSize);
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_128bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_128bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset_withSeed(statePtr, seed);
 }
 
 /*! @ingroup XXH3_family */
 XXH_errorcode XXH3_128bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
-        const void* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+        const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset_withSecretandSeed(statePtr, secret, secretSize, seed);
 }
 
-XXH_errorcode XXH3_128bits_update(XXH3_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
+XXH_errorcode XXH3_128bits_update(XXH3_state_t* state, const void* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_update(state, cast(const xxh_u8*) input, len,
             XXH3_accumulate_512, XXH3_scrambleAcc);
@@ -2672,19 +2674,19 @@ public:
          * dig.put(buf); //buffer
          * ----
          */
-    void put(scope const(ubyte)[] data...) @trusted nothrow @nogc
+    void put(scope const(ubyte)[] data...) @safe nothrow @nogc
     {
         XXH_errorcode ec;
         if (state == null)
             this.start;
         static if (digestSize == 32)
-            ec = XXH32_update(state, data.ptr, data.length);
+            ec = XXH32_update(state, &data[0], data.length);
         else static if (digestSize == 64 && !useXXH3)
-            ec = XXH64_update(state, data.ptr, data.length);
+            ec = XXH64_update(state, &data[0], data.length);
         else static if (digestSize == 64 && useXXH3)
-            ec = XXH3_64bits_update(state, data.ptr, data.length);
+            ec = XXH3_64bits_update(state, &data[0], data.length);
         else static if (digestSize == 128)
-            ec = XXH3_128bits_update(state, data.ptr, data.length);
+            ec = XXH3_128bits_update(state, &data[0], data.length);
         else
             assert(false, "Unknown XXH bitdeep or variant");
         assert(ec == XXH_errorcode.XXH_OK, "Update failed");
