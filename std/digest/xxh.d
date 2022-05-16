@@ -523,13 +523,6 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
     }
 }
 
-void XXH32_copyState(XXH32_state_t* dstState, const XXH32_state_t* srcState) @trusted pure nothrow @nogc
-{
-    import core.stdc.string : memcpy;
-
-    memcpy(dstState, srcState, (*dstState).sizeof);
-}
-
 XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted pure nothrow @nogc
 {
     import core.stdc.string : memset;
@@ -855,13 +848,6 @@ XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure 
         return XXH64_endian_align(cast(const(ubyte)*) input, len, seed,
                 XXH_alignment.XXH_unaligned);
     }
-}
-
-void XXH64_copyState(XXH64_state_t* dstState, const XXH64_state_t* srcState) @trusted pure nothrow @nogc
-{
-    import core.stdc.string : memcpy;
-
-    memcpy(dstState, srcState, (*dstState).sizeof);
 }
 
 XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted pure nothrow @nogc
@@ -1710,13 +1696,6 @@ XXH64_hash_t XXH3_64bits_withSecretandSeed(const(void)* input, size_t length,
 private void XXH3_INITSTATE(XXH3_state_t* XXH3_state_ptr) @safe nothrow @nogc
 {
     (XXH3_state_ptr).seed = 0;
-}
-
-void XXH3_copyState(XXH3_state_t* dst_state, const XXH3_state_t* src_state) @trusted pure nothrow @nogc
-{
-    import core.stdc.string : memcpy;
-
-    memcpy(dst_state, src_state, (*dst_state).sizeof);
 }
 
 private void XXH3_reset_internal(XXH3_state_t* statePtr, XXH64_hash_t seed,
