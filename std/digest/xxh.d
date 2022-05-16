@@ -44,7 +44,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF xxh32Of))
 /* xxh.d - A wrapper for the original C implementation */
 module std.digest.xxh;
 
-public import std.digest;
+version (X86)
+    version = HaveUnalignedLoads;
+else version (X86_64)
+    version = HaveUnalignedLoads;
 
 ///
 @safe unittest
