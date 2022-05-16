@@ -98,15 +98,8 @@ alias xxh_u8 = ubyte;
 alias xxh_u32 = uint;
 alias xxh_u64 = ulong;
 
-private uint32_t XXH_rotl32(uint32_t x, uint r) @safe pure nothrow @nogc
-{
-    return (((x) << (r)) | ((x) >> (32 - (r))));
-}
+private import core.bitop : rol;
 
-private uint64_t XXH_rotl64(uint64_t x, uint r) @safe pure nothrow @nogc
-{
-    return (((x) << (r)) | ((x) >> (64 - (r))));
-}
 /* *************************************
 *  Misc
 ***************************************/
@@ -324,7 +317,7 @@ enum XXH_PRIME32_5 = 0x165667B1U; /** 0b00010110010101100110011110110001 */
 private xxh_u32 XXH32_round(xxh_u32 acc, xxh_u32 input) @safe pure nothrow @nogc
 {
     acc += input * XXH_PRIME32_2;
-    acc = XXH_rotl32(acc, 13);
+    acc = rol(acc, 13);
     acc *= XXH_PRIME32_1;
     return acc;
 }
@@ -373,14 +366,14 @@ private xxh_u32 XXH32_finalize(xxh_u32 hash, const(xxh_u8)* ptr, size_t len, XXH
     void XXH_PROCESS1(ref uint32_t hash, ref const(xxh_u8)* ptr)
     {
         hash += (*ptr++) * XXH_PRIME32_5;
-        hash = XXH_rotl32(hash, 11) * XXH_PRIME32_1;
+        hash = rol(hash, 11) * XXH_PRIME32_1;
     }
 
     void XXH_PROCESS4(ref uint32_t hash, ref const(xxh_u8)* ptr)
     {
         hash += XXH_get32bits(ptr, align_) * XXH_PRIME32_3;
         ptr += 4;
-        hash = XXH_rotl32(hash, 17) * XXH_PRIME32_4;
+        hash = rol(hash, 17) * XXH_PRIME32_4;
     }
 
     /* Compact rerolled version; generally faster */
@@ -499,7 +492,7 @@ private xxh_u32 XXH32_endian_align(const(xxh_u8)* input, size_t len,
         }
         while (input < limit);
 
-        h32 = XXH_rotl32(v1, 1) + XXH_rotl32(v2, 7) + XXH_rotl32(v3, 12) + XXH_rotl32(v4, 18);
+        h32 = rol(v1, 1) + rol(v2, 7) + rol(v3, 12) + rol(v4, 18);
     }
     else
     {
@@ -649,8 +642,8 @@ XXH32_hash_t XXH32_digest(const XXH32_state_t* state) @trusted pure nothrow @nog
 
     if (state.large_len)
     {
-        h32 = XXH_rotl32(state.v[0], 1) + XXH_rotl32(state.v[1],
-                7) + XXH_rotl32(state.v[2], 12) + XXH_rotl32(state.v[3], 18);
+        h32 = rol(state.v[0], 1) + rol(state.v[1],
+                7) + rol(state.v[2], 12) + rol(state.v[3], 18);
     }
     else
     {
@@ -730,7 +723,7 @@ enum XXH_PRIME64_5 = 0x27D4EB2F165667C5; /*!< 0b00100111110101001110101100101111
 private xxh_u64 XXH64_round(xxh_u64 acc, xxh_u64 input) @safe pure nothrow @nogc
 {
     acc += input * XXH_PRIME64_2;
-    acc = XXH_rotl64(acc, 31);
+    acc = rol(acc, 31);
     acc *= XXH_PRIME64_1;
     return acc;
 }
@@ -785,20 +778,20 @@ private xxh_u64 XXH64_finalize(xxh_u64 hash, const(xxh_u8)* ptr, size_t len, XXH
         xxh_u64 k1 = XXH64_round(0, XXH_get64bits(ptr, align_));
         ptr += 8;
         hash ^= k1;
-        hash = XXH_rotl64(hash, 27) * XXH_PRIME64_1 + XXH_PRIME64_4;
+        hash = rol(hash, 27) * XXH_PRIME64_1 + XXH_PRIME64_4;
         len -= 8;
     }
     if (len >= 4)
     {
         hash ^= cast(xxh_u64)(XXH_get32bits(ptr, align_)) * XXH_PRIME64_1;
         ptr += 4;
-        hash = XXH_rotl64(hash, 23) * XXH_PRIME64_2 + XXH_PRIME64_3;
+        hash = rol(hash, 23) * XXH_PRIME64_2 + XXH_PRIME64_3;
         len -= 4;
     }
     while (len > 0)
     {
         hash ^= (*ptr++) * XXH_PRIME64_5;
-        hash = XXH_rotl64(hash, 11) * XXH_PRIME64_1;
+        hash = rol(hash, 11) * XXH_PRIME64_1;
         --len;
     }
     return XXH64_avalanche(hash);
@@ -841,7 +834,7 @@ private xxh_u64 XXH64_endian_align(const(xxh_u8)* input, size_t len,
         }
         while (input < limit);
 
-        h64 = XXH_rotl64(v1, 1) + XXH_rotl64(v2, 7) + XXH_rotl64(v3, 12) + XXH_rotl64(v4, 18);
+        h64 = rol(v1, 1) + rol(v2, 7) + rol(v3, 12) + rol(v4, 18);
         h64 = XXH64_mergeRound(h64, v1);
         h64 = XXH64_mergeRound(h64, v2);
         h64 = XXH64_mergeRound(h64, v3);
@@ -989,8 +982,8 @@ XXH64_hash_t XXH64_digest(const XXH64_state_t* state) @trusted pure nothrow @nog
 
     if (state.total_len >= 32)
     {
-        h64 = XXH_rotl64(state.v[0], 1) + XXH_rotl64(state.v[1],
-                7) + XXH_rotl64(state.v[2], 12) + XXH_rotl64(state.v[3], 18);
+        h64 = rol(state.v[0], 1) + rol(state.v[1],
+                7) + rol(state.v[2], 12) + rol(state.v[3], 18);
         h64 = XXH64_mergeRound(h64, state.v[0]);
         h64 = XXH64_mergeRound(h64, state.v[1]);
         h64 = XXH64_mergeRound(h64, state.v[2]);
@@ -1155,7 +1148,7 @@ private XXH64_hash_t XXH3_avalanche(xxh_u64 h64) @safe pure nothrow @nogc
 static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len) @safe pure nothrow @nogc
 {
     /* this mix is inspired by Pelle Evensen's rrmxmx */
-    h64 ^= XXH_rotl64(h64, 49) ^ XXH_rotl64(h64, 24);
+    h64 ^= rol(h64, 49) ^ rol(h64, 24);
     h64 *= 0x9FB21C651E98DF25;
     h64 ^= (h64 >> 35) + len;
     h64 *= 0x9FB21C651E98DF25;
@@ -2180,7 +2173,7 @@ private XXH128_hash_t XXH3_len_1to3_128b(const xxh_u8* input, size_t len,
         const xxh_u8 c3 = input[len - 1];
         const xxh_u32 combinedl = (cast(xxh_u32) c1 << 16) | (
                 cast(xxh_u32) c2 << 24) | (cast(xxh_u32) c3 << 0) | (cast(xxh_u32) len << 8);
-        const xxh_u32 combinedh = XXH_rotl32(XXH_swap32(combinedl), 13);
+        const xxh_u32 combinedh = rol(XXH_swap32(combinedl), 13);
         const xxh_u64 bitflipl = (XXH_readLE32(secret) ^ XXH_readLE32(secret + 4)) + seed;
         const xxh_u64 bitfliph = (XXH_readLE32(secret + 8) ^ XXH_readLE32(secret + 12)) - seed;
         const xxh_u64 keyed_lo = cast(xxh_u64) combinedl ^ bitflipl;
