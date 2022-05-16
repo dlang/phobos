@@ -253,7 +253,10 @@ private enum XXH_alignment
 private uint XXH_read32(const void* ptr) @trusted pure nothrow @nogc
 {
     uint val;
-    (cast(ubyte*)&val)[0 .. uint.sizeof] = (cast(ubyte*) ptr)[0 .. uint.sizeof];
+    version(HaveUnalignedLoads)
+        val = *(cast(uint*)ptr);
+    else
+        (cast(ubyte*)&val)[0 .. uint.sizeof] = (cast(ubyte*) ptr)[0 .. uint.sizeof];
     return val;
 }
 
@@ -671,7 +674,10 @@ XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src) @safe pure no
 private ulong XXH_read64(const void* ptr) @trusted pure nothrow @nogc
 {
     ulong val;
-    (cast(ubyte*)&val)[0 .. ulong.sizeof] = (cast(ubyte*) ptr)[0 .. ulong.sizeof];
+    version(HaveUnalignedLoads)
+        val = *(cast(ulong*)ptr);
+    else    
+        (cast(ubyte*)&val)[0 .. ulong.sizeof] = (cast(ubyte*) ptr)[0 .. ulong.sizeof];
     return val;
 }
 
