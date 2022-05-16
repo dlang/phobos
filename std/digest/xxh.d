@@ -252,7 +252,7 @@ private uint XXH_read32(const void* ptr) @trusted pure nothrow @nogc
 {
     uint val;
     version (HaveUnalignedLoads)
-        val = *(cast(uint*)ptr);
+        val = *(cast(uint*) ptr);
     else
         (cast(ubyte*)&val)[0 .. uint.sizeof] = (cast(ubyte*) ptr)[0 .. uint.sizeof];
     return val;
@@ -536,7 +536,7 @@ XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted p
 
 XXH_errorcode XXH32_update(XXH32_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     if (input == null)
     {
@@ -553,14 +553,18 @@ XXH_errorcode XXH32_update(XXH32_state_t* state, const void* input, size_t len) 
 
         if (state.memsize + len < 16)
         { /* fill in tmp buffer */
-            memcpy(cast(ubyte*)(state.mem32) + state.memsize, input, len);
+            //OBS memcpy(cast(ubyte*)(state.mem32) + state.memsize, input, len);
+            (cast(ubyte*) state.mem32)[state.memsize .. state.memsize + len] =
+                (cast(ubyte*) input)[0 .. len];
             state.memsize += cast(XXH32_hash_t) len;
             return XXH_errorcode.XXH_OK;
         }
 
         if (state.memsize)
         { /* some data left from previous update */
-            memcpy(cast(ubyte*)(state.mem32) + state.memsize, input, 16 - state.memsize);
+            //OBS memcpy(cast(ubyte*)(state.mem32) + state.memsize, input, 16 - state.memsize);
+            (cast(ubyte*) state.mem32)[state.memsize .. state.memsize + (16 - state.memsize)] =
+                (cast(ubyte*) input)[0 .. (16 - state.memsize)];
             {
                 const(uint)* p32 = cast(const(uint)*)&state.mem32[0];
                 state.v[0] = XXH32_round(state.v[0], XXH_readLE32(p32));
@@ -596,7 +600,9 @@ XXH_errorcode XXH32_update(XXH32_state_t* state, const void* input, size_t len) 
 
         if (p < bEnd)
         {
-            memcpy(cast(void*)&state.mem32[0], p, cast(size_t)(bEnd - p));
+            //OBS memcpy(cast(void*)&state.mem32[0], p, cast(size_t)(bEnd - p));
+            (cast(ubyte*) state.mem32)[0 .. cast(size_t)(bEnd - p) ] =
+                (cast(ubyte*) p)[0 .. cast(size_t)(bEnd - p) ];
             state.memsize = cast(XXH32_hash_t)(bEnd - p);
         }
     }
@@ -626,13 +632,14 @@ XXH32_hash_t XXH32_digest(const XXH32_state_t* state) @trusted pure nothrow @nog
 
 void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     static assert((XXH32_canonical_t).sizeof == (XXH32_hash_t).sizeof,
                     "(XXH32_canonical_t).sizeof != (XXH32_hash_t).sizeof");
     version (LittleEndian)
         hash = bswap(hash);
-    memcpy(dst, &hash, (*dst).sizeof);
+    //OBS memcpy(dst, &hash, (*dst).sizeof);
+    (cast(ubyte*) dst) [0 .. dst.sizeof] = (cast(ubyte*) &hash) [0 .. dst.sizeof];
 }
 
 XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src) @safe pure nothrow @nogc
@@ -648,7 +655,7 @@ private ulong XXH_read64(const void* ptr) @trusted pure nothrow @nogc
 {
     ulong val;
     version (HaveUnalignedLoads)
-        val = *(cast(ulong*)ptr);
+        val = *(cast(ulong*) ptr);
     else
         (cast(ubyte*)&val)[0 .. ulong.sizeof] = (cast(ubyte*) ptr)[0 .. ulong.sizeof];
     return val;
@@ -861,7 +868,7 @@ XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted p
 
 XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS: import core.stdc.string : memcpy;
 
     if (input == null)
     {
@@ -877,14 +884,18 @@ XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) 
 
         if (state.memsize + len < 32)
         { /* fill in tmp buffer */
-            memcpy((cast(ubyte*) state.mem64) + state.memsize, input, len);
+            //OBS memcpy((cast(ubyte*) state.mem64) + state.memsize, input, len);
+            (cast(ubyte*) state.mem64) [state.memsize .. state.memsize + len] =
+                 (cast(ubyte*) input) [0 .. len];
             state.memsize += cast(uint) len;
             return XXH_errorcode.XXH_OK;
         }
 
         if (state.memsize)
         { /* tmp buffer is full */
-            memcpy((cast(ubyte*) state.mem64) + state.memsize, input, 32 - state.memsize);
+            //OBS memcpy((cast(ubyte*) state.mem64) + state.memsize, input, 32 - state.memsize);
+            (cast(ubyte*) state.mem64) [state.memsize .. state.memsize + (32 - state.memsize)] =
+                 (cast(ubyte*) input) [0 .. (32 - state.memsize)];
             state.v[0] = XXH64_round(state.v[0], XXH_readLE64(&state.mem64[0]));
             state.v[1] = XXH64_round(state.v[1], XXH_readLE64(&state.mem64[1]));
             state.v[2] = XXH64_round(state.v[2], XXH_readLE64(&state.mem64[2]));
@@ -914,7 +925,9 @@ XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) 
 
         if (p < bEnd)
         {
-            memcpy(cast(void*)&state.mem64[0], p, cast(size_t)(bEnd - p));
+            //OBS memcpy(cast(void*)&state.mem64[0], p, cast(size_t)(bEnd - p));
+            (cast(void*) &state.mem64[0]) [0 .. cast(size_t) (bEnd - p)] =
+                (cast(void*) p) [0 .. cast(size_t) (bEnd - p)];
             state.memsize = cast(XXH32_hash_t)(bEnd - p);
         }
     }
@@ -948,13 +961,14 @@ XXH64_hash_t XXH64_digest(const XXH64_state_t* state) @trusted pure nothrow @nog
 
 void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     static assert((XXH64_canonical_t).sizeof == (XXH64_hash_t).sizeof,
                     "(XXH64_canonical_t).sizeof != (XXH64_hash_t).sizeof");
     version (LittleEndian)
         hash = bswap(hash);
-    memcpy(dst, &hash, (*dst).sizeof);
+    //OBS memcpy(dst, &hash, (*dst).sizeof);
+    (cast(ubyte*) dst) [0 .. dst.sizeof] = (cast(ubyte*) &hash) [0 .. dst.sizeof];
 }
 
 /*! @ingroup XXH64_family */
@@ -1325,12 +1339,13 @@ enum XXH_ACC_NB = (XXH_STRIPE_LEN / (ulong).sizeof);
 
 private void XXH_writeLE64(void* dst, ulong v64) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     version (LittleEndian) {}
     else
         v64 = bswap(v64);
-    memcpy(dst, &v64, (v64).sizeof);
+    //OBS memcpy(dst, &v64, (v64).sizeof);
+    (cast(ubyte*) dst) [0 .. v64.sizeof] = (cast(ubyte*) &v64) [0 .. v64.sizeof];
 }
 
 alias xxh_i64 = int64_t;
@@ -1803,7 +1818,7 @@ enum XXH3_STREAM_USE_STACK = 1;
 private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input,
         size_t len, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     if (input == null)
     {
@@ -1822,7 +1837,8 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
             * Operating into stack space seems to enable proper optimization.
             * clang, on the other hand, doesn't seem to need this trick */
             align(XXH_ACC_ALIGN) ulong[8] acc;
-            memcpy(&acc[0], &state.acc[0], (acc).sizeof);
+            //OBS memcpy(&acc[0], &state.acc[0], (acc).sizeof);
+            (cast(ubyte*) &acc[0]) [0 .. acc.sizeof] = (cast(ubyte*) &state.acc[0]) [0 .. acc.sizeof];
         }
         else
         {
@@ -1834,7 +1850,9 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
         /* small input : just fill in tmp buffer */
         if (state.bufferedSize + len <= XXH3_INTERNALBUFFER_SIZE)
         {
-            memcpy(&state.buffer[0] + state.bufferedSize, input, len);
+            //OBS memcpy(&state.buffer[0] + state.bufferedSize, input, len);
+            (cast(ubyte*) &state.buffer[0]) [state.bufferedSize .. state.bufferedSize + len] =
+                (cast(ubyte*) input) [0 .. len];
             state.bufferedSize += cast(XXH32_hash_t) len;
             return XXH_errorcode.XXH_OK;
         }
@@ -1850,7 +1868,9 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
         if (state.bufferedSize)
         {
             const size_t loadSize = XXH3_INTERNALBUFFER_SIZE - state.bufferedSize;
-            memcpy(&state.buffer[0] + state.bufferedSize, input, loadSize);
+            //OBS memcpy(&state.buffer[0] + state.bufferedSize, input, loadSize);
+            (cast(ubyte*)&state.buffer[0]) [state.bufferedSize .. state.bufferedSize + loadSize] =
+                (cast(ubyte*) input) [0 .. loadSize];
             input += loadSize;
             XXH3_consumeStripes(&acc[0], &state.nbStripesSoFar, state.nbStripesPerBlock,
                     &state.buffer[0], XXH3_INTERNALBUFFER_STRIPES, secret,
@@ -1890,8 +1910,10 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
             assert(input < bEnd, "input exceeds buffer, no bytes left"); /* at least some bytes left */
             state.nbStripesSoFar = nbStripes;
             /* buffer predecessor of last partial stripe */
-            memcpy(&state.buffer[0] + (state.buffer).sizeof - XXH_STRIPE_LEN,
-                    input - XXH_STRIPE_LEN, XXH_STRIPE_LEN);
+            //OBS memcpy(&state.buffer[0] + (state.buffer).sizeof - XXH_STRIPE_LEN, input - XXH_STRIPE_LEN, XXH_STRIPE_LEN);
+            (cast(ubyte*) &state.buffer[0])
+                [state.buffer.sizeof - XXH_STRIPE_LEN .. state.buffer.sizeof - XXH_STRIPE_LEN + XXH_STRIPE_LEN] =
+                (cast(ubyte*) input - XXH_STRIPE_LEN) [0 .. XXH_STRIPE_LEN];
             assert(bEnd - input <= XXH_STRIPE_LEN, "input exceed strip length");
         }
         else
@@ -1910,8 +1932,10 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
                 }
                 while (input < limit);
                 /* buffer predecessor of last partial stripe */
-                memcpy(&state.buffer[0] + (state.buffer).sizeof - XXH_STRIPE_LEN,
-                        input - XXH_STRIPE_LEN, XXH_STRIPE_LEN);
+                //OBS memcpy(&state.buffer[0] + (state.buffer).sizeof - XXH_STRIPE_LEN, input - XXH_STRIPE_LEN, XXH_STRIPE_LEN);
+                (cast(ubyte*) &state.buffer[0])
+                    [state.buffer.sizeof - XXH_STRIPE_LEN .. state.buffer.sizeof - XXH_STRIPE_LEN + XXH_STRIPE_LEN] =
+                    (cast(ubyte*) input - XXH_STRIPE_LEN) [0 .. XXH_STRIPE_LEN];
             }
         }
 
@@ -1919,12 +1943,15 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
         assert(input < bEnd, "input exceeds buffer");
         assert(bEnd - input <= XXH3_INTERNALBUFFER_SIZE, "input outside buffer");
         assert(state.bufferedSize == 0, "bufferedSize != 0");
-        memcpy(&state.buffer[0], input, cast(size_t)(bEnd - input));
+        //OBS memcpy(&state.buffer[0], input, cast(size_t)(bEnd - input));
+        (cast(ubyte*) &state.buffer[0]) [0 .. cast(size_t)(bEnd - input)] =
+            (cast(ubyte*) input) [0 .. cast(size_t)(bEnd - input)];
         state.bufferedSize = cast(XXH32_hash_t)(bEnd - input);
         static if (XXH3_STREAM_USE_STACK >= 1)
         {
             /* save stack accumulators into state */
-            memcpy(&state.acc[0], &acc[0], (acc).sizeof);
+            //OBS memcpy(&state.acc[0], &acc[0], (acc).sizeof);
+            (cast(ubyte*) &state.acc[0]) [0 .. acc.sizeof] = (cast(ubyte*) &acc[0]) [0 .. acc.sizeof];
         }
     }
 
@@ -1940,13 +1967,14 @@ XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, scope const(void)* input, 
 
 void XXH3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, const ubyte* secret) @trusted pure nothrow @nogc
 {
-    import core.stdc.string : memcpy;
+    //OBS import core.stdc.string : memcpy;
 
     /*
      * Digest on a local copy. This way, the state remains unaltered, and it can
      * continue ingesting more input afterwards.
      */
-    memcpy(&acc[0], &state.acc[0], (state.acc).sizeof);
+    //OBS memcpy(&acc[0], &state.acc[0], (state.acc).sizeof);
+    (cast(ubyte*) &acc[0]) [0 .. state.acc.sizeof] = (cast(ubyte*) &state.acc[0]) [0 .. state.acc.sizeof];
     if (state.bufferedSize >= XXH_STRIPE_LEN)
     {
         const size_t nbStripes = (state.bufferedSize - 1) / XXH_STRIPE_LEN;
@@ -1962,10 +1990,13 @@ void XXH3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, const ubyte*
         ubyte[XXH_STRIPE_LEN] lastStripe;
         const size_t catchupSize = XXH_STRIPE_LEN - state.bufferedSize;
         assert(state.bufferedSize > 0, "bufferedSize <= 0"); /* there is always some input buffered */
-        memcpy(&lastStripe[0], &state.buffer[0] + (state.buffer).sizeof - catchupSize, catchupSize);
-        memcpy(&lastStripe[0] + catchupSize, &state.buffer[0], state.bufferedSize);
-        XXH3_accumulate_512(&acc[0], &lastStripe[0],
-                &secret[0] + state.secretLimit - XXH_SECRET_LASTACC_START);
+        //OBS memcpy(&lastStripe[0], &state.buffer[0] + (state.buffer).sizeof - catchupSize, catchupSize);
+        (cast(ubyte*) &lastStripe[0]) [0 .. catchupSize] =
+            (cast(ubyte*) &state.buffer[0]) [state.buffer.sizeof - catchupSize .. state.buffer.sizeof];
+        //OBS memcpy(&lastStripe[0] + catchupSize, &state.buffer[0], state.bufferedSize);
+        (cast(ubyte*) &lastStripe[0]) [catchupSize .. catchupSize + state.bufferedSize] =
+            (cast(ubyte*) &state.buffer[0]) [0 .. state.buffer.sizeof];
+        XXH3_accumulate_512(&acc[0], &lastStripe[0], &secret[0] + state.secretLimit - XXH_SECRET_LASTACC_START);
     }
 }
 
