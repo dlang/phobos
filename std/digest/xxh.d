@@ -92,7 +92,7 @@ enum XXH_SIZE_OPT = 0;
 enum XXH_FORCE_ALIGN_CHECK = true;
 enum XXH32_ENDJMP = false;
 
-private import core.bitop : rol;
+private import core.bitop : rol, bswap;
 
 /* *************************************
 *  Misc
@@ -237,16 +237,6 @@ struct XXH32_canonical_t
     ubyte[4] digest; /*!< Hash bytes, big endian */
 }
 
-/** A 32-bit byteswap.
- *
- * Param: x = The 32-bit integer to byteswap.
- * Return: x, byteswapped.
- */
-private uint XXH_swap32(uint x) @safe pure nothrow @nogc
-{
-    return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) | (
-            (x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
-}
 
 /* ***************************
 *  Memory reads
@@ -272,13 +262,13 @@ private uint XXH_readLE32(const void* ptr) @safe pure nothrow @nogc
     version (LittleEndian)
         return XXH_read32(ptr);
     else
-        return XXH_swap32(XXH_read32(ptr));
+        return bswap(XXH_read32(ptr));
 }
 
 private uint XXH_readBE32(const void* ptr) @safe pure nothrow @nogc
 {
     version (LittleEndian)
-        return XXH_swap32(XXH_read32(ptr));
+        return bswap(XXH_read32(ptr));
     else
         return XXH_read32(ptr);
 }
@@ -294,7 +284,7 @@ private uint XXH_readLE32_align(const void* ptr, XXH_alignment align_) @trusted 
         version (LittleEndian)
             return *cast(const uint*) ptr;
         else
-            return XXH_swap32(*cast(const uint*) ptr);
+            return bswap(*cast(const uint*) ptr);
     }
 }
 
@@ -665,7 +655,7 @@ void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted
     static assert((XXH32_canonical_t).sizeof == (XXH32_hash_t).sizeof,
                     "(XXH32_canonical_t).sizeof != (XXH32_hash_t).sizeof");
     version (LittleEndian)
-        hash = XXH_swap32(hash);
+        hash = bswap(hash);
     memcpy(dst, &hash, (*dst).sizeof);
 }
 
@@ -685,26 +675,18 @@ private ulong XXH_read64(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-private ulong XXH_swap64(ulong x) @safe pure nothrow @nogc
-{
-    return ((x << 56) & 0xff00000000000000) | ((x << 40) & 0x00ff000000000000) | (
-            (x << 24) & 0x0000ff0000000000) | ((x << 8) & 0x000000ff00000000) | (
-            (x >> 8) & 0x00000000ff000000) | ((x >> 24) & 0x0000000000ff0000) | (
-            (x >> 40) & 0x000000000000ff00) | ((x >> 56) & 0x00000000000000ff);
-}
-
 private ulong XXH_readLE64(const void* ptr) @safe pure nothrow @nogc
 {
     version (LittleEndian)
         return XXH_read64(ptr);
     else
-        return XXH_swap64(XXH_read64(ptr));
+        return bswap(XXH_read64(ptr));
 }
 
 private ulong XXH_readBE64(const void* ptr) @safe pure nothrow @nogc
 {
     version (LittleEndian)
-        return XXH_swap64(XXH_read64(ptr));
+        return bswap(XXH_read64(ptr));
     else
         return XXH_read64(ptr);
 }
@@ -720,7 +702,7 @@ private ulong XXH_readLE64_align(const void* ptr, XXH_alignment align_) @trusted
         version (LittleEndian)
             return *cast(const ulong*) ptr;
         else
-            return XXH_swap64(*cast(const ulong*) ptr);
+            return bswap(*cast(const ulong*) ptr);
     }
 }
 
@@ -1017,7 +999,7 @@ void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted
     static assert((XXH64_canonical_t).sizeof == (XXH64_hash_t).sizeof,
                     "(XXH64_canonical_t).sizeof != (XXH64_hash_t).sizeof");
     version (LittleEndian)
-        hash = XXH_swap64(hash);
+        hash = bswap(hash);
     memcpy(dst, &hash, (*dst).sizeof);
 }
 
@@ -1227,7 +1209,7 @@ private XXH64_hash_t XXH3_len_4to8_64b(const ubyte* input, size_t len,
     assert(input != null, "input == null");
     assert(secret != null, "secret == null");
     assert(4 <= len && len <= 8, "len out of range");
-    seed ^= cast(ulong) XXH_swap32(cast(uint) seed) << 32;
+    seed ^= cast(ulong) bswap(cast(uint) seed) << 32;
     {
         const uint input1 = XXH_readLE32(input);
         const uint input2 = XXH_readLE32(input + len - 4);
@@ -1249,7 +1231,7 @@ private XXH64_hash_t XXH3_len_9to16_64b(const ubyte* input, size_t len,
         const ulong bitflip2 = (XXH_readLE64(secret + 40) ^ XXH_readLE64(secret + 48)) - seed;
         const ulong input_lo = XXH_readLE64(input) ^ bitflip1;
         const ulong input_hi = XXH_readLE64(input + len - 8) ^ bitflip2;
-        const ulong acc = len + XXH_swap64(input_lo) + input_hi + XXH3_mul128_fold64(input_lo,
+        const ulong acc = len + bswap(input_lo) + input_hi + XXH3_mul128_fold64(input_lo,
                 input_hi);
         return XXH3_avalanche(acc);
     }
@@ -1393,7 +1375,7 @@ private void XXH_writeLE64(void* dst, ulong v64) @trusted pure nothrow @nogc
 
     version (LittleEndian) {}
     else
-        v64 = XXH_swap64(v64);
+        v64 = bswap(v64);
     memcpy(dst, &v64, (v64).sizeof);
 }
 
@@ -2117,7 +2099,7 @@ private XXH128_hash_t XXH3_len_1to3_128b(const ubyte* input, size_t len,
         const ubyte c3 = input[len - 1];
         const uint combinedl = (cast(uint) c1 << 16) | (
                 cast(uint) c2 << 24) | (cast(uint) c3 << 0) | (cast(uint) len << 8);
-        const uint combinedh = rol(XXH_swap32(combinedl), 13);
+        const uint combinedh = rol(bswap(combinedl), 13);
         const ulong bitflipl = (XXH_readLE32(secret) ^ XXH_readLE32(secret + 4)) + seed;
         const ulong bitfliph = (XXH_readLE32(secret + 8) ^ XXH_readLE32(secret + 12)) - seed;
         const ulong keyed_lo = cast(ulong) combinedl ^ bitflipl;
@@ -2135,7 +2117,7 @@ private XXH128_hash_t XXH3_len_4to8_128b(const ubyte* input, size_t len,
     assert(input != null, "input is null");
     assert(secret != null, "secret is null");
     assert(4 <= len && len <= 8, "len is out of range");
-    seed ^= cast(ulong) XXH_swap32(cast(uint) seed) << 32;
+    seed ^= cast(ulong) bswap(cast(uint) seed) << 32;
     {
         const uint input_lo = XXH_readLE32(input);
         const uint input_hi = XXH_readLE32(input + len - 4);
@@ -2221,8 +2203,8 @@ private XXH128_hash_t XXH3_len_9to16_128b(const ubyte* input, size_t len,
              */
             m128.high64 += input_hi + XXH_mult32to64(cast(uint) input_hi, XXH_PRIME32_2 - 1);
         }
-        /* m128 ^= XXH_swap64(m128 >> 64); */
-        m128.low64 ^= XXH_swap64(m128.high64);
+        /* m128 ^= bswap(m128 >> 64); */
+        m128.low64 ^= bswap(m128.high64);
 
         { /* 128x64 multiply: h128 = m128 * XXH_PRIME64_2; */
             XXH128_hash_t h128 = XXH_mult64to128(m128.low64, XXH_PRIME64_2);
