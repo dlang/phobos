@@ -1950,7 +1950,7 @@ enum XXH3_STREAM_USE_STACK = 1;
 /*
  * Both XXH3_64bits_update and XXH3_128bits_update use this routine.
  */
-private XXH_errorcode XXH3_update(XXH3_state_t* state, const(ubyte)* input,
+private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input,
         size_t len, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 {
     import core.stdc.string : memcpy;
@@ -2083,7 +2083,7 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, const(ubyte)* input,
 }
 
 /*! @ingroup XXH3_family */
-XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, const(void)* input, size_t len) @safe pure nothrow @nogc
+XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, scope const(void)* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_update(state, cast(const(ubyte)*) input, len,
             XXH3_accumulate_512, XXH3_scrambleAcc);
@@ -2575,7 +2575,7 @@ XXH_errorcode XXH3_128bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
     return XXH3_64bits_reset_withSecretandSeed(statePtr, secret, secretSize, seed);
 }
 
-XXH_errorcode XXH3_128bits_update(XXH3_state_t* state, const void* input, size_t len) @safe pure nothrow @nogc
+XXH_errorcode XXH3_128bits_update(XXH3_state_t* state, scope const void* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_update(state, cast(const ubyte*) input, len,
             XXH3_accumulate_512, XXH3_scrambleAcc);
