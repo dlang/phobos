@@ -2658,6 +2658,44 @@ if (isBidirectionalRange!Range &&
 }
 
 /**
+Reverses `arr`. Reverse in-place if `arr` is an rvalue.  Performs `arr.length /
+2` evaluations of `swap`. UTF sequences consisting of multiple code units are
+preserved properly.
+
+Params:
+    arr = a static array to preform the reverse operation
+
+Returns: `arr`
+
+Note:
+    When passing a string with unicode modifiers on characters, such as `\u0301`,
+    this function will not properly keep the position of the modifier. For example,
+    reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
+    `da\u0301b` ("dáb").
+
+See_Also: $(LREF reverse)
+*/
+T[S] reverse(T, size_t S)(auto ref T[S] arr)
+{
+    cast(void).reverse(arr[]);
+    return arr;
+}
+
+@safe unittest
+{
+    import std.array : staticArray;
+    auto sarr = [1,2,3].staticArray;
+    sarr.reverse();
+
+    assert(sarr == [3,2,1]);
+    assert(reverse([1,2,3].staticArray) == [3,2,1]);
+
+    static immutable carr = "hello\U00010143\u0100\U00010143";
+    char[carr.length] arr = carr;
+    assert(arr.reverse() == "\U00010143\u0100\U00010143olleh");
+}
+
+/**
     The strip group of functions allow stripping of either leading, trailing,
     or both leading and trailing elements.
 
