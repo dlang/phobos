@@ -1,5 +1,6 @@
 /**
- * Computes xxHash hashes of arbitrary data. xxHash hashes are either uint32_t, uint64_t or uint128_t quantities that are like a
+ * Computes xxHash hashes of arbitrary data. xxHash hashes are either uint32_t,
+ * uint64_t or uint128_t quantities that are like a
  * checksum or CRC, but are more robust and very performant.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -98,12 +99,26 @@ private import core.bitop : rol, bswap;
 *  Misc
 ***************************************/
 
+alias XXH32_hash_t = uint;
+alias XXH64_hash_t = ulong;
+struct XXH128_hash_t
+{
+    XXH64_hash_t low64; /** `value & 0xFFFFFFFFFFFFFFFF` */
+    XXH64_hash_t high64; /** `value >> 64` */
+}
+
+alias XXH64_canonical_t = ubyte[XXH64_hash_t.sizeof];
+alias XXH128_canonical_t = ubyte[XXH128_hash_t.sizeof];
+
 enum XXH_VERSION_MAJOR = 0;
 enum XXH_VERSION_MINOR = 8;
 enum XXH_VERSION_RELEASE = 1;
+
 /** Version number, encoded as two digits each */
-enum XXH_VERSION_NUMBER = (XXH_VERSION_MAJOR * 100 * 100 + XXH_VERSION_MINOR
-            * 100 + XXH_VERSION_RELEASE);
+enum XXH_VERSION_NUMBER =
+    (XXH_VERSION_MAJOR * 100 * 100 +
+     XXH_VERSION_MINOR * 100 +
+     XXH_VERSION_RELEASE);
 
 /** Get version number */
 uint XXH_versionNumber() @safe pure nothrow @nogc
@@ -114,125 +129,47 @@ uint XXH_versionNumber() @safe pure nothrow @nogc
 @safe unittest
 {
     import std.stdio : writeln;
-    writeln("XXH Version is", XXH_versionNumber());
+    writeln("Ported XXH version is ", XXH_versionNumber());
 }
-
-private import std.stdint;
-
-alias XXH32_hash_t = uint32_t;
-alias XXH64_hash_t = uint64_t;
-struct XXH128_hash_t
-{
-    XXH64_hash_t low64; /*!< `value & 0xFFFFFFFFFFFFFFFF` */
-    XXH64_hash_t high64; /*!< `value >> 64` */
-}
-
-alias XXH64_canonical_t = uint64_t;
-alias XXH128_canonical_t = XXH128_hash_t;
-
-/*!
- * @internal
- * @brief Structure for XXH3 streaming API.
- *
- * @note This is only defined when @ref XXH_STATIC_LINKING_ONLY,
- * @ref XXH_INLINE_ALL, or @ref XXH_IMPLEMENTATION is defined.
- * Otherwise it is an opaque type.
- * Never use this definition in combination with dynamic library.
- * This allows fields to safely be changed in the future.
- *
- * @note ** This structure has a strict alignment requirement of 64 bytes!! **
- * Do not allocate this with `malloc()` or `new`, it will not be sufficiently aligned.
- * Use D new operator or stack allocation.
- *
- * Typedef'd to @ref XXH3_state_t.
- * Do never access the members of this struct directly.
- *
- * @see XXH3_INITSTATE() for stack initialization.
- * @see XXH32_state_s, XXH64_state_s
- */
-align(64) struct XXH3_state_t
-{
-    align(64) XXH64_hash_t[8] acc;
-    /*!< The 8 accumulators. See @ref XXH32_state_s::v and @ref XXH64_state_s::v */
-    align(64) ubyte[XXH3_SECRET_DEFAULT_SIZE] customSecret;
-    /*!< Used to store a custom secret generated from a seed. */
-    align(64) ubyte[XXH3_INTERNALBUFFER_SIZE] buffer;
-    /*!< The internal buffer. @see XXH32_state_s::mem32 */
-    XXH32_hash_t bufferedSize;
-    /*!< The amount of memory in @ref buffer, @see XXH32_state_s::memsize */
-    XXH32_hash_t useSeed;
-    /*!< Reserved field. Needed for padding on 64-bit. */
-    size_t nbStripesSoFar;
-    /*!< Number or stripes processed. */
-    XXH64_hash_t totalLen;
-    /*!< Total length hashed. 64-bit even on 32-bit targets. */
-    size_t nbStripesPerBlock;
-    /*!< Number of stripes per block. */
-    size_t secretLimit;
-    /*!< Size of @ref customSecret or @ref extSecret */
-    XXH64_hash_t seed;
-    /*!< Seed for _withSeed variants. Must be zero otherwise, @see XXH3_INITSTATE() */
-    XXH64_hash_t reserved64;
-    /*!< Reserved field. */
-    const(ubyte)* extSecret;
-    /*!< Reference to an external secret for the _withSecret variants, null
-        *   for other variants. */
-    /* note: there may be some padding at the end due to alignment on 64 bytes */
-} /* typedef'd to XXH3_state_t */
 
 enum XXH_errorcode
 {
-    XXH_OK = 0, /*!< OK */
-    XXH_ERROR /*!< Error */
+    XXH_OK = 0, /** OK */
+    XXH_ERROR /** Error */
 }
 
-/*!
- * @internal
- * @brief Structure for XXH32 streaming API.
+/* Structure for XXH32 streaming API.
  *
- * @note This is only defined when @ref XXH_STATIC_LINKING_ONLY,
- * @ref XXH_INLINE_ALL, or @ref XXH_IMPLEMENTATION is defined. Otherwise it is
- * an opaque type. This allows fields to safely be changed.
- *
- * Typedef'd to @ref XXH32_state_t.
- * Do not access the members of this struct directly.
- * @see XXH64_state_s, XXH3_state_s
+ * See: XXH64_state_s, XXH3_state_s
  */
 struct XXH32_state_t
 {
-    XXH32_hash_t total_len_32; /*!< Total length hashed, modulo 2^32 */
-    XXH32_hash_t large_len; /*!< Whether the hash is >= 16 (handles @ref total_len_32 overflow) */
-    XXH32_hash_t[4] v; /*!< Accumulator lanes */
-    XXH32_hash_t[4] mem32; /*!< Internal buffer for partial reads. Treated as unsigned char[16]. */
-    XXH32_hash_t memsize; /*!< Amount of data in @ref mem32 */
-    XXH32_hash_t reserved; /*!< Reserved field. Do not read nor write to it. */
-} /* typedef'd to XXH32_state_t */
+    XXH32_hash_t total_len_32; /** Total length hashed, modulo 2^32 */
+    XXH32_hash_t large_len; /** Whether the hash is >= 16 (handles total_len_32 overflow) */
+    XXH32_hash_t[4] v; /** Accumulator lanes */
+    XXH32_hash_t[4] mem32; /** Internal buffer for partial reads. Treated as unsigned char[16]. */
+    XXH32_hash_t memsize; /** Amount of data in mem32 */
+    XXH32_hash_t reserved; /** Reserved field. Do not read nor write to it. */
+}
 
-/*!
- * @internal
- * @brief Structure for XXH64 streaming API.
+
+/* Structure for XXH64 streaming API.
  *
- * @note This is only defined when @ref XXH_STATIC_LINKING_ONLY,
- * @ref XXH_INLINE_ALL, or @ref XXH_IMPLEMENTATION is defined. Otherwise it is
- * an opaque type. This allows fields to safely be changed.
- *
- * Typedef'd to @ref XXH64_state_t.
- * Do not access the members of this struct directly.
- * @see XXH32_state_s, XXH3_state_s
+ * See: XXH32_state_s, XXH3_state_s
  */
 struct XXH64_state_t
 {
-    XXH64_hash_t total_len; /*!< Total length hashed. This is always 64-bit. */
-    XXH64_hash_t[4] v; /*!< Accumulator lanes */
-    XXH64_hash_t[4] mem64; /*!< Internal buffer for partial reads. Treated as unsigned char[32]. */
-    XXH32_hash_t memsize; /*!< Amount of data in @ref mem64 */
-    XXH32_hash_t reserved32; /*!< Reserved field, needed for padding anyways*/
-    XXH64_hash_t reserved64; /*!< Reserved field. Do not read or write to it. */
+    XXH64_hash_t total_len; /** Total length hashed. This is always 64-bit. */
+    XXH64_hash_t[4] v; /** Accumulator lanes */
+    XXH64_hash_t[4] mem64; /** Internal buffer for partial reads. Treated as unsigned char[32]. */
+    XXH32_hash_t memsize; /** Amount of data in mem64 */
+    XXH32_hash_t reserved32; /** Reserved field, needed for padding anyways*/
+    XXH64_hash_t reserved64; /** Reserved field. Do not read or write to it. */
 } /* typedef'd to XXH64_state_t */
 
 struct XXH32_canonical_t
 {
-    ubyte[4] digest; /*!< Hash bytes, big endian */
+    ubyte[4] digest; /** Hash bytes, big endian */
 }
 
 
@@ -303,8 +240,8 @@ enum XXH_PRIME32_5 = 0x165667B1U; /** 0b00010110010101100110011110110001 */
  * This shuffles the bits so that any bit from @p input impacts several bits in
  * acc.
  *
- * Param: acc The accumulator lane.
- * Param: input The stripe of input to mix.
+ * Param: acc = The accumulator lane.
+ * Param: input = The stripe of input to mix.
  * Return: The mixed accumulator lane.
  */
 private uint XXH32_round(uint acc, uint input) @safe pure nothrow @nogc
@@ -338,31 +275,29 @@ private uint XXH_get32bits(const void* p, XXH_alignment align_) @safe pure nothr
     return XXH_readLE32_align(p, align_);
 }
 
-/*!
- * @internal
- * @brief Processes the last 0-15 bytes of @p ptr.
+/** Processes the last 0-15 bytes of @p ptr.
  *
  * There may be up to 15 bytes remaining to consume from the input.
  * This final stage will digest them to ensure that all input bytes are present
  * in the final mix.
  *
- * @param hash The hash to finalize.
- * @param ptr The pointer to the remaining input.
- * @param len The remaining length, modulo 16.
- * @param align Whether @p ptr is aligned.
- * @return The finalized hash.
- * @see XXH64_finalize().
+ * Param: hash = The hash to finalize.
+ * Param: ptr = The pointer to the remaining input.
+ * Param: len = The remaining length, modulo 16.
+ * Param: align = Whether @p ptr is aligned.
+ * Return: The finalized hash.
+ * See: XXH64_finalize().
  */
 private uint XXH32_finalize(uint hash, const(ubyte)* ptr, size_t len, XXH_alignment align_)
     @trusted pure nothrow @nogc
 {
-    void XXH_PROCESS1(ref uint32_t hash, ref const(ubyte)* ptr)
+    void XXH_PROCESS1(ref uint hash, ref const(ubyte)* ptr)
     {
         hash += (*ptr++) * XXH_PRIME32_5;
         hash = rol(hash, 11) * XXH_PRIME32_1;
     }
 
-    void XXH_PROCESS4(ref uint32_t hash, ref const(ubyte)* ptr)
+    void XXH_PROCESS4(ref uint hash, ref const(ubyte)* ptr)
     {
         hash += XXH_get32bits(ptr, align_) * XXH_PRIME32_3;
         ptr += 4;
@@ -449,10 +384,10 @@ private uint XXH32_finalize(uint hash, const(ubyte)* ptr, size_t len, XXH_alignm
     }
 }
 
-/** The implementation for @ref XXH32().
+/** The implementation for XXH32().
  *
  * Params:
- *  input = Directly passed from @ref XXH32().
+ *  input = Directly passed from XXH32().
  *  len = Ditto
  *  seed = Ditto
  *  align_ = Whether input is aligned.
@@ -685,11 +620,11 @@ private ulong XXH_readLE64_align(const void* ptr, XXH_alignment align_) @trusted
     }
 }
 
-enum XXH_PRIME64_1 = 0x9E3779B185EBCA87; /*!< 0b1001111000110111011110011011000110000101111010111100101010000111 */
-enum XXH_PRIME64_2 = 0xC2B2AE3D27D4EB4F; /*!< 0b1100001010110010101011100011110100100111110101001110101101001111 */
-enum XXH_PRIME64_3 = 0x165667B19E3779F9; /*!< 0b0001011001010110011001111011000110011110001101110111100111111001 */
-enum XXH_PRIME64_4 = 0x85EBCA77C2B2AE63; /*!< 0b1000010111101011110010100111011111000010101100101010111001100011 */
-enum XXH_PRIME64_5 = 0x27D4EB2F165667C5; /*!< 0b0010011111010100111010110010111100010110010101100110011111000101 */
+enum XXH_PRIME64_1 = 0x9E3779B185EBCA87; /** 0b1001111000110111011110011011000110000101111010111100101010000111 */
+enum XXH_PRIME64_2 = 0xC2B2AE3D27D4EB4F; /** 0b1100001010110010101011100011110100100111110101001110101101001111 */
+enum XXH_PRIME64_3 = 0x165667B19E3779F9; /** 0b0001011001010110011001111011000110011110001101110111100111111001 */
+enum XXH_PRIME64_4 = 0x85EBCA77C2B2AE63; /** 0b1000010111101011110010100111011111000010101100101010111001100011 */
+enum XXH_PRIME64_5 = 0x27D4EB2F165667C5; /** 0b0010011111010100111010110010111100010110010101100110011111000101 */
 
 private ulong XXH64_round(ulong acc, ulong input) @safe pure nothrow @nogc
 {
@@ -722,20 +657,18 @@ ulong XXH_get64bits(const void* p, XXH_alignment align_) @safe pure nothrow @nog
     return XXH_readLE64_align(p, align_);
 }
 
-/*!
- * @internal
- * @brief Processes the last 0-31 bytes of @p ptr.
+/** Processes the last 0-31 bytes of @p ptr.
  *
  * There may be up to 31 bytes remaining to consume from the input.
  * This final stage will digest them to ensure that all input bytes are present
  * in the final mix.
  *
- * @param hash The hash to finalize.
- * @param ptr The pointer to the remaining input.
- * @param len The remaining length, modulo 32.
- * @param align Whether @p ptr is aligned.
- * @return The finalized hash
- * @see XXH32_finalize().
+ * Param: hash The hash to finalize.
+ * Param: ptr The pointer to the remaining input.
+ * Param: len The remaining length, modulo 32.
+ * Param: align Whether @p ptr is aligned.
+ * Return: The finalized hash
+ * See: XXH32_finalize().
  */
 private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alignment align_)
     @trusted pure nothrow @nogc
@@ -768,13 +701,11 @@ private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alig
     return XXH64_avalanche(hash);
 }
 
-/*!
- * @internal
- * @brief The implementation for @ref XXH64().
+/** The implementation for XXH64().
  *
- * @param input , len , seed Directly passed from @ref XXH64().
- * @param align Whether @p input is aligned.
- * @return The calculated hash.
+ * Param: input , len , seed Directly passed from XXH64().
+ * Param: align Whether @p input is aligned.
+ * Return: The calculated hash.
  */
 private ulong XXH64_endian_align(const(ubyte)* input, size_t len,
         ulong seed, XXH_alignment align_) @trusted pure nothrow @nogc
@@ -949,6 +880,7 @@ XXH64_hash_t XXH64_digest(const XXH64_state_t* state) @trusted pure nothrow @nog
             cast(size_t) state.total_len, XXH_alignment.XXH_aligned);
 }
 
+
 void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted pure nothrow @nogc
 {
     static assert((XXH64_canonical_t).sizeof == (XXH64_hash_t).sizeof,
@@ -958,7 +890,6 @@ void XXH64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted
     (cast(ubyte*) dst) [0 .. dst.sizeof] = (cast(ubyte*) &hash) [0 .. dst.sizeof];
 }
 
-/*! @ingroup XXH64_family */
 XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src) @safe pure nothrow @nogc
 {
     return XXH_readBE64(src);
@@ -974,9 +905,49 @@ enum XXH3_SECRET_DEFAULT_SIZE = 192; /* minimum XXH3_SECRET_SIZE_MIN */
 enum XXH_SECRET_DEFAULT_SIZE = 192; /* minimum XXH3_SECRET_SIZE_MIN */
 enum XXH3_INTERNALBUFFER_SIZE = 256; ///The size of the internal XXH3 buffer.
 
+/* Structure for XXH3 streaming API.
+ *
+ * Note: ** This structure has a strict alignment requirement of 64 bytes!! **
+ * Do not allocate this with `malloc()` or `new`, it will not be sufficiently aligned.
+ *
+ * Do never access the members of this struct directly.
+ *
+ * See: XXH3_INITSTATE() for stack initialization.
+ * See: XXH32_state_s, XXH64_state_s
+ */
+align(64) struct XXH3_state_t
+{
+    align(64) XXH64_hash_t[8] acc;
+    /** The 8 accumulators. See XXH32_state_s::v and XXH64_state_s::v */
+    align(64) ubyte[XXH3_SECRET_DEFAULT_SIZE] customSecret;
+    /** Used to store a custom secret generated from a seed. */
+    align(64) ubyte[XXH3_INTERNALBUFFER_SIZE] buffer;
+    /** The internal buffer. See: XXH32_state_s::mem32 */
+    XXH32_hash_t bufferedSize;
+    /** The amount of memory in buffer, See: XXH32_state_s::memsize */
+    XXH32_hash_t useSeed;
+    /** Reserved field. Needed for padding on 64-bit. */
+    size_t nbStripesSoFar;
+    /** Number or stripes processed. */
+    XXH64_hash_t totalLen;
+    /** Total length hashed. 64-bit even on 32-bit targets. */
+    size_t nbStripesPerBlock;
+    /** Number of stripes per block. */
+    size_t secretLimit;
+    /** Size of customSecret or extSecret */
+    XXH64_hash_t seed;
+    /** Seed for _withSeed variants. Must be zero otherwise, See: XXH3_INITSTATE() */
+    XXH64_hash_t reserved64;
+    /** Reserved field. */
+    const(ubyte)* extSecret;
+    /** Reference to an external secret for the _withSecret variants, null
+     *   for other variants. */
+    /* note: there may be some padding at the end due to alignment on 64 bytes */
+} /* typedef'd to XXH3_state_t */
+
 static assert(XXH_SECRET_DEFAULT_SIZE >= XXH3_SECRET_SIZE_MIN, "default keyset is not large enough");
 
-/*! Pseudorandom secret taken directly from FARSH. */
+/** Pseudorandom secret taken directly from FARSH. */
 align(64) private immutable ubyte[XXH3_SECRET_DEFAULT_SIZE] XXH3_kSecret = [
     0xb8, 0xfe, 0x6c, 0x39, 0x23, 0xa4, 0x4b, 0xbe, 0x7c, 0x01, 0x81, 0x2c,
     0xf7, 0x21, 0xad, 0x1c, 0xde, 0xd4, 0x6d, 0xe9, 0x83, 0x90, 0x97, 0xdb,
@@ -1008,14 +979,13 @@ private ulong XXH_mult32to64(uint x, uint y) @safe pure nothrow @nogc
     return (cast(ulong)(x) * cast(ulong)(y));
 }
 
-/*!
- * @brief Calculates a 64.128-bit long multiply.
+/** Calculates a 64.128-bit long multiply.
  *
  * Uses `__uint128_t` and `_umul128` if available, otherwise uses a scalar
  * version.
  *
- * @param lhs , rhs The 64-bit integers to be multiplied
- * @return The 128-bit result represented in an @ref XXH128_hash_t.
+ * Param: lhs , rhs The 64-bit integers to be multiplied
+ * Return: The 128-bit result represented in an XXH128_hash_t.
  */
 private XXH128_hash_t XXH_mult64to128(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 {
@@ -1052,15 +1022,14 @@ private XXH128_hash_t XXH_mult64to128(ulong lhs, ulong rhs) @safe pure nothrow @
     return r128;
 }
 
-/*!
- * @brief Calculates a 64-bit to 128-bit multiply, then XOR folds it.
+/** Calculates a 64-bit to 128-bit multiply, then XOR folds it.
  *
  * The reason for the separate function is to prevent passing too many structs
  * around by value. This will hopefully inline the multiply, but we don't force it.
  *
- * @param lhs , rhs The 64-bit integers to multiply
- * @return The low 64 bits of the product XOR'd by the high 64 bits.
- * @see XXH_mult64to128()
+ * Param: lhs , rhs The 64-bit integers to multiply
+ * Return: The low 64 bits of the product XOR'd by the high 64 bits.
+ * See: XXH_mult64to128()
  */
 private ulong XXH3_mul128_fold64(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 {
@@ -1068,7 +1037,7 @@ private ulong XXH3_mul128_fold64(ulong lhs, ulong rhs) @safe pure nothrow @nogc
     return product.low64 ^ product.high64;
 }
 
-/*! Seems to produce slightly better code on GCC for some reason. */
+/* Seems to produce slightly better code on GCC for some reason. */
 private ulong XXH_xorshift64(ulong v64, int shift) @safe pure nothrow @nogc
 {
     assert(0 <= shift && shift < 64, "shift out of range");
@@ -1332,15 +1301,11 @@ private void XXH_writeLE64(void* dst, ulong v64) @trusted pure nothrow @nogc
     (cast(ubyte*) dst) [0 .. v64.sizeof] = (cast(ubyte*) &v64) [0 .. v64.sizeof];
 }
 
-alias xxh_i64 = int64_t;
-
 /* scalar variants - universal */
 
 enum XXH_ACC_ALIGN = 8;
 
-/*!
- * @internal
- * @brief Scalar round for @ref XXH3_accumulate_512_scalar().
+/** Scalar round for XXH3_accumulate_512_scalar().
  *
  * This is extracted to its own function because the NEON path uses a combination
  * of NEON and scalar.
@@ -1361,10 +1326,7 @@ private void XXH3_scalarRound(void* acc, const(void)* input, const(void)* secret
     }
 }
 
-/*!
- * @internal
- * @brief Processes a 64 byte block of data using the scalar path.
- */
+/* Processes a 64 byte block of data using the scalar path. */
 private void XXH3_accumulate_512_scalar(void* acc, const(void)* input, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
@@ -1374,9 +1336,7 @@ private void XXH3_accumulate_512_scalar(void* acc, const(void)* input, const(voi
     }
 }
 
-/*!
- * @internal
- * @brief Scalar scramble step for @ref XXH3_scrambleAcc_scalar().
+/* Scalar scramble step for XXH3_scrambleAcc_scalar().
  *
  * This is extracted to its own function because the NEON path uses a combination
  * of NEON and scalar.
@@ -1397,10 +1357,7 @@ private void XXH3_scalarScrambleRound(void* acc, const(void)* secret, size_t lan
     }
 }
 
-/*!
- * @internal
- * @brief Scrambles the accumulators after a large chunk has been read
- */
+/* Scrambles the accumulators after a large chunk has been read */
 private void XXH3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
@@ -1654,14 +1611,12 @@ private XXH64_hash_t XXH3_64bits_internal(const(void)* input, size_t len,
 
 /* ===   Public entry point   === */
 
-/*! @ingroup XXH3_family */
 XXH64_hash_t XXH3_64bits(const(void)* input, size_t length) @safe pure nothrow @nogc
 {
     return XXH3_64bits_internal(input, length, 0, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_64b_default);
 }
 
-/*! @ingroup XXH3_family */
 XXH64_hash_t XXH3_64bits_withSecret(const(void)* input, size_t length,
         const(void)* secret, size_t secretSize) @safe pure nothrow @nogc
 {
@@ -1669,7 +1624,6 @@ XXH64_hash_t XXH3_64bits_withSecret(const(void)* input, size_t length,
             &XXH3_hashLong_64b_withSecret);
 }
 
-/*! @ingroup XXH3_family */
 XXH64_hash_t XXH3_64bits_withSeed(const(void)* input, size_t length, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_64bits_internal(input, length, seed, &XXH3_kSecret[0],
@@ -1933,7 +1887,6 @@ private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input
     return XXH_errorcode.XXH_OK;
 }
 
-/*! @ingroup XXH3_family */
 XXH_errorcode XXH3_64bits_update(XXH3_state_t* state, scope const(void)* input, size_t len)
     @safe pure nothrow @nogc
 {
@@ -1972,7 +1925,6 @@ private void XXH3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, cons
     }
 }
 
-/*! @ingroup XXH3_family */
 XXH64_hash_t XXH3_64bits_digest(const XXH3_state_t* state) @trusted pure nothrow @nogc
 {
     const ubyte* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
@@ -2364,14 +2316,12 @@ private XXH128_hash_t XXH3_128bits_internal(const void* input, size_t len,
 
 /* ===   Public XXH128 API   === */
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits(const void* input, size_t len) @safe pure nothrow @nogc
 {
     return XXH3_128bits_internal(input, len, 0, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_128b_default);
 }
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_withSecret(const void* input, size_t len,
         const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
@@ -2379,14 +2329,12 @@ XXH128_hash_t XXH3_128bits_withSecret(const void* input, size_t len,
             secretSize, &XXH3_hashLong_128b_withSecret);
 }
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_withSeed(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_128bits_internal(input, len, seed, &XXH3_kSecret[0],
             (XXH3_kSecret).sizeof, &XXH3_hashLong_128b_withSeed);
 }
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_withSecretandSeed(const void* input, size_t len,
         const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
@@ -2396,7 +2344,6 @@ XXH128_hash_t XXH3_128bits_withSecretandSeed(const void* input, size_t len,
     return XXH3_hashLong_128b_withSecret(input, len, seed, secret, secretSize);
 }
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH128(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_128bits_withSeed(input, len, seed);
@@ -2407,20 +2354,17 @@ XXH_errorcode XXH3_128bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nog
     return XXH3_64bits_reset(statePtr);
 }
 
-/*! @ingroup XXH3_family */
 XXH_errorcode XXH3_128bits_reset_withSecret(XXH3_state_t* statePtr,
         const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset_withSecret(statePtr, secret, secretSize);
 }
 
-/*! @ingroup XXH3_family */
 XXH_errorcode XXH3_128bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return XXH3_64bits_reset_withSeed(statePtr, seed);
 }
 
-/*! @ingroup XXH3_family */
 XXH_errorcode XXH3_128bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
         const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
@@ -2433,7 +2377,6 @@ XXH_errorcode XXH3_128bits_update(XXH3_state_t* state, scope const void* input, 
             XXH3_accumulate_512, XXH3_scrambleAcc);
 }
 
-/*! @ingroup XXH3_family */
 XXH128_hash_t XXH3_128bits_digest(const XXH3_state_t* state) @trusted pure nothrow @nogc
 {
     const ubyte* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
