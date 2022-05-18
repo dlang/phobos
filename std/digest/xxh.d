@@ -45,10 +45,14 @@ $(TR $(TDNW Helpers) $(TD $(MYREF xxh32Of))
 /* xxh.d - A wrapper for the original C implementation */
 module std.digest.xxh;
 
+
 version (X86)
     version = HaveUnalignedLoads;
 else version (X86_64)
     version = HaveUnalignedLoads;
+
+//TODO: Properly detect this requirement.
+//version = CheckACCAlignment;
 
 //TODO: Check, if this code is an advantage over XXH provided code
 //      The code from core.int128 doesn't inline.
@@ -1396,8 +1400,9 @@ enum XXH_ACC_ALIGN = 8;
 private void xxh3_scalarRound(void* acc, const(void)* input, const(void)* secret, size_t lane)
     @trusted pure nothrow @nogc
 in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
-in((cast(size_t) acc & (XXH_ACC_ALIGN - 1)) == 0, "(cast(size_t) acc & (XXH_ACC_ALIGN - 1)) != 0")
 {
+    version (CheckACCAlignment)
+        assert((cast(size_t) acc & (XXH_ACC_ALIGN - 1)) == 0, "(cast(size_t) acc & (XXH_ACC_ALIGN - 1)) != 0");
     ulong* xacc = cast(ulong*) acc;
     ubyte* xinput = cast(ubyte*) input;
     ubyte* xsecret = cast(ubyte*) secret;
@@ -1427,9 +1432,10 @@ private void xxh3_accumulate_512_scalar(void* acc, const(void)* input, const(voi
  */
 // TODO: Do we need that? // pragma(inline, true)
 private void xxh3_scalarScrambleRound(void* acc, const(void)* secret, size_t lane) @trusted pure nothrow @nogc
-in(((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) == 0, "((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) != 0")
 in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 {
+    version (CheckACCAlignment)
+        assert(((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) == 0, "((cast(size_t) acc) & (XXH_ACC_ALIGN - 1)) != 0");
     ulong* xacc = cast(ulong*) acc; /* presumed aligned */
     const ubyte* xsecret = cast(const ubyte*) secret; /* no alignment restriction */
     {
