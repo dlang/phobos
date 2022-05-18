@@ -1498,9 +1498,24 @@ immutable XXH3_f_scrambleAcc xxh3_scrambleAcc = &xxh3_scrambleAcc_scalar;
 immutable XXH3_f_initCustomSecret xxh3_initCustomSecret = &xxh3_initCustomSecret_scalar;
 
 enum XXH_PREFETCH_DIST = 384;
+/* TODO: Determine how to implement prefetching in D! Disabled for now
+ *
+ */
 private void XXH_PREFETCH(const ubyte* ptr) @safe pure nothrow @nogc
 {
-    cast(void)(ptr);
+    cast(void)(ptr); /* DISABLED prefetch and do nothing here */
+
+//TODO In C it is done with the following code lines:
+//TODO  if XXH_SIZE_OPT >= 1
+//TODO    define XXH_PREFETCH(ptr) (void)(ptr)
+//TODO  elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))  /* _mm_prefetch() not defined outside of x86/x64 */
+//TODO    include <mmintrin.h>   /* https://msdn.microsoft.com/fr-fr/library/84szxsww(v=vs.90).aspx */
+//TODO    define XXH_PREFETCH(ptr)  _mm_prefetch((const char*)(ptr), _MM_HINT_T0)
+//TODO  elif defined(__GNUC__) && ( (__GNUC__ >= 4) || ( (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1) ) )
+//TODO    define XXH_PREFETCH(ptr)  __builtin_prefetch((ptr), 0 /* rw==read */, 3 /* locality */)
+//TODO  else
+//TODO    define XXH_PREFETCH(ptr) (void)(ptr)  /* disabled */
+//TODO  endif
 }
 
 /*
