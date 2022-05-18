@@ -222,7 +222,7 @@ PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_datetime = date interval package stopwatch systime timezone
-PACKAGE_std_digest = crc hmac md murmurhash package ripemd sha
+PACKAGE_std_digest = crc hmac md murmurhash package ripemd sha xxh
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
