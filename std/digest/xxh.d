@@ -3086,7 +3086,7 @@ auto xxh128Of(T...)(T data)
 alias XXH32Digest = WrapperDigest!XXH_32;
 alias XXH64Digest = WrapperDigest!XXH_64; ///ditto
 alias XXH3_64Digest = WrapperDigest!XXH3_64; ///ditto
-alias XXH128Digest = WrapperDigest!XXH3_128; ///ditto
+alias XXH3_128Digest = WrapperDigest!XXH3_128; ///ditto
 
 ///
 @safe unittest
@@ -3119,7 +3119,7 @@ alias XXH128Digest = WrapperDigest!XXH3_128; ///ditto
 @safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
-    auto xxh = new XXH128Digest();
+    auto xxh = new XXH3_128Digest();
     ubyte[] hash = xxh.digest("abc");
     //Let's get a hash string
     assert(toHexString(hash) == "06B05AB6733A618578AF5F94892F3950");
@@ -3185,7 +3185,7 @@ alias XXH128Digest = WrapperDigest!XXH3_128; ///ditto
         dig.put(cast(ubyte) 0);
     }
 
-    auto xxh = new XXH128Digest();
+    auto xxh = new XXH3_128Digest();
     test(xxh);
 
     //Let's use a custom buffer:
@@ -3201,7 +3201,7 @@ alias XXH128Digest = WrapperDigest!XXH3_128; ///ditto
     auto xxh = new XXH32Digest();
     auto xxh64 = new XXH64Digest();
     auto xxh3_64 = new XXH3_64Digest();
-    auto xxh128 = new XXH128Digest();
+    auto xxh128 = new XXH3_128Digest();
 
     xxh.put(cast(ubyte[]) "abcdef");
     xxh.reset();

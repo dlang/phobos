@@ -52,7 +52,7 @@ as well as with the OOP versions:
     auto xxh1 = new XXH3_64Digest();
     ubyte[] hash2 = xxh2.digest("abc");
 
-    auto xxh2 = new XXH128Digest();
+    auto xxh2 = new XXH3_128Digest();
     ubyte[] hash3 = xxh3.digest("abc");
 -------
 

@@ -179,7 +179,7 @@ import std.traits;
         auto xxh32 = new XXH32Digest();
         auto xxh64 = new XXH64Digest();
         auto xxh3_64 = new XXH3_64Digest();
-        auto xxh3_128 = new XXH128Digest();
+        auto xxh3_128 = new XXH3_128Digest();
 
         foreach (arg; args[1 .. $])
         {
@@ -706,7 +706,7 @@ interface Digest
     ubyte[] xxh32 = (new XXH32Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] xxh64 = (new XXH64Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] xxh3_64 = (new XXH3_64Digest()).digest("The quick brown fox jumps over the lazy dog");
-    ubyte[] xxh3_128 = (new XXH128Digest()).digest("The quick brown fox jumps over the lazy dog");
+    ubyte[] xxh3_128 = (new XXH3_128Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick brown fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
