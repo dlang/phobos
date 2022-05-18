@@ -718,8 +718,7 @@ private ulong XXH64_endian_align(const(ubyte)* input, size_t len,
         ulong seed, XXH_alignment align_) @trusted pure nothrow @nogc
 {
     ulong h64;
-    if (input == null)
-        assert(len == 0, "input null ptr only allowed with len == 0");
+    assert(input !is null && !len, "input null ptr only allowed with len == 0");
 
     if (len >= 32)
     {
