@@ -127,14 +127,17 @@ class XXHException : Exception
 
 alias XXH32_hash_t = uint;
 alias XXH64_hash_t = ulong;
-struct XXH128_hash_t
+align(16) struct XXH128_hash_t
 {
     XXH64_hash_t low64; /** `value & 0xFFFFFFFFFFFFFFFF` */
     XXH64_hash_t high64; /** `value >> 64` */
 }
 
 alias XXH64_canonical_t = ubyte[XXH64_hash_t.sizeof];
+static assert(XXH64_hash_t.sizeof == 8, "64bit integers should be 8 bytes?");
 alias XXH128_canonical_t = ubyte[XXH128_hash_t.sizeof];
+static assert(XXH128_hash_t.sizeof == 16, "128bit integers should be 16 bytes?");
+
 
 enum XXH_VERSION_MAJOR = 0;
 enum XXH_VERSION_MINOR = 8;
