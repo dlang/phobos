@@ -2957,7 +2957,7 @@ alias XXH3_128 = XXHTemplate!(XXH128_hash_t, XXH3_state_t, true); /// XXH3_128 f
     enum ubyte[16] input = cast(ubyte[16]) hexString!"c3fcd3d76192e4007dfb496cca67e13b";
     assert(toHexString(input) == "C3FCD3D76192E4007DFB496CCA67E13B");
 
-    ubyte[] onemilliona = new ubyte[1000000];
+    ubyte[] onemilliona = new ubyte[1_000_000];
     onemilliona[] = 'a';
     digest32 = xxh32Of(onemilliona);
     assert(digest32 == cast(ubyte[]) hexString!"E1155920", "Got " ~ toHexString(digest32));
@@ -2969,7 +2969,7 @@ alias XXH3_128 = XXHTemplate!(XXH128_hash_t, XXH3_state_t, true); /// XXH3_128 f
     assert(digest128 == cast(ubyte[]) hexString!"A545DF8E384A9579B1FD6FAE5285C4EB",
             "Got " ~ toHexString(digest128));
 
-    auto oneMillionRange = repeat!ubyte(cast(ubyte) 'a', 1000000);
+    auto oneMillionRange = repeat!ubyte(cast(ubyte) 'a', 1_000_000);
     digest32 = xxh32Of(oneMillionRange);
     assert(digest32 == cast(ubyte[]) hexString!"E1155920", "Got " ~ toHexString(digest32));
     digest64 = xxh64Of(oneMillionRange);
