@@ -54,7 +54,7 @@ else version (X86_64)
 //      The code from core.int128 doesn't inline.
 //version = Have128BitInteger;
 
-version(Have128BitInteger)
+version (Have128BitInteger)
 {
     import core.int128;
 }
@@ -1064,7 +1064,7 @@ private ulong xxh_mult32to64(uint x, uint y) @safe pure nothrow @nogc
  */
 private XXH128_hash_t xxh_mult64to128(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 {
-    version(Have128BitInteger)
+    version (Have128BitInteger)
     {
         Cent cent_lhs; cent_lhs.lo = lhs;
         Cent cent_rhs; cent_rhs.lo = rhs;
@@ -1512,7 +1512,7 @@ private void XXH_PREFETCH(const ubyte* ptr) @safe pure nothrow @nogc
 //TODO    include <mmintrin.h>   /* https://msdn.microsoft.com/fr-fr/library/84szxsww(v=vs.90).aspx */
 //TODO    define XXH_PREFETCH(ptr)  _mm_prefetch((const char*)(ptr), _MM_HINT_T0)
 //TODO  elif defined(__GNUC__) && ( (__GNUC__ >= 4) || ( (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1) ) )
-//TODO    define XXH_PREFETCH(ptr)  __builtin_prefetch((ptr), 0 /* rw==read */, 3 /* locality */)
+//TODO    define XXH_PREFETCH(ptr)  __builtin_prefetch((ptr), 0 /* rw == read */, 3 /* locality */)
 //TODO  else
 //TODO    define XXH_PREFETCH(ptr) (void)(ptr)  /* disabled */
 //TODO  endif
