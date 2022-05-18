@@ -323,7 +323,7 @@ private uint xxh_get32bits(const void* p, XXH_alignment align_) @safe pure nothr
 private uint xxh32_finalize(uint hash, const(ubyte)* ptr, size_t len, XXH_alignment align_)
     @trusted pure nothrow @nogc
 {
-    void XXH_PROCESS1(ref uint hash, ref const(ubyte)* ptr)
+    static void XXH_PROCESS1(ref uint hash, ref const(ubyte)* ptr)
     {
         hash += (*ptr++) * XXH_PRIME32_5;
         hash = rol(hash, 11) * XXH_PRIME32_1;
