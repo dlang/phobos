@@ -50,6 +50,15 @@ version (X86)
 else version (X86_64)
     version = HaveUnalignedLoads;
 
+//TODO: Check, if this code is an advantage over XXH provided code
+//      The code from core.int128 doesn't inline.
+//version = Have128BitInteger;
+
+version(Have128BitInteger)
+{
+    import core.int128;
+}
+
 ///
 @safe unittest
 {
@@ -1052,17 +1061,14 @@ private ulong xxh_mult32to64(uint x, uint y) @safe pure nothrow @nogc
  */
 private XXH128_hash_t xxh_mult64to128(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 {
-    static if (is(ucent))
+    version(Have128BitInteger)
     {
-        //import std.int128;
-        //alias uint128_t = Int128;
-
-        const uint128_t product = cast(uint128_t_) lhs * cast(uint128_t_) rhs;
+        Cent cent_lhs; cent_lhs.lo = lhs;
+        Cent cent_rhs; cent_rhs.lo = rhs;
+        const Cent product = mul(cent_lhs, cent_rhs);
         XXH128_hash_t r128;
-        // r128.low64  = cast(ulong) (product);
-        // r128.high64 = cast(ulong) (product >> 64);
-        r128.low64 = product.data.lo;
-        r128.high64 = product.data.hi;
+        r128.low64 = product.lo;
+        r128.high64 = product.hi;
     }
     else
     {
