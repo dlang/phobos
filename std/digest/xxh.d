@@ -499,6 +499,8 @@ do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
+    else if (input == null && len != 0)
+        return XXH_errorcode.XXH_ERROR;
     else
     {
         const(ubyte)* p = cast(const(ubyte)*) input;
@@ -703,7 +705,6 @@ in
 }
 do
 {
-
     len &= 31;
     while (len >= 8)
     {
@@ -831,6 +832,8 @@ do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
+    else if (input == null && len != 0)
+        return XXH_errorcode.XXH_ERROR;
     else
     {
         const(ubyte)* p = cast(const(ubyte)*) input;
@@ -1826,6 +1829,8 @@ do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
+    else if (input == null && len != 0)
+        return XXH_errorcode.XXH_ERROR;
     else
     {
         const ubyte* bEnd = input + len;
