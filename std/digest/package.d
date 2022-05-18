@@ -154,7 +154,7 @@ import std.traits;
 ///
 @system unittest
 {
-    import std.digest.crc, std.digest.md, std.digest.sha;
+    import std.digest.crc, std.digest.md, std.digest.sha, std.digest.xxh;
     import std.stdio;
 
     // Digests a file and prints the result.
@@ -176,12 +176,20 @@ import std.traits;
         auto md5 = new MD5Digest();
         auto sha1 = new SHA1Digest();
         auto crc32 = new CRC32Digest();
+        auto xxh32 = new XXH32Digest();
+        auto xxh64 = new XXH64Digest();
+        auto xxh3_64 = new XXH3_64Digest();
+        auto xxh3_128 = new XXH128Digest();
 
         foreach (arg; args[1 .. $])
         {
           digestFile(md5, arg);
           digestFile(sha1, arg);
           digestFile(crc32, arg);
+          digestFile(xxh32, arg);
+          digestFile(xxh64, arg);
+          digestFile(xxh3_64, arg);
+          digestFile(xxh3_128, arg);
         }
     }
 }
@@ -692,9 +700,13 @@ interface Digest
 ///
 @system unittest
 {
-    import std.digest.crc, std.digest.md, std.digest.sha;
+    import std.digest.crc, std.digest.md, std.digest.sha, std.digest.xxh;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] sha1  = (new SHA1Digest()).digest("The quick brown fox jumps over the lazy dog");
+    ubyte[] xxh32 = (new XXH32Digest()).digest("The quick brown fox jumps over the lazy dog");
+    ubyte[] xxh64 = (new XXH64Digest()).digest("The quick brown fox jumps over the lazy dog");
+    ubyte[] xxh3_64 = (new XXH3_64Digest()).digest("The quick brown fox jumps over the lazy dog");
+    ubyte[] xxh3_128 = (new XXH128Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick brown fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
@@ -898,6 +910,11 @@ unittest
 {
     import std.digest.md : MD5;
     import std.digest.sha : SHA1, SHA256, SHA512;
+    import std.digest.xxh : XXH_32, XXH_64, XXH3_64, XXH3_128;
+    assert(digestLength!XXH_32 == 4);
+    assert(digestLength!XXH_64 == 8);
+    assert(digestLength!XXH3_64 == 8);
+    assert(digestLength!XXH3_128 == 16);
     assert(digestLength!MD5 == 16);
     assert(digestLength!SHA1 == 20);
     assert(digestLength!SHA256 == 32);
