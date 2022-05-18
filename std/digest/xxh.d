@@ -491,7 +491,11 @@ in (statePtr != null, "statePtr is null")
 }
 
 XXH_errorcode XXH32_update(XXH32_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
-in(input !is null && !len, "input null ptr only allowed with len == 0")
+in
+{
+    if (input == null) assert(len == 0, "input null ptr only allowed with len == 0");
+}
+do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
@@ -693,8 +697,13 @@ ulong XXH_get64bits(const void* p, XXH_alignment align_) @safe pure nothrow @nog
  */
 private ulong XXH64_finalize(ulong hash, const(ubyte)* ptr, size_t len, XXH_alignment align_)
     @trusted pure nothrow @nogc
-in(ptr !is null && !len, "input null ptr only allowed with len == 0")
+in
 {
+    if (ptr == null) assert(len == 0, "input null ptr only allowed with len == 0");
+}
+do
+{
+
     len &= 31;
     while (len >= 8)
     {
@@ -729,7 +738,11 @@ in(ptr !is null && !len, "input null ptr only allowed with len == 0")
 pragma(inline, true)
 private ulong XXH64_endian_align(const(ubyte)* input, size_t len,
         ulong seed, XXH_alignment align_) @trusted pure nothrow @nogc
-in(input !is null && !len, "input null ptr only allowed with len == 0")
+in
+{
+    if (input == null) assert(len == 0, "input null ptr only allowed with len == 0");
+}
+do
 {
     ulong h64;
 
@@ -810,7 +823,11 @@ XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted p
 }
 
 XXH_errorcode XXH64_update(XXH64_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
-in(input !is null && !len, "input null ptr only allowed with len == 0")
+in
+{
+    if (input == null) assert(len == 0, "input null ptr only allowed with len == 0");
+}
+do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
@@ -1801,7 +1818,11 @@ pragma(inline, true)
 private XXH_errorcode XXH3_update(XXH3_state_t* state, scope const(ubyte)* input,
         size_t len, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 in(state != null, "state == null")
-in(input !is null && !len, "input null ptr only allowed with len == 0")
+in
+{
+    if (input == null) assert(len == 0, "input null ptr only allowed with len == 0");
+}
+do
 {
     if (input == null && len == 0)
         return XXH_errorcode.XXH_OK;
