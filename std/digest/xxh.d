@@ -453,6 +453,7 @@ private uint xxh32_endian_align(const(ubyte)* input, size_t len,
     return xxh32_finalize(h32, input, len & 15, align_);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure nothrow @nogc
 {
     static if (!XXH_NO_STREAM && XXH_SIZE_OPT >= 2)
@@ -486,6 +487,7 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
     }
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed) @trusted pure nothrow @nogc
 in (statePtr != null, "statePtr is null")
 {
@@ -497,6 +499,7 @@ in (statePtr != null, "statePtr is null")
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh32_update(XXH32_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
 in
 {
@@ -573,6 +576,7 @@ do
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH32_hash_t xxh32_digest(const XXH32_state_t* state) @trusted pure nothrow @nogc
 {
     uint h32;
@@ -593,6 +597,7 @@ XXH32_hash_t xxh32_digest(const XXH32_state_t* state) @trusted pure nothrow @nog
             XXH_alignment.XXH_aligned);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 void xxh32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted pure nothrow @nogc
 {
     static assert((XXH32_canonical_t).sizeof == (XXH32_hash_t).sizeof,
@@ -602,6 +607,7 @@ void xxh32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash) @trusted
     (cast(ubyte*) dst) [0 .. dst.sizeof] = (cast(ubyte*) &hash) [0 .. dst.sizeof];
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH32_hash_t xxh32_hashFromCanonical(const XXH32_canonical_t* src) @safe pure nothrow @nogc
 {
     return xxh_readBE32(src);
@@ -793,6 +799,7 @@ do
     return xxh64_finalize(h64, input, len, align_);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     static if (!XXH_NO_STREAM && XXH_SIZE_OPT >= 2)
@@ -826,6 +833,7 @@ XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure 
     }
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
     assert(statePtr != null, "statePtr == null");
@@ -837,6 +845,7 @@ XXH_errorcode xxh64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed) @trusted p
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh64_update(XXH64_state_t* state, const void* input, size_t len) @trusted pure nothrow @nogc
 in
 {
@@ -907,6 +916,7 @@ do
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh64_digest(const XXH64_state_t* state) @trusted pure nothrow @nogc
 {
     ulong h64;
@@ -932,6 +942,7 @@ XXH64_hash_t xxh64_digest(const XXH64_state_t* state) @trusted pure nothrow @nog
 }
 
 
+/* XXH PUBLIC API - hidden in D module */ private
 void xxh64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted pure nothrow @nogc
 {
     static assert((XXH64_canonical_t).sizeof == (XXH64_hash_t).sizeof,
@@ -941,6 +952,7 @@ void xxh64_canonicalFromHash(XXH64_canonical_t* dst, XXH64_hash_t hash) @trusted
     (cast(ubyte*) dst) [0 .. dst.sizeof] = (cast(ubyte*) &hash) [0 .. dst.sizeof];
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh64_hashFromCanonical(const XXH64_canonical_t* src) @safe pure nothrow @nogc
 {
     return xxh_readBE64(src);
@@ -1685,12 +1697,14 @@ in(secretLen >= XXH3_SECRET_SIZE_MIN, "secretLen < XXH3_SECRET_SIZE_MIN")
 
 /* ===   Public entry point   === */
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh3_64bits(const(void)* input, size_t length) @safe pure nothrow @nogc
 {
     return xxh3_64bits_internal(input, length, 0, &xxh3_kSecret[0],
             (xxh3_kSecret).sizeof, &xxh3_hashLong_64b_default);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh3_64bits_withSecret(const(void)* input, size_t length,
         const(void)* secret, size_t secretSize) @safe pure nothrow @nogc
 {
@@ -1698,12 +1712,14 @@ XXH64_hash_t xxh3_64bits_withSecret(const(void)* input, size_t length,
             &xxh3_hashLong_64b_withSecret);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh3_64bits_withSeed(const(void)* input, size_t length, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return xxh3_64bits_internal(input, length, seed, &xxh3_kSecret[0],
             (xxh3_kSecret).sizeof, &xxh3_hashLong_64b_withSeed);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh3_64bits_withSecretandSeed(const(void)* input, size_t length,
         const(void)* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
@@ -1749,6 +1765,7 @@ in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
     statePtr.nbStripesPerBlock = statePtr.secretLimit / XXH_SECRET_CONSUME_RATE;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_64bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nogc
 {
     if (statePtr == null)
@@ -1757,6 +1774,7 @@ XXH_errorcode xxh3_64bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nogc
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_64bits_reset_withSecret(XXH3_state_t* statePtr,
         const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
@@ -1770,6 +1788,7 @@ XXH_errorcode xxh3_64bits_reset_withSecret(XXH3_state_t* statePtr,
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     if (statePtr == null)
@@ -1782,6 +1801,7 @@ XXH_errorcode xxh3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t se
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_64bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
         const(void)* secret, size_t secretSize, XXH64_hash_t seed64) @safe pure nothrow @nogc
 {
@@ -1970,6 +1990,7 @@ do
     return XXH_errorcode.XXH_OK;
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_64bits_update(XXH3_state_t* state, scope const(void)* input, size_t len)
     @safe pure nothrow @nogc
 {
@@ -2009,6 +2030,7 @@ private void xxh3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, cons
     }
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH64_hash_t xxh3_64bits_digest(const XXH3_state_t* state) @trusted pure nothrow @nogc
 {
     const ubyte* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
@@ -2413,12 +2435,14 @@ private XXH128_hash_t xxh3_128bits_internal(const void* input, size_t len,
 
 /* ===   Public XXH128 API   === */
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t xxh3_128bits(const void* input, size_t len) @safe pure nothrow @nogc
 {
     return xxh3_128bits_internal(input, len, 0, &xxh3_kSecret[0],
             (xxh3_kSecret).sizeof, &xxh3_hashLong_128b_default);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t xxh3_128bits_withSecret(const void* input, size_t len,
         const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
@@ -2426,12 +2450,14 @@ XXH128_hash_t xxh3_128bits_withSecret(const void* input, size_t len,
             secretSize, &xxh3_hashLong_128b_withSecret);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t xxh3_128bits_withSeed(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return xxh3_128bits_internal(input, len, seed, &xxh3_kSecret[0],
             (xxh3_kSecret).sizeof, &xxh3_hashLong_128b_withSeed);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t xxh3_128bits_withSecretandSeed(const void* input, size_t len,
         const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
@@ -2441,39 +2467,46 @@ XXH128_hash_t xxh3_128bits_withSecretandSeed(const void* input, size_t len,
     return xxh3_hashLong_128b_withSecret(input, len, seed, secret, secretSize);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t XXH128(const void* input, size_t len, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return xxh3_128bits_withSeed(input, len, seed);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_128bits_reset(XXH3_state_t* statePtr) @safe pure nothrow @nogc
 {
     return xxh3_64bits_reset(statePtr);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_128bits_reset_withSecret(XXH3_state_t* statePtr,
         const void* secret, size_t secretSize) @safe pure nothrow @nogc
 {
     return xxh3_64bits_reset_withSecret(statePtr, secret, secretSize);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_128bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return xxh3_64bits_reset_withSeed(statePtr, seed);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_128bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
         const void* secret, size_t secretSize, XXH64_hash_t seed) @safe pure nothrow @nogc
 {
     return xxh3_64bits_reset_withSecretandSeed(statePtr, secret, secretSize, seed);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH_errorcode xxh3_128bits_update(XXH3_state_t* state, scope const void* input, size_t len) @safe pure nothrow @nogc
 {
     return xxh3_update(state, cast(const ubyte*) input, len,
             xxh3_accumulate_512, xxh3_scrambleAcc);
 }
 
+/* XXH PUBLIC API - hidden in D module */ private
 XXH128_hash_t xxh3_128bits_digest(const XXH3_state_t* state) @trusted pure nothrow @nogc
 {
     const ubyte* secret = (state.extSecret == null) ? &state.customSecret[0] : &state.extSecret[0];
