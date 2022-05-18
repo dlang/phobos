@@ -459,9 +459,16 @@ XXH32_hash_t XXH32(const void* input, size_t len, XXH32_hash_t seed) @safe pure 
     {
         /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
         XXH32_state_t state;
-        xxh32_reset(&state, seed);
-        xxh32_update(&state, cast(const(ubyte)*) input, len);
-        return xxh32_digest(&state);
+        auto rc = xxh32_reset(&state, seed);
+        if (rc == XXH_errorcode.XXH_OK)
+        {
+            rc = xxh32_update(&state, cast(const(ubyte)*) input, len);
+            if (rc == XXH_errorcode.XXH_OK)
+            {
+                return xxh32_digest(&state);
+            }
+        }
+        return XXH_errorcode.XXH_ERROR;
     }
     else
     {
@@ -792,9 +799,16 @@ XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed) @safe pure 
     {
         /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
         XXH64_state_t state;
-        xxh64_reset(&state, seed);
-        xxh64_update(&state, cast(const(ubyte)*) input, len);
-        return xxh64_digest(&state);
+        auto rc = xxh64_reset(&state, seed);
+        if (rc == XXH_errorcode.XXH_OK)
+        {
+            rc = xxh64_update(&state, cast(const(ubyte)*) input, len);
+            if (rc == XXH_errorcode.XXH_OK)
+            {
+                return xxh64_digest(&state);
+            }
+        }
+        return XXH_errorcode.XXH_ERROR;
     }
     else
     {
