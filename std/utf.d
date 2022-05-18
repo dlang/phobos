@@ -4275,7 +4275,7 @@ private int impureVariable;
  *                            UseReplacementDchar.no means throw `UTFException` for invalid UTF
  *
  * Throws:
- *      `UTFException` if invalid UTF sequence and `useReplacementDchar` is set to `UseReplacementDchar.yes`
+ *      `UTFException` if invalid UTF sequence and `useReplacementDchar` is set to `UseReplacementDchar.no`
  *
  * GC:
  *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.no`
