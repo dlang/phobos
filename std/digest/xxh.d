@@ -118,6 +118,7 @@ class XXHException : Exception
 ///
 @safe unittest
 {
+    import std.exception : enforce;
     enforce!XXHException(true, "This never throws...");
 }
 
@@ -157,8 +158,7 @@ uint xxh_versionNumber() @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.stdio : writeln;
-    writeln("Ported XXH version is ", xxh_versionNumber());
+    assert(XXH_VERSION_NUMBER == xxh_versionNumber(), "Version mismatch");
 }
 
 enum XXH_errorcode
