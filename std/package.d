@@ -35,6 +35,7 @@ public import
  std.base64,
  std.bigint,
  std.bitmanip,
+ std.checkedint,
  std.compiler,
  std.complex,
  std.concurrency,
