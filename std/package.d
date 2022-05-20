@@ -50,6 +50,7 @@ public import
  std.format,
  std.functional,
  std.getopt,
+ std.int128,
  std.json,
  std.math,
  std.mathspecial,
