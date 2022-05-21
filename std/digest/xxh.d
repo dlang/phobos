@@ -218,7 +218,6 @@ private enum XXH_alignment
     XXH_unaligned /** Possibly unaligned */
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private uint xxh_read32(const void* ptr) @trusted pure nothrow @nogc
 {
     uint val;
@@ -229,7 +228,6 @@ private uint xxh_read32(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private uint xxh_readLE32(const void* ptr) @safe pure nothrow @nogc
 {
     version (LittleEndian)
@@ -246,7 +244,6 @@ private uint xxh_readBE32(const void* ptr) @safe pure nothrow @nogc
         return xxh_read32(ptr);
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private uint xxh_readLE32_align(const void* ptr, XXH_alignment align_) @trusted pure nothrow @nogc
 {
     if (align_ == XXH_alignment.XXH_unaligned)
@@ -429,7 +426,6 @@ private uint xxh32_finalize(uint hash, const(ubyte)* ptr, size_t len, XXH_alignm
  *  align_ = Whether input is aligned.
  * Return: The calculated hash.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private uint xxh32_endian_align(const(ubyte)* input, size_t len,
         uint seed, XXH_alignment align_) @trusted pure nothrow @nogc
 {
@@ -643,7 +639,6 @@ private ulong xxh_read64(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh_readLE64(const void* ptr) @safe pure nothrow @nogc
 {
     version (LittleEndian)
@@ -660,7 +655,6 @@ private ulong xxh_readBE64(const void* ptr) @safe pure nothrow @nogc
         return xxh_read64(ptr);
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh_readLE64_align(const void* ptr, XXH_alignment align_) @trusted pure nothrow @nogc
 {
     if (align_ == XXH_alignment.XXH_unaligned)
@@ -765,7 +759,6 @@ do
  * Param: align Whether @p input is aligned.
  * Return: The calculated hash.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh64_endian_align(const(ubyte)* input, size_t len,
         ulong seed, XXH_alignment align_) @trusted pure nothrow @nogc
 in
@@ -1114,7 +1107,6 @@ private ulong xxh3_mul128_fold64(ulong lhs, ulong rhs) @safe pure nothrow @nogc
 }
 
 /* Seems to produce slightly better code on GCC for some reason. */
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh_xorshift64(ulong v64, int shift) @safe pure nothrow @nogc
 in(0 <= shift && shift < 64, "shift out of range")
 {
@@ -1181,7 +1173,6 @@ static XXH64_hash_t xxh3_rrmxmx(ulong h64, ulong len) @safe pure nothrow @nogc
  *
  * This adds an extra layer of strength for custom secrets.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_len_1to3_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed)
         @trusted pure nothrow @nogc
@@ -1206,7 +1197,6 @@ in(secret != null, "secret == null")
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_len_4to8_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 in(input != null, "input == null")
@@ -1224,7 +1214,6 @@ in(4 <= len && len <= 8, "len out of range")
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_len_9to16_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 in(input != null, "input == null")
@@ -1242,19 +1231,16 @@ in(9 <= len && len <= 16, "len out of range")
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private bool xxh_likely(bool exp) @safe pure nothrow @nogc
 {
     return exp;
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private bool xxh_unlikely(bool exp) @safe pure nothrow @nogc
 {
     return exp;
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_len_0to16_64b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 in(len <= 16, "len > 16")
@@ -1296,7 +1282,6 @@ in(len <= 16, "len > 16")
  * by this, although it is always a good idea to use a proper seed if you care
  * about strength.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed64) @trusted pure nothrow @nogc
 {
     {
@@ -1308,7 +1293,6 @@ private ulong xxh3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed6
 }
 
 /* For mid range keys, XXH3 uses a Mum-hash variant. */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_len_17to128_64b(const(ubyte)* input, size_t len,
         const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
@@ -1343,7 +1327,6 @@ enum XXH3_MIDSIZE_MAX = 240;
 enum XXH3_MIDSIZE_STARTOFFSET = 3;
 enum XXH3_MIDSIZE_LASTOFFSET = 17;
 
-// TODO: Do we need that? // pragma(inline, false)
 private XXH64_hash_t xxh3_len_129to240_64b(const(ubyte)* input, size_t len,
         const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
@@ -1378,7 +1361,6 @@ enum XXH_STRIPE_LEN = 64;
 enum XXH_SECRET_CONSUME_RATE = 8; /* nb of secret bytes consumed at each accumulation */
 enum XXH_ACC_NB = (XXH_STRIPE_LEN / (ulong).sizeof);
 
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh_writeLE64(void* dst, ulong v64) @trusted pure nothrow @nogc
 {
     version (LittleEndian) {}
@@ -1396,7 +1378,6 @@ enum XXH_ACC_ALIGN = 8;
  * This is extracted to its own function because the NEON path uses a combination
  * of NEON and scalar.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_scalarRound(void* acc, const(void)* input, const(void)* secret, size_t lane)
     @trusted pure nothrow @nogc
 in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
@@ -1415,7 +1396,6 @@ in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 }
 
 /* Processes a 64 byte block of data using the scalar path. */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_accumulate_512_scalar(void* acc, const(void)* input, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
@@ -1430,7 +1410,6 @@ private void xxh3_accumulate_512_scalar(void* acc, const(void)* input, const(voi
  * This is extracted to its own function because the NEON path uses a combination
  * of NEON and scalar.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_scalarScrambleRound(void* acc, const(void)* secret, size_t lane) @trusted pure nothrow @nogc
 in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 {
@@ -1449,7 +1428,6 @@ in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 }
 
 /* Scrambles the accumulators after a large chunk has been read */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure nothrow @nogc
 {
     size_t i;
@@ -1459,7 +1437,6 @@ private void xxh3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure 
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_initCustomSecret_scalar(void* customSecret, ulong seed64) @trusted pure nothrow @nogc
 {
     /*
@@ -1511,17 +1488,17 @@ private void XXH_PREFETCH(const ubyte* ptr) @safe pure nothrow @nogc
 {
     cast(void)(ptr); /* DISABLED prefetch and do nothing here */
 
-//TODO In C it is done with the following code lines:
-//TODO  if XXH_SIZE_OPT >= 1
-//TODO    define XXH_PREFETCH(ptr) (void)(ptr)
-//TODO  elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))  /* _mm_prefetch() not defined outside of x86/x64 */
-//TODO    include <mmintrin.h>   /* https://msdn.microsoft.com/fr-fr/library/84szxsww(v=vs.90).aspx */
-//TODO    define XXH_PREFETCH(ptr)  _mm_prefetch((const char*)(ptr), _MM_HINT_T0)
-//TODO  elif defined(__GNUC__) && ( (__GNUC__ >= 4) || ( (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1) ) )
-//TODO    define XXH_PREFETCH(ptr)  __builtin_prefetch((ptr), 0 /* rw == read */, 3 /* locality */)
-//TODO  else
-//TODO    define XXH_PREFETCH(ptr) (void)(ptr)  /* disabled */
-//TODO  endif
+// In C it is done with the following code lines:
+//  if XXH_SIZE_OPT >= 1
+//    define XXH_PREFETCH(ptr) (void)(ptr)
+//  elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))  /* _mm_prefetch() not defined outside of x86/x64 */
+//    include <mmintrin.h>   /* https://msdn.microsoft.com/fr-fr/library/84szxsww(v=vs.90).aspx */
+//    define XXH_PREFETCH(ptr)  _mm_prefetch((const char*)(ptr), _MM_HINT_T0)
+//  elif defined(__GNUC__) && ( (__GNUC__ >= 4) || ( (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1) ) )
+//    define XXH_PREFETCH(ptr)  __builtin_prefetch((ptr), 0 /* rw == read */, 3 /* locality */)
+//  else
+//    define XXH_PREFETCH(ptr) (void)(ptr)  /* disabled */
+//  endif
 }
 
 /*
@@ -1529,7 +1506,6 @@ private void XXH_PREFETCH(const ubyte* ptr) @safe pure nothrow @nogc
  * Loops over xxh3_accumulate_512().
  * Assumption: nbStripes will not overflow the secret size
  */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_accumulate(ulong* acc, const ubyte* input,
         const ubyte* secret, size_t nbStripes, XXH3_f_accumulate_512 f_acc512) @trusted pure nothrow @nogc
 {
@@ -1542,7 +1518,6 @@ private void xxh3_accumulate(ulong* acc, const ubyte* input,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_hashLong_internal_loop(ulong* acc, const ubyte* input, size_t len, const ubyte* secret,
         size_t secretSize, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
@@ -1577,7 +1552,6 @@ in(len > XXH_STRIPE_LEN, "len <= XXH_STRIPE_LEN")
 
 enum XXH_SECRET_LASTACC_START = 7; /* not aligned on 8, last secret is different from acc & scrambler */
 
-// TODO: Do we need that? // pragma(inline, true)
 private ulong xxh3_mix2Accs(const(ulong)* acc, const(ubyte)* secret) @trusted pure nothrow @nogc
 {
     return xxh3_mul128_fold64(acc[0] ^ xxh_readLE64(secret), acc[1] ^ xxh_readLE64(secret + 8));
@@ -1602,7 +1576,6 @@ static immutable XXH3_INIT_ACC = [
         XXH_PRIME64_4, XXH_PRIME32_2, XXH_PRIME64_5, XXH_PRIME32_1
     ];
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_hashLong_64b_internal(const(void)* input, size_t len, const(void)* secret,
         size_t secretSize, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 {
@@ -1627,7 +1600,6 @@ enum XXH_SECRET_MERGEACCS_START = 11;
  * so that the compiler can properly optimize the vectorized loop.
  * This makes a big performance difference for "medium" keys (<1 KB) when using AVX instruction set.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_hashLong_64b_withSecret(const(void)* input,
         size_t len, XXH64_hash_t seed64, const(ubyte)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -1642,7 +1614,6 @@ private XXH64_hash_t xxh3_hashLong_64b_withSecret(const(void)* input,
  * Note that inside this no_inline function, we do inline the internal loop,
  * and provide a statically defined secret size to allow optimization of vector loop.
  */
-// TODO: Do we need that? // pragma(inline, false)
 private XXH64_hash_t xxh3_hashLong_64b_default(const(void)* input, size_t len,
         XXH64_hash_t seed64, const(ubyte)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -1666,7 +1637,6 @@ enum XXH_SEC_ALIGN = 8;
  * It's important for performance that XXH3_hashLong is not inlined. Not sure
  * why (uop cache maybe?), but the difference is large and easily measurable.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_hashLong_64b_withSeed_internal(const(void)* input, size_t len, XXH64_hash_t seed,
         XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble,
         XXH3_f_initCustomSecret f_initSec) @safe pure nothrow @nogc
@@ -1687,7 +1657,6 @@ private XXH64_hash_t xxh3_hashLong_64b_withSeed_internal(const(void)* input, siz
 /*
  * It's important for performance that XXH3_hashLong is not inlined.
  */
-// TODO: Do we need that? // pragma(inline, false)
 private XXH64_hash_t xxh3_hashLong_64b_withSeed(const(void)* input, size_t len,
         XXH64_hash_t seed, const(ubyte)* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -1700,7 +1669,6 @@ private XXH64_hash_t xxh3_hashLong_64b_withSeed(const(void)* input, size_t len,
 alias XXH3_hashLong64_f = XXH64_hash_t function(const(void)*, size_t,
         XXH64_hash_t, const(ubyte)*, size_t) @safe pure nothrow @nogc;
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH64_hash_t xxh3_64bits_internal(const(void)* input, size_t len,
         XXH64_hash_t seed64, const(void)* secret, size_t secretLen, XXH3_hashLong64_f f_hashLong)
         @safe pure nothrow @nogc
@@ -1849,7 +1817,6 @@ XXH_errorcode xxh3_64bits_reset_withSecretandSeed(XXH3_state_t* statePtr,
 /* Note : when xxh3_consumeStripes() is invoked,
  * there must be a guarantee that at least one more byte must be consumed from input
  * so that the function can blindly consume all stripes using the "normal" secret segment */
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_consumeStripes(ulong* acc, size_t* nbStripesSoFarPtr,
         size_t nbStripesPerBlock, const ubyte* input, size_t nbStripes,
         const ubyte* secret, size_t secretLimit, XXH3_f_accumulate_512 f_acc512,
@@ -1881,7 +1848,6 @@ enum XXH3_STREAM_USE_STACK = 1;
 /*
  * Both xxh3_64bits_update and xxh3_128bits_update use this routine.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH_errorcode xxh3_update(XXH3_state_t* state, scope const(ubyte)* input,
         size_t len, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 in(state != null, "state == null")
@@ -2028,7 +1994,6 @@ XXH_errorcode xxh3_64bits_update(XXH3_state_t* state, scope const(void)* input, 
             xxh3_accumulate_512, xxh3_scrambleAcc);
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private void xxh3_digest_long(XXH64_hash_t* acc, const XXH3_state_t* state, const ubyte* secret)
     @trusted pure nothrow @nogc
 {
@@ -2094,7 +2059,6 @@ XXH64_hash_t xxh3_64bits_digest(const XXH3_state_t* state) @trusted pure nothrow
  * XXH128 is also more oriented towards 64-bit machines. It is still extremely
  * fast for a _128-bit_ hash on 32-bit (it usually clears XXH64).
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_len_1to3_128b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2125,7 +2089,6 @@ private XXH128_hash_t xxh3_len_1to3_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_len_4to8_128b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2154,7 +2117,6 @@ private XXH128_hash_t xxh3_len_4to8_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_len_9to16_128b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2233,7 +2195,6 @@ private XXH128_hash_t xxh3_len_9to16_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_len_0to16_128b(const ubyte* input, size_t len,
         const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2256,7 +2217,6 @@ private XXH128_hash_t xxh3_len_0to16_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh128_mix32B(XXH128_hash_t acc, const ubyte* input_1,
         const ubyte* input_2, const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2267,7 +2227,6 @@ private XXH128_hash_t xxh128_mix32B(XXH128_hash_t acc, const ubyte* input_1,
     return acc;
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_len_17to128_128b(const ubyte* input, size_t len,
         const ubyte* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2319,7 +2278,6 @@ private XXH128_hash_t xxh3_len_17to128_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, false)
 private XXH128_hash_t xxh3_len_129to240_128b(const ubyte* input, size_t len,
         const ubyte* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
 {
@@ -2362,7 +2320,6 @@ private XXH128_hash_t xxh3_len_129to240_128b(const ubyte* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_hashLong_128b_internal(const void* input, size_t len, const ubyte* secret,
         size_t secretSize, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
 {
@@ -2384,7 +2341,6 @@ private XXH128_hash_t xxh3_hashLong_128b_internal(const void* input, size_t len,
     }
 }
 
-// TODO: Do we need that? // pragma(inline, false)
 private XXH128_hash_t xxh3_hashLong_128b_default(const void* input, size_t len,
         XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -2399,7 +2355,6 @@ private XXH128_hash_t xxh3_hashLong_128b_default(const void* input, size_t len,
  * It's important for performance to pass @p secretLen (when it's static)
  * to the compiler, so that it can properly optimize the vectorized loop.
  */
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_hashLong_128b_withSecret(const void* input,
         size_t len, XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -2408,7 +2363,6 @@ private XXH128_hash_t xxh3_hashLong_128b_withSecret(const void* input,
             secretLen, xxh3_accumulate_512, xxh3_scrambleAcc);
 }
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_hashLong_128b_withSeed_internal(const void* input, size_t len, XXH64_hash_t seed64,
         XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble,
         XXH3_f_initCustomSecret f_initSec) @safe pure nothrow @nogc
@@ -2426,7 +2380,6 @@ private XXH128_hash_t xxh3_hashLong_128b_withSeed_internal(const void* input, si
 /*
  * It's important for performance that XXH3_hashLong is not inlined.
  */
-// TODO: Do we need that? // pragma(inline, false)
 private XXH128_hash_t xxh3_hashLong_128b_withSeed(const void* input, size_t len,
         XXH64_hash_t seed64, const void* secret, size_t secretLen) @safe pure nothrow @nogc
 {
@@ -2439,7 +2392,6 @@ private XXH128_hash_t xxh3_hashLong_128b_withSeed(const void* input, size_t len,
 alias XXH3_hashLong128_f = XXH128_hash_t function(const void*, size_t,
         XXH64_hash_t, const void*, size_t) @safe pure nothrow @nogc;
 
-// TODO: Do we need that? // pragma(inline, true)
 private XXH128_hash_t xxh3_128bits_internal(const void* input, size_t len,
         XXH64_hash_t seed64, const void* secret, size_t secretLen, XXH3_hashLong128_f f_hl128)
         @safe pure nothrow @nogc
@@ -2578,7 +2530,7 @@ version (LittleEndian)
     private alias bigEndianToNative = bswap;
 }
 else
-    // TODO: Do we need that? // pragma(inline, true) private pure @nogc nothrow @safe
+pragma(inline, true) private pure @nogc nothrow @safe
 {
     uint nativeToBigEndian(uint val)
     {
