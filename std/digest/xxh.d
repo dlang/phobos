@@ -1346,29 +1346,26 @@ private XXH64_hash_t xxh3_len_17to128_64b(const(ubyte)* input, size_t len,
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
 in(16 < len && len <= 128, "len out of range")
 {
-    cast(void) secretSize;
+    ulong acc = len * XXH_PRIME64_1;
+    if (len > 32)
     {
-        ulong acc = len * XXH_PRIME64_1;
-        if (len > 32)
+        if (len > 64)
         {
-            if (len > 64)
+            if (len > 96)
             {
-                if (len > 96)
-                {
-                    acc += xxh3_mix16B(input + 48, secret + 96, seed);
-                    acc += xxh3_mix16B(input + len - 64, secret + 112, seed);
-                }
-                acc += xxh3_mix16B(input + 32, secret + 64, seed);
-                acc += xxh3_mix16B(input + len - 48, secret + 80, seed);
+                acc += xxh3_mix16B(input + 48, secret + 96, seed);
+                acc += xxh3_mix16B(input + len - 64, secret + 112, seed);
             }
-            acc += xxh3_mix16B(input + 16, secret + 32, seed);
-            acc += xxh3_mix16B(input + len - 32, secret + 48, seed);
+            acc += xxh3_mix16B(input + 32, secret + 64, seed);
+            acc += xxh3_mix16B(input + len - 48, secret + 80, seed);
         }
-        acc += xxh3_mix16B(input + 0, secret + 0, seed);
-        acc += xxh3_mix16B(input + len - 16, secret + 16, seed);
-
-        return xxh3_avalanche(acc);
+        acc += xxh3_mix16B(input + 16, secret + 32, seed);
+        acc += xxh3_mix16B(input + len - 32, secret + 48, seed);
     }
+    acc += xxh3_mix16B(input + 0, secret + 0, seed);
+    acc += xxh3_mix16B(input + len - 16, secret + 16, seed);
+
+    return xxh3_avalanche(acc);
 }
 
 enum XXH3_MIDSIZE_MAX = 240;
@@ -1381,26 +1378,23 @@ in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
 in { const int nbRounds = cast(int) len / 16; assert(nbRounds >= 8, "nbRounds < 8"); }
 in(128 < len && len <= XXH3_MIDSIZE_MAX, "128 >= len || len > XXH3_MIDSIZE_MAX")
 {
-    cast(void) secretSize;
+    ulong acc = len * XXH_PRIME64_1;
+    const int nbRounds = cast(int) len / 16;
+    int i;
+    for (i = 0; i < 8; i++)
     {
-        ulong acc = len * XXH_PRIME64_1;
-        const int nbRounds = cast(int) len / 16;
-        int i;
-        for (i = 0; i < 8; i++)
-        {
-            acc += xxh3_mix16B(input + (16 * i), secret + (16 * i), seed);
-        }
-        acc = xxh3_avalanche(acc);
-        for (i = 8; i < nbRounds; i++)
-        {
-            acc += xxh3_mix16B(input + (16 * i),
-                    secret + (16 * (i - 8)) + XXH3_MIDSIZE_STARTOFFSET, seed);
-        }
-        /* last bytes */
-        acc += xxh3_mix16B(input + len - 16,
-                secret + XXH3_SECRET_SIZE_MIN - XXH3_MIDSIZE_LASTOFFSET, seed);
-        return xxh3_avalanche(acc);
+        acc += xxh3_mix16B(input + (16 * i), secret + (16 * i), seed);
     }
+    acc = xxh3_avalanche(acc);
+    for (i = 8; i < nbRounds; i++)
+    {
+        acc += xxh3_mix16B(input + (16 * i),
+                secret + (16 * (i - 8)) + XXH3_MIDSIZE_STARTOFFSET, seed);
+    }
+    /* last bytes */
+    acc += xxh3_mix16B(input + len - 16,
+            secret + XXH3_SECRET_SIZE_MIN - XXH3_MIDSIZE_LASTOFFSET, seed);
+    return xxh3_avalanche(acc);
 }
 
 /* =======     Long Keys     ======= */
@@ -1530,7 +1524,7 @@ enum XXH_PREFETCH_DIST = 384;
 /* TODO: Determine how to implement prefetching in D! Disabled for now */
 private void XXH_PREFETCH(const ubyte* ptr) @safe pure nothrow @nogc
 {
-    cast(void)(ptr); /* DISABLED prefetch and do nothing here */
+//    cast(void)(ptr); /* DISABLED prefetch and do nothing here */
 
 // In C it is done with the following code lines:
 //  if XXH_SIZE_OPT >= 1
@@ -1653,7 +1647,6 @@ private XXH64_hash_t xxh3_hashLong_64b_withSecret(
     const(void)* input, size_t len, XXH64_hash_t seed64, const(ubyte)* secret, size_t secretLen)
     @safe pure nothrow @nogc
 {
-    cast(void) seed64;
     return xxh3_hashLong_64b_internal(input, len, secret, secretLen,
             xxh3_accumulate_512, xxh3_scrambleAcc);
 }
@@ -1668,9 +1661,6 @@ private XXH64_hash_t xxh3_hashLong_64b_default(
     const(void)* input, size_t len, XXH64_hash_t seed64, const(ubyte)* secret, size_t secretLen)
     @safe pure nothrow @nogc
 {
-    cast(void) seed64;
-    cast(void) secret;
-    cast(void) secretLen;
     return xxh3_hashLong_64b_internal(input, len, &xxh3_kSecret[0],
             (xxh3_kSecret).sizeof, xxh3_accumulate_512, xxh3_scrambleAcc);
 }
@@ -1716,8 +1706,6 @@ private XXH64_hash_t xxh3_hashLong_64b_withSeed(const(void)* input, size_t len,
     XXH64_hash_t seed, const(ubyte)* secret, size_t secretLen)
     @safe pure nothrow @nogc
 {
-    cast(void) secret;
-    cast(void) secretLen;
     return xxh3_hashLong_64b_withSeed_internal(input, len, seed,
             xxh3_accumulate_512, xxh3_scrambleAcc, xxh3_initCustomSecret);
 }
