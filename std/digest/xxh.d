@@ -424,8 +424,9 @@ private uint xxh32_finalize(uint hash, const(ubyte)* ptr, size_t len, XXH_alignm
  *  align_ = Whether input is aligned.
  * Return: The calculated hash.
  */
-private uint xxh32_endian_align(const(ubyte)* input, size_t len,
-        uint seed, XXH_alignment align_) @trusted pure nothrow @nogc
+private uint xxh32_endian_align(
+    const(ubyte)* input, size_t len, uint seed, XXH_alignment align_)
+    @trusted pure nothrow @nogc
 {
     uint h32;
 
@@ -674,7 +675,8 @@ private void xxh32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash)
 
 /* Helper functions to read 64bit data quantities from memory follow */
 
-private ulong xxh_read64(const void* ptr) @trusted pure nothrow @nogc
+private ulong xxh_read64(const void* ptr)
+    @trusted pure nothrow @nogc
 {
     ulong val;
     version (HaveUnalignedLoads)
@@ -684,7 +686,8 @@ private ulong xxh_read64(const void* ptr) @trusted pure nothrow @nogc
     return val;
 }
 
-private ulong xxh_readLE64(const void* ptr) @safe pure nothrow @nogc
+private ulong xxh_readLE64(const void* ptr)
+    @safe pure nothrow @nogc
 {
     version (LittleEndian)
         return xxh_read64(ptr);
@@ -692,7 +695,8 @@ private ulong xxh_readLE64(const void* ptr) @safe pure nothrow @nogc
         return bswap(xxh_read64(ptr));
 }
 
-private ulong xxh_readBE64(const void* ptr) @safe pure nothrow @nogc
+private ulong xxh_readBE64(const void* ptr)
+    @safe pure nothrow @nogc
 {
     version (LittleEndian)
         return bswap(xxh_read64(ptr));
@@ -700,7 +704,8 @@ private ulong xxh_readBE64(const void* ptr) @safe pure nothrow @nogc
         return xxh_read64(ptr);
 }
 
-private ulong xxh_readLE64_align(const void* ptr, XXH_alignment align_) @trusted pure nothrow @nogc
+private ulong xxh_readLE64_align(const void* ptr, XXH_alignment align_)
+    @trusted pure nothrow @nogc
 {
     if (align_ == XXH_alignment.XXH_unaligned)
     {
@@ -721,7 +726,8 @@ enum XXH_PRIME64_3 = 0x165667B19E3779F9; /** 0b000101100101011001100111101100011
 enum XXH_PRIME64_4 = 0x85EBCA77C2B2AE63; /** 0b1000010111101011110010100111011111000010101100101010111001100011 */
 enum XXH_PRIME64_5 = 0x27D4EB2F165667C5; /** 0b0010011111010100111010110010111100010110010101100110011111000101 */
 
-private ulong xxh64_round(ulong acc, ulong input) @safe pure nothrow @nogc
+private ulong xxh64_round(ulong acc, ulong input)
+    @safe pure nothrow @nogc
 {
     acc += input * XXH_PRIME64_2;
     acc = rol(acc, 31);
@@ -729,7 +735,8 @@ private ulong xxh64_round(ulong acc, ulong input) @safe pure nothrow @nogc
     return acc;
 }
 
-private ulong xxh64_mergeRound(ulong acc, ulong val) @safe pure nothrow @nogc
+private ulong xxh64_mergeRound(ulong acc, ulong val)
+    @safe pure nothrow @nogc
 {
     val = xxh64_round(0, val);
     acc ^= val;
@@ -737,7 +744,8 @@ private ulong xxh64_mergeRound(ulong acc, ulong val) @safe pure nothrow @nogc
     return acc;
 }
 
-private ulong xxh64_avalanche(ulong hash) @safe pure nothrow @nogc
+private ulong xxh64_avalanche(ulong hash)
+    @safe pure nothrow @nogc
 {
     hash ^= hash >> 33;
     hash *= XXH_PRIME64_2;
@@ -747,7 +755,8 @@ private ulong xxh64_avalanche(ulong hash) @safe pure nothrow @nogc
     return hash;
 }
 
-ulong xxh_get64bits(const void* p, XXH_alignment align_) @safe pure nothrow @nogc
+ulong xxh_get64bits(const void* p, XXH_alignment align_)
+    @safe pure nothrow @nogc
 {
     return xxh_readLE64_align(p, align_);
 }
@@ -896,7 +905,7 @@ private XXH64_hash_t XXH64(const void* input, size_t len, XXH64_hash_t seed)
 
 /* XXH PUBLIC API - hidden in D module */
 private XXH_errorcode xxh64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed)
-    @trusted pure nothrow @nogc
+    @safe pure nothrow @nogc
 {
     assert(statePtr != null, "statePtr == null");
     *statePtr = XXH64_state_t.init;
@@ -909,7 +918,7 @@ private XXH_errorcode xxh64_reset(XXH64_state_t* statePtr, XXH64_hash_t seed)
 
 /* XXH PUBLIC API - hidden in D module */
 private XXH_errorcode xxh64_update(XXH64_state_t* state, const void* input, size_t len)
-@trusted pure nothrow @nogc
+    @trusted pure nothrow @nogc
 in
 {
     if (input == null) assert(len == 0, "input null ptr only allowed with len == 0");
@@ -1220,9 +1229,9 @@ static private XXH64_hash_t xxh3_rrmxmx(ulong h64, ulong len) @safe pure nothrow
  *
  * This adds an extra layer of strength for custom secrets.
  */
-private XXH64_hash_t xxh3_len_1to3_64b(const ubyte* input, size_t len,
-        const ubyte* secret, XXH64_hash_t seed)
-        @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_1to3_64b(
+    const ubyte* input, size_t len, const ubyte* secret, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(input != null, "input == null")
 in(1 <= len && len <= 3, "len out of range")
 in(secret != null, "secret == null")
@@ -1244,8 +1253,9 @@ in(secret != null, "secret == null")
     }
 }
 
-private XXH64_hash_t xxh3_len_4to8_64b(const ubyte* input, size_t len,
-        const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_4to8_64b(
+    const ubyte* input, size_t len, const ubyte* secret, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(input != null, "input == null")
 in(secret != null, "secret == null")
 in(4 <= len && len <= 8, "len out of range")
@@ -1261,8 +1271,9 @@ in(4 <= len && len <= 8, "len out of range")
     }
 }
 
-private XXH64_hash_t xxh3_len_9to16_64b(const ubyte* input, size_t len,
-        const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_9to16_64b(
+    const ubyte* input, size_t len, const ubyte* secret, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(input != null, "input == null")
 in(secret != null, "secret == null")
 in(9 <= len && len <= 16, "len out of range")
@@ -1278,18 +1289,21 @@ in(9 <= len && len <= 16, "len out of range")
     }
 }
 
-private bool xxh_likely(bool exp) @safe pure nothrow @nogc
+private bool xxh_likely(bool exp)
+    @safe pure nothrow @nogc
 {
     return exp;
 }
 
-private bool xxh_unlikely(bool exp) @safe pure nothrow @nogc
+private bool xxh_unlikely(bool exp)
+    @safe pure nothrow @nogc
 {
     return exp;
 }
 
-private XXH64_hash_t xxh3_len_0to16_64b(const ubyte* input, size_t len,
-        const ubyte* secret, XXH64_hash_t seed) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_0to16_64b(
+    const ubyte* input, size_t len, const ubyte* secret, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(len <= 16, "len > 16")
 {
     {
@@ -1329,7 +1343,8 @@ in(len <= 16, "len > 16")
  * by this, although it is always a good idea to use a proper seed if you care
  * about strength.
  */
-private ulong xxh3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed64) @trusted pure nothrow @nogc
+private ulong xxh3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed64)
+    @trusted pure nothrow @nogc
 {
     {
         const ulong input_lo = xxh_readLE64(input);
@@ -1341,8 +1356,9 @@ private ulong xxh3_mix16B(const(ubyte)* input, const(ubyte)* secret, ulong seed6
 }
 
 /* For mid range keys, XXH3 uses a Mum-hash variant. */
-private XXH64_hash_t xxh3_len_17to128_64b(const(ubyte)* input, size_t len,
-        const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_17to128_64b(
+    const(ubyte)* input, size_t len, const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
 in(16 < len && len <= 128, "len out of range")
 {
@@ -1372,8 +1388,9 @@ enum XXH3_MIDSIZE_MAX = 240;
 enum XXH3_MIDSIZE_STARTOFFSET = 3;
 enum XXH3_MIDSIZE_LASTOFFSET = 17;
 
-private XXH64_hash_t xxh3_len_129to240_64b(const(ubyte)* input, size_t len,
-        const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_len_129to240_64b(
+    const(ubyte)* input, size_t len, const(ubyte)* secret, size_t secretSize, XXH64_hash_t seed)
+    @trusted pure nothrow @nogc
 in(secretSize >= XXH3_SECRET_SIZE_MIN, "secretSize < XXH3_SECRET_SIZE_MIN")
 in { const int nbRounds = cast(int) len / 16; assert(nbRounds >= 8, "nbRounds < 8"); }
 in(128 < len && len <= XXH3_MIDSIZE_MAX, "128 >= len || len > XXH3_MIDSIZE_MAX")
@@ -1450,7 +1467,8 @@ private void xxh3_accumulate_512_scalar(void* acc, const(void)* input, const(voi
  * This is extracted to its own function because the NEON path uses a combination
  * of NEON and scalar.
  */
-private void xxh3_scalarScrambleRound(void* acc, const(void)* secret, size_t lane) @trusted pure nothrow @nogc
+private void xxh3_scalarScrambleRound(void* acc, const(void)* secret, size_t lane)
+    @trusted pure nothrow @nogc
 in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 {
     version (CheckACCAlignment)
@@ -1468,7 +1486,8 @@ in(lane < XXH_ACC_NB, "lane >= XXH_ACC_NB")
 }
 
 /* Scrambles the accumulators after a large chunk has been read */
-private void xxh3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure nothrow @nogc
+private void xxh3_scrambleAcc_scalar(void* acc, const(void)* secret)
+    @safe pure nothrow @nogc
 {
     size_t i;
     for (i = 0; i < XXH_ACC_NB; i++)
@@ -1477,7 +1496,8 @@ private void xxh3_scrambleAcc_scalar(void* acc, const(void)* secret) @safe pure 
     }
 }
 
-private void xxh3_initCustomSecret_scalar(void* customSecret, ulong seed64) @trusted pure nothrow @nogc
+private void xxh3_initCustomSecret_scalar(void* customSecret, ulong seed64)
+    @trusted pure nothrow @nogc
 {
     /*
      * We need a separate pointer for the hack below,
@@ -1619,8 +1639,10 @@ static immutable XXH3_INIT_ACC = [
         XXH_PRIME64_4, XXH_PRIME32_2, XXH_PRIME64_5, XXH_PRIME32_1
     ];
 
-private XXH64_hash_t xxh3_hashLong_64b_internal(const(void)* input, size_t len, const(void)* secret,
-        size_t secretSize, XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble) @trusted pure nothrow @nogc
+private XXH64_hash_t xxh3_hashLong_64b_internal(
+    const(void)* input, size_t len, const(void)* secret, size_t secretSize,
+    XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble)
+    @trusted pure nothrow @nogc
 {
     align(XXH_ACC_ALIGN) ulong[XXH_ACC_NB] acc = XXH3_INIT_ACC; /* NOTE: This doesn't work in D, fails on 32bit NetBSD */
 
