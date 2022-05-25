@@ -1702,7 +1702,7 @@ private XXH64_hash_t xxh3_hashLong_64b_withSeed_internal(
     XXH3_f_accumulate_512 f_acc512,
     XXH3_f_scrambleAcc f_scramble,
     XXH3_f_initCustomSecret f_initSec)
-    @safe pure nothrow @nogc
+    @trusted pure nothrow @nogc
 {
     //#if XXH_SIZE_OPT <= 0
     if (seed == 0)
@@ -2444,7 +2444,7 @@ private XXH128_hash_t xxh3_hashLong_128b_withSeed_internal(
     const void* input, size_t len, XXH64_hash_t seed64,
     XXH3_f_accumulate_512 f_acc512, XXH3_f_scrambleAcc f_scramble,
     XXH3_f_initCustomSecret f_initSec)
-    @safe pure nothrow @nogc
+    @trusted pure nothrow @nogc
 {
     if (seed64 == 0)
         return xxh3_hashLong_128b_internal(input, len, &xxh3_kSecret[0],
