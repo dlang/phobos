@@ -135,10 +135,7 @@ align(16) struct XXH128_hash_t
     XXH64_hash_t high64; /** `value >> 64` */
 }
 
-struct XXH32_canonical_t
-{
-    ubyte[4] digest; /** Hash bytes, big endian */
-}
+alias XXH32_canonical_t = ubyte[XXH32_hash_t.sizeof];
 static assert(XXH32_canonical_t.sizeof == 4, "32bit integers should be 4 bytes?");
 alias XXH64_canonical_t = ubyte[XXH64_hash_t.sizeof];
 static assert(XXH64_hash_t.sizeof == 8, "64bit integers should be 8 bytes?");
