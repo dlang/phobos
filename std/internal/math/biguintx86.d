@@ -636,7 +636,7 @@ L_odd:
 // Multiples by M_ADDRESS which should be "ESP+LASTPARAM" or "ESP". OP must be "add" or "sub"
 // This is the most time-critical code in the BigInt library.
 // It is used by both MulAdd, multiplyAccumulate, and triangleAccumulate
-string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure @safe @nogc {
+string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure @safe {
     // The bottlenecks in this code are extremely complicated. The MUL, ADD, and ADC
     // need 4 cycles on each of the ALUs units p0 and p1. So we use memory load
     // (unit p2) for initializing registers to zero.
