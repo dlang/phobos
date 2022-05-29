@@ -564,7 +564,7 @@ L_last:
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
-    pure @safe
+    pure @safe @nogc
 {
     // Timing: definitely not optimal.
     // Pentium M: 5.0 cycles/operation, has 3 resource stalls/iteration
