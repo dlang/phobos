@@ -707,7 +707,7 @@ L_done: " ~ OP ~ " [-8+EDI+4*EBX], ECX;
                 // final carry is now in EBP
 }
 
-string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure @safe @nogc
+string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure @safe
 {
     return "
         mul int ptr [" ~M_ADDRESS ~"];
