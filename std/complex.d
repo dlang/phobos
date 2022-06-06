@@ -479,9 +479,12 @@ if (isFloatingPoint!T)
         return this;
     }
 
+    /** Returns a complex number instance that correponds in size and in ABI
+        to the associated C compiler's `_Complex` type.
+     */
     auto toNative()
     {
-        import core.stdc.config;
+        import core.stdc.config : c_complex_float, c_complex_double, c_complex_real;
         static if (is(T == float))
             return c_complex_float(re, im);
         else static if (is(T == double))
