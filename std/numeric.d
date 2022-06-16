@@ -79,10 +79,12 @@ public enum CustomFloatFlags
     none = 0
 }
 
+enum isIEEEQuadruple = floatTraits!real.realFormat == RealFormat.ieeeQuadruple;
+
 private template CustomFloatParams(uint bits)
 {
     enum CustomFloatFlags flags = CustomFloatFlags.ieee
-                ^ ((bits == 80) ? CustomFloatFlags.storeNormalized : CustomFloatFlags.none);
+                ^ ((bits == 80 && !isIEEEQuadruple) ? CustomFloatFlags.storeNormalized : CustomFloatFlags.none);
     static if (bits ==  8) alias CustomFloatParams = CustomFloatParams!( 4,  3, flags);
     static if (bits == 16) alias CustomFloatParams = CustomFloatParams!(10,  5, flags);
     static if (bits == 32) alias CustomFloatParams = CustomFloatParams!(23,  8, flags);
@@ -367,11 +369,26 @@ private:
 public:
     static if (precision == 64) // CustomFloat!80 support hack
     {
-        ulong significand;
-        enum ulong significand_max = ulong.max;
-        mixin(bitfields!(
-            T_exp , "exponent", exponentWidth,
-            bool  , "sign"    , flags & flags.signed ));
+        static if (isIEEEQuadruple)
+        {
+        // Only use highest 64 significand bits from 112 explicitly stored
+        align (1):
+            uint padding32;
+            ushort padding16;
+            ulong significand;
+            enum ulong significand_max = ulong.max;
+            mixin(bitfields!(
+                T_exp , "exponent", exponentWidth,
+                bool  , "sign"    , flags & flags.signed ));
+        }
+        else
+        {
+            ulong significand;
+            enum ulong significand_max = ulong.max;
+            mixin(bitfields!(
+                T_exp , "exponent", exponentWidth,
+                bool  , "sign"    , flags & flags.signed ));
+        }
     }
     else
     {
