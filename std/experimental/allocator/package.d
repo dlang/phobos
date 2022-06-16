@@ -547,6 +547,16 @@ nothrow:
 
 @system unittest
 {
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.region : Region;
+    alias ASTAllocator = CAllocatorImpl!(AllocatorList!(n => Region!Mallocator(1024 * 128), Mallocator));
+    scope allocator = new ASTAllocator();
+    scope allocatorO = allocator.allocatorObject;
+}
+
+@system unittest
+{
     import std.experimental.allocator.building_blocks.region : Region;
     import std.conv : emplace;
 
