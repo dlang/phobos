@@ -373,12 +373,23 @@ public:
         {
         // Only use highest 64 significand bits from 112 explicitly stored
         align (1):
-            private ubyte[6] _padding; // 48-bit of padding
-            ulong significand;
             enum ulong significand_max = ulong.max;
-            mixin(bitfields!(
-                T_exp , "exponent", exponentWidth,
-                bool  , "sign"    , flags & flags.signed ));
+            version (LittleEndian)
+            {
+                private ubyte[6] _padding; // 48-bit of padding
+                ulong significand;
+                mixin(bitfields!(
+                    T_exp , "exponent", exponentWidth,
+                    bool  , "sign"    , flags & flags.signed ));
+            }
+            else
+            {
+                mixin(bitfields!(
+                    T_exp , "exponent", exponentWidth,
+                    bool  , "sign"    , flags & flags.signed ));
+                ulong significand;
+                private ubyte[6] _padding; // 48-bit of padding
+            }
         }
         else
         {
