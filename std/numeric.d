@@ -79,7 +79,7 @@ public enum CustomFloatFlags
     none = 0
 }
 
-enum isIEEEQuadruple = floatTraits!real.realFormat == RealFormat.ieeeQuadruple;
+private enum isIEEEQuadruple = floatTraits!real.realFormat == RealFormat.ieeeQuadruple;
 
 private template CustomFloatParams(uint bits)
 {
