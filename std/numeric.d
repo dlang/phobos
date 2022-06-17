@@ -373,8 +373,7 @@ public:
         {
         // Only use highest 64 significand bits from 112 explicitly stored
         align (1):
-            uint padding32;
-            ushort padding16;
+            private ubyte[6] _padding; // 48-bit of padding
             ulong significand;
             enum ulong significand_max = ulong.max;
             mixin(bitfields!(
