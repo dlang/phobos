@@ -658,23 +658,28 @@ public:
         auto x = F(0.125);
         assert(x.get!float == 0.125F);
         assert(x.get!double == 0.125);
+        assert(x.get!real == 0.125L);
 
         x -= 0.0625;
         assert(x.get!float == 0.0625F);
         assert(x.get!double == 0.0625);
+        assert(x.get!real == 0.0625L);
 
         x *= 2;
         assert(x.get!float == 0.125F);
         assert(x.get!double == 0.125);
+        assert(x.get!real == 0.125L);
 
         x /= 4;
         assert(x.get!float == 0.03125);
         assert(x.get!double == 0.03125);
+        assert(x.get!real == 0.03125L);
 
         x = 0.5;
         x ^^= 4;
         assert(x.get!float == 1 / 16.0F);
         assert(x.get!double == 1 / 16.0);
+        assert(x.get!real == 1 / 16.0L);
     }
 }
 
