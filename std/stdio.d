@@ -498,17 +498,17 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted //@nogc nothrow
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
 
         assert(!_p);
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        _p = cast(Impl*) enforce(malloc(Impl.sizeof), preAllocatedStdioOOMError);
         initImpl(handle, name, refs, isPopened);
     }
 
-    private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
+    private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false) @nogc nothrow pure @safe
     {
         assert(_p);
         _p.handle = handle;
@@ -5134,7 +5134,7 @@ if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
 }
 
 /*********************
- * Thrown if I/O errors happen.
+ * Thrown if I/O exceptions happen.
  */
 class StdioException : Exception
 {
@@ -5167,6 +5167,12 @@ Initialize with a message and an error code.
     {
         throw new StdioException(null, core.stdc.errno.errno);
     }
+}
+
+private Error preAllocatedStdioOOMError;
+static this()
+{
+	preAllocatedStdioOOMError = new Error("Out of memory");
 }
 
 enum StdFileHandle: string
