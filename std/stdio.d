@@ -504,7 +504,13 @@ struct File
         import std.exception : enforce;
 
         assert(!_p);
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), preAllocatedStdioOOMError);
+        auto memory = malloc(Impl.sizeof);
+        if(!memory)
+        {
+            import core.exception : onOutOfMemoryError;
+            onOutOfMemoryError();
+        }
+        _p = cast(Impl*) memory;
         initImpl(handle, name, refs, isPopened);
     }
 
@@ -5167,12 +5173,6 @@ Initialize with a message and an error code.
     {
         throw new StdioException(null, core.stdc.errno.errno);
     }
-}
-
-private Error preAllocatedStdioOOMError;
-static this()
-{
-	preAllocatedStdioOOMError = new Error("Out of memory");
 }
 
 enum StdFileHandle: string
