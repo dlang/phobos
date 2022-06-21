@@ -5134,7 +5134,7 @@ if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
 }
 
 /*********************
- * Thrown if I/O exceptions happen.
+ * Thrown if I/O errors happen.
  */
 class StdioException : Exception
 {
