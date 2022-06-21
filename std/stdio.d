@@ -501,7 +501,6 @@ struct File
     package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted @nogc nothrow
     {
         import core.stdc.stdlib : malloc;
-        import std.exception : enforce;
 
         assert(!_p);
         _p = cast(Impl*) malloc(Impl.sizeof);
