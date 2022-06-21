@@ -3610,7 +3610,7 @@ version (StdDdoc)
             Throws:
                 $(LREF FileException) if the file does not exist.
         +/
-        this(string path);
+        this(return scope string path);
 
         version (Windows)
         {
@@ -3772,7 +3772,7 @@ else version (Windows)
     public:
         alias name this;
 
-        this(string path)
+        this(return scope string path)
         {
             import std.datetime.systime : FILETIMEToSysTime;
 
@@ -3881,7 +3881,7 @@ else version (Posix)
     public:
         alias name this;
 
-        this(string path)
+        this(return scope string path)
         {
             if (!path.exists)
                 throw new FileException(path, "File does not exist");
@@ -4424,7 +4424,7 @@ void rmdirRecurse(scope const(char)[] pathname) @safe
 }
 
 /// ditto
-void rmdirRecurse(ref DirEntry de) @safe
+void rmdirRecurse(ref scope DirEntry de) @safe
 {
     if (!de.isDir)
         throw new FileException(de.name, "Not a directory");
@@ -4459,7 +4459,7 @@ void rmdirRecurse(ref DirEntry de) @safe
 //"rmdirRecurse(in char[] pathname)" implementation. That is needlessly
 //expensive.
 //A DirEntry is a bit big (72B), so keeping the "by ref" signature is desirable.
-void rmdirRecurse(DirEntry de) @safe
+void rmdirRecurse(scope DirEntry de) @safe
 {
     rmdirRecurse(de);
 }
