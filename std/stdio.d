@@ -498,7 +498,7 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted //@nogc nothrow
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted @nogc nothrow
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
