@@ -505,7 +505,7 @@ struct File
 
         assert(!_p);
         auto memory = malloc(Impl.sizeof);
-        if(!memory)
+        if (!memory)
         {
             import core.exception : onOutOfMemoryError;
             onOutOfMemoryError();
