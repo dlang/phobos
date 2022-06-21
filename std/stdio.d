@@ -504,13 +504,12 @@ struct File
         import std.exception : enforce;
 
         assert(!_p);
-        auto memory = malloc(Impl.sizeof);
-        if (!memory)
+        _p = cast(Impl*) malloc(Impl.sizeof);
+        if (!_p)
         {
             import core.exception : onOutOfMemoryError;
             onOutOfMemoryError();
         }
-        _p = cast(Impl*) memory;
         initImpl(handle, name, refs, isPopened);
     }
 
