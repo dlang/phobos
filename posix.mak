@@ -332,7 +332,8 @@ dll: $(ROOT)/libphobos2.so
 
 $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
-	$(CC) -c $(CFLAGS) $< $(OUTFILEFLAG)$@
+#	$(CC) -c $(CFLAGS) $< $(OUTFILEFLAG)$@
+	$(DMD) -c $(DFLAGS) -I. -v $< -of$@
 
 $(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)

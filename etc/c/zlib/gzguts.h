@@ -142,9 +142,11 @@
 #elif defined(_MSC_VER)
 #include <io.h>
 #else
-ssize_t read(int, void*, size_t);
-ssize_t write(int, const void*, size_t);
-int close(int);
+#include <unistd.h>
+//off_t lseek(int, off_t, int);
+//ssize_t read(int, void*, size_t);
+//ssize_t write(int, const void*, size_t);
+//int close(int);
 #endif
 
 /* provide prototypes for these when building zlib without LFS */
