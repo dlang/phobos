@@ -136,6 +136,19 @@
 #  endif
 #endif
 
+/* C11 no longer allows implicit declaration of functions */
+#if defined(__DMC__)
+#include <io.h>
+#elif defined(_MSC_VER)
+#include <io.h>
+#else
+ssize_t read(int, void*, size_t);
+ssize_t write(int, const void*, size_t);
+int close(int);
+#endif
+
+
+
 /* provide prototypes for these when building zlib without LFS */
 #if !defined(_LARGEFILE64_SOURCE) || _LFS64_LARGEFILE-0 == 0
     ZEXTERN gzFile ZEXPORT gzopen64 OF((const char *, const char *));
