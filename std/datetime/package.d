@@ -135,7 +135,6 @@ import std.functional : unaryFun;
 import std.traits;
 import std.typecons : Flag, Yes, No;
 
-
 // Verify module example.
 @safe unittest
 {
@@ -148,18 +147,31 @@ import std.typecons : Flag, Yes, No;
 @safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
-           std.datetime.Date(2010, 9, 12));
+            std.datetime.Date(2010, 9, 12));
 
     assert(std.datetime.Date(2010, 9, 7) - std.datetime.Date(2010, 10, 3) ==
-           dur!"days"(-26));
+            dur!"days"(-26));
 }
 
 @safe unittest
 {
     import std.traits : hasUnsharedAliasing;
+
     /* https://issues.dlang.org/show_bug.cgi?id=6642 */
     static assert(!hasUnsharedAliasing!Date);
     static assert(!hasUnsharedAliasing!TimeOfDay);
     static assert(!hasUnsharedAliasing!DateTime);
     static assert(!hasUnsharedAliasing!SysTime);
+}
+
+auto now(DT)(immutable TimeZone dz = LocalTime()) @safe nothrow @nogc
+{
+    return cast(DT) Clock.currTime(dz);
+}
+
+@safe unittest
+{
+    now!DateTime.writeln;
+    now!TimeOfDay.writeln;
+    now!Date.writeln;
 }
