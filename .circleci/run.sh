@@ -75,7 +75,7 @@ setup_repos()
         git checkout -f FETCH_HEAD
     fi
 
-    for proj in dmd druntime tools ; do
+    for proj in dmd tools ; do
         if [ "$base_branch" != master ] && [ "$base_branch" != stable ] &&
             ! git ls-remote --exit-code --heads https://github.com/dlang/$proj.git "$base_branch" > /dev/null; then
             # use master as fallback for other repos to test feature branches
@@ -90,7 +90,7 @@ setup_repos()
 
     # build dmd and druntime
     pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD PIC="$PIC" all && popd
-    make -j"$N" -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD
+    pushd ../dmd && make -j"$N" -C druntime -f posix.mak MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD && popd
 }
 
 # run unittest with coverage
