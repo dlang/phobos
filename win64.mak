@@ -35,7 +35,7 @@ CFLAGS=/O2 /nologo
 
 ## Location of druntime tree
 
-DRUNTIME=../druntime
+DRUNTIME=../dmd/druntime
 DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler

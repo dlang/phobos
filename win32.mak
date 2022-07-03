@@ -38,7 +38,7 @@ CFLAGS=-mn -6 -r
 
 ## Location of druntime tree
 
-DRUNTIME=../druntime
+DRUNTIME=../dmd/druntime
 DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler

@@ -34,7 +34,7 @@ DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
 DMD_DIR=../dmd
 
-include $(DMD_DIR)/src/osmodel.mak
+include $(DMD_DIR)/compiler/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.9
@@ -67,7 +67,7 @@ endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
-DRUNTIME_PATH = ../druntime
+DRUNTIME_PATH = ../dmd/druntime
 DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
@@ -82,10 +82,10 @@ ifneq (,$(DRUNTIME))
 	CUSTOM_DRUNTIME=1
 endif
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
+	DRUNTIME = $(DRUNTIME_PATH)/../generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
 	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
 else
-	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
+	DRUNTIME = $(DRUNTIME_PATH)/../lib/druntime.lib
 endif
 
 # Set CC and DMD
