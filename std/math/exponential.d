@@ -3337,34 +3337,22 @@ real log2(real x) @safe pure nothrow @nogc
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow @nogc
+pragma(inline, true)
+real logb(real x) @trusted pure nothrow @nogc
 {
     version (InlineAsm_X87_MSVC)
-    {
-        version (X86_64)
-        {
-            asm pure nothrow @nogc
-            {
-                naked                       ;
-                fld     real ptr [RCX]      ;
-                fxtract                     ;
-                fstp    ST(0)               ;
-                ret                         ;
-            }
-        }
-        else
-        {
-            asm pure nothrow @nogc
-            {
-                fld     x                   ;
-                fxtract                     ;
-                fstp    ST(0)               ;
-            }
-        }
-    }
+        return logbAsm(x);
     else
-        return core.stdc.math.logbl(x);
+        return logbImpl(x);
 }
+
+/// ditto
+pragma(inline, true)
+double logb(double x) @trusted pure nothrow @nogc { return logbImpl(x); }
+
+/// ditto
+pragma(inline, true)
+float logb(float x) @trusted pure nothrow @nogc { return logbImpl(x); }
 
 ///
 @safe @nogc nothrow unittest
@@ -3375,6 +3363,83 @@ real logb(real x) @trusted nothrow @nogc
     assert(logb(0.0) == -real.infinity);
     assert(logb(real.infinity) == real.infinity);
     assert(logb(-real.infinity) == real.infinity);
+}
+
+@safe @nogc nothrow unittest
+{
+    import std.meta : AliasSeq;
+    import std.typecons : Tuple;
+    import std.math.traits : isNaN;
+    static foreach (F; AliasSeq!(float, double, real))
+    {{
+        alias T = Tuple!(F, F);
+        T[17] vals =   // x, logb(x)
+        [
+            T(1.0          , 0          ),
+            T(100.0        , 6          ),
+            T(0.0          , -F.infinity),
+            T(-0.0         , -F.infinity),
+            T(1024         , 10         ),
+            T(-2000        , 10         ),
+            T(0x0.1p-127   , -131       ),
+            T(0x0.01p-127  , -135       ),
+            T(0x0.011p-127 , -135       ),
+            T(F.nan        , F.nan      ),
+            T(-F.nan       , F.nan      ),
+            T(F.infinity   , F.infinity ),
+            T(-F.infinity  , F.infinity ),
+            T(F.min_normal , F.min_exp-1),
+            T(-F.min_normal, F.min_exp-1),
+            T(F.max        , F.max_exp-1),
+            T(-F.max       , F.max_exp-1),
+        ];
+
+        foreach (elem; vals)
+        {
+            if (isNaN(elem[1]))
+                assert(isNaN(logb(elem[1])));
+            else
+                assert(logb(elem[0]) == elem[1]);
+        }
+    }}
+}
+
+version (InlineAsm_X87_MSVC)
+private T logbAsm(T)(T x) @trusted pure nothrow @nogc
+{
+    version (X86_64)
+    {
+        asm pure nothrow @nogc
+        {
+            naked                       ;
+            fld     real ptr [RCX]      ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else
+    {
+        asm pure nothrow @nogc
+        {
+            fld     x                   ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+        }
+    }
+}
+
+private T logbImpl(T)(T x) @trusted pure nothrow @nogc
+{
+    import std.math.traits : isFinite;
+
+    // Handle special cases.
+    if (!isFinite(x))
+        return x * x;
+    if (x == 0)
+        return -1 / (x * x);
+
+    return ilogb(x);
 }
 
 /*************************************
