@@ -58,7 +58,8 @@ DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 ZLIB=etc\c\zlib\zlib$(MODEL).lib
 
 .c.obj:
-	"$(CC)" -c $(CFLAGS) $*.c
+#	"$(CC)" -c $(CFLAGS) $*.c
+	$(DMD) -c $(DFLAGS) -I. -v $*.c
 
 .cpp.obj:
 	"$(CC)" -c $(CFLAGS) $*.cpp
