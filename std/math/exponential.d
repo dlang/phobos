@@ -66,7 +66,10 @@ if (isFloatingPoint!(F) && isIntegral!(G))
 {
     import std.traits : Unsigned;
 
-    real p = 1.0, v = void;
+    static if (is(Unqual!F == real))
+        real p = 1.0, v = void;
+    else
+        double p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
 
     if (n < 0)
@@ -361,10 +364,13 @@ if (isIntegral!(F) && isIntegral!(G))
 }
 
 /**Computes integer to floating point powers.*/
-real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
+auto pow(I, F)(I x, F y) @nogc @trusted pure nothrow
 if (isIntegral!I && isFloatingPoint!F)
 {
-    return pow(cast(real) x, cast(Unqual!F) y);
+    static if (is(Unqual!F == real))
+        return pow(cast(real) x, cast(Unqual!F) y);
+    else
+        return pow(cast(double) x, cast(Unqual!F) y);
 }
 
 ///
@@ -424,9 +430,12 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     import core.math : fabs, sqrt;
     import std.math.traits : isInfinity, isNaN, signbit;
 
-    alias Float = typeof(return);
+    static if (is(typeof(return) == real))
+        alias Float = real;
+    else
+        alias Float = double;
 
-    static real impl(real x, real y) @nogc pure nothrow
+    static Float impl(Float x, Float y) @nogc pure nothrow
     {
         // Special cases.
         if (isNaN(y))
@@ -578,12 +587,12 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
         if (iy == y && fabs(y) < 32_768.0)
             return pow(x, iy);
 
-        real sign = 1.0;
+        Float sign = 1.0;
         if (x < 0)
         {
             // Result is real only if y is an integer
             // Check for a non-zero fractional part
-            enum maxOdd = pow(2.0L, real.mant_dig) - 1.0L;
+            enum maxOdd = pow(2.0L, Float.mant_dig) - 1.0L;
             static if (maxOdd > ulong.max)
             {
                 // Generic method, for any FP type
