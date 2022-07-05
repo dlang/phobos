@@ -2862,14 +2862,14 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
 
 private
 {
-    import std.math : floatTraits, RealFormat;
-
-    version (INLINE_YL2X) {} else
+    template LogCoeffs(T)
     {
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
+        import std.math : floatTraits, RealFormat;
+
+        static if (floatTraits!T.realFormat == RealFormat.ieeeQuadruple)
         {
             // Coefficients for log(1 + x) = x - x**2/2 + x**3 P(x)/Q(x)
-            static immutable real[13] logCoeffsP = [
+            static immutable real[13] P = [
                 1.313572404063446165910279910527789794488E4L,
                 7.771154681358524243729929227226708890930E4L,
                 2.014652742082537582487669938141683759923E5L,
@@ -2884,7 +2884,7 @@ private
                 4.998469661968096229986658302195402690910E-1L,
                 1.538612243596254322971797716843006400388E-6L
             ];
-            static immutable real[13] logCoeffsQ = [
+            static immutable real[13] Q = [
                 3.940717212190338497730839731583397586124E4L,
                 2.626900195321832660448791748036714883242E5L,
                 7.777690340007566932935753241556479363645E5L,
@@ -2902,7 +2902,7 @@ private
 
             // Coefficients for log(x) = z + z^3 P(z^2)/Q(z^2)
             // where z = 2(x-1)/(x+1)
-            static immutable real[6] logCoeffsR = [
+            static immutable real[6] R = [
                 1.418134209872192732479751274970992665513E5L,
                 -8.977257995689735303686582344659576526998E4L,
                 2.048819892795278657810231591630928516206E4L,
@@ -2910,7 +2910,7 @@ private
                 8.057002716646055371965756206836056074715E1L,
                 -8.828896441624934385266096344596648080902E-1L
             ];
-            static immutable real[7] logCoeffsS = [
+            static immutable real[7] S = [
                 1.701761051846631278975701529965589676574E6L,
                 -1.332535117259762928288745111081235577029E6L,
                 4.001557694070773974936904547424676279307E5L,
@@ -2923,7 +2923,7 @@ private
         else
         {
             // Coefficients for log(1 + x) = x - x**2/2 + x**3 P(x)/Q(x)
-            static immutable real[7] logCoeffsP = [
+            static immutable real[7] P = [
                 2.0039553499201281259648E1L,
                 5.7112963590585538103336E1L,
                 6.0949667980987787057556E1L,
@@ -2932,7 +2932,7 @@ private
                 4.9854102823193375972212E-1L,
                 4.5270000862445199635215E-5L,
             ];
-            static immutable real[7] logCoeffsQ = [
+            static immutable real[7] Q = [
                 6.0118660497603843919306E1L,
                 2.1642788614495947685003E2L,
                 3.0909872225312059774938E2L,
@@ -2944,13 +2944,13 @@ private
 
             // Coefficients for log(x) = z + z^3 P(z^2)/Q(z^2)
             // where z = 2(x-1)/(x+1)
-            static immutable real[4] logCoeffsR = [
+            static immutable real[4] R = [
                -3.5717684488096787370998E1L,
                 1.0777257190312272158094E1L,
                -7.1990767473014147232598E-1L,
                 1.9757429581415468984296E-3L,
             ];
-            static immutable real[4] logCoeffsS = [
+            static immutable real[4] S = [
                -4.2861221385716144629696E2L,
                 1.9361891836232102174846E2L,
                -2.6201045551331104417768E1L,
@@ -2972,83 +2972,13 @@ private
  */
 real log(real x) @safe pure nothrow @nogc
 {
-    import std.math.constants : LN2, LOG2, SQRT1_2;
-    import std.math.traits : isInfinity, isNaN, signbit;
-    import std.math.algebraic : poly;
-
     version (INLINE_YL2X)
-        return core.math.yl2x(x, LN2);
-    else
     {
-        // C1 + C2 = LN2.
-        enum real C1 = 6.93145751953125E-1L;
-        enum real C2 = 1.428606820309417232121458176568075500134E-6L;
-
-        // Special cases.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 R(z) / S(z),
-        // where z = 2(x - 1)/(x + 1)
-        if ((exp > 2) || (exp < -2))
-        {
-            if (x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            z = x * (z * poly(z, logCoeffsR) / poly(z, logCoeffsS));
-            z += exp * C2;
-            z += x;
-            z += exp * C1;
-
-            return z;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {
-            exp -= 1;
-            x = 2.0 * x - 1.0;
-        }
-        else
-        {
-            x = x - 1.0;
-        }
-        z = x * x;
-        y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y += exp * C2;
-        z = y - 0.5 * z;
-
-        // Note, the sum of above terms does not exceed x/4,
-        // so it contributes at most about 1/4 lsb to the error.
-        z += x;
-        z += exp * C1;
-
-        return z;
+        import std.math.constants : LN2;
+        return core.math.yl2x(x, LN2);
     }
+    else
+        return logImpl(x);
 }
 
 ///
@@ -3058,6 +2988,84 @@ real log(real x) @safe pure nothrow @nogc
     import std.math.constants : E;
 
     assert(feqrel(log(E), 1) >= real.mant_dig - 1);
+}
+
+private T logImpl(T)(T x) @safe pure nothrow @nogc
+{
+    import std.math.constants : SQRT1_2;
+    import std.math.algebraic : poly;
+    import std.math.traits : isInfinity, isNaN, signbit;
+
+    alias logCoeffs = LogCoeffs!T;
+
+    // C1 + C2 = LN2.
+    enum T C1 = 6.93145751953125E-1L;
+    enum T C2 = 1.428606820309417232121458176568075500134E-6L;
+
+    // Special cases.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -T.infinity;
+    if (x < 0.0)
+        return T.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    T y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 R(z) / S(z),
+    // where z = 2(x - 1)/(x + 1)
+    if ((exp > 2) || (exp < -2))
+    {
+        if (x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
+            exp -= 1;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
+        }
+        else
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
+        }
+        x = z / y;
+        z = x * x;
+        z = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        z += exp * C2;
+        z += x;
+        z += exp * C1;
+
+        return z;
+    }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {
+        exp -= 1;
+        x = 2.0 * x - 1.0;
+    }
+    else
+    {
+        x = x - 1.0;
+    }
+    z = x * x;
+    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y += exp * C2;
+    z = y - 0.5 * z;
+
+    // Note, the sum of above terms does not exceed x/4,
+    // so it contributes at most about 1/4 lsb to the error.
+    z += x;
+    z += exp * C1;
+
+    return z;
 }
 
 /**************************************
@@ -3072,87 +3080,13 @@ real log(real x) @safe pure nothrow @nogc
  */
 real log10(real x) @safe pure nothrow @nogc
 {
-    import std.math.constants : LOG2, LN2, SQRT1_2;
-    import std.math.algebraic : poly;
-    import std.math.traits : isNaN, isInfinity, signbit;
-
     version (INLINE_YL2X)
-        return core.math.yl2x(x, LOG2);
-    else
     {
-        // log10(2) split into two parts.
-        enum real L102A =  0.3125L;
-        enum real L102B = -1.14700043360188047862611052755069732318101185E-2L;
-
-        // log10(e) split into two parts.
-        enum real L10EA =  0.5L;
-        enum real L10EB = -6.570551809674817234887108108339491770560299E-2L;
-
-        // Special cases are the same as for log.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 R(z) / S(z),
-        // where z = 2(x - 1)/(x + 1)
-        if ((exp > 2) || (exp < -2))
-        {
-            if (x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            y = x * (z * poly(z, logCoeffsR) / poly(z, logCoeffsS));
-            goto Ldone;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {
-            exp -= 1;
-            x = 2.0 * x - 1.0;
-        }
-        else
-            x = x - 1.0;
-
-        z = x * x;
-        y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - 0.5 * z;
-
-        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
-        // This sequence of operations is critical and it may be horribly
-        // defeated by some compiler optimizers.
-    Ldone:
-        z = y * L10EB;
-        z += x * L10EB;
-        z += exp * L102B;
-        z += y * L10EA;
-        z += x * L10EA;
-        z += exp * L102A;
-
-        return z;
+        import std.math.constants : LOG2;
+        return core.math.yl2x(x, LOG2);
     }
+    else
+        return log10Impl(x);
 }
 
 ///
@@ -3161,6 +3095,88 @@ real log10(real x) @safe pure nothrow @nogc
     import std.math.algebraic : fabs;
 
     assert(fabs(log10(1000) - 3) < .000001);
+}
+
+private T log10Impl(T)(T x) @safe pure nothrow @nogc
+{
+    import std.math.constants : SQRT1_2;
+    import std.math.algebraic : poly;
+    import std.math.traits : isNaN, isInfinity, signbit;
+
+    alias logCoeffs = LogCoeffs!T;
+
+    // log10(2) split into two parts.
+    enum T L102A =  0.3125L;
+    enum T L102B = -1.14700043360188047862611052755069732318101185E-2L;
+
+    // log10(e) split into two parts.
+    enum T L10EA =  0.5L;
+    enum T L10EB = -6.570551809674817234887108108339491770560299E-2L;
+
+    // Special cases are the same as for log.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -T.infinity;
+    if (x < 0.0)
+        return T.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    T y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 R(z) / S(z),
+    // where z = 2(x - 1)/(x + 1)
+    if ((exp > 2) || (exp < -2))
+    {
+        if (x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
+            exp -= 1;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
+        }
+        else
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
+        }
+        x = z / y;
+        z = x * x;
+        y = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        goto Ldone;
+    }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {
+        exp -= 1;
+        x = 2.0 * x - 1.0;
+    }
+    else
+        x = x - 1.0;
+
+    z = x * x;
+    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y = y - 0.5 * z;
+
+    // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+    // This sequence of operations is critical and it may be horribly
+    // defeated by some compiler optimizers.
+Ldone:
+    z = y * L10EB;
+    z += x * L10EB;
+    z += exp * L102B;
+    z += y * L10EA;
+    z += x * L10EA;
+    z += exp * L102A;
+
+    return z;
 }
 
 /**
@@ -3179,29 +3195,15 @@ real log10(real x) @safe pure nothrow @nogc
  */
 real log1p(real x) @safe pure nothrow @nogc
 {
-    import std.math.traits : isNaN, isInfinity, signbit;
-    import std.math.constants : LN2;
-
     version (INLINE_YL2X)
     {
         // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
         //    ie if -0.29 <= x <= 0.414
+        import std.math.constants : LN2;
         return (core.math.fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
     }
     else
-    {
-        // Special cases.
-        if (isNaN(x) || x == 0.0)
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == -1.0)
-            return -real.infinity;
-        if (x < -1.0)
-            return real.nan;
-
-        return log(x + 1.0);
-    }
+        return log1pImpl(x);
 }
 
 ///
@@ -3220,6 +3222,23 @@ real log1p(real x) @safe pure nothrow @nogc
     assert(log1p(real.infinity) == real.infinity);
 }
 
+private T log1pImpl(T)(T x) @safe pure nothrow @nogc
+{
+    import std.math.traits : isNaN, isInfinity, signbit;
+
+    // Special cases.
+    if (isNaN(x) || x == 0.0)
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == -1.0)
+        return -T.infinity;
+    if (x < -1.0)
+        return T.nan;
+
+    return logImpl(x + 1.0);
+}
+
 /***************************************
  * Calculates the base-2 logarithm of x:
  * $(SUB log, 2)x
@@ -3233,78 +3252,10 @@ real log1p(real x) @safe pure nothrow @nogc
  */
 real log2(real x) @safe pure nothrow @nogc
 {
-    import std.math.traits : isNaN, isInfinity, signbit;
-    import std.math.constants : SQRT1_2, LOG2E;
-    import std.math.algebraic : poly;
-
     version (INLINE_YL2X)
         return core.math.yl2x(x, 1.0L);
     else
-    {
-        // Special cases are the same as for log.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 R(z) / S(z),
-        // where z = 2(x - 1)/(x + 1)
-        if ((exp > 2) || (exp < -2))
-        {
-            if (x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            y = x * (z * poly(z, logCoeffsR) / poly(z, logCoeffsS));
-            goto Ldone;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {
-            exp -= 1;
-            x = 2.0 * x - 1.0;
-        }
-        else
-            x = x - 1.0;
-
-        z = x * x;
-        y = x * (z * poly(x, logCoeffsP) / poly(x, logCoeffsQ));
-        y = y - 0.5 * z;
-
-        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
-        // This sequence of operations is critical and it may be horribly
-        // defeated by some compiler optimizers.
-    Ldone:
-        z = y * (LOG2E - 1.0);
-        z += x * (LOG2E - 1.0);
-        z += y;
-        z += x;
-        z += exp;
-
-        return z;
-    }
+        return log2Impl(x);
 }
 
 ///
@@ -3321,6 +3272,79 @@ real log2(real x) @safe pure nothrow @nogc
 
     // check if values are equal to 19 decimal digits of precision
     assert(isClose(log2(1024.0L), 10, 1e-18));
+}
+
+private T log2Impl(T)(T x) @safe pure nothrow @nogc
+{
+    import std.math.traits : isNaN, isInfinity, signbit;
+    import std.math.constants : SQRT1_2, LOG2E;
+    import std.math.algebraic : poly;
+
+    alias logCoeffs = LogCoeffs!T;
+
+    // Special cases are the same as for log.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -T.infinity;
+    if (x < 0.0)
+        return T.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    T y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 R(z) / S(z),
+    // where z = 2(x - 1)/(x + 1)
+    if ((exp > 2) || (exp < -2))
+    {
+        if (x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
+            exp -= 1;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
+        }
+        else
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
+        }
+        x = z / y;
+        z = x * x;
+        y = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        goto Ldone;
+    }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {
+        exp -= 1;
+        x = 2.0 * x - 1.0;
+    }
+    else
+        x = x - 1.0;
+
+    z = x * x;
+    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y = y - 0.5 * z;
+
+    // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+    // This sequence of operations is critical and it may be horribly
+    // defeated by some compiler optimizers.
+Ldone:
+    z = y * (LOG2E - 1.0);
+    z += x * (LOG2E - 1.0);
+    z += y;
+    z += x;
+    z += exp;
+
+    return z;
 }
 
 /*****************************************
