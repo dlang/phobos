@@ -107,7 +107,7 @@ endif
 OUTFILEFLAG = -o
 NODEFAULTLIB=-defaultlib= -debuglib=
 ifeq (,$(findstring win,$(OS)))
-	CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
+	CFLAGS=$(MODEL_FLAG) -fPIC -std=c11 -DHAVE_UNISTD_H
 	NODEFAULTLIB += -L-lpthread -L-lm
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
