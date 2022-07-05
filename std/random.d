@@ -2762,7 +2762,7 @@ Returns:
     return a `ref` to the $(D range element), otherwise it will return
     a copy.
  */
-auto ref choice(Range, RandomGen = Random)(auto ref Range range, ref RandomGen urng)
+auto ref choice(Range, RandomGen = Random)(Range range, ref RandomGen urng)
 if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
     assert(range.length > 0,
@@ -2772,7 +2772,22 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 }
 
 /// ditto
-auto ref choice(Range)(auto ref Range range)
+auto ref choice(Range)(Range range)
+{
+    return choice(range, rndGen);
+}
+
+/// ditto
+auto ref choice(Range, RandomGen = Random)(ref Range range, ref RandomGen urng)
+if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
+{
+    assert(range.length > 0,
+           __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
+    return range[uniform(size_t(0), $, urng)];
+}
+
+/// ditto
+auto ref choice(Range)(ref Range range)
 {
     return choice(range, rndGen);
 }
@@ -2825,6 +2840,39 @@ auto ref choice(Range)(auto ref Range range)
            "Choice did not return a ref to an element from the given Range");
     assert(array.canFind(*(cast(int *)(elemAddr))),
            "Choice did not return a valid element from the given Range");
+}
+
+@safe unittest // issue 18631
+{
+    auto rng = MinstdRand0(42);
+    const a = [0,1,2];
+    const(int[]) b = [0, 1, 2];
+    auto x = choice(a);
+    auto y = choice(b);
+    auto z = choice(cast(const)[1, 2, 3]);
+    auto x1 = choice(a, rng);
+    auto y1 = choice(b, rng);
+    auto z1 = choice(cast(const)[1, 2, 3], rng);
+}
+
+@safe unittest // Ref range (issue 18631 PR)
+{
+    struct TestRange
+    {
+        int x;
+        ref int front() return {return x;}
+        ref int back() return {return x;}
+        void popFront() {}
+        void popBack() {}
+        bool empty = false;
+        TestRange save() {return this;}
+        size_t length = 10;
+        alias opDollar = length;
+        ref int opIndex(size_t i) return {return x;}
+    }
+
+    TestRange r = TestRange(10);
+    int* s = &choice(r);
 }
 
 /**
