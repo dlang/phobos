@@ -147,8 +147,6 @@ ssize_t write(int, const void*, size_t);
 int close(int);
 #endif
 
-
-
 /* provide prototypes for these when building zlib without LFS */
 #if !defined(_LARGEFILE64_SOURCE) || _LFS64_LARGEFILE-0 == 0
     ZEXTERN gzFile ZEXPORT gzopen64 OF((const char *, const char *));
