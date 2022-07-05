@@ -931,11 +931,9 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
 ///
 @safe pure nothrow unittest
 {
-    import core.math;
     import std.math.operations : isClose;
-    import std.math.algebraic : sqrt;
-    import std.math.constants : PI_4;
-    auto z = fromPolar(core.math.sqrt(2.0L), PI_4);
+    import std.math.constants : SQRT2, PI_4;
+    auto z = fromPolar(SQRT2, PI_4);
     assert(isClose(z.re, 1.0L));
     assert(isClose(z.im, 1.0L));
 }
@@ -1614,15 +1612,14 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import core.math : sqrt;
-    import std.math.constants : PI;
+    import std.math.constants : SQRT1_2, PI;
     import std.math.operations : isClose;
 
     auto a = complex(2.0, 1.0);
     assert(log(conj(a)) == conj(log(a)));
 
     auto b = 2.0 * log10(complex(0.0, 1.0));
-    auto c = 4.0 * log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2));
+    auto c = 4.0 * log10(complex(SQRT1_2, SQRT1_2));
     assert(isClose(b, c, 0.0, 1e-15));
 
     assert(log(complex(-1.0L, 0.0L)) == complex(0.0L, PI));
@@ -1664,7 +1661,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math.constants : PI;
+    import std.math.constants : PI, PI_2;
     import std.math.operations : isClose;
 
     auto a = log(fromPolar(1.0, PI / 6.0));
@@ -1673,7 +1670,7 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
     auto b = log(fromPolar(1.0, PI / 3.0));
     assert(isClose(b, complex(0.0L, 1.04719755119659774615L), 0.0, 1e-15));
 
-    auto c = log(fromPolar(1.0, PI / 2.0));
+    auto c = log(fromPolar(1.0, PI_2));
     assert(isClose(c, complex(0.0L, 1.57079632679489661923L), 0.0, 1e-15));
 
     auto d = log(fromPolar(1.0, 2.0 * PI / 3.0));
@@ -1703,21 +1700,20 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import core.math : sqrt;
-    import std.math.constants : LN10, PI;
+    import std.math.constants : LN10, PI, SQRT1_2;
     import std.math.operations : isClose;
 
     auto a = complex(2.0, 1.0);
     assert(log10(a) == log(a) / log(complex(10.0)));
 
     auto b = log10(complex(0.0, 1.0)) * 2.0;
-    auto c = log10(complex(sqrt(2.0) / 2, sqrt(2.0) / 2)) * 4.0;
+    auto c = log10(complex(SQRT1_2, SQRT1_2)) * 4.0;
     assert(isClose(b, c, 0.0, 1e-15));
 }
 
 @safe pure nothrow @nogc unittest
 {
-    import std.math.constants : LN10, PI;
+    import std.math.constants : LN10, PI, PI_2;
     import std.math.operations : isClose;
 
     auto a = log10(fromPolar(1.0, PI / 6.0));
@@ -1726,7 +1722,7 @@ Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
     auto b = log10(fromPolar(1.0, PI / 3.0));
     assert(isClose(b, complex(0.0L, 0.454792117947280449161L), 0.0, 1e-15));
 
-    auto c = log10(fromPolar(1.0, PI / 2.0));
+    auto c = log10(fromPolar(1.0, PI_2));
     assert(isClose(c, complex(0.0L, 0.682188176920920673742L), 0.0, 1e-15));
 
     auto d = log10(fromPolar(1.0, 2.0 * PI / 3.0));

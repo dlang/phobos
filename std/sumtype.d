@@ -90,7 +90,7 @@ version (D_BetterC) {} else
 {
     import std.math.operations : isClose;
     import std.math.trigonometry : cos;
-    import std.math.constants : PI;
+    import std.math.constants : PI_4;
     import std.math.algebraic : sqrt;
 
     struct Rectangular { double x, y; }
@@ -114,7 +114,7 @@ version (D_BetterC) {} else
     }
 
     Vector u = Rectangular(1, 1);
-    Vector v = Polar(1, PI/4);
+    Vector v = Polar(1, PI_4);
 
     assert(length(u).isClose(sqrt(2.0)));
     assert(length(v).isClose(1));
