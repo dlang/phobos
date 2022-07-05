@@ -2862,14 +2862,16 @@ float ldexp(float n, int exp)   @safe pure nothrow @nogc { return core.math.ldex
 
 private
 {
+    // Coefficients shared across log(), log2(), log10().
     template LogCoeffs(T)
     {
         import std.math : floatTraits, RealFormat;
 
         static if (floatTraits!T.realFormat == RealFormat.ieeeQuadruple)
         {
-            // Coefficients for log(1 + x) = x - x**2/2 + x**3 P(x)/Q(x)
-            static immutable real[13] P = [
+            // Coefficients for log(1 + x) = x - x^^2/2 + x^^3 P(x)/Q(x)
+            // Theoretical peak relative error = 5.3e-37
+            static immutable real[13] logP = [
                 1.313572404063446165910279910527789794488E4L,
                 7.771154681358524243729929227226708890930E4L,
                 2.014652742082537582487669938141683759923E5L,
@@ -2884,7 +2886,7 @@ private
                 4.998469661968096229986658302195402690910E-1L,
                 1.538612243596254322971797716843006400388E-6L
             ];
-            static immutable real[13] Q = [
+            static immutable real[13] logQ = [
                 3.940717212190338497730839731583397586124E4L,
                 2.626900195321832660448791748036714883242E5L,
                 7.777690340007566932935753241556479363645E5L,
@@ -2900,9 +2902,18 @@ private
                 1.0
             ];
 
-            // Coefficients for log(x) = z + z^3 P(z^2)/Q(z^2)
+            // log2 uses the same coefficients as log.
+            alias log2P = logP;
+            alias log2Q = logQ;
+
+            // log10 uses the same coefficients as log.
+            alias log10P = logP;
+            alias log10Q = logQ;
+
+            // Coefficients for log(x) = z + z^^3 P(z^^2)/Q(z^^2)
             // where z = 2(x-1)/(x+1)
-            static immutable real[6] R = [
+            // Theoretical peak relative error = 1.1e-35
+            static immutable real[6] logR = [
                 1.418134209872192732479751274970992665513E5L,
                 -8.977257995689735303686582344659576526998E4L,
                 2.048819892795278657810231591630928516206E4L,
@@ -2910,7 +2921,7 @@ private
                 8.057002716646055371965756206836056074715E1L,
                 -8.828896441624934385266096344596648080902E-1L
             ];
-            static immutable real[7] S = [
+            static immutable real[7] logS = [
                 1.701761051846631278975701529965589676574E6L,
                 -1.332535117259762928288745111081235577029E6L,
                 4.001557694070773974936904547424676279307E5L,
@@ -2922,8 +2933,9 @@ private
         }
         else
         {
-            // Coefficients for log(1 + x) = x - x**2/2 + x**3 P(x)/Q(x)
-            static immutable real[7] P = [
+            // Coefficients for log(1 + x) = x - x^^2/2 + x^^3 P(x)/Q(x)
+            // Theoretical peak relative error = 2.32e-20
+            static immutable real[7] logP = [
                 2.0039553499201281259648E1L,
                 5.7112963590585538103336E1L,
                 6.0949667980987787057556E1L,
@@ -2932,7 +2944,7 @@ private
                 4.9854102823193375972212E-1L,
                 4.5270000862445199635215E-5L,
             ];
-            static immutable real[7] Q = [
+            static immutable real[7] logQ = [
                 6.0118660497603843919306E1L,
                 2.1642788614495947685003E2L,
                 3.0909872225312059774938E2L,
@@ -2942,15 +2954,42 @@ private
                 1.0000000000000000000000E0L,
             ];
 
-            // Coefficients for log(x) = z + z^3 P(z^2)/Q(z^2)
+            // Coefficients for log(1 + x) = x - x^^2/2 + x^^3 P(x)/Q(x)
+            // Theoretical peak relative error = 6.2e-22
+            static immutable real[7] log2P = [
+                1.0747524399916215149070E2L,
+                3.4258224542413922935104E2L,
+                4.2401812743503691187826E2L,
+                2.5620629828144409632571E2L,
+                7.7671073698359539859595E1L,
+                1.0767376367209449010438E1L,
+                4.9962495940332550844739E-1L,
+            ];
+            static immutable real[8] log2Q = [
+                3.2242573199748645407652E2L,
+                1.2695660352705325274404E3L,
+                2.0307734695595183428202E3L,
+                1.6911722418503949084863E3L,
+                7.7952888181207260646090E2L,
+                1.9444210022760132894510E2L,
+                2.3479774160285863271658E1L,
+                1.0000000000000000000000E0,
+            ];
+
+            // log10 uses the same coefficients as log2.
+            alias log10P = log2P;
+            alias log10Q = log2Q;
+
+            // Coefficients for log(x) = z + z^^3 P(z^^2)/Q(z^^2)
             // where z = 2(x-1)/(x+1)
-            static immutable real[4] R = [
+            // Theoretical peak relative error = 6.16e-22
+            static immutable real[4] logR = [
                -3.5717684488096787370998E1L,
                 1.0777257190312272158094E1L,
                -7.1990767473014147232598E-1L,
                 1.9757429581415468984296E-3L,
             ];
-            static immutable real[4] S = [
+            static immutable real[4] logS = [
                -4.2861221385716144629696E2L,
                 1.9361891836232102174846E2L,
                -2.6201045551331104417768E1L,
@@ -2996,7 +3035,7 @@ private T logImpl(T)(T x) @safe pure nothrow @nogc
     import std.math.algebraic : poly;
     import std.math.traits : isInfinity, isNaN, signbit;
 
-    alias logCoeffs = LogCoeffs!T;
+    alias coeffs = LogCoeffs!T;
 
     // C1 + C2 = LN2.
     enum T C1 = 6.93145751953125E-1L;
@@ -3037,7 +3076,7 @@ private T logImpl(T)(T x) @safe pure nothrow @nogc
         }
         x = z / y;
         z = x * x;
-        z = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        z = x * (z * poly(z, coeffs.logR) / poly(z, coeffs.logS));
         z += exp * C2;
         z += x;
         z += exp * C1;
@@ -3056,7 +3095,7 @@ private T logImpl(T)(T x) @safe pure nothrow @nogc
         x = x - 1.0;
     }
     z = x * x;
-    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y = x * (z * poly(x, coeffs.logP) / poly(x, coeffs.logQ));
     y += exp * C2;
     z = y - 0.5 * z;
 
@@ -3103,7 +3142,7 @@ private T log10Impl(T)(T x) @safe pure nothrow @nogc
     import std.math.algebraic : poly;
     import std.math.traits : isNaN, isInfinity, signbit;
 
-    alias logCoeffs = LogCoeffs!T;
+    alias coeffs = LogCoeffs!T;
 
     // log10(2) split into two parts.
     enum T L102A =  0.3125L;
@@ -3148,7 +3187,7 @@ private T log10Impl(T)(T x) @safe pure nothrow @nogc
         }
         x = z / y;
         z = x * x;
-        y = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        y = x * (z * poly(z, coeffs.logR) / poly(z, coeffs.logS));
         goto Ldone;
     }
 
@@ -3162,7 +3201,7 @@ private T log10Impl(T)(T x) @safe pure nothrow @nogc
         x = x - 1.0;
 
     z = x * x;
-    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y = x * (z * poly(x, coeffs.log10P) / poly(x, coeffs.log10Q));
     y = y - 0.5 * z;
 
     // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
@@ -3280,7 +3319,7 @@ private T log2Impl(T)(T x) @safe pure nothrow @nogc
     import std.math.constants : SQRT1_2, LOG2E;
     import std.math.algebraic : poly;
 
-    alias logCoeffs = LogCoeffs!T;
+    alias coeffs = LogCoeffs!T;
 
     // Special cases are the same as for log.
     if (isNaN(x))
@@ -3317,7 +3356,7 @@ private T log2Impl(T)(T x) @safe pure nothrow @nogc
         }
         x = z / y;
         z = x * x;
-        y = x * (z * poly(z, logCoeffs.R) / poly(z, logCoeffs.S));
+        y = x * (z * poly(z, coeffs.logR) / poly(z, coeffs.logS));
         goto Ldone;
     }
 
@@ -3331,7 +3370,7 @@ private T log2Impl(T)(T x) @safe pure nothrow @nogc
         x = x - 1.0;
 
     z = x * x;
-    y = x * (z * poly(x, logCoeffs.P) / poly(x, logCoeffs.Q));
+    y = x * (z * poly(x, coeffs.log2P) / poly(x, coeffs.log2Q));
     y = y - 0.5 * z;
 
     // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
