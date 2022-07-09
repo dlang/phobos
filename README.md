@@ -1,4 +1,4 @@
-![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library
+![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library (TEST)
 ===================================================================
 
 [![GitHub tag](https://img.shields.io/github/tag/dlang/phobos.svg?maxAge=86400)](https://github.com/dlang/phobos/releases)
