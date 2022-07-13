@@ -1782,13 +1782,13 @@ void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
     Associative arrays are formatted by using `':'` and $(D ", ") as
     separators, and enclosed by `'['` and `']'`.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.format : enforceFmt, formatValue;
     import std.range.primitives : put;
 
-    AssocArrayTypeOf!(const(T)) val = obj;
+    AssocArrayTypeOf!T val = obj;
     const spec = f.spec;
 
     enforceFmt(spec == 's' || spec == '(',
