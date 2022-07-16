@@ -7151,7 +7151,6 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    debug import std.stdio;
 
     Grapheme gr;
     string s = " \u0020\u0308 ";
