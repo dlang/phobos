@@ -1404,7 +1404,7 @@ abstract class Logger
 
 // Thread Global
 
-private __gshared Logger stdSharedDefaultLogger;
+private shared Logger stdSharedDefaultLogger;
 private shared Logger stdSharedLogger;
 private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
 
@@ -1422,10 +1422,10 @@ private @property shared(Logger) defaultSharedLoggerImpl() @trusted
     import std.concurrency : initOnce;
     initOnce!stdSharedDefaultLogger({
         auto buffer = cast(ubyte[]) _buffer;
-        return emplace!FileLogger(buffer, stderr, LogLevel.info);
+        return cast(shared) emplace!(FileLogger)(buffer, stderr, LogLevel.info);
     }());
 
-    return atomicLoad(cast(shared) stdSharedDefaultLogger);
+    return atomicLoad(stdSharedDefaultLogger);
 }
 
 /** This property sets and gets the default `Logger`. Unless set to another
