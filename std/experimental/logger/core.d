@@ -1557,7 +1557,7 @@ private @property Logger stdThreadLocalLogImpl() @trusted
 }
 
 /** This function returns a thread unique `Logger`, that by default
-propergates all data logged to it to the `sharedLog`.
+propagates all data logged to it to the `sharedLog`.
 
 These properties can be used to set and get this `Logger`. Every
 modification to this `Logger` will only be visible in the thread the
