@@ -556,14 +556,14 @@ abstract class Logger
     Params:
          lv = `LogLevel` to use for this `Logger` instance.
     */
-    this(LogLevel lv) @safe
+    this(this This)(LogLevel lv)
     {
         this.logLevel_ = lv;
         this.fatalHandler_ = delegate() {
             throw new Error("A fatal log message was logged");
         };
 
-        this.mutex = new Mutex();
+        this.mutex = new typeof(mutex)();
     }
 
     /** A custom logger must implement this method in order to work in a
@@ -1518,7 +1518,7 @@ class StdForwardLogger : Logger
 
     override protected void writeLogMsg(ref LogEntry payload) @trusted
     {
-        synchronized (mutex)
+        synchronized (sharedLog.mutex)
         {
             (cast() sharedLog).forwardMsg(payload);
         }
@@ -1529,6 +1529,40 @@ class StdForwardLogger : Logger
 @safe unittest
 {
     auto nl1 = new StdForwardLogger(LogLevel.all);
+}
+
+@safe unittest
+{
+    import core.thread : Thread, msecs;
+
+    static class RaceLogger : Logger
+    {
+        int value;
+        this() @safe shared
+        {
+            super(LogLevel.init);
+        }
+        override void writeLogMsg(ref LogEntry payload) @safe
+        {
+            import core.thread : Thread, msecs;
+            if (payload.msg == "foo")
+            {
+                value = 42;
+                () @trusted { Thread.sleep(100.msecs); }();
+                assert(value == 42, "Another thread changed the value");
+            }
+            else
+            {
+                () @trusted { Thread.sleep(50.msecs); } ();
+                value = 13;
+            }
+        }
+    }
+
+    sharedLog = new shared RaceLogger;
+    scope(exit) { sharedLog = null; }
+    () @trusted { new Thread(() { log("foo"); }).start(); }();
+    log("bar");
 }
 
 /** This `LogLevel` is unqiue to every thread.
