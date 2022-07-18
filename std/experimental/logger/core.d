@@ -1455,13 +1455,8 @@ if (sharedLog !is myLogger)
 */
 @property shared(Logger) sharedLog() @safe
 {
-    static auto trustedLoad(ref shared Logger logger)
-    {
-        return atomicLoad!(MemoryOrder.seq)(logger);
-    }
-
     // If we have set up our own logger use that
-    if (auto logger = trustedLoad(stdSharedLogger))
+    if (auto logger = atomicLoad!(MemoryOrder.seq)(stdSharedLogger))
     {
         return atomicLoad(logger);
     }
