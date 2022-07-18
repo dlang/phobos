@@ -574,7 +574,7 @@ dscanner: $(LIB)
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini -I $(DRUNTIME_PATH)/src/ --styleCheck etc std -I.
 
 style_lint_shellcmds:
 	@echo "Check for trailing whitespace"
