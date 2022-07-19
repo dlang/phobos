@@ -1494,7 +1494,7 @@ void  curl_formfree(curl_httppost *form);
  * Returns a malloc()'ed string that MUST be curl_free()ed after usage is
  * complete. DEPRECATED - see lib/README.curlx
  */
-char * curl_getenv(in const(char) *variable);
+char * curl_getenv(scope const(char) *variable);
 
 /**
  * Name: curl_version()
