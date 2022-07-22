@@ -1273,7 +1273,7 @@ Params:
     predicate = Function to apply to each element of range
 
 Returns:
-    An input range. If `range` is at least a forward range, the return value of `filter`
+    An input range that contains the filtered elements. If `range` is at least a forward range, the return value of `filter`
     will also be a forward range.
 
 See_Also:
