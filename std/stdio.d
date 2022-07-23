@@ -1218,7 +1218,7 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
         File f;
         ubyte[0] u;
         assertNotThrown(f.rawRead(u));
-    }    
+    }
 
 /**
 Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
