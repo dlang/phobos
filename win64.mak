@@ -264,6 +264,7 @@ SRC_STD_WIN= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
+	std\internal\memory.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
 	std\internal\unicode_decomp.d \

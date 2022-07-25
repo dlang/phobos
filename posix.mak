@@ -256,7 +256,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
 	digest/digest \
 	$(addprefix internal/, \
-		cstring digest/sha_SSSE3 \
+		cstring memory digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
