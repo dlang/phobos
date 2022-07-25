@@ -3056,8 +3056,16 @@ if (isRandomAccessRange!Range)
 }
 
 /**
-Rolls a dice with relative probabilities stored in $(D
-proportions). Returns the index in `proportions` that was chosen.
+Get a random index into a list of weights corresponding to each index
+
+Similar to rolling a die with relative probabilities stored in `proportions`.
+Returns the index in `proportions` that was chosen.
+
+Note:
+    Usually, dice are 'fair', meaning that each side has equal probability
+    to come up, in which case `1 + uniform(0, 6)` can simply be used.
+    In future Phobos versions, this function might get renamed to something like
+    `weightedChoice` to avoid confusion.
 
 Params:
     rnd = (optional) random number generator to use; if not
@@ -3103,6 +3111,9 @@ if (isNumeric!Num)
 ///
 @safe unittest
 {
+    auto d6  = 1 + dice(1, 1, 1, 1, 1, 1); // fair dice roll
+    auto d6b = 1 + dice(2, 1, 1, 1, 1, 1); // double the chance to roll '1'
+
     auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
     auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
     auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
