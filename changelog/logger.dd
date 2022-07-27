@@ -1,0 +1,5 @@
+Move logger out of experimental.
+
+The std.experimental.logger package is now std.logger. The old package and modules are
+still available and publicly import the new ones. To avoid breakage in modules that compile
+with deprecations as errors, for now the old modules aren't deprecated, but they will be.
