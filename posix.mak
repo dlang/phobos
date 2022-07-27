@@ -203,7 +203,7 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  format math net uni \
+  format logger math net uni \
   experimental range regex windows)
 
 # Modules broken down per package
@@ -238,6 +238,8 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
 PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
+PACKAGE_std_logger = core filelogger \
+  nulllogger multilogger package
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))

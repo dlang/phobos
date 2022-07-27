@@ -320,6 +320,13 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_LOGGER= \
+	std\logger\core.d \
+	std\logger\filelogger.d \
+	std\logger\multilogger.d \
+	std\logger\nulllogger.d \
+	std\logger\package.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -353,6 +360,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_UNI) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_LOGGER) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -425,7 +433,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5b.obj $(SRC_STD_MATH)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6a.obj $(SRC_STD_EXP_ALLOC)
-	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_EXP_LOGGER)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7a.obj $(SRC_STD_7a)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8a.obj $(SRC_STD_REGEX)

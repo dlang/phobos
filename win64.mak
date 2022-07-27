@@ -328,6 +328,13 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_LOGGER= \
+	std\logger\core.d \
+	std\logger\filelogger.d \
+	std\logger\multilogger.d \
+	std\logger\nulllogger.d \
+	std\logger\package.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -361,6 +368,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_LOGGER) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -447,7 +455,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
-	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest7a.obj $(SRC_STD_7a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
