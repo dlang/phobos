@@ -32,6 +32,8 @@ See the [licence file](LICENSE_1_0.txt).
 
 I Want to Contribute
 --------------------
+I would add use cases for the program which would help use this.
+
 
 Great!
 See the [CONTRIBUTING.md file](CONTRIBUTING.md).
