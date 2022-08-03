@@ -587,7 +587,7 @@ if (!is(immutable W == immutable bool))
                 // Thanks to @dkorpel (https://github.com/dlang/phobos/pull/8162#discussion_r667479090).
 
                 import core.lifetime : emplace;
-                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U)value);
+                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U) value);
 
                 // We increment the length after each iteration (as opposed to adjusting it just once, after the loop)
                 // in order to improve error-safety (in case one of the calls to emplace throws).
