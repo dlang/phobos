@@ -573,7 +573,7 @@ if (!is(immutable W == immutable bool))
      * Constructor taking a number of items.
      */
     this(U)(U[] values...)
-    if (isImplicitlyConvertible!(Unshared!U, T)) //Fix https://issues.dlang.org/show_bug.cgi?id=23140
+    if (isImplicitlyConvertible!(Unshared!U, T))
     {
         // [2021-07-17] Checking to see whether *always* calling ensureInitialized works-around-and/or-is-related-to https://issues.dlang.org/show_bug.cgihttps://issues.dlang.org/show_bug.cgi...
         //if (values.length)
@@ -587,7 +587,7 @@ if (!is(immutable W == immutable bool))
                 // Thanks to @dkorpel (https://github.com/dlang/phobos/pull/8162#discussion_r667479090).
 
                 import core.lifetime : emplace;
-                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U)value);  //Fix https://issues.dlang.org/show_bug.cgi?id=23140
+                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U)value);
 
                 // We increment the length after each iteration (as opposed to adjusting it just once, after the loop)
                 // in order to improve error-safety (in case one of the calls to emplace throws).
