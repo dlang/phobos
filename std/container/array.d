@@ -365,8 +365,8 @@ private struct RangeT(A)
 }
 
 //Fix https://issues.dlang.org/show_bug.cgi?id=23140
-alias Unshared(T) = T;
-alias Unshared(T: shared U, U) = U;
+private alias Unshared(T) = T;
+private alias Unshared(T: shared U, U) = U;
 
 /**
  * _Array type with deterministic control of memory. The memory allocated
