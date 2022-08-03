@@ -144,7 +144,7 @@ private struct RangeT(A)
 
     /* E is different from T when A is more restrictively qualified than T:
        immutable(Array!int) => T == int, E = immutable(int) */
-    alias E = typeof(_outer_[0]._data._payload[0]);
+    alias E = Unshared!(typeof(_outer_[0]._data._payload[0]));
 
     private this(ref A data, size_t a, size_t b)
     {
@@ -364,6 +364,9 @@ private struct RangeT(A)
     assert(S.s_nDestroyed == S.s_nConstructed);
 }
 
+//Fix https://issues.dlang.org/show_bug.cgi?id=23140
+alias Unshared(T) = T;
+alias Unshared(T: shared U, U) = U;
 
 /**
  * _Array type with deterministic control of memory. The memory allocated
@@ -382,9 +385,11 @@ private struct RangeT(A)
  * `Array` must be sliced to get a range (for example, use `array[].map!`
  * instead of `array.map!`). The container itself is not a range.
  */
-struct Array(T)
-if (!is(immutable T == immutable bool))
+
+struct Array(W)
+if (!is(immutable W == immutable bool))
 {
+    alias T = Unshared!W; //Fix https://issues.dlang.org/show_bug.cgi?id=23140
     import core.memory : free = pureFree;
     import std.internal.memory : enforceMalloc, enforceRealloc;
     import core.stdc.string : memcpy, memmove, memset;
@@ -568,7 +573,7 @@ if (!is(immutable T == immutable bool))
      * Constructor taking a number of items.
      */
     this(U)(U[] values...)
-    if (isImplicitlyConvertible!(U, T))
+    if (isImplicitlyConvertible!(Unshared!U, T)) //Fix https://issues.dlang.org/show_bug.cgi?id=23140
     {
         // [2021-07-17] Checking to see whether *always* calling ensureInitialized works-around-and/or-is-related-to https://issues.dlang.org/show_bug.cgihttps://issues.dlang.org/show_bug.cgi...
         //if (values.length)
@@ -582,7 +587,7 @@ if (!is(immutable T == immutable bool))
                 // Thanks to @dkorpel (https://github.com/dlang/phobos/pull/8162#discussion_r667479090).
 
                 import core.lifetime : emplace;
-                emplace(_data._payload.ptr + _data._payload.length, value);
+                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U)value);  //Fix https://issues.dlang.org/show_bug.cgi?id=23140
 
                 // We increment the length after each iteration (as opposed to adjusting it just once, after the loop)
                 // in order to improve error-safety (in case one of the calls to emplace throws).
