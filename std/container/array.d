@@ -1745,6 +1745,13 @@ if (!is(immutable W == immutable bool))
     assertThrown!AssertError(array.length = 5);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=23140
+@system unittest
+{
+    shared class C {}
+	
+    assert(__traits(compiles, Array!C));
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
 ////////////////////////////////////////////////////////////////////////////////
