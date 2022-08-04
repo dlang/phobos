@@ -1752,7 +1752,7 @@ if (!is(immutable W == immutable bool))
     {
     }
 
-    assert(__traits(compiles, Array!C));
+    Array!C ac;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
