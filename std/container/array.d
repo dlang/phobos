@@ -1751,7 +1751,7 @@ if (!is(immutable W == immutable bool))
     shared class C
     {
     }
-	
+
     assert(__traits(compiles, Array!C));
 }
 ////////////////////////////////////////////////////////////////////////////////
