@@ -108,7 +108,10 @@ OUTFILEFLAG = -o
 NODEFAULTLIB=-defaultlib= -debuglib=
 ifeq (,$(findstring win,$(OS)))
 	CFLAGS=$(MODEL_FLAG) -fPIC -std=c11 -DHAVE_UNISTD_H
-	NODEFAULTLIB += -L-lpthread -L-lm
+# Bundled with the system library on OSX, and doesn't work with >= MacOS 11
+	ifneq (osx,$(OS))
+		NODEFAULTLIB += -L-lpthread -L-lm
+	endif
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
