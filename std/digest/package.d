@@ -1212,3 +1212,108 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
         assert(!secureEqual(hex1, hex2));
     }
 }
+
+/**
+ * Used to convert hex string to byte array
+ * Example:
+ * ---
+ * ubyte[2] sba = "0xAA".toDigest!2; // returns static array, no allocating
+ * ubyte[] dby  = "0xBA".toDigest;   // returns dynamic array, gc allocating
+ * ---
+ */
+auto toDigest(const string hex) pure nothrow @safe
+{
+    auto digest = new ubyte[hex.length / 2 + hex.length % 2];
+    return toDigestImpl(hex, digest);
+}
+
+/// ditto
+auto toDigest(size_t num)(const string hex) pure nothrow @safe @nogc
+{
+    ubyte[num] digest;
+    toDigestImpl(hex, digest);
+    return digest;
+}
+
+///
+@safe unittest
+{
+    void testToDigest(const ubyte[] b, const string s) @safe
+    {
+        import std.conv : text;
+
+        assert(b == s.toDigest, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+    }
+
+    testToDigest([255], "0xff");
+    testToDigest([], "");
+    testToDigest([], "0x");
+    testToDigest([0x01], "0x1");
+    testToDigest([255], "0xFf");
+    testToDigest([255], "ff");
+    testToDigest([0x0f, 0xff], "0xfff");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaAa");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123_AaAa");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123 AaAa");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123            AaAa");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123Aa______AA");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
+
+    void testToStaticDigest(size_t n)(const ubyte[n]b, const string s ) @safe
+    {
+        import std.conv : text;
+        assert(b == s.toDigest!n, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+    }
+
+    testToStaticDigest!3([0, 0, 255], "0xff");
+    testToStaticDigest!3([0, 0, 255], "0x00ff");
+    testToStaticDigest!1([255], "0x12ff");
+    testToStaticDigest!2([0x12, 255], "0x12ff");
+    testToStaticDigest!2([0x12, 255], "0x12__ff");
+    testToStaticDigest!4([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
+}
+
+/*
+ * Fill in a preallocated byte buffer by values from ASCII hex buffer
+ */
+private auto toDigestImpl(BB, HB)(
+    scope const ref HB hexBuffer, return scope ref BB byteBuffer) @safe pure nothrow @nogc
+{
+    size_t bi = byteBuffer.length - 1, hi;
+    import std.ascii : isHexDigit;
+
+    size_t start;
+    if (hexBuffer.length >= 2 && hexBuffer[0 .. 2] == "0x")
+        start = 2;
+
+    foreach_reverse (c; hexBuffer[start .. $])
+    {
+        if (!c.isHexDigit)
+            continue;
+        byteBuffer[bi] |= cast(ubyte)(c.toByte << (hi % 2 ? 4 : 0));
+        if (hi % 2)
+        {
+            if (bi == 0)
+                break;
+            bi--;
+        }
+        hi++;
+    }
+    return byteBuffer[bi + !(hi % 2) .. $];
+
+}
+
+private int toByte(char hexDigit) @safe pure nothrow @nogc
+{
+    import std.ascii : isDigit, isAlpha, toLower;
+
+    if (hexDigit.isDigit)
+    {
+        return hexDigit - '0';
+    }
+    else if (hexDigit.isAlpha)
+    {
+        return hexDigit.toLower - 'a' + 10;
+    }
+    assert(0, "Invalid hex digit");
+}
