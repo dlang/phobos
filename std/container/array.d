@@ -489,9 +489,9 @@ if (!is(immutable T == immutable bool))
                 auto newPayload = newPayloadPtr[0 .. oldLength];
 
                 // copy old data over to new array
-                memcpy(cast(void*) newPayload.ptr,cast(void*)  _payload.ptr, T.sizeof * oldLength);
+                memcpy(cast(void*) newPayload.ptr, cast(void*) _payload.ptr, T.sizeof * oldLength);
                 // Zero out unused capacity to prevent gc from seeing false pointers
-                memset(cast(void*) newPayload.ptr + oldLength,
+                memset( cast(void*) (newPayload.ptr + oldLength),
                         0,
                         (elements - oldLength) * T.sizeof);
                 GC.addRange(cast(void*) newPayload.ptr, sz);
@@ -1746,7 +1746,7 @@ if (!is(immutable T == immutable bool))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=23140
-/*@system unittest
+@system unittest
 {
     shared class C
     {
