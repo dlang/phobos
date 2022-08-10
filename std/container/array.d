@@ -1751,7 +1751,7 @@ if (!is(immutable T == immutable bool))
     shared class C
     {
     }
-    
+
     Array!C ac;
     ac = Array!C([new C]);
 }
