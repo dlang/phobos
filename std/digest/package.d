@@ -1223,7 +1223,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
  */
 auto toDigest(const string hex) pure nothrow @safe @nogc
 {
-    return ByteToHexConverter(hex);
+    return HexToBytesConverter(hex);
 }
 
 ///
@@ -1269,7 +1269,7 @@ auto toDigest(const string hex) pure nothrow @safe @nogc
     testToStaticDigest!4([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
 }
 
-private struct ByteToHexConverter
+private struct HexToBytesConverter
 {
     import std.ascii : isHexDigit;
 
