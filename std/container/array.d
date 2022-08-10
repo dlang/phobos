@@ -144,7 +144,7 @@ private struct RangeT(A)
 
     /* E is different from T when A is more restrictively qualified than T:
        immutable(Array!int) => T == int, E = immutable(int) */
-    alias E = Unshared!(typeof(_outer_[0]._data._payload[0]));
+    alias E = typeof(_outer_[0]._data._payload[0]);
 
     private this(ref A data, size_t a, size_t b)
     {
@@ -364,9 +364,6 @@ private struct RangeT(A)
     assert(S.s_nDestroyed == S.s_nConstructed);
 }
 
-//Fix https://issues.dlang.org/show_bug.cgi?id=23140
-private alias Unshared(T) = T;
-private alias Unshared(T: shared U, U) = U;
 
 /**
  * _Array type with deterministic control of memory. The memory allocated
@@ -385,11 +382,9 @@ private alias Unshared(T: shared U, U) = U;
  * `Array` must be sliced to get a range (for example, use `array[].map!`
  * instead of `array.map!`). The container itself is not a range.
  */
-
-struct Array(W)
-if (!is(immutable W == immutable bool))
+struct Array(T)
+if (!is(immutable T == immutable bool))
 {
-    alias T = Unshared!W; //Fix https://issues.dlang.org/show_bug.cgi?id=23140
     import core.memory : free = pureFree;
     import std.internal.memory : enforceMalloc, enforceRealloc;
     import core.stdc.string : memcpy, memmove, memset;
@@ -417,9 +412,9 @@ if (!is(immutable W == immutable bool))
                     .destroy(e);
 
             static if (hasIndirections!T)
-                GC.removeRange(_payload.ptr);
+                GC.removeRange(cast(void*) _payload.ptr);
 
-            free(_payload.ptr);
+            free(cast(void*) _payload.ptr);
         }
 
         this(this) @disable;
@@ -494,14 +489,14 @@ if (!is(immutable W == immutable bool))
                 auto newPayload = newPayloadPtr[0 .. oldLength];
 
                 // copy old data over to new array
-                memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
+                memcpy(cast(void*) newPayload.ptr,cast(void*)  _payload.ptr, T.sizeof * oldLength);
                 // Zero out unused capacity to prevent gc from seeing false pointers
-                memset(newPayload.ptr + oldLength,
+                memset(cast(void*) newPayload.ptr + oldLength,
                         0,
                         (elements - oldLength) * T.sizeof);
-                GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_payload.ptr);
-                free(_payload.ptr);
+                GC.addRange(cast(void*) newPayload.ptr, sz);
+                GC.removeRange(cast(void*) _payload.ptr);
+                free(cast(void*) _payload.ptr);
                 _payload = newPayload;
             }
             else
@@ -573,7 +568,7 @@ if (!is(immutable W == immutable bool))
      * Constructor taking a number of items.
      */
     this(U)(U[] values...)
-    if (isImplicitlyConvertible!(Unshared!U, T))
+    if (isImplicitlyConvertible!(U, T))
     {
         // [2021-07-17] Checking to see whether *always* calling ensureInitialized works-around-and/or-is-related-to https://issues.dlang.org/show_bug.cgihttps://issues.dlang.org/show_bug.cgi...
         //if (values.length)
@@ -587,7 +582,7 @@ if (!is(immutable W == immutable bool))
                 // Thanks to @dkorpel (https://github.com/dlang/phobos/pull/8162#discussion_r667479090).
 
                 import core.lifetime : emplace;
-                emplace(_data._payload.ptr + _data._payload.length, cast(Unshared!U) value);
+                emplace(_data._payload.ptr + _data._payload.length, value);
 
                 // We increment the length after each iteration (as opposed to adjusting it just once, after the loop)
                 // in order to improve error-safety (in case one of the calls to emplace throws).
@@ -616,12 +611,17 @@ if (!is(immutable W == immutable bool))
         return opEquals(rhs);
     }
 
+    // fix https://issues.dlang.org/show_bug.cgi?23140
+    private alias Unshared(T) = T;
+    private alias Unshared(T: shared U, U) = U;
+
     /// ditto
     bool opEquals(ref const Array rhs) const
     {
         if (empty) return rhs.empty;
         if (rhs.empty) return false;
-        return _data._payload == rhs._data._payload;
+
+        return cast(Unshared!(T)[]) _data._payload ==  cast(Unshared!(T)[]) rhs._data._payload;
     }
 
     /**
@@ -1746,13 +1746,14 @@ if (!is(immutable W == immutable bool))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=23140
-@system unittest
+/*@system unittest
 {
     shared class C
     {
     }
-
+    
     Array!C ac;
+    ac = Array!C([new C]);
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
