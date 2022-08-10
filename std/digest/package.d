@@ -1217,22 +1217,13 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
  * Used to convert hex string to byte array
  * Example:
  * ---
- * ubyte[2] sba = "0xAA".toDigest!2; // returns static array, no allocating
- * ubyte[] dby  = "0xBA".toDigest;   // returns dynamic array, gc allocating
+ * ubyte[2] sba = "0xAA".toDigest.staticArray!2;
+ * ubyte[] dby  = "0xBA".toDigest.array;
  * ---
  */
-auto toDigest(const string hex) pure nothrow @safe
+auto toDigest(const string hex) pure nothrow @safe @nogc
 {
-    auto digest = new ubyte[hex.length / 2 + hex.length % 2];
-    return toDigestImpl(hex, digest);
-}
-
-/// ditto
-auto toDigest(size_t num)(const string hex) pure nothrow @safe @nogc
-{
-    ubyte[num] digest;
-    toDigestImpl(hex, digest);
-    return digest;
+    return ByteToHexConverter(hex);
 }
 
 ///
@@ -1241,8 +1232,10 @@ auto toDigest(size_t num)(const string hex) pure nothrow @safe @nogc
     void testToDigest(const ubyte[] b, const string s) @safe
     {
         import std.conv : text;
+        import std.array : array;
 
-        assert(b == s.toDigest, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+        assert(b == s.toDigest.array, text(s ~ ".toDigest returned ",
+                s.toDigest, ", instead of ", b));
     }
 
     testToDigest([255], "0xff");
@@ -1259,48 +1252,88 @@ auto toDigest(size_t num)(const string hex) pure nothrow @safe @nogc
     testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123Aa______AA");
     testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
 
-    void testToStaticDigest(size_t n)(const ubyte[n]b, const string s ) @safe
+    void testToStaticDigest(size_t n)(const ubyte[n] b, const string s) @safe
     {
         import std.conv : text;
-        assert(b == s.toDigest!n, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+        import std.array : staticArray;
+
+        ubyte[n] bb = s.toDigest.staticArray!n;
+        assert(b == bb, text(s ~ ".toDigest returned ", bb, ", instead of ", b));
     }
 
-    testToStaticDigest!3([0, 0, 255], "0xff");
-    testToStaticDigest!3([0, 0, 255], "0x00ff");
-    testToStaticDigest!1([255], "0x12ff");
+    testToStaticDigest!3([255, 0, 0], "0xff");
+    testToStaticDigest!3([0, 255, 0], "0x00ff");
+    testToStaticDigest!1([0x12], "0x12ff");
     testToStaticDigest!2([0x12, 255], "0x12ff");
     testToStaticDigest!2([0x12, 255], "0x12__ff");
     testToStaticDigest!4([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
 }
 
-/*
- * Fill in a preallocated byte buffer by values from ASCII hex buffer
- */
-private auto toDigestImpl(BB, HB)(
-    scope const ref HB hexBuffer, return scope ref BB byteBuffer) @safe pure nothrow @nogc
+private struct ByteToHexConverter
 {
-    size_t bi = byteBuffer.length - 1, hi;
     import std.ascii : isHexDigit;
 
-    size_t start;
-    if (hexBuffer.length >= 2 && hexBuffer[0 .. 2] == "0x")
-        start = 2;
+    private string hex;
+    private size_t byteCount;
+    private size_t hexPos;
+    private size_t bytesPos;
+    private bool addZero;
+    private char[2] _front;
 
-    foreach_reverse (c; hexBuffer[start .. $])
+    @safe @nogc pure nothrow
     {
-        if (!c.isHexDigit)
-            continue;
-        byteBuffer[bi] |= cast(ubyte)(c.toByte << (hi % 2 ? 4 : 0));
-        if (hi % 2)
+        this(string t)
         {
-            if (bi == 0)
-                break;
-            bi--;
+            hex = t;
+            if (hex.length >= 2 && hex[0 .. 2] == "0x")
+            {
+                hex = hex[2 .. $];
+            }
+            foreach (c; hex)
+            {
+                byteCount += c.isHexDigit;
+            }
+            addZero = byteCount % 2;
+            byteCount = byteCount / 2 + byteCount % 2;
+            parseFront();
         }
-        hi++;
-    }
-    return byteBuffer[bi + !(hi % 2) .. $];
 
+        bool empty() const
+        {
+            return bytesPos == byteCount;
+        }
+
+        ubyte front() const
+        {
+            return cast(ubyte)(_front[0].toByte << 4 | _front[1].toByte);
+        }
+
+        void parseFront()
+        {
+            size_t frontI = 0;
+            if (hexPos == 0 && addZero)
+            {
+                _front[frontI++] = '0';
+            }
+            foreach (i, c; hex[hexPos .. $])
+            {
+                hexPos++;
+                if (c.isHexDigit)
+                {
+                    _front[frontI++] = c;
+                    if (frontI == 2)
+                        break;
+                }
+            }
+        }
+
+        void popFront()
+        {
+            parseFront();
+
+            bytesPos++;
+        }
+    }
 }
 
 private int toByte(char hexDigit) @safe pure nothrow @nogc
