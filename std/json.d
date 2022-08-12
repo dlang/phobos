@@ -1537,7 +1537,7 @@ if (isOutputRange!(Out,char))
             toStringImpl!char(str);
     }
 
-    /* make the function infoer @system when json.put() is @system
+    /* make the function infer @system when json.put() is @system
      */
     if (0)
         json.put(' ');
