@@ -4376,8 +4376,8 @@ unittest
             return app[];
     }
 
-    class C {}
-    struct S { const(C) c; }
+    static class C {}
+    static struct S { const(C) c; }
     S[] s = [ S(new C) ];
 
     auto t = fastCopy(s); // Does not compile
