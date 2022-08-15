@@ -2,7 +2,7 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.079.1
+HOST_DMD_VER=2.095.0
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
 N=${N:-2}
@@ -75,7 +75,7 @@ setup_repos()
         git checkout -f FETCH_HEAD
     fi
 
-    for proj in dmd druntime tools ; do
+    for proj in dmd tools ; do
         if [ "$base_branch" != master ] && [ "$base_branch" != stable ] &&
             ! git ls-remote --exit-code --heads https://github.com/dlang/$proj.git "$base_branch" > /dev/null; then
             # use master as fallback for other repos to test feature branches
@@ -90,7 +90,7 @@ setup_repos()
 
     # build dmd and druntime
     pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD PIC="$PIC" all && popd
-    make -j"$N" -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD
+    pushd ../dmd && make -j"$N" -C druntime -f posix.mak MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD && popd
 }
 
 # run unittest with coverage
@@ -111,6 +111,12 @@ coverage()
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
     sed -i 's/^ *[0-9]*\(|.*nocoverage.*\)$/       \1/' ./*.lst
+}
+
+# Upload coverage reports to CodeCov
+codecov()
+{
+    OS_NAME=linux source ../dmd/ci/codecov.sh
 }
 
 # extract publictests and run them independently
@@ -144,6 +150,7 @@ case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
+    codecov) codecov ;;
     publictests) publictests ;;
     style_lint) echo "style_lint is now run at Buildkite";;
     # has_public_example has been removed and is kept for compatibility with older PRs

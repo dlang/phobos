@@ -1,8 +1,9 @@
-// @@@DEPRECATED_2022-02@@@
+// @@@DEPRECATED_2.106@@@
 
 /**
-$(RED Deprecated. Use `core.sys.windows.sqlucode` instead. This module will be
-      removed in February 2022.)
+$(RED Warning:
+      This module is deprecated. It will be removed in 2.106.
+      Use `core.sys.windows.sqlucode` instead.)
 
 Declarations for interfacing with the ODBC library.
 

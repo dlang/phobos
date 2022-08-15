@@ -1,4 +1,6 @@
-# Makefile to build D runtime library phobos.lib for Win32
+# Makefile to build D runtime library phobos.lib for Win32 OMF
+# MS COFF builds use win64.mak for 32 and 64 bit
+#
 # Prerequisites:
 #	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
 #	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
@@ -18,8 +20,8 @@
 #	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
 #	or just use the supplied minit.obj
 
-## Memory model (32 or 64)
-MODEL=32
+# Ignored, only the default value is supported
+# MODEL=32omf
 
 ## Copy command
 
@@ -36,18 +38,18 @@ CFLAGS=-mn -6 -r
 
 ## Location of druntime tree
 
-DRUNTIME=../druntime
+DRUNTIME=../dmd/druntime
 DRUNTIMELIB=$(DRUNTIME)/lib/druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
+DFLAGS=-m32omf -conf= -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
+UDFLAGS=-m32omf -unittest -version=StdUnittest -version=CoreUnittest -conf= -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -60,14 +62,15 @@ MAKE=make
 DMD_DIR=../dmd
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
+DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/32/dmd
 
 ## Zlib library
 
 ZLIB=etc\c\zlib\zlib.lib
 
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+#	$(CC) -c $(CFLAGS) $*
+	$(DMD) -c $(DFLAGS) -I. -v $*
 
 .cpp.obj:
 	$(CC) -c $(CFLAGS) $*
@@ -137,6 +140,7 @@ SRC_STD_3a= \
 	std\concurrency.d
 
 SRC_STD_4= \
+	std\int128.d \
 	std\uuid.d
 
 SRC_STD_6= \
@@ -252,6 +256,7 @@ SRC_STD_WIN= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
+	std\internal\memory.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
 	std\internal\unicode_decomp.d \
@@ -275,7 +280,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\checkedint.d std\experimental\typecons.d
+	std\checkedint.d std\experimental\checkedint.d std\experimental\typecons.d
 
 SRC_STD_UNI = std\uni\package.d \
 
@@ -315,6 +320,13 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_LOGGER= \
+	std\logger\core.d \
+	std\logger\filelogger.d \
+	std\logger\multilogger.d \
+	std\logger\nulllogger.d \
+	std\logger\package.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -348,6 +360,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_UNI) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_LOGGER) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -367,7 +380,6 @@ SRC_ZLIB= \
 	etc\c\zlib\compress.c \
 	etc\c\zlib\crc32.c \
 	etc\c\zlib\deflate.c \
-	etc\c\zlib\example.c \
 	etc\c\zlib\gzclose.c \
 	etc\c\zlib\gzlib.c \
 	etc\c\zlib\gzread.c \
@@ -376,18 +388,9 @@ SRC_ZLIB= \
 	etc\c\zlib\inffast.c \
 	etc\c\zlib\inflate.c \
 	etc\c\zlib\inftrees.c \
-	etc\c\zlib\minigzip.c \
 	etc\c\zlib\trees.c \
 	etc\c\zlib\uncompr.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\algorithm.txt \
-	etc\c\zlib\zlib.3 \
-	etc\c\zlib\ChangeLog \
-	etc\c\zlib\README \
-	etc\c\zlib\win32.mak \
-	etc\c\zlib\win64.mak \
-	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak
+	etc\c\zlib\zutil.c
 
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
@@ -430,7 +433,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest5b.obj $(SRC_STD_MATH)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6a.obj $(SRC_STD_EXP_ALLOC)
-	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_EXP_LOGGER)
+	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest6b.obj $(SRC_STD_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest7a.obj $(SRC_STD_7a)
 	$(DMD) $(UDFLAGS) -L/co -c  -ofunittest8a.obj $(SRC_STD_REGEX)
@@ -465,6 +468,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=89 $(UDFLAGS) -main -run std\utf.d
 	$(DMD) -conf= -cov=ctfe -cov=93 $(UDFLAGS) -main -run std\csv.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\complex.d
+	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\int128.d
 	$(DMD) -conf= -cov=ctfe -cov=70 $(UDFLAGS) -main -run std\numeric.d
 	$(DMD) -conf= -cov=ctfe -cov=94 $(UDFLAGS) -main -run std\bigint.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\bitmanip.d
@@ -542,7 +546,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak zlib.lib CC=$(CC) LIB=$(AR)
+	$(MAKE) -f win32.mak zlib.lib CC=$(CC) LIB=$(AR)
 	cd ..\..\..
 
 ######################################################
@@ -555,7 +559,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak clean
+	$(MAKE) -f win32.mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
@@ -570,10 +574,5 @@ install: phobos.zip
 auto-tester-build:
 	echo "Windows builds have been disabled on auto-tester"
 
-JOBS=$(NUMBER_OF_PROCESSORS)
-GMAKE=gmake
-
 auto-tester-test:
 	echo "Windows builds have been disabled on auto-tester"
-	#$(GMAKE) -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
-	#CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)

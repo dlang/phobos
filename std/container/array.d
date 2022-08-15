@@ -428,8 +428,6 @@ if (!is(immutable T == immutable bool))
 
         @property void length(size_t newLength)
         {
-            import std.algorithm.mutation : initializeAll;
-
             if (length >= newLength)
             {
                 // shorten
@@ -440,10 +438,22 @@ if (!is(immutable T == immutable bool))
                 _payload = _payload.ptr[0 .. newLength];
                 return;
             }
-            immutable startEmplace = length;
-            reserve(newLength);
-            initializeAll(_payload.ptr[startEmplace .. newLength]);
-            _payload = _payload.ptr[0 .. newLength];
+
+            static if (__traits(compiles, { static T _; }))
+            {
+                import std.algorithm.mutation : initializeAll;
+
+                immutable startEmplace = length;
+                reserve(newLength);
+                initializeAll(_payload.ptr[startEmplace .. newLength]);
+                _payload = _payload.ptr[0 .. newLength];
+            }
+            else
+            {
+                assert(0, "Cannot add elements to array because `" ~
+                    fullyQualifiedName!T ~ ".this()` is annotated with " ~
+                    "`@disable`.");
+            }
         }
 
         @property size_t capacity() const
@@ -678,9 +688,9 @@ if (!is(immutable T == immutable bool))
      * Complexity: $(BIGOH 1).
      */
 
-    T[] data() @system
+    inout(T)[] data() inout @system
     {
-        return _data._payload;
+        return _data.refCountedStore.isInitialized ? _data._payload : [];
     }
 
     /**
@@ -901,11 +911,15 @@ if (!is(immutable T == immutable bool))
     /**
      * Sets the number of elements in the array to `newLength`. If `newLength`
      * is greater than `length`, the new elements are added to the end of the
-     * array and initialized with `T.init`.
+     * array and initialized with `T.init`. If `T` is a `struct` whose default
+     * constructor is annotated with `@disable`, `newLength` must be lower than
+     * or equal to `length`.
      *
      * Complexity:
      * Guaranteed $(BIGOH abs(length - newLength)) if `capacity >= newLength`.
      * If `capacity < newLength` the worst case is $(BIGOH newLength).
+     *
+     * Precondition: `__traits(compiles, { static T _; }) || newLength <= length`
      *
      * Postcondition: `length == newLength`
      */
@@ -1708,6 +1722,23 @@ if (!is(immutable T == immutable bool))
     assert(equal(a[], [1,2,3,4,5,6,7,8]));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=22105
+@system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown, assertNotThrown;
+
+    struct NoDefaultCtor
+    {
+        int i;
+        @disable this();
+        this(int j) { i = j; }
+    }
+
+    auto array = Array!NoDefaultCtor([NoDefaultCtor(1), NoDefaultCtor(2)]);
+    assertNotThrown!AssertError(array.length = 1);
+    assertThrown!AssertError(array.length = 5);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
@@ -2720,9 +2751,19 @@ if (is(immutable T == immutable bool))
 
 @system unittest
 {
+
     Array!int arr = [1, 2, 4, 5];
     int[] data = arr.data();
 
+    const Array!int arr2 = [8, 9];
+    assert(arr2.data() == [8, 9]);
+
     data[0] = 0;
     assert(arr[0] == 0);
+
+    arr.length = 0;
+    assert(arr.data == []);
+
+    Array!int empty;
+    assert(empty.data == []);
 }

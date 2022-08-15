@@ -106,9 +106,8 @@ version (Windows)
 }
 
 import std.internal.cstring;
-import std.range.primitives;
+import std.range;
 import std.stdio;
-import std.traits : isSomeChar;
 
 version (OSX)
     version = Darwin;
@@ -276,7 +275,7 @@ static:
     multi-threaded programs. See e.g.
     $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
-    inout(char)[] opIndexAssign(return inout char[] value, scope const(char)[] name) @trusted
+    inout(char)[] opIndexAssign(return scope inout char[] value, scope const(char)[] name) @trusted
     {
         version (Posix)
         {
@@ -300,10 +299,9 @@ static:
         }
         else version (Windows)
         {
-            import std.exception : enforce;
-            enforce(
+            import std.windows.syserror : wenforce;
+            wenforce(
                 SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
-                sysErrorString(GetLastError())
             );
             return value;
         }
@@ -615,7 +613,7 @@ private:
  * writefln("Current process ID: %d", thisProcessID);
  * ---
  */
-@property int thisProcessID() @trusted nothrow //TODO: @safe
+@property int thisProcessID() @trusted nothrow @nogc //TODO: @safe
 {
     version (Windows)    return GetCurrentProcessId();
     else version (Posix) return core.sys.posix.unistd.getpid();
@@ -634,7 +632,7 @@ private:
  * writefln("Current thread ID: %s", thisThreadID);
  * ---
  */
-@property ThreadID thisThreadID() @trusted nothrow //TODO: @safe
+@property ThreadID thisThreadID() @trusted nothrow @nogc //TODO: @safe
 {
     version (Windows)
         return GetCurrentThreadId();
@@ -1331,7 +1329,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
                 {
                     throw new StdioException(
                         "Failed to make "~which~" stream inheritable by child process ("
-                        ~sysErrorString(GetLastError()) ~ ')',
+                        ~generateSysErrorMsg() ~ ')',
                         0);
                 }
             }
@@ -1527,7 +1525,7 @@ package(std) string searchPathFor(scope const(char)[] executable)
 // current user.
 version (Posix)
 private bool isExecutable(R)(R path) @trusted nothrow @nogc
-if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+if (isSomeFiniteCharInputRange!R)
 {
     return (access(path.tempCString(), X_OK) == 0);
 }
@@ -1656,7 +1654,12 @@ version (Posix) @system unittest
         if (lsofRes.status == 0)
         {
             assert(!lsofRes.output.canFind(path));
-            assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+            auto lsofOut = execute(lsof.path, null, Config.inheritFDs).output;
+            if (!lsofOut.canFind(path))
+            {
+                std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+                    ": Warning: unexpected lsof output:", lsofOut);
+            }
             return;
         }
 
@@ -2771,7 +2774,7 @@ Pipe pipe() @trusted //TODO: @safe
     if (!CreatePipe(&readHandle, &writeHandle, null, 0))
     {
         throw new StdioException(
-            "Error creating pipe (" ~ sysErrorString(GetLastError()) ~ ')',
+            "Error creating pipe (" ~ generateSysErrorMsg() ~ ')',
             0);
     }
 
@@ -3471,7 +3474,7 @@ class ProcessException : Exception
                                              string file = __FILE__,
                                              size_t line = __LINE__)
     {
-        auto lastMsg = sysErrorString(GetLastError());
+        auto lastMsg = generateSysErrorMsg();
         auto msg = customMsg.empty ? lastMsg
                                    : customMsg ~ " (" ~ lastMsg ~ ')';
         return new ProcessException(msg, file, line);
@@ -4380,6 +4383,7 @@ else version (Posix)
 
     void browse(scope const(char)[] url) nothrow @nogc @safe
     {
+        const buffer = url.tempCString(); // Retain buffer until end of scope
         const(char)*[3] args;
 
         // Trusted because it's called with a zero-terminated literal
@@ -4403,7 +4407,6 @@ else version (Posix)
             }
         }
 
-        const buffer = url.tempCString(); // Retain buffer until end of scope
         args[1] = buffer;
         args[2] = null;
 

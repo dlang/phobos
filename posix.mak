@@ -34,7 +34,7 @@ DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
 DMD_DIR=../dmd
 
-include $(DMD_DIR)/src/osmodel.mak
+include $(DMD_DIR)/compiler/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.9
@@ -67,7 +67,7 @@ endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
-DRUNTIME_PATH = ../druntime
+DRUNTIME_PATH = ../dmd/druntime
 DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
@@ -82,10 +82,10 @@ ifneq (,$(DRUNTIME))
 	CUSTOM_DRUNTIME=1
 endif
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
+	DRUNTIME = $(DRUNTIME_PATH)/../generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
 	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
 else
-	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
+	DRUNTIME = $(DRUNTIME_PATH)/../lib/druntime.lib
 endif
 
 # Set CC and DMD
@@ -107,8 +107,11 @@ endif
 OUTFILEFLAG = -o
 NODEFAULTLIB=-defaultlib= -debuglib=
 ifeq (,$(findstring win,$(OS)))
-	CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
-	NODEFAULTLIB += -L-lpthread -L-lm
+	CFLAGS=$(MODEL_FLAG) -fPIC -std=c11 -DHAVE_UNISTD_H
+# Bundled with the system library on OSX, and doesn't work with >= MacOS 11
+	ifneq (osx,$(OS))
+		NODEFAULTLIB += -L-lpthread -L-lm
+	endif
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -203,14 +206,14 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container datetime digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  format math net uni \
+  format logger math net uni \
   experimental range regex windows)
 
 # Modules broken down per package
 
-PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+PACKAGE_std = array ascii base64 bigint bitmanip checkedint compiler complex concurrency \
   conv csv demangle encoding exception file \
-  functional getopt json mathspecial meta mmfile numeric \
+  functional getopt int128 json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
   stdio string sumtype system traits typecons \
   uri utf uuid variant xml zip zlib
@@ -238,6 +241,8 @@ PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking tests tests2 thompson kickstart)
 PACKAGE_std_uni = package
 PACKAGE_std_windows = charset registry syserror
+PACKAGE_std_logger = core filelogger \
+  nulllogger multilogger package
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -256,7 +261,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
 	digest/digest \
 	$(addprefix internal/, \
-		cstring digest/sha_SSSE3 \
+		cstring memory digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
@@ -485,7 +490,7 @@ else
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
 $(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(abspath $(DMD)) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
 $(DRUNTIMESO): $(DRUNTIME)
@@ -574,7 +579,7 @@ dscanner: $(LIB)
 	@# However, we still need to ensure that the DScanner binary is built once
 	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini -I $(DRUNTIME_PATH)/src/ --styleCheck etc std -I.
 
 style_lint_shellcmds:
 	@echo "Check for trailing whitespace"
@@ -646,7 +651,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 
 %.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
-	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main $(UDFLAGS) -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
+	@$(DMD) $(DFLAGS) $(NODEFAULTLIB) $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 ################################################################################
 # Check and run @betterC tests

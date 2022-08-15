@@ -50,8 +50,8 @@ import core.stdc.stddef : wchar_t;
 public import core.stdc.stdio;
 import std.algorithm.mutation : copy;
 import std.meta : allSatisfy;
-import std.range.primitives : ElementEncodingType, empty, front,
-    isBidirectionalRange, isInputRange, put;
+import std.range : ElementEncodingType, empty, front, isBidirectionalRange,
+    isInputRange, isSomeFiniteCharInputRange, put;
 import std.traits : isSomeChar, isSomeString, Unqual, isPointer;
 import std.typecons : Flag, No, Yes;
 
@@ -281,17 +281,14 @@ else version (GENERIC_IO)
     nothrow:
     @nogc:
 
-    private int _FPUTC(int c, _iobuf* fp) { return fputc(c, cast(shared) fp); }
-    private int _FPUTWC(wchar_t c, _iobuf* fp)
+    extern (C) private
     {
-        import core.stdc.wchar_ : fputwc;
-        return fputwc(c, cast(shared) fp);
-    }
-    private int _FGETC(_iobuf* fp) { return fgetc(cast(shared) fp); }
-    private int _FGETWC(_iobuf* fp)
-    {
-        import core.stdc.wchar_ : fgetwc;
-        return fgetwc(cast(shared) fp);
+        static import core.stdc.wchar_;
+
+        pragma(mangle, fputc.mangleof) int _FPUTC(int c, _iobuf* fp);
+        pragma(mangle, core.stdc.wchar_.fputwc.mangleof) int _FPUTWC(wchar_t c, _iobuf* fp);
+        pragma(mangle, fgetc.mangleof) int _FGETC(_iobuf* fp);
+        pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int _FGETWC(_iobuf* fp);
     }
 
     version (Posix)
@@ -307,27 +304,19 @@ else version (GENERIC_IO)
     // @@@DEPRECATED_2.107@@@
     deprecated("internal function fputc_unlocked was unintentionally available "
                ~ "from std.stdio and will be removed afer 2.107")
-    int fputc_unlocked(int c, _iobuf* fp) { return fputc(c, cast(shared) fp); }
+    extern (C) pragma(mangle, fputc.mangleof) int fputc_unlocked(int c, _iobuf* fp);
     // @@@DEPRECATED_2.107@@@
     deprecated("internal function fputwc_unlocked was unintentionally available "
                ~ "from std.stdio and will be removed afer 2.107")
-    int fputwc_unlocked(wchar_t c, _iobuf* fp)
-    {
-        import core.stdc.wchar_ : fputwc;
-        return fputwc(c, cast(shared) fp);
-    }
+    extern (C) pragma(mangle, core.stdc.wchar_.fputwc.mangleof) int fputwc_unlocked(wchar_t c, _iobuf* fp);
     // @@@DEPRECATED_2.107@@@
     deprecated("internal function fgetc_unlocked was unintentionally available "
                ~ "from std.stdio and will be removed afer 2.107")
-    int fgetc_unlocked(_iobuf* fp) { return fgetc(cast(shared) fp); }
+    extern (C) pragma(mangle, fgetc.mangleof) int fgetc_unlocked(_iobuf* fp);
     // @@@DEPRECATED_2.107@@@
     deprecated("internal function fgetwc_unlocked was unintentionally available "
                ~ "from std.stdio and will be removed afer 2.107")
-    int fgetwc_unlocked(_iobuf* fp)
-    {
-        import core.stdc.wchar_ : fgetwc;
-        return fgetwc(cast(shared) fp);
-    }
+    extern (C) pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int fgetwc_unlocked(_iobuf* fp);
 
     // @@@DEPRECATED_2.107@@@
     deprecated("internal alias FPUTC was unintentionally available from "
@@ -361,6 +350,16 @@ else version (GENERIC_IO)
 else
 {
     static assert(0, "unsupported C I/O system");
+}
+
+private extern (C) @nogc nothrow
+{
+    pragma(mangle, _FPUTC.mangleof) int trustedFPUTC(int ch, _iobuf* h) @trusted;
+
+    version (DIGITAL_MARS_STDIO)
+        pragma(mangle, _FPUTWC.mangleof) int trustedFPUTWC(int ch, _iobuf* h) @trusted;
+    else
+        pragma(mangle, _FPUTWC.mangleof) int trustedFPUTWC(wchar_t ch, _iobuf* h) @trusted;
 }
 
 static if (__traits(compiles, core.sys.posix.stdio.getdelim))
@@ -499,17 +498,21 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted @nogc nothrow
     {
         import core.stdc.stdlib : malloc;
-        import std.exception : enforce;
 
         assert(!_p);
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        _p = cast(Impl*) malloc(Impl.sizeof);
+        if (!_p)
+        {
+            import core.exception : onOutOfMemoryError;
+            onOutOfMemoryError();
+        }
         initImpl(handle, name, refs, isPopened);
     }
 
-    private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
+    private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false) @nogc nothrow pure @safe
     {
         assert(_p);
         _p.handle = handle;
@@ -556,7 +559,7 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name)
-        if (isInputRange!R1 && isSomeChar!(ElementEncodingType!R1))
+        if (isSomeFiniteCharInputRange!R1)
     {
         import std.conv : to;
         this(name.to!string, "rb");
@@ -564,8 +567,8 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name, R2 mode)
-        if (isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) &&
-            isInputRange!R2 && isSomeChar!(ElementEncodingType!R2))
+        if (isSomeFiniteCharInputRange!R1 &&
+            isSomeFiniteCharInputRange!R2)
     {
         import std.conv : to;
         this(name.to!string, mode.to!string);
@@ -958,7 +961,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-If the file is not opened, returns `true`. Otherwise, returns
+If the file is closed or not yet opened, returns `true`. Otherwise, returns
 $(HTTP cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
@@ -1014,8 +1017,8 @@ Throws: `ErrnoException` on failure if closing the file.
     }
 
 /**
-If the file was unopened, succeeds vacuously. Otherwise closes the
-file (by calling $(HTTP
+If the file was closed or not yet opened, succeeds vacuously. Otherwise
+closes the file (by calling $(HTTP
 cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from `detach` in that it
@@ -1043,7 +1046,7 @@ Throws: `ErrnoException` on error.
     }
 
 /**
-If the file is not opened, succeeds vacuously. Otherwise, returns
+If the file is closed or not yet opened, succeeds vacuously. Otherwise, returns
 $(HTTP cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
@@ -1129,10 +1132,9 @@ each item is inferred from the size and type of the input array, respectively.
 
 Returns: The slice of `buffer` containing the data that was actually read.
 This will be shorter than `buffer` if EOF was reached before the buffer
-could be filled.
+could be filled. If the buffer is empty, it will be returned.
 
-Throws: `Exception` if `buffer` is empty.
-        `ErrnoException` if the file is not opened or the call to `fread` fails.
+Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
 
 `rawRead` always reads in binary mode on Windows.
  */
@@ -1141,7 +1143,7 @@ Throws: `Exception` if `buffer` is empty.
         import std.exception : enforce, errnoEnforce;
 
         if (!buffer.length)
-            throw new Exception("rawRead must take a non-empty buffer");
+            return buffer;
         enforce(isOpen, "Attempting to read from an unopened file");
         version (Windows)
         {
@@ -1206,6 +1208,16 @@ Throws: `Exception` if `buffer` is empty.
             ubyte[1] u;
             assertThrown(p.readEnd.rawRead(u));
         }
+    }
+
+    // https://issues.dlang.org/show_bug.cgi?id=13893
+    @system unittest
+    {
+        import std.exception : assertNotThrown;
+
+        File f;
+        ubyte[0] u;
+        assertNotThrown(f.rawRead(u));
     }
 
 /**
@@ -1459,6 +1471,7 @@ Throws: `Exception` if the file is not opened.
     {
         import core.sys.windows.winbase : OVERLAPPED;
         import core.sys.windows.winnt : BOOL, ULARGE_INTEGER;
+        import std.windows.syserror : wenforce;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1474,15 +1487,6 @@ Throws: `Exception` if the file is not opened.
             overlapped.hEvent = null;
             return F(windowsHandle, flags, 0, liLength.LowPart,
                 liLength.HighPart, &overlapped);
-        }
-
-        private static T wenforce(T)(T cond, lazy string str)
-        {
-            import core.sys.windows.winbase : GetLastError;
-            import std.windows.syserror : sysErrorString;
-
-            if (cond) return cond;
-            throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
         }
     }
     version (Posix)
@@ -1784,7 +1788,7 @@ Throws: `Exception` if the file is not opened.
         import std.format : checkFormatException;
 
         alias e = checkFormatException!(fmt, A);
-        static assert(!e, e.msg);
+        static assert(!e, e);
         return this.writef(fmt, args);
     }
 
@@ -1803,7 +1807,7 @@ Throws: `Exception` if the file is not opened.
         import std.format : checkFormatException;
 
         alias e = checkFormatException!(fmt, A);
-        static assert(!e, e.msg);
+        static assert(!e, e);
         return this.writefln(fmt, args);
     }
 
@@ -2152,7 +2156,7 @@ $(CONSOLE
         import std.format : checkFormatException;
 
         alias e = checkFormatException!(format, Data);
-        static assert(!e, e.msg);
+        static assert(!e, e);
         return this.readf(format, data);
     }
 
@@ -3183,16 +3187,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
         /// ditto
         void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
-            import std.traits : Parameters;
             import std.utf : decodeFront, encode, stride;
-            static auto trustedFPUTC(int ch, _iobuf* h) @trusted
-            {
-                return _FPUTC(ch, h);
-            }
-            static auto trustedFPUTWC(Parameters!_FPUTWC[0] ch, _iobuf* h) @trusted
-            {
-                return _FPUTWC(ch, h);
-            }
 
             static if (c.sizeof == 1)
             {
@@ -4398,7 +4393,7 @@ if (isSomeString!(typeof(fmt)))
     import std.format : checkFormatException;
 
     alias e = checkFormatException!(fmt, A);
-    static assert(!e, e.msg);
+    static assert(!e, e);
     return .writef(fmt, args);
 }
 
@@ -4439,7 +4434,7 @@ if (isSomeString!(typeof(fmt)))
     import std.format : checkFormatException;
 
     alias e = checkFormatException!(fmt, A);
-    static assert(!e, e.msg);
+    static assert(!e, e);
     return .writefln(fmt, args);
 }
 
@@ -4520,7 +4515,7 @@ if (isSomeString!(typeof(format)))
     import std.format : checkFormatException;
 
     alias e = checkFormatException!(format, A);
-    static assert(!e, e.msg);
+    static assert(!e, e);
     return .readf(format, args);
 }
 
@@ -4652,15 +4647,15 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
  * with appropriately-constructed C-style strings.
  */
 private FILE* _fopen(R1, R2)(R1 name, R2 mode = "r")
-if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
-    (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
+if ((isSomeFiniteCharInputRange!R1 || isSomeString!R1) &&
+    (isSomeFiniteCharInputRange!R2 || isSomeString!R2))
 {
     import std.internal.cstring : tempCString;
 
     auto namez = name.tempCString!FSChar();
     auto modez = mode.tempCString!FSChar();
 
-    static _fopenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
+    static _fopenImpl(scope const(FSChar)* namez, scope const(FSChar)* modez) @trusted nothrow @nogc
     {
         version (Windows)
         {
@@ -4694,8 +4689,8 @@ version (Posix)
      * with appropriately-constructed C-style strings.
      */
     FILE* _popen(R1, R2)(R1 name, R2 mode = "r") @trusted nothrow @nogc
-    if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
-        (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
+    if ((isSomeFiniteCharInputRange!R1 || isSomeString!R1) &&
+        (isSomeFiniteCharInputRange!R2 || isSomeString!R2))
     {
         import std.internal.cstring : tempCString;
 

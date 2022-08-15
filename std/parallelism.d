@@ -1039,6 +1039,11 @@ uint totalCPUsImpl() @nogc nothrow @trusted
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
+    else version (Hurd)
+    {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
     else
     {
         static assert(0, "Don't know how to get N CPUs on this OS.");
@@ -2738,7 +2743,7 @@ public:
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
             import core.stdc.stdlib : malloc, free;
-            if (nBytesNeeded < maxStack)
+            if (nBytesNeeded <= maxStack)
             {
                 tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
             }
@@ -2763,9 +2768,6 @@ public:
                 }
             }
 
-            foreach (ref t; tasks[])
-                emplaceRef(t, RTask());
-
             // Hack to take the address of a nested function w/o
             // making a closure.
             static auto scopedAddress(D)(scope D del) @system
@@ -2778,12 +2780,19 @@ public:
             void useTask(ref RTask task)
             {
                 import std.algorithm.comparison : min;
+                import core.lifetime : emplace;
+
+                // Private constructor, so can't feed it's arguments directly
+                // to emplace
+                emplace(&task, RTask
+                (
+                    scopedAddress(&reduceOnRange),
+                    range,
+                    curPos, // lower bound.
+                    cast() min(len, curPos + workUnitSize)  // upper bound.
+                ));
 
                 task.pool = this;
-                task._args[0] = scopedAddress(&reduceOnRange);
-                task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
-                task._args[1] = range;  // range
-                task._args[2] = curPos; // lower bound.
 
                 curPos += workUnitSize;
             }
@@ -3041,11 +3050,11 @@ public:
     Since the underlying data for this struct is heap-allocated, this struct
     has reference semantics when passed between functions.
 
-    The main uses cases for `WorkerLocalStorageStorage` are:
+    The main uses cases for `WorkerLocalStorage` are:
 
     1.  Performing parallel reductions with an imperative, as opposed to
         functional, programming style.  In this case, it's useful to treat
-        `WorkerLocalStorageStorage` as local to each thread for only the parallel
+        `WorkerLocalStorage` as local to each thread for only the parallel
         portion of an algorithm.
 
     2.  Recycling temporary buffers across iterations of a parallel foreach loop.
@@ -3533,6 +3542,21 @@ public:
     // Range, seeds, and work unit size
     assert(taskPool.fold!"a + b"(r, 0, 42) == expected);
     assert(taskPool.fold!("a + b", "a + b")(r, 0, 0, 42) == tuple(expected, expected));
+}
+
+// Issue 16705
+@system unittest
+{
+    struct MyIota
+    {
+        size_t front;
+        void popFront()(){front++;}
+        auto empty(){return front >= 25;}
+        auto opIndex(size_t i){return front+i;}
+        auto length(){return 25-front;}
+    }
+
+    auto mySum = taskPool.reduce!"a + b"(MyIota());
 }
 
 /**

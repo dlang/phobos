@@ -2,13 +2,13 @@
 
 variables:
   DMD_BRANCH: $[ coalesce(variables['System.PullRequest.TargetBranch'], variables['Build.SourceBranchName'], 'master') ]
-  VSINSTALLDIR: C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\
+  VSINSTALLDIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
 
 jobs:
   - job: Windows
     timeoutInMinutes: 60
     pool:
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
     variables:
       D_COMPILER: dmd
       HOST_DMD_VERSION: LATEST
@@ -20,7 +20,7 @@ jobs:
           ARCH: x64
         x86-OMF:
           OS: Win_32
-          MODEL: 32
+          MODEL: 32omf
           ARCH: x86
     steps:
       - checkout: self
@@ -44,7 +44,7 @@ jobs:
   - job: Windows_VisualD
     timeoutInMinutes: 60
     pool:
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
     variables:
       D_COMPILER: ldc
       VISUALD_VER: v0.49.0

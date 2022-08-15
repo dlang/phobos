@@ -390,6 +390,33 @@ public:
                            hnsecsToUnixEpoch;
                 }
             }
+            else version (Hurd)
+            {
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.hurd.time : CLOCK_REALTIME_COARSE;
+                    import core.sys.posix.time : clock_gettime, CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_COARSE;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts = void;
+                    immutable error = clock_gettime(clockArg, &ts);
+                    // Posix clock_gettime called with a valid address and valid clock_id is only
+                    // permitted to fail if the number of seconds does not fit in time_t. If tv_sec
+                    // is long or larger overflow won't happen before 292 billion years A.D.
+                    static if (ts.tv_sec.max < long.max)
+                    {
+                        if (error)
+                            throw new TimeException("Call to clock_gettime() failed");
+                    }
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
             else static assert(0, "Unsupported OS");
         }
         else static assert(0, "Unsupported OS");
@@ -503,7 +530,7 @@ public:
                        given $(REF DateTime,std,datetime,date) is assumed to
                        be in the given time zone.
       +/
-    this(DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
+    this(DateTime dateTime, return scope immutable TimeZone tz = null) return scope @safe nothrow
     {
         try
             this(dateTime, Duration.zero, tz);
@@ -554,7 +581,7 @@ public:
             $(REF DateTimeException,std,datetime,date) if `fracSecs` is negative or if it's
             greater than or equal to one second.
       +/
-    this(DateTime dateTime, Duration fracSecs, immutable TimeZone tz = null) @safe
+    this(DateTime dateTime, Duration fracSecs, return scope immutable TimeZone tz = null) return scope @safe
     {
         enforce(fracSecs >= Duration.zero, new DateTimeException("A SysTime cannot have negative fractional seconds."));
         enforce(fracSecs < seconds(1), new DateTimeException("Fractional seconds must be less than one second."));
@@ -611,7 +638,7 @@ public:
                    given $(REF Date,std,datetime,date) is assumed to be in the
                    given time zone.
       +/
-    this(Date date, immutable TimeZone tz = null) @safe nothrow
+    this(Date date, return scope immutable TimeZone tz = null) return scope @safe nothrow
     {
         _timezone = tz is null ? LocalTime() : tz;
 
@@ -664,7 +691,7 @@ public:
                       $(LREF SysTime). If null,
                       $(REF LocalTime,std,datetime,timezone) will be used.
       +/
-    this(long stdTime, immutable TimeZone tz = null) @safe pure nothrow
+    this(long stdTime, return scope immutable TimeZone tz = null) return scope @safe pure nothrow
     {
         _stdTime = stdTime;
         _timezone = tz is null ? LocalTime() : tz;
@@ -693,7 +720,7 @@ public:
 
         Returns: The `this` of this `SysTime`.
       +/
-    ref SysTime opAssign()(auto ref const(SysTime) rhs) return @safe pure nothrow scope
+    ref SysTime opAssign()(auto ref const(SysTime) rhs) scope return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -710,6 +737,7 @@ public:
         st = other;
         assert(st == other);
 
+        version (none) // https://issues.dlang.org/show_bug.cgi?id=21175
         static void testScope(scope ref SysTime left, const scope SysTime right) @safe
         {
             left = right;
@@ -2184,7 +2212,7 @@ public:
         hours - adjust the time to this $(LREF SysTime)'s time zone before
         returning.
       +/
-    @property immutable(TimeZone) timezone() @safe const pure nothrow scope
+    @property immutable(TimeZone) timezone() @safe const pure nothrow return scope
     {
         return _timezone;
     }
@@ -2238,7 +2266,7 @@ public:
     /++
         Returns whether DST is in effect for this $(LREF SysTime).
       +/
-    @property bool dstInEffect() @safe const nothrow scope
+    @property bool dstInEffect() @safe const nothrow return scope
     {
         return _timezone.dstInEffect(_stdTime);
     }
@@ -2261,7 +2289,7 @@ public:
         Returns what the offset from UTC is for this $(LREF SysTime).
         It includes the DST offset in effect at that time (if any).
       +/
-    @property Duration utcOffset() @safe const nothrow scope
+    @property Duration utcOffset() @safe const nothrow return scope
     {
         return _timezone.utcOffsetAt(_stdTime);
     }
@@ -6268,7 +6296,7 @@ public:
             duration = The $(REF Duration, core,time) to add to or subtract from
                        this $(LREF SysTime).
       +/
-    SysTime opBinary(string op)(Duration duration) @safe const pure nothrow scope
+    SysTime opBinary(string op)(Duration duration) @safe const pure nothrow return scope
         if (op == "+" || op == "-")
     {
         SysTime retval = SysTime(this._stdTime, this._timezone);
@@ -7667,7 +7695,7 @@ public:
         $(LREF SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
       +/
-    @property SysTime endOfMonth() @safe const nothrow scope
+    @property SysTime endOfMonth() @safe const nothrow return scope
     {
         immutable hnsecs = adjTime;
         immutable days = getUnitsFromHNSecs!"days"(hnsecs);
@@ -8712,13 +8740,14 @@ public:
 
     /++
         Creates a $(LREF SysTime) from a string with the format
-        YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds is the time
-        zone). Whitespace is stripped from the given string.
+        YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds and TZ
+        is the time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in `toISOString` except that
-        trailing zeroes are permitted - including having fractional seconds with
-        all zeroes. However, a decimal point with nothing following it is
-        invalid. Also, while $(LREF toISOString) will never generate a string
+        The exact format is exactly as described in $(LREF toISOString) except
+        that trailing zeroes are permitted - including having fractional seconds
+        with all zeroes. The time zone and fractional seconds are optional,
+        however, a decimal point with nothing following it is invalid.
+        Also, while $(LREF toISOString) will never generate a string
         with more than 7 digits in the fractional seconds (because that's the
         limit with hecto-nanosecond precision), it will allow more than 7 digits
         in order to read strings from other sources that have higher precision
@@ -9023,13 +9052,14 @@ public:
 
     /++
         Creates a $(LREF SysTime) from a string with the format
-        YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
-        time zone). Whitespace is stripped from the given string.
+        YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
+        is the time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in `toISOExtString`
+        The exact format is exactly as described in $(LREF toISOExtString)
         except that trailing zeroes are permitted - including having fractional
-        seconds with all zeroes. However, a decimal point with nothing following
-        it is invalid. Also, while $(LREF toISOExtString) will never generate a
+        seconds with all zeroes. The time zone and fractional seconds are
+        optional, however, a decimal point with nothing following it is invalid.
+        Also, while $(LREF toISOExtString) will never generate a
         string with more than 7 digits in the fractional seconds (because that's
         the limit with hecto-nanosecond precision), it will allow more than 7
         digits in order to read strings from other sources that have higher
@@ -9272,13 +9302,14 @@ public:
 
     /++
         Creates a $(LREF SysTime) from a string with the format
-        YYYY-MM-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
-        time zone). Whitespace is stripped from the given string.
+        YYYY-Mon-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
+        is the time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in `toSimpleString` except
+        The exact format is exactly as described in $(LREF toSimpleString) except
         that trailing zeroes are permitted - including having fractional seconds
-        with all zeroes. However, a decimal point with nothing following it is
-        invalid. Also, while $(LREF toSimpleString) will never generate a
+        with all zeroes. The time zone and fractional seconds are optional,
+        however, a decimal point with nothing following it is invalid.
+        Also, while $(LREF toSimpleString) will never generate a
         string with more than 7 digits in the fractional seconds (because that's
         the limit with hecto-nanosecond precision), it will allow more than 7
         digits in order to read strings from other sources that have higher
@@ -9586,13 +9617,13 @@ private:
 
         @property override bool hasDST() @safe const nothrow @nogc { return false; }
 
-        override bool dstInEffect(long stdTime) @safe const nothrow @nogc { return false; }
+        override bool dstInEffect(long stdTime) @safe const scope nothrow @nogc { return false; }
 
-        override long utcToTZ(long stdTime) @safe const nothrow @nogc { return 0; }
+        override long utcToTZ(long stdTime) @safe const scope nothrow @nogc { return 0; }
 
-        override long tzToUTC(long adjTime) @safe const nothrow @nogc { return 0; }
+        override long tzToUTC(long adjTime) @safe const scope nothrow @nogc { return 0; }
 
-        override Duration utcOffsetAt(long stdTime) @safe const nothrow @nogc { return Duration.zero; }
+        override Duration utcOffsetAt(long stdTime) @safe const scope nothrow @nogc { return Duration.zero; }
 
     private:
 
@@ -9628,7 +9659,7 @@ private:
         return _timezoneStorage is null ? InitTimeZone() : _timezoneStorage;
     }
 
-    pragma(inline, true) @property void _timezone(immutable TimeZone tz) @safe pure nothrow @nogc scope
+    pragma(inline, true) @property void _timezone(return scope immutable TimeZone tz) @safe pure nothrow @nogc scope
     {
         _timezoneStorage = tz;
     }

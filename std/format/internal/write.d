@@ -160,8 +160,6 @@ if (is(immutable T == immutable typeof(null)) && !is(T == enum) && !hasToString!
 void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.range.primitives : put;
-
     alias U = IntegralTypeOf!T;
     U val = obj;    // Extracting alias this may be impure/system/may-throw
 
@@ -171,56 +169,46 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         auto raw = (ref val) @trusted {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
-
+        import std.range.primitives : put;
         if (needToSwapEndianess(f))
-        {
             foreach_reverse (c; raw)
                 put(w, c);
-        }
         else
-        {
             foreach (c; raw)
                 put(w, c);
-        }
         return;
     }
 
-    immutable uint base =
-        f.spec == 'x' || f.spec == 'X' || f.spec == 'a' || f.spec == 'A' ? 16 :
-        f.spec == 'o' ? 8 :
-        f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u'
-        || f.spec == 'e' || f.spec == 'E' || f.spec == 'f' || f.spec == 'F'
-        || f.spec == 'g' || f.spec == 'G' ? 10 :
-        0;
-
-    import std.format : enforceFmt;
-    enforceFmt(base > 0,
-        "incompatible format character for integral argument: %" ~ f.spec);
-
-    import std.math.algebraic : abs;
-
-    bool negative = false;
-    ulong arg = val;
     static if (isSigned!U)
     {
-        if (f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u')
-        {
-            if (val < 0)
-            {
-                negative = true;
-                arg = cast(ulong) abs(val);
-            }
-        }
+        const negative = val < 0 && f.spec != 'x' && f.spec != 'X' && f.spec != 'b' && f.spec != 'o' && f.spec != 'u';
+        ulong arg = negative ? -cast(ulong) val : val;
     }
-
+    else
+    {
+        const negative = false;
+        ulong arg = val;
+    }
     arg &= Unsigned!U.max;
 
+    formatValueImplUlong!(Writer, Char)(w, arg, negative, f);
+}
+
+// Helper function for `formatValueImpl` that avoids template bloat
+private void formatValueImplUlong(Writer, Char)(auto ref Writer w, ulong arg, in bool negative,
+                                                scope const ref FormatSpec!Char f)
+{
+    immutable uint base = baseOfSpec(f.spec);
+
+    const bool zero = arg == 0;
     char[64] digits = void;
     size_t pos = digits.length - 1;
     do
     {
-        digits[pos--] = '0' + arg % base;
+        /* `cast(char)` is needed because value range propagation (VRP) cannot
+         * analyze `base` because it’s computed in a separate function
+         * (`baseOfSpec`). */
+        digits[pos--] = cast(char) ('0' + arg % base);
         if (base > 10 && digits[pos + 1] > '9')
             digits[pos + 1] += ((f.spec == 'x' || f.spec == 'a') ? 'a' : 'A') - '0' - 10;
         arg /= base;
@@ -245,12 +233,12 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (f.spec == 'x' || f.spec == 'X' || f.spec == 'b' || f.spec == 'o' || f.spec == 'u'
         || f.spec == 'd' || f.spec == 's')
     {
-        if (f.flHash && (base == 16) && obj != 0)
+        if (f.flHash && (base == 16) && !zero)
         {
             prefix[--left] = f.spec;
             prefix[--left] = '0';
         }
-        if (f.flHash && (base == 8) && obj != 0
+        if (f.flHash && (base == 8) && !zero
             && (digits.length - (pos + 1) >= f.precision || f.precision == f.UNSPECIFIED))
             prefix[--left] = '0';
 
@@ -356,6 +344,48 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
                  digits[pos + 1 .. min(digit_end, $)],
                  suffix[0 .. $], fs,
                  (f.spec == 'g' || f.spec == 'G') ? PrecisionType.allDigits : PrecisionType.fractionalDigits);
+}
+
+private uint baseOfSpec(in char spec) @safe pure
+{
+    typeof(return) base =
+        spec == 'x' || spec == 'X' || spec == 'a' || spec == 'A' ? 16 :
+        spec == 'o' ? 8 :
+        spec == 'b' ? 2 :
+        spec == 's' || spec == 'd' || spec == 'u'
+        || spec == 'e' || spec == 'E' || spec == 'f' || spec == 'F'
+        || spec == 'g' || spec == 'G' ? 10 :
+        0;
+
+    import std.format : enforceFmt;
+    enforceFmt(base > 0,
+        "incompatible format character for integral argument: %" ~ spec);
+
+    return base;
+}
+
+@safe pure unittest
+{
+    assertCTFEable!(
+    {
+        formatTest(byte.min, "-128");
+        formatTest(byte.max, "127");
+        formatTest(short.min, "-32768");
+        formatTest(short.max, "32767");
+        formatTest(int.min, "-2147483648");
+        formatTest(int.max, "2147483647");
+        formatTest(long.min, "-9223372036854775808");
+        formatTest(long.max, "9223372036854775807");
+
+        formatTest(ubyte.min, "0");
+        formatTest(ubyte.max, "255");
+        formatTest(ushort.min, "0");
+        formatTest(ushort.max, "65535");
+        formatTest(uint.min, "0");
+        formatTest(uint.max, "4294967295");
+        formatTest(ulong.min, "0");
+        formatTest(ulong.max, "18446744073709551615");
+    });
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=18838
@@ -1307,7 +1337,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 /*
     Static-size arrays are formatted as dynamic arrays.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref const(T) obj,
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T obj,
     scope const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
@@ -1752,13 +1782,13 @@ void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
     Associative arrays are formatted by using `':'` and $(D ", ") as
     separators, and enclosed by `'['` and `']'`.
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) obj, scope const ref FormatSpec!Char f)
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, scope const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.format : enforceFmt, formatValue;
     import std.range.primitives : put;
 
-    AssocArrayTypeOf!(const(T)) val = obj;
+    AssocArrayTypeOf!T val = obj;
     const spec = f.spec;
 
     enforceFmt(spec == 's' || spec == '(',
@@ -1970,8 +2000,7 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.none;
     }
     else static if (is(typeof(
-        {
-            T val = void;
+        (T val) {
             const FormatSpec!Char f;
             static struct S {void put(scope Char s){}}
             S s;
@@ -1985,8 +2014,7 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.customPutWriterFormatSpec;
     }
     else static if (is(typeof(
-        {
-            T val = void;
+        (T val) {
             static struct S {void put(scope Char s){}}
             S s;
             val.toString(s);
@@ -1996,36 +2024,36 @@ template hasToString(T, Char)
     {
         enum hasToString = HasToStringResult.customPutWriter;
     }
-    else static if (is(typeof({ T val = void; FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
+    else static if (is(typeof((T val) { FormatSpec!Char f; val.toString((scope const(char)[] s){}, f); })))
     {
         enum hasToString = HasToStringResult.constCharSinkFormatSpec;
     }
-    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}, "%s"); })))
+    else static if (is(typeof((T val) { val.toString((scope const(char)[] s){}, "%s"); })))
     {
         enum hasToString = HasToStringResult.constCharSinkFormatString;
     }
-    else static if (is(typeof({ T val = void; val.toString((scope const(char)[] s){}); })))
+    else static if (is(typeof((T val) { val.toString((scope const(char)[] s){}); })))
     {
         enum hasToString = HasToStringResult.constCharSink;
     }
 
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; FormatSpec!Char f; val.toString((in char[] s){}, f); })))
+                    is(typeof((T val) { FormatSpec!Char f; val.toString((in char[] s){}, f); })))
     {
         enum hasToString = HasToStringResult.inCharSinkFormatSpec;
     }
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; val.toString((in char[] s){}, "%s"); })))
+                    is(typeof((T val) { val.toString((in char[] s){}, "%s"); })))
     {
         enum hasToString = HasToStringResult.inCharSinkFormatString;
     }
     else static if (hasPreviewIn &&
-                    is(typeof({ T val = void; val.toString((in char[] s){}); })))
+                    is(typeof((T val) { val.toString((in char[] s){}); })))
     {
         enum hasToString = HasToStringResult.inCharSink;
     }
 
-    else static if (is(typeof({ T val = void; return val.toString(); }()) S) && isSomeString!S)
+    else static if (is(ReturnType!((T val) { return val.toString(); }) S) && isSomeString!S)
     {
         enum hasToString = HasToStringResult.hasSomeToString;
     }
@@ -2137,6 +2165,133 @@ template hasToString(T, Char)
             static assert(hasToString!(M, char) == inCharSinkFormatSpec);
             static assert(hasToString!(N, char) == inCharSinkFormatString);
             static assert(hasToString!(O, char) == inCharSink);
+        }
+    }
+}
+
+// const toString methods
+@safe unittest
+{
+    import std.range.primitives : isOutputRange;
+
+    static struct A
+    {
+        void toString(Writer)(ref Writer w) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct B
+    {
+        void toString(scope void delegate(scope const(char)[]) sink, scope FormatSpec!char fmt) const {}
+    }
+    static struct C
+    {
+        void toString(scope void delegate(scope const(char)[]) sink, string fmt) const {}
+    }
+    static struct D
+    {
+        void toString(scope void delegate(scope const(char)[]) sink) const {}
+    }
+    static struct E
+    {
+        string toString() const {return "";}
+    }
+    static struct F
+    {
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct G
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w) const if (isOutputRange!(Writer, string)) {}
+    }
+    static struct H
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct I
+    {
+        void toString(Writer)(ref Writer w) const if (isOutputRange!(Writer, string)) {}
+        void toString(Writer)(ref Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct J
+    {
+        string toString() const {return "";}
+        void toString(Writer)(ref Writer w, scope ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct K
+    {
+        void toString(Writer)(Writer w, scope const ref FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct L
+    {
+        void toString(Writer)(ref Writer w, scope const FormatSpec!char fmt) const
+        if (isOutputRange!(Writer, string))
+        {}
+    }
+    static struct M
+    {
+        void toString(scope void delegate(in char[]) sink, in FormatSpec!char fmt) const {}
+    }
+    static struct N
+    {
+        void toString(scope void delegate(in char[]) sink, string fmt) const {}
+    }
+    static struct O
+    {
+        void toString(scope void delegate(in char[]) sink) const {}
+    }
+
+    with(HasToStringResult)
+    {
+        static assert(hasToString!(A, char) == customPutWriter);
+        static assert(hasToString!(B, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(C, char) == constCharSinkFormatString);
+        static assert(hasToString!(D, char) == constCharSink);
+        static assert(hasToString!(E, char) == hasSomeToString);
+        static assert(hasToString!(F, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(G, char) == customPutWriter);
+        static assert(hasToString!(H, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(I, char) == customPutWriterFormatSpec);
+        static assert(hasToString!(J, char) == hasSomeToString);
+        static assert(hasToString!(K, char) == constCharSinkFormatSpec);
+        static assert(hasToString!(L, char) == none);
+        static if (hasPreviewIn)
+        {
+            static assert(hasToString!(M, char) == inCharSinkFormatSpec);
+            static assert(hasToString!(N, char) == inCharSinkFormatString);
+            static assert(hasToString!(O, char) == inCharSink);
+        }
+
+        // https://issues.dlang.org/show_bug.cgi?id=22873
+        static assert(hasToString!(inout(A), char) == customPutWriter);
+        static assert(hasToString!(inout(B), char) == constCharSinkFormatSpec);
+        static assert(hasToString!(inout(C), char) == constCharSinkFormatString);
+        static assert(hasToString!(inout(D), char) == constCharSink);
+        static assert(hasToString!(inout(E), char) == hasSomeToString);
+        static assert(hasToString!(inout(F), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(G), char) == customPutWriter);
+        static assert(hasToString!(inout(H), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(I), char) == customPutWriterFormatSpec);
+        static assert(hasToString!(inout(J), char) == hasSomeToString);
+        static assert(hasToString!(inout(K), char) == constCharSinkFormatSpec);
+        static assert(hasToString!(inout(L), char) == none);
+        static if (hasPreviewIn)
+        {
+            static assert(hasToString!(inout(M), char) == inCharSinkFormatSpec);
+            static assert(hasToString!(inout(N), char) == inCharSinkFormatString);
+            static assert(hasToString!(inout(O), char) == inCharSink);
         }
     }
 }

@@ -1987,8 +1987,8 @@ pure:
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-    @property ref inout(uint) a() inout { return _tuple[0]; }
-    @property ref inout(uint) b() inout { return _tuple[1]; }
+    @property ref inout(uint) a() return inout { return _tuple[0]; }
+    @property ref inout(uint) b() return inout { return _tuple[1]; }
 }
 
 /**
@@ -5363,7 +5363,7 @@ pure @safe unittest
 pure @safe unittest
 {
     import std.range : stride;
-    static bool testAll(Matcher, Range)(scope ref Matcher m, ref Range r)
+    static bool testAll(Matcher, Range)(ref Matcher m, ref Range r) @safe
     {
         bool t = m.test(r);
         auto save = r.idx;
@@ -5798,7 +5798,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
 // Utilities for compression of Unicode code point sets
 //============================================================================
 
-@safe void compressTo(uint val, ref ubyte[] arr) pure nothrow
+@safe void compressTo(uint val, ref scope ubyte[] arr) pure nothrow
 {
     // not optimized as usually done 1 time (and not public interface)
     if (val < 128)
@@ -5817,7 +5817,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
     }
 }
 
-@safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
+@safe uint decompressFrom(scope const(ubyte)[] arr, ref size_t idx) pure
 {
     import std.exception : enforce;
     immutable first = arr[idx++];
@@ -7032,9 +7032,7 @@ template genericDecodeGrapheme(bool getValue)
             case RI:
                 if (isRegionalIndicator(ch))
                     mixin(eat);
-                else
-                    goto L_End_Extend;
-            break;
+                goto L_End_Extend;
             case L:
                 if (isHangL(ch))
                     mixin(eat);
@@ -7166,6 +7164,10 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
     s = "\u11A8\u0308\uAC01";
     assert(equal(decodeGrapheme(s)[], "\u11A8\u0308"));
     assert(equal(decodeGrapheme(s)[], "\uAC01"));
+
+    // Two Union Jacks of the Great Britain
+    s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    assert(equal(decodeGrapheme(s)[], "\U0001F1EC\U0001F1E7"));
 }
 
 /++
@@ -8412,7 +8414,7 @@ int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 }
 
 // internal helper: compose hangul syllables leaving dchar.init in holes
-void hangulRecompose(dchar[] seq) pure nothrow @nogc @safe
+void hangulRecompose(scope dchar[] seq) pure nothrow @nogc @safe
 {
     for (size_t idx = 0; idx + 1 < seq.length; )
     {
@@ -8695,7 +8697,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] inpu
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
-private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow @safe
+private size_t recompose(size_t start, scope dchar[] input, scope ubyte[] ccc) pure nothrow @safe
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0 .. 255 range
@@ -9824,7 +9826,7 @@ dchar toLower(dchar c)
 
 /++
     Creates a new array which is identical to `s` except that all of its
-    characters are converted to lowercase (by preforming Unicode lowercase mapping).
+    characters are converted to lowercase (by performing Unicode lowercase mapping).
     If none of `s` characters were affected, then `s` itself is returned if `s` is a
     `string`-like type.
 
@@ -9834,25 +9836,29 @@ dchar toLower(dchar c)
     Returns:
         An array with the same element type as `s`.
 +/
-ElementEncodingType!S[] toLower(S)(S s)
-if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
+ElementEncodingType!S[] toLower(S)(return scope S s) @trusted
+if (isSomeString!S)
 {
     static import std.ascii;
+    return toCase!(LowerTriple, std.ascii.toLower)(s);
+}
 
-    static if (isSomeString!S)
-        return () @trusted { return toCase!(LowerTriple, std.ascii.toLower)(s); } ();
-    else
-        return toCase!(LowerTriple, std.ascii.toLower)(s);
+/// ditto
+ElementEncodingType!S[] toLower(S)(S s)
+if (!isSomeString!S && (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
+{
+    static import std.ascii;
+    return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
 
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
-    string toLower(string s)
+    string toLower(return scope string s)
     { return toLower!string(s); }
-    wstring toLower(wstring s)
+    wstring toLower(return scope wstring s)
     { return toLower!wstring(s); }
-    dstring toLower(dstring s)
+    dstring toLower(return scope dstring s)
     { return toLower!dstring(s); }
 
     @safe unittest
@@ -10028,7 +10034,7 @@ dchar toUpper(dchar c)
 
 /++
     Allocates a new array which is identical to `s` except that all of its
-    characters are converted to uppercase (by preforming Unicode uppercase mapping).
+    characters are converted to uppercase (by performing Unicode uppercase mapping).
     If none of `s` characters were affected, then `s` itself is returned if `s`
     is a `string`-like type.
 
@@ -10038,25 +10044,29 @@ dchar toUpper(dchar c)
     Returns:
         An new array with the same element type as `s`.
 +/
-ElementEncodingType!S[] toUpper(S)(S s)
-if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
+ElementEncodingType!S[] toUpper(S)(return scope S s) @trusted
+if (isSomeString!S)
 {
     static import std.ascii;
+    return toCase!(UpperTriple, std.ascii.toUpper)(s);
+}
 
-    static if (isSomeString!S)
-        return () @trusted { return toCase!(UpperTriple, std.ascii.toUpper)(s); } ();
-    else
-        return toCase!(UpperTriple, std.ascii.toUpper)(s);
+/// ditto
+ElementEncodingType!S[] toUpper(S)(S s)
+if (!isSomeString!S && (isRandomAccessRange!S && hasLength!S && hasSlicing!S && isSomeChar!(ElementType!S)))
+{
+    static import std.ascii;
+    return toCase!(UpperTriple, std.ascii.toUpper)(s);
 }
 
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
 {
-    string toUpper(string s)
+    string toUpper(return scope string s)
     { return toUpper!string(s); }
-    wstring toUpper(wstring s)
+    wstring toUpper(return scope wstring s)
     { return toUpper!wstring(s); }
-    dstring toUpper(dstring s)
+    dstring toUpper(return scope dstring s)
     { return toUpper!dstring(s); }
 
     @safe unittest

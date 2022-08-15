@@ -19,7 +19,7 @@ module std.json;
 
 import std.array;
 import std.conv;
-import std.range.primitives;
+import std.range;
 import std.traits;
 
 ///
@@ -159,7 +159,7 @@ struct JSONValue
         return store.str;
     }
     /// ditto
-    @property string str(return string v) pure nothrow @nogc @trusted return // TODO make @safe
+    @property string str(return scope string v) pure nothrow @nogc @trusted return // TODO make @safe
     {
         assign(v);
         return v;
@@ -282,7 +282,7 @@ struct JSONValue
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(return JSONValue[string] v) pure nothrow @nogc @trusted // TODO make @safe
+    @property JSONValue[string] object(return scope JSONValue[string] v) pure nothrow @nogc @trusted // TODO make @safe
     {
         assign(v);
         return v;
@@ -321,14 +321,14 @@ struct JSONValue
        (*a)[0] = "world";  // segmentation fault
        ---
      */
-    @property ref inout(JSONValue[]) array() inout pure @system
+    @property ref inout(JSONValue[]) array() scope return inout pure @system
     {
         enforce!JSONException(type == JSONType.array,
                                 "JSONValue is not an array");
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(return JSONValue[] v) pure nothrow @nogc @trusted scope // TODO make @safe
+    @property JSONValue[] array(return scope JSONValue[] v) pure nothrow @nogc @trusted scope // TODO make @safe
     {
         assign(v);
         return v;
@@ -635,7 +635,7 @@ struct JSONValue
      * Hash syntax for json objects.
      * Throws: `JSONException` if `type` is not `JSONType.object`.
      */
-    ref inout(JSONValue) opIndex(return string k) inout pure @safe
+    ref inout(JSONValue) opIndex(return scope string k) inout pure @safe
     {
         auto o = this.objectNoRef;
         return *enforce!JSONException(k in o,
@@ -929,7 +929,7 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
-if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
+if (isSomeFiniteCharInputRange!T)
 {
     import std.ascii : isDigit, isHexDigit, toUpper, toLower;
     import std.typecons : Nullable, Yes;
@@ -1437,7 +1437,7 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, JSONOptions options)
-if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
+if (isSomeFiniteCharInputRange!T)
 {
     return parseJSON!T(json, -1, options);
 }
@@ -1537,19 +1537,15 @@ if (isOutputRange!(Out,char))
             toStringImpl!char(str);
     }
 
-    // recursive @safe inference is broken here
-    // workaround: if json.put is @safe, we should be too,
-    // so annotate the recursion as @safe manually
-    static if (isSafe!({ json.put(""); }))
-    {
-        void delegate(ref const JSONValue, ulong) @safe toValue;
-    }
-    else
-    {
-        void delegate(ref const JSONValue, ulong) @system toValue;
-    }
+    /* make the function infer @system when json.put() is @system
+     */
+    if (0)
+        json.put(' ');
 
-    void toValueImpl(ref const JSONValue value, ulong indentLevel)
+    /* Mark as @trusted because json.put() may be @system. This has difficulty
+     * inferring @safe because it is recursive.
+     */
+    void toValueImpl(ref const JSONValue value, ulong indentLevel) @trusted
     {
         void putTabs(ulong additionalIndent = 0)
         {
@@ -1594,7 +1590,7 @@ if (isOutputRange!(Out,char))
                             json.put(':');
                             if (pretty)
                                 json.put(' ');
-                            toValue(member, indentLevel + 1);
+                            toValueImpl(member, indentLevel + 1);
                         }
                     }
 
@@ -1631,7 +1627,7 @@ if (isOutputRange!(Out,char))
                         if (i)
                             putCharAndEOL(',');
                         putTabs(1);
-                        toValue(el, indentLevel + 1);
+                        toValueImpl(el, indentLevel + 1);
                     }
                     putEOL();
                     putTabs();
@@ -1710,9 +1706,7 @@ if (isOutputRange!(Out,char))
         }
     }
 
-    toValue = &toValueImpl;
-
-    toValue(root, 0);
+    toValueImpl(root, 0);
 }
 
  // https://issues.dlang.org/show_bug.cgi?id=12897

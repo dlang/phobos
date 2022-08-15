@@ -13,7 +13,7 @@ $(T2 any,
         `any!"a > 0"([1, 2, -3, -4])` returns `true` because at least one
         element is positive)
 $(T2 balancedParens,
-        `balancedParens("((1 + 1) / 2)")` returns `true` because the
+        `balancedParens("((1 + 1) / 2)", '(', ')')` returns `true` because the
         string has balanced parentheses.)
 $(T2 boyerMooreFinder,
         `find("hello world", boyerMooreFinder("or"))` returns `"orld"`
@@ -638,7 +638,7 @@ Returns:
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 if (isInputRange!Range && !isInfinite!Range &&
-    is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+    is(typeof(binaryFun!pred(haystack.front, needle))))
 {
     bool pred2(ElementType!Range a) { return binaryFun!pred(a, needle); }
     return count!pred2(haystack);
@@ -693,7 +693,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && !isInfinite!R1 &&
     isForwardRange!R2 &&
-    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+    is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     assert(!needle.empty, "Cannot count occurrences of an empty range");
 
@@ -716,7 +716,7 @@ if (isForwardRange!R1 && !isInfinite!R1 &&
 /// Ditto
 size_t count(alias pred, R)(R haystack)
 if (isInputRange!R && !isInfinite!R &&
-    is(typeof(unaryFun!pred(haystack.front)) : bool))
+    is(typeof(unaryFun!pred(haystack.front))))
 {
     size_t result;
     alias T = ElementType!R; //For narrow strings forces dchar iteration
@@ -743,6 +743,12 @@ if (isInputRange!R && !isInfinite!R)
 @safe nothrow unittest
 {
     assert([1, 2, 3].count([2, 3]) == 1);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22582
+@safe unittest
+{
+    assert([1, 2, 3].count!"a & 1" == 2);
 }
 
 /++
@@ -2506,6 +2512,8 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
 Convenience function. Like find, but only returns whether or not the search
 was successful.
 
+For more information about `pred` see $(LREF find).
+
 See_Also:
 $(REF among, std,algorithm,comparison) for checking a value against multiple possibilities.
  +/
@@ -2616,6 +2624,8 @@ Advances `r` until it finds the first two adjacent elements `a`,
 `b` that satisfy `pred(a, b)`. Performs $(BIGOH r.length)
 evaluations of `pred`.
 
+For more information about `pred` see $(LREF find).
+
 Params:
     pred = The predicate to satisfy.
     r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
@@ -2692,6 +2702,8 @@ Advances `seq` by calling `seq.popFront` until either
 `find!(pred)(choices, seq.front)` is `true`, or `seq` becomes empty.
 Performs $(BIGOH seq.length * choices.length) evaluations of `pred`.
 
+For more information about `pred` see $(LREF find).
+
 Params:
     pred = The predicate to use for determining a match.
     seq = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
@@ -2752,6 +2764,8 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
  * Similarly, the haystack is positioned so as `pred` evaluates to `false` for
  * `haystack.front`.
  *
+ * For more information about `pred` see $(LREF find).
+
  * Params:
  *  haystack = The
  *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
@@ -2875,6 +2889,8 @@ the same type as `haystack`. Otherwise, `haystack` must be a
 $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and
 the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
 std,range).
+
+For more information about `pred` see $(LREF find).
 
 Params:
     pred = Predicate to use for comparing needle against haystack.
@@ -4588,6 +4604,8 @@ Checks whether the given
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) starts with (one
 of) the given needle(s) or, if no needles are given,
 if its front element fulfils predicate `pred`.
+
+For more information about `pred` see $(LREF find).
 
 Params:
 

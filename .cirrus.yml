@@ -2,20 +2,20 @@ common_steps_template: &COMMON_STEPS_TEMPLATE
   clone_dmd_script: |
     set -uexo pipefail
     git clone --branch "${CIRRUS_BASE_BRANCH:-$CIRRUS_BRANCH}" --depth 1 https://github.com/dlang/dmd.git ../dmd
-  install_prerequisites_script: cd ../dmd && ./cirrusci.sh
-  install_host_compiler_script: cd ../dmd && ./ci.sh install_host_compiler
+  install_prerequisites_script: cd ../dmd && ./ci/cirrusci.sh
+  install_host_compiler_script: cd ../dmd && ./ci/run.sh install_host_compiler
   setup_repos_script: |
     set -uexo pipefail
     ln -s $CIRRUS_WORKING_DIR ../phobos
-    cd ../dmd && ./ci.sh setup_repos "${CIRRUS_BASE_BRANCH:-$CIRRUS_BRANCH}"
-  build_script: cd ../dmd && ./ci.sh build
-  test_dmd_script: cd ../dmd && ./ci.sh test_dmd
-  test_druntime_script: cd ../dmd && ./ci.sh test_druntime
-  test_phobos_script: cd ../dmd && ./ci.sh test_phobos
+    cd ../dmd && ./ci/run.sh setup_repos "${CIRRUS_BASE_BRANCH:-$CIRRUS_BRANCH}"
+  build_script: cd ../dmd && ./ci/run.sh build
+  test_dmd_script: cd ../dmd && ./ci/run.sh test_dmd
+  test_druntime_script: cd ../dmd && ./ci/run.sh test_druntime
+  test_phobos_script: cd ../dmd && ./ci/run.sh test_phobos
 
 environment:
   CIRRUS_CLONE_DEPTH: 1
-  # for ci.sh:
+  # for ci/run.sh:
   MODEL: 64
   HOST_DMD: dmd
   N: 4
@@ -39,10 +39,10 @@ linux_task:
   << : *COMMON_STEPS_TEMPLATE
 
 # Mac
-mac_task:
-  name: macOS 10.15 x64
+macos_task:
+  name: macOS 11.x x64
   osx_instance:
-    image: catalina-xcode
+    image: big-sur-xcode
   timeout_in: 60m
   environment:
     OS_NAME: darwin
@@ -75,5 +75,7 @@ freebsd11_task:
     OS_NAME: freebsd
     HOST_DMD: dmd-2.079.0
     CI_DFLAGS: -version=TARGET_FREEBSD11
-  install_bash_and_git_script: pkg install -y bash git
+  install_bash_and_git_script: |
+    sed -i '' -e 's|pkg.FreeBSD.org|mirrors.xtom.com/freebsd-pkg|' /etc/pkg/FreeBSD.conf
+    pkg install -y bash git
   << : *COMMON_STEPS_TEMPLATE

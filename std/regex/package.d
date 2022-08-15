@@ -43,11 +43,16 @@ $(TR $(TD Objects) $(TD
 ))
 
   $(SECTION Synopsis)
-  ---
-  import std.regex;
-  import std.stdio;
-  void main()
-  {
+
+  Create a regex at runtime:
+  $(RUNNABLE_EXAMPLE
+  $(RUNNABLE_EXAMPLE_STDIN
+They met on 24/01/1970.
+7/8/99 wasn't as hot as 7/8/2022.
+)
+      ---
+      import std.regex;
+      import std.stdio;
       // Print out all possible dd/mm/yy(yy) dates found in user input.
       auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b");
       foreach (line; stdin.byLine)
@@ -57,33 +62,52 @@ $(TR $(TD Objects) $(TD
         foreach (c; matchAll(line, r))
             writeln(c.hit);
       }
-  }
-  ...
-
-  // Create a static regex at compile-time, which contains fast native code.
+      ---
+  )
+  Create a static regex at compile-time, which contains fast native code:
+  $(RUNNABLE_EXAMPLE
+  ---
+  import std.regex;
   auto ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
   // It works just like a normal regex:
   auto c2 = matchFirst("foo/bar", ctr);   // First match found here, if any
   assert(!c2.empty);   // Be sure to check if there is a match before examining contents!
   assert(c2[1] == "bar");   // Captures is a range of submatches: 0 = full match.
-
-  ...
-  // multi-pattern regex
-  auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
+  ---
+  )
+  Multi-pattern regex:
+  $(RUNNABLE_EXAMPLE
+  ---
+  import std.regex;
+  auto multi = regex([`\d+,\d+`, `([a-z]+):(\d+)`]);
   auto m = "abc:43 12,34".matchAll(multi);
   assert(m.front.whichPattern == 2);
   assert(m.front[1] == "abc");
   assert(m.front[2] == "43");
   m.popFront();
   assert(m.front.whichPattern == 1);
-  assert(m.front[1] == "12");
-  ...
-
-  // The result of the `matchAll/matchFirst` is directly testable with if/assert/while.
-  // e.g. test if a string consists of letters:
-  assert(matchFirst("Letter", `^\p{L}+$`));
+  assert(m.front[0] == "12,34");
   ---
+  )
+  $(LREF Captures) and `opCast!bool`:
+  $(RUNNABLE_EXAMPLE
+  ---
+  import std.regex;
+  // The result of `matchAll/matchFirst` is directly testable with `if/assert/while`,
+  // e.g. test if a string consists of letters only:
+  assert(matchFirst("LettersOnly", `^\p{L}+$`));
+
+  // And we can take advantage of the ability to define a variable in the IfCondition:
+  if (const captures = matchFirst("At l34st one digit, but maybe more...", `((\d)(\d*))`))
+  {
+      assert(captures[2] == "3");
+      assert(captures[3] == "4");
+      assert(captures[1] == "34");
+  }
+  ---
+  )
+  See_Also: $(LINK2 https://dlang.org/spec/statement.html#IfCondition, `IfCondition`).
 
   $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,
@@ -161,6 +185,10 @@ $(TR $(TD Objects) $(TD
     $(REG_ROW +, Matches previous character/subexpression 1 or more times.
       Greedy version - tries as many times as possible.)
     $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
+      Lazy version  - stops as early as possible.)
+    $(REG_ROW ?, Matches previous character/subexpression 0 or 1 time.
+      Greedy version - tries as many times as possible.)
+    $(REG_ROW ??, Matches previous character/subexpression 0 or 1 time.
       Lazy version  - stops as early as possible.)
     $(REG_ROW {n}, Matches previous character/subexpression exactly n times. )
     $(REG_ROW {n$(COMMA)}, Matches previous character/subexpression n times or more.
@@ -458,7 +486,7 @@ private struct CTRegexWrapper(Char)
     alias getRe this;
 }
 
-template ctRegexImpl(alias pattern, string flags=[])
+template ctRegexImpl(alias pattern, string flags="")
 {
     import std.regex.internal.backtracking, std.regex.internal.parser;
     static immutable r = cast(immutable) regex(pattern, flags);
@@ -506,7 +534,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     pattern = Regular expression
     flags = The _attributes (g, i, m, s and x accepted)
 +/
-public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
+public enum ctRegex(alias pattern, string flags="") = ctRegexImpl!(pattern, flags).wrapper;
 
 enum isRegexFor(RegEx, R) = is(immutable RegEx == immutable Regex!(BasicElementOf!R))
      || is(RegEx : const(Regex!(BasicElementOf!R)))
@@ -1736,4 +1764,10 @@ auto escaper(Range)(Range r)
       auto s2 = "";
       assert(s2.escaper.equal(""));
     }}
+}
+
+@system unittest
+{
+    assert("ab".matchFirst(regex(`a?b?`)).hit == "ab");
+    assert("ab".matchFirst(regex(`a??b?`)).hit == "");
 }

@@ -438,7 +438,7 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto args = ["prog", "--foo", "-b"];
 
@@ -1646,11 +1646,13 @@ Params:
     text = The text to printed at the beginning of the help output.
     opt = The `Option` extracted from the `getopt` parameter.
 */
-void defaultGetoptPrinter(string text, Option[] opt)
+void defaultGetoptPrinter(string text, Option[] opt) @safe
 {
     import std.stdio : stdout;
+    // stdout global __gshared is trusted with a locked text writer
+    auto w = (() @trusted => stdout.lockingTextWriter())();
 
-    defaultGetoptFormatter(stdout.lockingTextWriter(), text, opt);
+    defaultGetoptFormatter(w, text, opt);
 }
 
 /** This function writes the passed text and `Option` into an output range
@@ -1833,7 +1835,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     assert(flag);
 }
 
-@safe unittest  // Delegates as callbacks
+@system unittest  // Delegates as callbacks
 {
     alias TwoArgOptionHandler = void delegate(string option, string value) @safe;
 

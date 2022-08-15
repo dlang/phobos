@@ -78,7 +78,7 @@ import std.meta, std.traits, std.typecons;
 /++
     Gives the `sizeof` the largest type given.
 
-    See_Also: https://forum.dlang.org/thread/wbpnncxepehgcswhuazl@forum.dlang.org?page=1
+    See_Also: $(LINK https://forum.dlang.org/thread/wbpnncxepehgcswhuazl@forum.dlang.org?page=1)
   +/
 template maxSize(Ts...)
 {
@@ -471,6 +471,20 @@ private:
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
                 return compare(rhsPA, zis, selector);
+            }
+            // Generate the function below only if the Variant's type is
+            // comparable with 'null'
+            static if (__traits(compiles, () => A.init == null))
+            {
+                if (rhsType == typeid(null))
+                {
+                    // if rhsType is typeof(null), then we're comparing with 'null'
+                    // this takes into account 'opEquals' and 'opCmp'
+                    // all types that can compare with null have to following properties:
+                    // if it's 'null' then it's equal to null, otherwise it's always greater
+                    // than 'null'
+                    return *zis == null ? 0 : 1;
+                }
             }
             return ptrdiff_t.min; // dunno
         case OpID.toString:
@@ -1608,6 +1622,42 @@ pure nothrow @nogc
     assert(v != b);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=22647
+// Can compare with 'null'
+@system unittest
+{
+    static struct Bar
+    {
+        int* ptr;
+        alias ptr this;
+    }
+
+    static class Foo {}
+    int* iptr;
+    int[] arr;
+
+    Variant v = Foo.init; // 'null'
+    assert(v != null); // can only compare objects with 'null' by using 'is'
+
+    v = iptr;
+    assert(v == null); // pointers can be compared with 'null'
+
+    v = arr;
+    assert(v == null); // arrays can be compared with 'null'
+
+    v = "";
+    assert(v == null); // strings are arrays, an empty string is considered 'null'
+
+    v = Bar.init;
+    assert(v == null); // works with alias this
+
+    v = [3];
+    assert(v != null);
+    assert(v > null);
+    assert(v >= null);
+    assert(!(v < null));
+}
+
 /**
 _Algebraic data type restricted to a closed set of possible
 types. It's an alias for $(LREF VariantN) with an
@@ -2052,10 +2102,10 @@ static class VariantException : Exception
 
     assert(v == 2);
     assert(v < 3);
-    static assert(!__traits(compiles, {v == long.max;}));
-    static assert(!__traits(compiles, {v == null;}));
-    static assert(!__traits(compiles, {v < long.max;}));
-    static assert(!__traits(compiles, {v > null;}));
+    static assert(!__traits(compiles, () => v == long.max));
+    static assert(!__traits(compiles, () => v == null));
+    static assert(!__traits(compiles, () => v < long.max));
+    static assert(!__traits(compiles, () => v > null));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=1558

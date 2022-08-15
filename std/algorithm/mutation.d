@@ -866,6 +866,9 @@ if (isInputRange!InputRange
 Initializes all elements of `range` with their `.init` value.
 Assumes that the elements of the range are uninitialized.
 
+This function is unavailable if `T` is a `struct` and  `T.this()` is annotated
+with `@disable`.
+
 Params:
         range = An
                 $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -874,10 +877,11 @@ Params:
 
 See_Also:
         $(LREF fill)
-        $(LREF uninitializeFill)
+        $(LREF uninitializedFill)
  */
 void initializeAll(Range)(Range range)
-if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
+if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
+    && __traits(compiles, { static ElementType!Range _; }))
 {
     import core.stdc.string : memset, memcpy;
     import std.traits : hasElaborateAssign, isDynamicArray;
@@ -886,31 +890,13 @@ if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
     static if (hasElaborateAssign!T)
     {
         import std.algorithm.internal : addressOf;
-        //Elaborate opAssign. Must go the memcpy road.
-        //We avoid calling emplace here, because our goal is to initialize to
-        //the static state of T.init,
-        //So we want to avoid any un-necassarilly CC'ing of T.init
+        //Elaborate opAssign. Must go the memcpy/memset road.
         static if (!__traits(isZeroInit, T))
         {
-            auto p = typeid(T).initializer();
             for ( ; !range.empty ; range.popFront() )
             {
-                static if (__traits(isStaticArray, T))
-                {
-                    // static array initializer only contains initialization
-                    // for one element of the static array.
-                    auto elemp = cast(void *) addressOf(range.front);
-                    auto endp = elemp + T.sizeof;
-                    while (elemp < endp)
-                    {
-                        memcpy(elemp, p.ptr, p.length);
-                        elemp += p.length;
-                    }
-                }
-                else
-                {
-                    memcpy(addressOf(range.front), p.ptr, T.sizeof);
-                }
+                import core.internal.lifetime : emplaceInitializer;
+                emplaceInitializer(range.front);
             }
         }
         else
@@ -1053,6 +1039,18 @@ if (is(Range == char[]) || is(Range == wchar[]))
     initializeAll(R());
     assert(xs[0].x == 3);
     assert(xs[1].x == 3);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22105
+@system unittest
+{
+    struct NoDefaultCtor
+    {
+        @disable this();
+    }
+
+    NoDefaultCtor[1] array = void;
+    static assert(!__traits(compiles, array[].initializeAll));
 }
 
 // move
@@ -1456,10 +1454,7 @@ private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
             static if (__traits(isZeroInit, T))
                 () @trusted { memset(&source, 0, sz); }();
             else
-            {
-                auto init = typeid(T).initializer();
-                () @trusted { memcpy(&source, init.ptr, sz); }();
-            }
+                () @trusted { memcpy(&source, __traits(initSymbol, T).ptr, sz); }();
         }
     }
     else static if (isStaticArray!T)
