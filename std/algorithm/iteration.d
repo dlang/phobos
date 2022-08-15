@@ -303,7 +303,7 @@ private struct _Cache(R, bool bidir)
 
     this(R range)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         this.source = move(range);
         if (!source.empty)
         {
@@ -374,7 +374,7 @@ private struct _Cache(R, bool bidir)
     {
         private this(R source, ref CacheTypes caches)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             this.source = move(source);
             this.caches = caches;
         }
@@ -478,7 +478,7 @@ if (fun.length >= 1)
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         return MapResult!(_fun, Range)(move(r));
     }
 }
@@ -557,7 +557,7 @@ private struct MapResult(alias fun, Range)
 
     this(R input)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _input = move(input);
     }
 
@@ -1297,7 +1297,7 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         return FilterResult!(unaryFun!predicate, Range)(move(range));
     }
 }
@@ -1333,7 +1333,7 @@ if (is(typeof(unaryFun!predicate)))
 
 private struct FilterResult(alias pred, Range)
 {
-    import std.algorithm.mutation : move;
+    import core.lifetime : move;
 
     alias R = Unqual!Range;
     R _input;
@@ -1568,7 +1568,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     this(R r)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _input = move(r);
         while (!_input.empty && !pred(_input.front)) _input.popFront();
         while (!_input.empty && !pred(_input.back)) _input.popBack();
@@ -1670,14 +1670,15 @@ if (isInputRange!R)
     ///
     this(R input)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _input = move(input);
         if (!_input.empty) popFront();
     }
 
     private this(R input, Tuple!(MutableE, uint) current)
     {
-        _input = input;
+        import core.lifetime : move;
+        _input = move(input);
         _current = current;
     }
 
@@ -1920,7 +1921,7 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     this(Range _r)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _r = move(r);
         if (!empty)
         {
@@ -3088,7 +3089,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         this(RoR items, Separator sep)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             _items = move(items);
             _currentSep.initialize(sep);
             static if (isBidirectional)
@@ -3629,7 +3630,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         this(RoR items, ElementType!RoR current)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             _items = move(items);
             _current = current;
             static if (isBidirectional && hasNested!Result)
@@ -3656,7 +3657,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     public:
         this(RoR r)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             _items = move(r);
             // field _current must be initialized in constructor, because it is nested struct
             _current = typeof(_current).init;
@@ -4960,7 +4961,7 @@ if (fun.length >= 1)
 
             this(R range, ref Args args)
             {
-                import std.algorithm.mutation : move;
+                import core.lifetime : move;
                 source = move(range);
                 if (source.empty)
                     return;
@@ -5338,7 +5339,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             _input = move(input);
             _separator = separator;
 
@@ -5920,7 +5921,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            import std.algorithm.mutation : move;
+            import core.lifetime : move;
             _input = move(input);
             _separator = separator;
         }
@@ -6126,7 +6127,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     this(Range input)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _input = move(input);
         static if (!fullSlicing)
             _next = _input.save;
@@ -7787,7 +7788,7 @@ private struct UniqResult(alias pred, Range)
 
     this(Range input)
     {
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _input = move(input);
     }
 
@@ -7920,7 +7921,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
         import std.array : array;
         import std.range : iota;
 
-        import std.algorithm.mutation : move;
+        import core.lifetime : move;
         _r = move(r);
         _state = r.length ? new size_t[r.length-1] : null;
         _indices = iota(size_t(r.length)).array;
