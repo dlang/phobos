@@ -72,6 +72,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.iteration;
 
+import core.lifetime : move;
 import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
@@ -303,8 +304,10 @@ private struct _Cache(R, bool bidir)
 
     this(R range)
     {
-        import core.lifetime : move;
-        this.source = move(range);
+        static if (shouldMove!R)
+            this.source = move(range);
+        else
+            this.source = range;
         if (!source.empty)
         {
             caches[0] = source.front;
@@ -374,8 +377,10 @@ private struct _Cache(R, bool bidir)
     {
         private this(R source, ref CacheTypes caches)
         {
-            import core.lifetime : move;
-            this.source = move(source);
+            static if (shouldMove!R)
+                this.source = move(source);
+            else
+                this.source = source;
             this.caches = caches;
         }
         typeof(this) save() @property
@@ -478,7 +483,6 @@ if (fun.length >= 1)
                 "Mapping function(s) must not return void: " ~ _funs.stringof);
         }
 
-        import core.lifetime : move;
         return MapResult!(_fun, Range)(move(r));
     }
 }
@@ -557,8 +561,10 @@ private struct MapResult(alias fun, Range)
 
     this(R input)
     {
-        import core.lifetime : move;
-        _input = move(input);
+        static if (shouldMove!R)
+            _input = move(input);
+        else
+            _input = input;
     }
 
     static if (isInfinite!R)
@@ -1297,7 +1303,6 @@ if (is(typeof(unaryFun!predicate)))
      */
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        import core.lifetime : move;
         return FilterResult!(unaryFun!predicate, Range)(move(range));
     }
 }
@@ -1333,7 +1338,6 @@ if (is(typeof(unaryFun!predicate)))
 
 private struct FilterResult(alias pred, Range)
 {
-    import core.lifetime : move;
 
     alias R = Unqual!Range;
     R _input;
@@ -1351,12 +1355,18 @@ private struct FilterResult(alias pred, Range)
 
     this(R r)
     {
-        _input = move(r);
+        static if (shouldMove!R)
+            _input = move(r);
+        else
+            _input = r;
     }
 
     private this(R r, bool primed)
     {
-        _input = move(r);
+        static if (shouldMove!R)
+            _input = move(r);
+        else
+            _input = r;
         _primed = primed;
     }
 
@@ -1568,8 +1578,10 @@ private struct FilterBidiResult(alias pred, Range)
 
     this(R r)
     {
-        import core.lifetime : move;
-        _input = move(r);
+        static if (shouldMove!R)
+            _input = move(r);
+        else
+            _input = r;
         while (!_input.empty && !pred(_input.front)) _input.popFront();
         while (!_input.empty && !pred(_input.back)) _input.popBack();
     }
@@ -1670,15 +1682,19 @@ if (isInputRange!R)
     ///
     this(R input)
     {
-        import core.lifetime : move;
-        _input = move(input);
+        static if (shouldMove!R)
+            _input = move(input);
+        else
+            _input = input;
         if (!_input.empty) popFront();
     }
 
     private this(R input, Tuple!(MutableE, uint) current)
     {
-        import core.lifetime : move;
-        _input = move(input);
+        static if (shouldMove!R)
+            _input = move(input);
+        else
+            _input = input;
         _current = current;
     }
 
@@ -1921,8 +1937,10 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     this(Range _r)
     {
-        import core.lifetime : move;
-        _r = move(r);
+        static if (shouldMove!Range)
+            r = move(_r);
+        else
+            r = _r;
         if (!empty)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
@@ -2109,8 +2127,6 @@ if (isForwardRange!Range)
 
     this(Range r)
     {
-        import core.lifetime : move;
-
         auto savedR = r.save;
 
         static if (eqEquivalenceAssured) () @trusted
@@ -3088,8 +3104,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         this(RoR items, Separator sep)
         {
-            import core.lifetime : move;
-            _items = move(items);
+            static if (shouldMove!RoR)
+                _items = move(items);
+            else
+                _items = items;
             _currentSep.initialize(sep);
             static if (isBidirectional)
                 _currentBackSep.initialize(sep);
@@ -3629,8 +3647,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         this(RoR items, ElementType!RoR current)
         {
-            import core.lifetime : move;
-            _items = move(items);
+            static if (shouldMove!RoR)
+                _items = move(items);
+            else
+                _items = items;
             _current = current;
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
@@ -3638,8 +3658,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         void replaceCurrent(typeof(_current) current) @trusted
         {
-            import core.lifetime : move;
-
             current.move(_current);
         }
 
@@ -3647,8 +3665,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             void replaceCurrentBack(typeof(_currentBack) currentBack) @trusted
             {
-                import core.lifetime : move;
-
                 currentBack.move(_currentBack);
             }
         }
@@ -3656,8 +3672,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     public:
         this(RoR r)
         {
-            import core.lifetime : move;
-            _items = move(r);
+            static if (shouldMove!RoR)
+                _items = move(r);
+            else
+                _items = r;
             // field _current must be initialized in constructor, because it is nested struct
             _current = typeof(_current).init;
 
@@ -4960,8 +4978,10 @@ if (fun.length >= 1)
 
             this(R range, ref Args args)
             {
-                import core.lifetime : move;
-                source = move(range);
+                static if (shouldMove!R)
+                    source = move(range);
+                else
+                    source = range;
                 if (source.empty)
                     return;
 
@@ -5338,8 +5358,10 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            import core.lifetime : move;
-            _input = move(input);
+            static if (shouldMove!Range)
+                _input = move(input);
+            else
+                _input = input;
             _separator = separator;
 
             static if (isNarrowString!Range)
@@ -5920,8 +5942,10 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            import core.lifetime : move;
-            _input = move(input);
+            static if (shouldMove!Range)
+                _input = move(input);
+            else
+                _input = input;
             _separator = separator;
         }
 
@@ -6126,8 +6150,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
     this(Range input)
     {
-        import core.lifetime : move;
-        _input = move(input);
+        static if (shouldMove!Range)
+            _input = move(input);
+        else
+            _input = input;
         static if (!fullSlicing)
             _next = _input.save;
 
@@ -7787,8 +7813,10 @@ private struct UniqResult(alias pred, Range)
 
     this(Range input)
     {
-        import core.lifetime : move;
-        _input = move(input);
+        static if (shouldMove!Range)
+            _input = move(input);
+        else
+            _input = input;
     }
 
     static if (__traits(isCopyable, Range))
@@ -7920,11 +7948,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
         import std.array : array;
         import std.range : iota;
 
-        import core.lifetime : move;
-        _r = move(r);
-        _state = r.length ? new size_t[r.length-1] : null;
-        _indices = iota(size_t(r.length)).array;
-        _empty = r.length == 0;
+        static if (shouldMove!Range)
+            _r = move(r);
+        else
+            _r = r;
+        _state = _r.length ? new size_t[_r.length-1] : null;
+        _indices = iota(size_t(_r.length)).array;
+        _empty = _r.length == 0;
     }
 
     /// Returns: `true` if the range is empty, `false` otherwise.
