@@ -3873,7 +3873,7 @@ enum bool shouldMove(T) = !__traits(isCopyable, T) || !__traits(isPOD, T);
     static assert(!shouldMove!string);
     static assert(!shouldMove!(int[]));
 
-	class C {}
+    class C {}
     static assert(!shouldMove!(C));
 
     struct POD {}
