@@ -234,10 +234,11 @@ public import std.range.interfaces;
 public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
+import core.lifetime : move;
 import std.internal.attributes : betterC;
 import std.meta : allSatisfy, anySatisfy, staticMap;
 import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
-    isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
+    isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf, shouldMove;
 
 
 /**
@@ -935,7 +936,10 @@ if (Ranges.length > 0 &&
                 // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
                 static foreach (i, v; input)
                 {
-                    source[i] = v;
+                    if (shouldMove!(typeof(v)))
+                        source[i] = move(v);
+                    else
+                        source[i] = v;
                 }
             }
 
@@ -1479,7 +1483,7 @@ private struct ChooseResult(Ranges...)
     // @trusted because of assignment of r which overlap each other
     this(size_t chosen, return scope Ranges rs) @trusted
     {
-        import core.lifetime : emplace;
+        import core.lifetime : emplace, moveEmplace;
 
         // This should be the only place chosenI is ever assigned
         // independently
@@ -1498,7 +1502,10 @@ private struct ChooseResult(Ranges...)
             static foreach (i; 0 .. rs.length)
             {
                 case i:
-                emplace(&this.rs[i], rs[i]);
+                    static if (shouldMove!(typeof(rs[i])))
+                        moveEmplace(rs[i], this.rs[i]);
+                    else
+                        emplace(&this.rs[i], rs[i]);
                 break sw;
             }
 
@@ -1514,7 +1521,6 @@ private struct ChooseResult(Ranges...)
     deprecated("Call with size_t (0 = first), or use the choose function")
     this(bool firstChosen, Ranges rs)
     {
-        import core.lifetime : move;
         this(cast(size_t)(firstChosen? 0: 1), rs[0].move, rs[1].move);
     }
 
@@ -3891,7 +3897,10 @@ if (isForwardRange!R && !isInfinite!R)
         /// Range primitives
         this(R input, size_t index = 0)
         {
-            _original = input;
+            static if (shouldMove!R)
+                _original = move(input);
+            else
+                _original = input;
             _index = index % _original.length;
         }
 
@@ -3995,14 +4004,23 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         this(R input)
         {
-            _original = input;
-            _current = input.save;
+            static if (shouldMove!R)
+                _original = move(input);
+            else
+                _original = input;
+            _current = _original.save;
         }
 
         private this(R original, R current)
         {
-            _original = original;
-            _current = current;
+            static if (shouldMove!R)
+                _original = move(original);
+            else
+                _original = original;
+            static if (shouldMove!R)
+                _current = move(current);
+            else
+                _current = current;
         }
 
         /// ditto
@@ -4415,7 +4433,13 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
  */
     this(R rs, StoppingPolicy s = StoppingPolicy.shortest)
     {
-        ranges[] = rs[];
+        static foreach (i, r; rs)
+        {
+            static if (shouldMove!(typeof(r)))
+                ranges[i] = move(r);
+            else
+                ranges[i] = r;
+        }
         stoppingPolicy = s;
     }
 
@@ -4942,7 +4966,13 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     +/
     this(Ranges rs)
     {
-        ranges[] = rs[];
+        static foreach (i, r; rs)
+        {
+            static if (shouldMove!(typeof(r)))
+                ranges[i] = move(r);
+            else
+                ranges[i] = r;
+        }
     }
 
     /+
@@ -5616,7 +5646,14 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
     {
         import std.exception : enforce;
 
-        _ranges = ranges;
+        static foreach (i, r; ranges)
+        {
+            static if (shouldMove!(typeof(r)))
+                _ranges[i] = move(r);
+            else
+                _ranges[i] = r;
+        }
+
         enforce(sp != StoppingPolicy.longest,
                 "Can't use StoppingPolicy.Longest on Lockstep.");
         _stoppingPolicy = sp;
@@ -5916,7 +5953,13 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     StateType[stateSize] _state;
     size_t _n;
 
-    this(StateType[stateSize] initial) { _state = initial; }
+    this(StateType[stateSize] initial)
+    {
+        static if (shouldMove!StateType)
+            _state = move(initial);
+        else
+            _state = initial;
+    }
 
     void popFront()
     {
@@ -6030,7 +6073,10 @@ private:
 public:
     this(State initial, size_t n = 0)
     {
-        _state = initial;
+        static if (shouldMove!State)
+            _state = move(initial);
+        else
+            _state = initial;
         _n = n;
     }
 
@@ -6279,8 +6325,14 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 this.step = 0;
                 return;
             }
-            this.step = step;
-            this.current = current;
+            static if (shouldMove!(typeof(step)))
+                this.step = move(step);
+            else
+                this.step = step;
+            static if (shouldMove!(typeof(current)))
+                this.current = move(current);
+            else
+                this.current = current;
         }
 
         @property bool empty() const { return step == 0; }
@@ -6973,7 +7025,10 @@ struct FrontTransversal(Ror,
 */
     this(RangeOfRanges input)
     {
-        _input = input;
+        static if (shouldMove!RangeOfRanges)
+            _input = move(input);
+        else
+            _input = input;
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
@@ -7305,7 +7360,10 @@ struct Transversal(Ror,
 */
     this(RangeOfRanges input, size_t n)
     {
-        _input = input;
+        static if (shouldMove!RangeOfRanges)
+            _input = move(input);
+        else
+            _input = input;
         _n = n;
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
@@ -7573,7 +7631,10 @@ if (isForwardRange!RangeOfRanges &&
 {
     this(RangeOfRanges input)
     {
-        this._input = input;
+        static if (shouldMove!RangeOfRanges)
+            this._input = move(input);
+        else
+            this._input = input;
         static if (opt == TransverseOptions.enforceNotJagged)
         {
             import std.exception : enforce;
@@ -7774,8 +7835,14 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
 {
     this(Source source, Indices indices)
     {
-        this._source = source;
-        this._indices = indices;
+        static if (shouldMove!Source)
+            this._source = move(source);
+        else
+            this._source = source;
+        static if (shouldMove!Indices)
+            this._indices = move(indices);
+        else
+            this._indices = indices;
     }
 
     /// Range primitives
@@ -8041,7 +8108,10 @@ if (isInputRange!Source)
         this(Source source, size_t chunkSize)
         {
             assert(chunkSize != 0, "Cannot create a Chunk with an empty chunkSize");
-            _source = source;
+            static if (shouldMove!Source)
+                _source = move(source);
+            else
+                _source = source;
             _chunkSize = chunkSize;
         }
 
@@ -8260,7 +8330,10 @@ if (isInputRange!Source)
 
         private this(Source r, size_t chunkSize)
         {
-            impl = RefCounted!Impl(r, r.empty ? 0 : chunkSize, chunkSize);
+            static if (shouldMove!Source)
+                impl = RefCounted!Impl(move(r), r.empty ? 0 : chunkSize, chunkSize);
+            else
+                impl = RefCounted!Impl(r, r.empty ? 0 : chunkSize, chunkSize);
         }
 
         @property bool empty() { return impl.chunkSize == 0; }
@@ -8445,7 +8518,10 @@ if (isForwardRange!Source && hasLength!Source)
     this(Source source, size_t chunkCount)
     {
         assert(chunkCount != 0 || source.empty, "Cannot create EvenChunks with a zero chunkCount");
-        _source = source;
+        static if (shouldMove!Source)
+            _source = move(source);
+        else
+            _source = source;
         _chunkCount = chunkCount;
     }
 
@@ -10790,7 +10866,10 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
         {
             strictlyVerifySorted(input);
         }
-        this._input = input;
+        static if (shouldMove!Range)
+            this._input = move(input);
+        else
+            this._input = input;
     }
 
     // Assertion only.
@@ -13411,7 +13490,10 @@ if (
 
         this(R r, E e, size_t n)
         {
-            data = r;
+            static if (shouldMove!R)
+                data = move(r);
+            else
+                data = r;
             element = e;
             static if (hasLength!R)
             {
