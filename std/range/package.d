@@ -238,7 +238,7 @@ import core.lifetime : move;
 import std.internal.attributes : betterC;
 import std.meta : allSatisfy, anySatisfy, staticMap;
 import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
-    isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf, shouldMove;
+    isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
 
 
 /**
@@ -936,10 +936,10 @@ if (Ranges.length > 0 &&
                 // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
                 static foreach (i, v; input)
                 {
-                    if (shouldMove!(typeof(v)))
-                        source[i] = move(v);
-                    else
+                    if (__traits(isPOD, typeof(v)))
                         source[i] = v;
+                    else
+                        source[i] = move(v);
                 }
             }
 
@@ -1502,10 +1502,10 @@ private struct ChooseResult(Ranges...)
             static foreach (i; 0 .. rs.length)
             {
                 case i:
-                    static if (shouldMove!(typeof(rs[i])))
-                        moveEmplace(rs[i], this.rs[i]);
-                    else
+                    static if (__traits(isPOD, typeof(rs[i])))
                         emplace(&this.rs[i], rs[i]);
+                    else
+                        moveEmplace(rs[i], this.rs[i]);
                 break sw;
             }
 
@@ -3897,10 +3897,10 @@ if (isForwardRange!R && !isInfinite!R)
         /// Range primitives
         this(R input, size_t index = 0)
         {
-            static if (shouldMove!R)
-                _original = move(input);
-            else
+            static if (__traits(isPOD, R))
                 _original = input;
+            else
+                _original = move(input);
             _index = index % _original.length;
         }
 
@@ -4004,23 +4004,23 @@ if (isForwardRange!R && !isInfinite!R)
         /// ditto
         this(R input)
         {
-            static if (shouldMove!R)
-                _original = move(input);
-            else
+            static if (__traits(isPOD, R))
                 _original = input;
+            else
+                _original = move(input);
             _current = _original.save;
         }
 
         private this(R original, R current)
         {
-            static if (shouldMove!R)
-                _original = move(original);
-            else
+            static if (__traits(isPOD, R))
                 _original = original;
-            static if (shouldMove!R)
-                _current = move(current);
             else
+                _original = move(original);
+            static if (__traits(isPOD, R))
                 _current = current;
+            else
+                _current = move(current);
         }
 
         /// ditto
@@ -4435,10 +4435,10 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     {
         static foreach (i, r; rs)
         {
-            static if (shouldMove!(typeof(r)))
-                ranges[i] = move(r);
-            else
+            static if (__traits(isPOD, typeof(r)))
                 ranges[i] = r;
+            else
+                ranges[i] = move(r);
         }
         stoppingPolicy = s;
     }
@@ -4968,10 +4968,10 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     {
         static foreach (i, r; rs)
         {
-            static if (shouldMove!(typeof(r)))
-                ranges[i] = move(r);
-            else
+            static if (__traits(isPOD, typeof(r)))
                 ranges[i] = r;
+            else
+                ranges[i] = move(r);
         }
     }
 
@@ -5648,10 +5648,10 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 
         static foreach (i, r; ranges)
         {
-            static if (shouldMove!(typeof(r)))
-                _ranges[i] = move(r);
-            else
+            static if (__traits(isPOD, typeof(r)))
                 _ranges[i] = r;
+            else
+                _ranges[i] = move(r);
         }
 
         enforce(sp != StoppingPolicy.longest,
@@ -5955,10 +5955,10 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 
     this(StateType[stateSize] initial)
     {
-        static if (shouldMove!StateType)
-            _state = move(initial);
-        else
+        static if (__traits(isPOD, StateType))
             _state = initial;
+        else
+            _state = move(initial);
     }
 
     void popFront()
@@ -6073,10 +6073,10 @@ private:
 public:
     this(State initial, size_t n = 0)
     {
-        static if (shouldMove!State)
-            _state = move(initial);
-        else
+        static if (__traits(isPOD, State))
             _state = initial;
+        else
+            _state = move(initial);
         _n = n;
     }
 
@@ -6325,14 +6325,14 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 this.step = 0;
                 return;
             }
-            static if (shouldMove!(typeof(step)))
-                this.step = move(step);
-            else
+            static if (__traits(isPOD, typeof(step)))
                 this.step = step;
-            static if (shouldMove!(typeof(current)))
-                this.current = move(current);
             else
+                this.step = move(step);
+            static if (__traits(isPOD, typeof(current)))
                 this.current = current;
+            else
+                this.current = move(current);
         }
 
         @property bool empty() const { return step == 0; }
@@ -7025,10 +7025,10 @@ struct FrontTransversal(Ror,
 */
     this(RangeOfRanges input)
     {
-        static if (shouldMove!RangeOfRanges)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, RangeOfRanges))
             _input = input;
+        else
+            _input = move(input);
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
@@ -7360,10 +7360,10 @@ struct Transversal(Ror,
 */
     this(RangeOfRanges input, size_t n)
     {
-        static if (shouldMove!RangeOfRanges)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, RangeOfRanges))
             _input = input;
+        else
+            _input = move(input);
         _n = n;
         prime();
         static if (opt == TransverseOptions.enforceNotJagged)
@@ -7631,10 +7631,10 @@ if (isForwardRange!RangeOfRanges &&
 {
     this(RangeOfRanges input)
     {
-        static if (shouldMove!RangeOfRanges)
-            this._input = move(input);
-        else
+        static if (__traits(isPOD, RangeOfRanges))
             this._input = input;
+        else
+            this._input = move(input);
         static if (opt == TransverseOptions.enforceNotJagged)
         {
             import std.exception : enforce;
@@ -7835,14 +7835,14 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
 {
     this(Source source, Indices indices)
     {
-        static if (shouldMove!Source)
-            this._source = move(source);
-        else
+        static if (__traits(isPOD, Source))
             this._source = source;
-        static if (shouldMove!Indices)
-            this._indices = move(indices);
         else
+            this._source = move(source);
+        static if (__traits(isPOD, Indices))
             this._indices = indices;
+        else
+            this._indices = move(indices);
     }
 
     /// Range primitives
@@ -8108,10 +8108,10 @@ if (isInputRange!Source)
         this(Source source, size_t chunkSize)
         {
             assert(chunkSize != 0, "Cannot create a Chunk with an empty chunkSize");
-            static if (shouldMove!Source)
-                _source = move(source);
-            else
+            static if (__traits(isPOD, Source))
                 _source = source;
+            else
+                _source = move(source);
             _chunkSize = chunkSize;
         }
 
@@ -8330,10 +8330,10 @@ if (isInputRange!Source)
 
         private this(Source r, size_t chunkSize)
         {
-            static if (shouldMove!Source)
-                impl = RefCounted!Impl(move(r), r.empty ? 0 : chunkSize, chunkSize);
-            else
+            static if (__traits(isPOD, Source))
                 impl = RefCounted!Impl(r, r.empty ? 0 : chunkSize, chunkSize);
+            else
+                impl = RefCounted!Impl(move(r), r.empty ? 0 : chunkSize, chunkSize);
         }
 
         @property bool empty() { return impl.chunkSize == 0; }
@@ -8518,10 +8518,10 @@ if (isForwardRange!Source && hasLength!Source)
     this(Source source, size_t chunkCount)
     {
         assert(chunkCount != 0 || source.empty, "Cannot create EvenChunks with a zero chunkCount");
-        static if (shouldMove!Source)
-            _source = move(source);
-        else
+        static if (__traits(isPOD, Source))
             _source = source;
+        else
+            _source = move(source);
         _chunkCount = chunkCount;
     }
 
@@ -10866,10 +10866,10 @@ if (isInputRange!Range && !isInstanceOf!(SortedRange, Range))
         {
             strictlyVerifySorted(input);
         }
-        static if (shouldMove!Range)
-            this._input = move(input);
-        else
+        static if (__traits(isPOD, Range))
             this._input = input;
+        else
+            this._input = move(input);
     }
 
     // Assertion only.
@@ -13490,10 +13490,10 @@ if (
 
         this(R r, E e, size_t n)
         {
-            static if (shouldMove!R)
-                data = move(r);
-            else
+            static if (__traits(isPOD, R))
                 data = r;
+            else
+                data = move(r);
             element = e;
             static if (hasLength!R)
             {

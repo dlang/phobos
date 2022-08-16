@@ -304,10 +304,10 @@ private struct _Cache(R, bool bidir)
 
     this(R range)
     {
-        static if (shouldMove!R)
-            this.source = move(range);
-        else
+        static if (__traits(isPOD, R))
             this.source = range;
+        else
+            this.source = move(range);
         if (!source.empty)
         {
             caches[0] = source.front;
@@ -377,10 +377,10 @@ private struct _Cache(R, bool bidir)
     {
         private this(R source, ref CacheTypes caches)
         {
-            static if (shouldMove!R)
-                this.source = move(source);
-            else
+            static if (__traits(isPOD, R))
                 this.source = source;
+            else
+                this.source = move(source);
             this.caches = caches;
         }
         typeof(this) save() @property
@@ -561,10 +561,10 @@ private struct MapResult(alias fun, Range)
 
     this(R input)
     {
-        static if (shouldMove!R)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, R))
             _input = input;
+        else
+            _input = move(input);
     }
 
     static if (isInfinite!R)
@@ -1355,18 +1355,18 @@ private struct FilterResult(alias pred, Range)
 
     this(R r)
     {
-        static if (shouldMove!R)
-            _input = move(r);
-        else
+        static if (__traits(isPOD, R))
             _input = r;
+        else
+            _input = move(r);
     }
 
     private this(R r, bool primed)
     {
-        static if (shouldMove!R)
-            _input = move(r);
-        else
+        static if (__traits(isPOD, R))
             _input = r;
+        else
+            _input = move(r);
         _primed = primed;
     }
 
@@ -1578,10 +1578,10 @@ private struct FilterBidiResult(alias pred, Range)
 
     this(R r)
     {
-        static if (shouldMove!R)
-            _input = move(r);
-        else
+        static if (__traits(isPOD, R))
             _input = r;
+        else
+            _input = move(r);
         while (!_input.empty && !pred(_input.front)) _input.popFront();
         while (!_input.empty && !pred(_input.back)) _input.popBack();
     }
@@ -1682,19 +1682,19 @@ if (isInputRange!R)
     ///
     this(R input)
     {
-        static if (shouldMove!R)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, R))
             _input = input;
+        else
+            _input = move(input);
         if (!_input.empty) popFront();
     }
 
     private this(R input, Tuple!(MutableE, uint) current)
     {
-        static if (shouldMove!R)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, R))
             _input = input;
+        else
+            _input = move(input);
         _current = current;
     }
 
@@ -1937,10 +1937,10 @@ if (isInputRange!Range && !isForwardRange!Range)
 
     this(Range _r)
     {
-        static if (shouldMove!Range)
-            r = move(_r);
-        else
+        static if (__traits(isPOD, Range))
             r = _r;
+        else
+            r = move(_r);
         if (!empty)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
@@ -3104,10 +3104,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
         this(RoR items, Separator sep)
         {
-            static if (shouldMove!RoR)
-                _items = move(items);
-            else
+            static if (__traits(isPOD, RoR))
                 _items = items;
+            else
+                _items = move(items);
             _currentSep.initialize(sep);
             static if (isBidirectional)
                 _currentBackSep.initialize(sep);
@@ -3647,10 +3647,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
         this(RoR items, ElementType!RoR current)
         {
-            static if (shouldMove!RoR)
-                _items = move(items);
-            else
+            static if (__traits(isPOD, RoR))
                 _items = items;
+            else
+                _items = move(items);
             _current = current;
             static if (isBidirectional && hasNested!Result)
                 _currentBack = typeof(_currentBack).init;
@@ -3672,10 +3672,10 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     public:
         this(RoR r)
         {
-            static if (shouldMove!RoR)
-                _items = move(r);
-            else
+            static if (__traits(isPOD, RoR))
                 _items = r;
+            else
+                _items = move(r);
             // field _current must be initialized in constructor, because it is nested struct
             _current = typeof(_current).init;
 
@@ -4978,10 +4978,10 @@ if (fun.length >= 1)
 
             this(R range, ref Args args)
             {
-                static if (shouldMove!R)
-                    source = move(range);
-                else
+                static if (__traits(isPOD, R))
                     source = range;
+                else
+                    source = move(range);
                 if (source.empty)
                     return;
 
@@ -5358,10 +5358,10 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            static if (shouldMove!Range)
-                _input = move(input);
-            else
+            static if (__traits(isPOD, Range))
                 _input = input;
+            else
+                _input = move(input);
             _separator = separator;
 
             static if (isNarrowString!Range)
@@ -5942,10 +5942,10 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     public:
         this(Range input, Separator separator)
         {
-            static if (shouldMove!Range)
-                _input = move(input);
-            else
+            static if (__traits(isPOD, Range))
                 _input = input;
+            else
+                _input = move(input);
             _separator = separator;
         }
 
@@ -6150,10 +6150,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
     this(Range input)
     {
-        static if (shouldMove!Range)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, Range))
             _input = input;
+        else
+            _input = move(input);
         static if (!fullSlicing)
             _next = _input.save;
 
@@ -7813,10 +7813,10 @@ private struct UniqResult(alias pred, Range)
 
     this(Range input)
     {
-        static if (shouldMove!Range)
-            _input = move(input);
-        else
+        static if (__traits(isPOD, Range))
             _input = input;
+        else
+            _input = move(input);
     }
 
     static if (__traits(isCopyable, Range))
@@ -7948,10 +7948,10 @@ if (isRandomAccessRange!Range && hasLength!Range)
         import std.array : array;
         import std.range : iota;
 
-        static if (shouldMove!Range)
-            _r = move(r);
-        else
+        static if (__traits(isPOD, Range))
             _r = r;
+        else
+            _r = move(r);
         _state = _r.length ? new size_t[_r.length-1] : null;
         _indices = iota(size_t(_r.length)).array;
         _empty = _r.length == 0;
