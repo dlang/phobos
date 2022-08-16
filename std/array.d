@@ -2297,7 +2297,7 @@ if (isInputRange!RoR &&
 // https://issues.dlang.org/show_bug.cgi?id=10895
 @safe unittest
 {
-    class A
+    static class A
     {
         string name;
         alias name this;
