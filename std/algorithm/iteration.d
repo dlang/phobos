@@ -126,7 +126,7 @@ if (isBidirectionalRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range, std.stdio;
+    import std.range;
     import std.typecons : tuple;
 
     ulong counter = 0;
@@ -2204,7 +2204,6 @@ if (isForwardRange!Range)
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
-    import std.stdio;
     auto n = 3;
     auto s = [1,2,3].chunkBy!(a => a+n);
     auto t = s.save.map!(x=>x[0]);
