@@ -3848,6 +3848,44 @@ else
     static assert( hasElaborateMove!S10);
 }
 
+/** True if the last reference of a `T` in the scope of its lifetime should be
+ * passed by move instead of by copy either because
+ *
+ * - it cannot be copied or
+ * - because it has an elaborate constructor or elaborate destructor that can be
+ *   elided via a move.
+ *
+ * This excludes arrays and classes.
+ *
+ * Note that `__traits(isPOD, T)` implies
+ * `core.internal.traits.hasElaborateAssign!T ||
+ *  core.internal.traits.hasElaborateDestructor!T`.
+ *
+ * See_Also: `std.traits.hasElaborateMove`.
+ */
+enum bool shouldMove(T) = !__traits(isCopyable, T) || !__traits(isPOD, T);
+
+///
+@safe pure unittest
+{
+    static assert(!shouldMove!char);
+    static assert(!shouldMove!int);
+    static assert(!shouldMove!string);
+    static assert(!shouldMove!(int[]));
+
+	class C {}
+    static assert(!shouldMove!(C));
+
+    struct POD {}
+    static assert(!shouldMove!POD);
+
+    struct SomeUncopyable { @disable this(this); }
+    static assert(shouldMove!SomeUncopyable);
+
+    struct WithDtor { ~this() nothrow {} }
+    static assert(shouldMove!WithDtor);
+}
+
 package alias Identity(alias A) = A;
 
 /**
