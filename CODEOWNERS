@@ -36,7 +36,6 @@ std/digest/* @jpf91
 std/experimental/allocator/* @andralex @wilzbach @PetarKirov
 std/experimental/checkedint/* @andralex
 std/experimental/logger/* @burner
-# std/experimental/typecons.d
 std/file.d @CyberShadow
 # std/format.d
 # std/functional.d
