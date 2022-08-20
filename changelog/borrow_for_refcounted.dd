@@ -43,7 +43,7 @@ int destroyFirstAndUseLater()
 }
 -------
 
-As a side effect, $(LREF dirEntries, std, file) is now also `@safe` with
+As a side effect, $(REF dirEntries, std, file) is now also `@safe` with
 `-preview=dip1000`.
 
 Some member functions of `RefCounted` that were `@safe` are not anymore.
