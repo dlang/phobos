@@ -1,8 +1,8 @@
 Added `borrow` for `RefCounted`. `@safe` with `-preview=dip1000`.
 
 `std.typecons.RefCounted` has so far been only available for `@system` code,
-because of possibility of escaping a reference to it's payload past the end of
-it's lifetime. We have added a `borrow` function, that lets one to safely
+because of possibility of escaping a reference to its payload past the end of
+its lifetime. We have added a `borrow` function, that lets one to safely
 access and modify the payload. `-dip1000` prevents escaping a reference to it
 in `@safe` code.
 
