@@ -1216,8 +1216,8 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
 /**
  * Used to convert hex string to byte array
  * Params:
- *  hex = hex string 
- *  num = count of bytes 
+ *  hex = hex string
+ *  num = count of bytes
  * Returns: byte array
  * Example:
  * ---
