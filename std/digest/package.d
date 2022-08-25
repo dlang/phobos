@@ -1276,7 +1276,7 @@ auto fromHexString(const string hex) pure nothrow @safe @nogc
 /*
  * Fill in a preallocated byte buffer by values from ASCII hex buffer
  */
-private auto toDigestImpl(BB, HB)(
+private auto fromHexStringImpl(BB, HB)(
     scope const ref HB hexBuffer, return scope ref BB byteBuffer) @safe pure nothrow @nogc
 {
     size_t bi = byteBuffer.length - 1, hi;
