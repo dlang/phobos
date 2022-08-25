@@ -1221,7 +1221,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
  * ubyte[] dby  = "0xBA".toDigest;   // returns dynamic array, gc allocating
  * ---
  */
-auto toDigest(const string hex) pure nothrow @safe
+auto fromHexString(const string hex) pure nothrow @safe
 {
     auto digest = new ubyte[hex.length / 2 + hex.length % 2];
     return toDigestImpl(hex, digest);
