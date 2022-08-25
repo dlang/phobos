@@ -1228,7 +1228,7 @@ auto toDigest(const string hex) pure nothrow @safe
 }
 
 /// ditto
-auto toDigest(size_t num)(const string hex) pure nothrow @safe @nogc
+auto fromHexString(const string hex) pure nothrow @safe @nogc
 {
     ubyte[num] digest;
     toDigestImpl(hex, digest);
