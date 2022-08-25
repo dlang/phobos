@@ -1215,23 +1215,27 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
 
 /**
  * Used to convert hex string to byte array
+ * Params:
+ *  hex = hex string 
+ *  num = count of bytes 
+ * Returns: byte array
  * Example:
  * ---
- * ubyte[2] sba = "0xAA".toDigest!2; // returns static array, no allocating
- * ubyte[] dby  = "0xBA".toDigest;   // returns dynamic array, gc allocating
+ * ubyte[2] sba = "0xAA".fromHexString!2; // returns static array, no allocating
+ * ubyte[] dby  = "0xBA".fromHexString;   // returns dynamic array, gc allocating
  * ---
  */
 auto fromHexString(const string hex) pure nothrow @safe
 {
     auto digest = new ubyte[hex.length / 2 + hex.length % 2];
-    return toDigestImpl(hex, digest);
+    return fromHexStringImpl(hex, digest);
 }
 
 /// ditto
-auto fromHexString(const string hex) pure nothrow @safe @nogc
+auto fromHexString(size_t num)(const string hex) pure nothrow @safe @nogc
 {
     ubyte[num] digest;
-    toDigestImpl(hex, digest);
+    fromHexStringImpl(hex, digest);
     return digest;
 }
 
@@ -1242,7 +1246,7 @@ auto fromHexString(const string hex) pure nothrow @safe @nogc
     {
         import std.conv : text;
 
-        assert(b == s.toDigest, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+        assert(b == s.fromHexString, text(s ~ ".fromHexString returned ", s.fromHexString, ", instead of ", b));
     }
 
     testToDigest([255], "0xff");
@@ -1262,7 +1266,7 @@ auto fromHexString(const string hex) pure nothrow @safe @nogc
     void testToStaticDigest(size_t n)(const ubyte[n]b, const string s ) @safe
     {
         import std.conv : text;
-        assert(b == s.toDigest!n, text(s ~ ".toDigest returned ", s.toDigest, ", instead of ", b));
+        assert(b == s.fromHexString!n, text(s ~ ".fromHexString returned ", s.fromHexString, ", instead of ", b));
     }
 
     testToStaticDigest!3([0, 0, 255], "0xff");
