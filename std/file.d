@@ -4442,11 +4442,6 @@ version (Windows) @safe unittest
     Throws:
         $(LREF FileException) if there is an error (including if the given
         file is not a directory).
-
-    ABI note:
-        This function is currently a zero-argument template, because it has to
-        be compiled together with client code. Otherwise the binary name
-        mangling would be wrong for code without -DIP1000.
  +/
 void rmdirRecurse(scope const(char)[] pathname) @safe
 {
@@ -4471,8 +4466,9 @@ void rmdirRecurse(ref scope DirEntry de) @safe
     else
     {
         // dirEntries is @system without DIP1000 because it uses
-        // a DirIterator with a RefCounted variable, but here, no references
-        // to the payload is escaped to the outside, so this should be @trusted
+        // a DirIterator with a SafeRefCounted variable, but here, no
+        // references to the payload are escaped to the outside, so this should
+        // be @trusted
         () @trusted {
             // all children, recursively depth-first
             foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
@@ -4877,7 +4873,7 @@ struct DirIterator(bool useDIP1000)
         "Please don't override useDIP1000 to disagree with compiler switch.");
 
 private:
-    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
