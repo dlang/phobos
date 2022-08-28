@@ -121,7 +121,6 @@ SRC_STD_3c= \
 	std\typetuple.d \
 	std\traits.d \
 	std\encoding.d \
-	std\xml.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \

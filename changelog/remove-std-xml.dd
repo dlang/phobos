@@ -1,0 +1,4 @@
+std.xml has been removed
+
+This module is considered out-dated and not up to Phobos' current standards.
+If you still need it, go to $(LINK https://github.com/DigitalMars/undeaD)

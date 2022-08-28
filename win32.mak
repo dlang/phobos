@@ -132,7 +132,6 @@ SRC_STD_3a= \
 	std\typetuple.d \
 	std\traits.d \
 	std\encoding.d \
-	std\xml.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
@@ -485,7 +484,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\typetuple.d
 	$(DMD) -conf= -cov=ctfe -cov=85 $(UDFLAGS) -main -run std\traits.d
 	$(DMD) -conf= -cov=ctfe -cov=62 $(UDFLAGS) -main -run std\encoding.d
-	$(DMD) -conf= -cov=ctfe -cov=61 $(UDFLAGS) -main -run std\xml.d
 	$(DMD) -conf= -cov=ctfe -cov=79 $(UDFLAGS) -main -run std\random.d
 	$(DMD) -conf= -cov=ctfe -cov=92 $(UDFLAGS) -main -run std\exception.d
 	$(DMD) -conf= -cov=ctfe -cov=73 $(UDFLAGS) -main -run std\concurrency.d

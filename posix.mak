@@ -216,7 +216,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip checkedint compiler complex con
   functional getopt int128 json mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
   stdio string sumtype system traits typecons \
-  uri utf uuid variant xml zip zlib
+  uri utf uuid variant zip zlib
 PACKAGE_std_experimental = checkedint
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
