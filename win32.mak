@@ -202,7 +202,6 @@ SRC_STD_DIGEST= \
 	std\digest\sha.d \
 	std\digest\md.d \
 	std\digest\ripemd.d \
-	std\digest\digest.d \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
@@ -498,7 +497,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=ctfe -cov=55 $(UDFLAGS) -main -run std\digest\sha.d
 	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\md.d
 	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\ripemd.d
-	$(DMD) -conf= -cov=ctfe -cov=75 $(UDFLAGS) -main -run std\digest\digest.d
 	$(DMD) -conf= -cov=ctfe -cov=100 $(UDFLAGS) -main -run std\digest\hmac.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\package.d
 	$(DMD) -conf= -cov=ctfe -cov=95 $(UDFLAGS) -main -run std\algorithm\comparison.d

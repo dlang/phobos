@@ -231,7 +231,6 @@ SRC_STD_DIGEST= \
 	std\digest\sha.d \
 	std\digest\md.d \
 	std\digest\ripemd.d \
-	std\digest\digest.d \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
