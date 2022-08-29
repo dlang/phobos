@@ -121,7 +121,6 @@ SRC_STD_3c= \
 	std\typetuple.d \
 	std\traits.d \
 	std\encoding.d \
-	std\xml.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
@@ -232,7 +231,6 @@ SRC_STD_DIGEST= \
 	std\digest\sha.d \
 	std\digest\md.d \
 	std\digest\ripemd.d \
-	std\digest\digest.d \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d

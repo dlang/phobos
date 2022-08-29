@@ -71,6 +71,5 @@ std/utf.d @jmdavis
 std/uuid.d @jpf91
 # std/variant.d
 std/windows/* @CyberShadow
-# std/xml.d
 std/zip.d @CyberShadow
 std/zlib.d @CyberShadow
