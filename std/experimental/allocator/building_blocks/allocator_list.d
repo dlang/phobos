@@ -314,7 +314,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         else
         {
-            bkalloc.deallocate(toFree);
+            static if (hasMember!(typeof(bkalloc), "deallocate"))
+                bkalloc.deallocate(toFree);
         }
     }
 
@@ -577,7 +578,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
             n.a.deallocateAll;
             n.a.destroy;
         }
-        bkalloc.deallocate(allocators);
+        static if (hasMember!(typeof(bkalloc), "deallocate"))
+            bkalloc.deallocate(allocators);
         allocators = null;
         root = null;
         return true;

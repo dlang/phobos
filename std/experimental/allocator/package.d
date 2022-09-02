@@ -1183,6 +1183,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
             }
         }
 
+        static if (hasMember!(Allocator, "deallocate"))
         scope(failure)
         {
             static if (is(typeof(() pure { return construct(); })))
@@ -1832,10 +1833,13 @@ if (isInputRange!R && !isInfinite!R)
                 destroy(p);
             }
 
-            static if (canSafelyDeallocPostRewind!T)
-                () @trusted { alloc.deallocate(m); } ();
-            else
-                alloc.deallocate(m);
+            static if (hasMember!(Allocator, "deallocate"))
+            {
+                static if (canSafelyDeallocPostRewind!T)
+                    () @trusted { alloc.deallocate(m); } ();
+                else
+                    alloc.deallocate(m);
+            }
         }
 
         import core.internal.lifetime : emplaceRef;
@@ -1872,10 +1876,13 @@ if (isInputRange!R && !isInfinite!R)
                 destroy(result[i]);
             }
 
-            static if (canSafelyDeallocPostRewind!T)
-                () @trusted { alloc.deallocate(m); } ();
-            else
-                alloc.deallocate(m);
+            static if (hasMember!(Allocator, "deallocate"))
+            {
+                static if (canSafelyDeallocPostRewind!T)
+                    () @trusted { alloc.deallocate(m); } ();
+                else
+                    alloc.deallocate(m);
+            }
         }
         scope (failure) bailout;
 
@@ -2346,7 +2353,8 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 
     if (delta == array.length)
     {
-        alloc.deallocate(array);
+        static if (hasMember!(Allocator, "deallocate"))
+            alloc.deallocate(array);
         array = null;
         return true;
     }
@@ -2402,7 +2410,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T* p)
     {
         destroy(*p);
     }
-    alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
+    static if (hasMember!(A, "deallocate"))
+        alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
     static if (__traits(isRef, p))
         p = null;
 }
@@ -2426,7 +2435,8 @@ if (is(T == class) || is(T == interface))
         alias ob = p;
     auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
-    alloc.deallocate(support);
+    static if (hasMember!(A, "deallocate"))
+        alloc.deallocate(support);
     static if (__traits(isRef, p))
         p = null;
 }
@@ -2441,7 +2451,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
             destroy(e);
         }
     }
-    alloc.deallocate(array);
+    static if (hasMember!(A, "deallocate"))
+        alloc.deallocate(array);
     static if (__traits(isRef, array))
         array = null;
 }
@@ -3784,11 +3795,13 @@ unittest
             switch (uniform(0, 2))
             {
             case 0:
-                () nothrow @nogc { a.deallocate(bufs[j]); }();
+                static if (hasMember!(A, "deallocate"))
+                    () nothrow @nogc { a.deallocate(bufs[j]); }();
                 bufs[j] = a.allocate(uniform(0, 4096));
                 break;
             case 1:
-                () nothrow @nogc { a.deallocate(bufs[j]); }();
+                static if (hasMember!(A, "deallocate"))
+                    () nothrow @nogc { a.deallocate(bufs[j]); }();
                 bufs[j] = null;
                 break;
             default:
@@ -3862,20 +3875,20 @@ unittest
     import std.experimental.allocator.building_blocks.segregator : Segregator;
     import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
-    /// Define an allocator bound to the built-in GC.
-    auto alloc = allocatorObject(GCAllocator.instance);
+    /// Define an allocator bound to the C library's 'malloc'
+    auto alloc = allocatorObject(Mallocator.instance);
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b));
 
     import std.algorithm.comparison : max;
     // Define an elaborate allocator and bind it to the class API.
-    alias FList = FreeList!(GCAllocator, 0, unbounded);
+    alias FList = FreeList!(Mallocator, 0, unbounded);
     alias A = ThreadLocal!(
         Segregator!(
-            8, FreeList!(GCAllocator, 0, 8),
+            8, FreeList!(Mallocator, 0, 8),
             128, Bucketizer!(FList, 1, 128, 16),
             256, Bucketizer!(FList, 129, 256, 32),
             512, Bucketizer!(FList, 257, 512, 64),
@@ -3883,9 +3896,9 @@ unittest
             2048, Bucketizer!(FList, 1025, 2048, 256),
             3584, Bucketizer!(FList, 2049, 3584, 512),
             4072 * 1024, AllocatorList!(
-                (n) => BitmappedBlock!(4096)(cast(ubyte[]) GCAllocator.instance.allocate(
+                (n) => BitmappedBlock!(4096)(cast(ubyte[]) Mallocator.instance.allocate(
                     max(n, 4072 * 1024)))),
-            GCAllocator
+            Mallocator
         )
     );
 

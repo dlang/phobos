@@ -253,12 +253,23 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         }
 
         static if (hasMember!(SmallAllocator, "deallocate")
-                && hasMember!(LargeAllocator, "deallocate"))
+                || hasMember!(LargeAllocator, "deallocate"))
         bool deallocate(void[] data)
         {
-            return data.length <= threshold
-                ? _small.deallocate(data)
-                : _large.deallocate(data);
+            if (data.length <= threshold)
+            {
+                static if (hasMember!(SmallAllocator, "deallocate"))
+                    return _small.deallocate(data);
+                else
+                    return false;
+            }
+            else
+            {
+                static if (hasMember!(LargeAllocator, "deallocate"))
+                    return _large.deallocate(data);
+                else
+                    return false;
+            }
         }
 
         static if (hasMember!(SmallAllocator, "deallocateAll")
@@ -459,6 +470,16 @@ if (Args.length > 3)
     void[] p;
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    shared Segregator!(1024 * 4, Mallocator, Mallocator) a;
+
+    auto b = a.allocate(201);
+    assert(b.length == 201);
 
     // Ensure deallocate inherits from parent allocators
     assert((() nothrow @nogc => a.deallocate(b))());

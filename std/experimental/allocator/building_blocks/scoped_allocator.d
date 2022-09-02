@@ -194,8 +194,13 @@ struct ScopedAllocator(ParentAllocator)
             void* p = n + 1;
             auto length = n.length;
             n = n.next;
-            if (!parent.deallocate(p[0 .. length]))
+            static if (!hasMember!(Allocator, "deallocate"))
                 result = false;
+            else
+            {
+                if (!parent.deallocate(p[0 .. length]))
+                    result = false;
+            }
         }
         root = null;
         return result;
@@ -245,8 +250,8 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    ScopedAllocator!GCAllocator a;
+    import std.experimental.allocator.mallocator : Mallocator;
+    ScopedAllocator!Mallocator a;
 
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
 

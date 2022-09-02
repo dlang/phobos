@@ -507,10 +507,10 @@ version (StdUnittest)
 
 @system unittest
 {
-    import std.experimental.allocator.gc_allocator;
-    alias a = AffixAllocator!(GCAllocator, uint).instance;
+    import std.experimental.allocator.mallocator;
+    alias a = AffixAllocator!(Mallocator, uint).instance;
 
-    // Check that goodAllocSize inherits from parent, i.e. GCAllocator
+    // Check that goodAllocSize inherits from parent, i.e. Mallocator
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
 
     // Ensure deallocate inherits from parent

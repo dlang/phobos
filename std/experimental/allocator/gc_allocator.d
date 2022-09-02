@@ -23,9 +23,9 @@ struct GCAllocator
     enum uint alignment = platformAlignment;
 
     /**
-    Standard allocator methods per the semantics defined above. The $(D
-    deallocate) and `reallocate` methods are `@system` because they may
-    move memory around, leaving dangling pointers in user code.
+    Standard allocator methods per the semantics defined above. The
+    `reallocate` method is `@system` because it may leave dangling
+    pointers in user code.
     */
     pure nothrow @trusted void[] allocate(size_t bytes) shared const
     {
@@ -85,14 +85,6 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @system @nogc
-    bool deallocate(void[] b) shared const
-    {
-        GC.free(b.ptr);
-        return true;
-    }
-
-    /// Ditto
     pure nothrow @safe @nogc
     size_t goodAllocSize(size_t n) shared const
     {
@@ -137,9 +129,7 @@ struct GCAllocator
 pure @system unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
-    // deallocate upon scope's end (alternatively: leave it to collection)
-    scope(exit) GCAllocator.instance.deallocate(buffer);
-    //...
+    // buffer will be collected automatically by the GC
 }
 
 pure @safe unittest
@@ -161,7 +151,6 @@ pure @system unittest
         assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
 
         auto buffer = GCAllocator.instance.allocate(s);
-        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer); }();
 
         void[] p;
         assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
@@ -174,7 +163,6 @@ pure @system unittest
         version (none)
         {
             auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
-            scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer2); }();
 
             assert(GC.sizeOf(buffer2.ptr) == s);
         }
