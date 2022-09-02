@@ -1559,8 +1559,13 @@ class StdForwardLogger : Logger
         }
     }
 
+    auto oldSharedLog = sharedLog;
+
     sharedLog = new shared RaceLogger;
-    scope(exit) { sharedLog = null; }
+    scope(exit)
+    {
+        sharedLog = oldSharedLog;
+    }
     () @trusted { new Thread(() { log("foo"); }).start(); }();
     log("bar");
 }
@@ -1897,7 +1902,7 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
         assertThrown!Throwable(logf(LogLevel.fatal, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
-    assert(l.msg == msg.format("Yet"));
+    assert(l.msg == msg.format("Yet"), l.msg);
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
