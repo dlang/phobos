@@ -23,9 +23,7 @@ struct GCAllocator
     enum uint alignment = platformAlignment;
 
     /**
-    Standard allocator methods per the semantics defined above. The
-    `reallocate` method is `@system` because it may leave dangling
-    pointers in user code.
+    Standard allocator methods per the semantics defined above.
     */
     pure nothrow @trusted void[] allocate(size_t bytes) shared const
     {
@@ -54,23 +52,6 @@ struct GCAllocator
             assert(newSize >= desired);
         }
         b = b.ptr[0 .. desired];
-        return true;
-    }
-
-    /// Ditto
-    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared const
-    {
-        import core.exception : OutOfMemoryError;
-        try
-        {
-            auto p = cast(ubyte*) GC.realloc(b.ptr, newSize);
-            b = p[0 .. newSize];
-        }
-        catch (OutOfMemoryError)
-        {
-            // leave the block in place, tell caller
-            return false;
-        }
         return true;
     }
 
