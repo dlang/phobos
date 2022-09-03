@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-D's built-in garbage-collected allocator.
+Allocators that draw from the D runtime's garbage-collected heap.
 
 Source: $(PHOBOSSRC std/experimental/allocator/_gc_allocator.d)
 */
@@ -196,4 +196,149 @@ pure nothrow @safe unittest
     assert(GCAllocator.instance.resolveInternalPointer(null, result) == Ternary.no);
     void *badPtr = (() @trusted => cast(void*)(0xdeadbeef))();
     assert(GCAllocator.instance.resolveInternalPointer(badPtr, result) == Ternary.no);
+}
+
+/**
+Allocates from the D runtime's garbage-collected heap, but frees memory
+manually using $(REF GC.free, core,memory) rather than leaving it for the GC to
+collect.
+*/
+struct GCHeapMallocator
+{
+    import std.typecons : Ternary;
+
+    private GCAllocator impl;
+
+    /**
+    The alignment is a static constant equal to `platformAlignment`, which
+    ensures proper alignment for any D data type.
+    */
+    enum uint alignment = impl.alignment;
+
+    /**
+    Standard allocator methods per the semantics defined above. The $(D
+    deallocate) and `reallocate` methods are `@system` because they may
+    move memory around, leaving dangling pointers in user code.
+    */
+    pure nothrow @trusted void[] allocate(size_t bytes) shared const
+    {
+        return impl.allocate(bytes);
+    }
+
+    /// Ditto
+    pure nothrow @trusted bool expand(ref void[] b, size_t delta) shared const
+    {
+        return impl.expand(b, delta);
+    }
+
+    /// Ditto
+    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared const
+    {
+        return impl.reallocate(b, newSize);
+    }
+
+    /// Ditto
+    pure nothrow @trusted @nogc
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared const
+    {
+        return impl.resolveInternalPointer(p, result);
+    }
+
+    /// Ditto
+    pure nothrow @system @nogc
+    bool deallocate(void[] b) shared const
+    {
+        return impl.deallocate(b);
+    }
+
+    /// Ditto
+    pure nothrow @safe @nogc
+    size_t goodAllocSize(size_t n) shared const
+    {
+        return impl.goodAllocSize(n);
+    }
+
+    package pure nothrow @trusted void[] allocateZeroed()(size_t bytes) shared const
+    {
+        return impl.allocateZeroed(bytes);
+    }
+
+    /**
+    Returns the global instance of this allocator type. The garbage collected
+    allocator is thread-safe, therefore all of its methods and `instance` itself
+    are `shared`.
+    */
+
+    static shared const GCHeapMallocator instance;
+
+    // Leave it undocummented for now.
+    nothrow @trusted void collect() shared const
+    {
+        impl.collect();
+    }
+}
+
+///
+pure @system unittest
+{
+    auto buffer = GCHeapMallocator.instance.allocate(1024 * 1024 * 4);
+    // deallocate upon scope's end (alternatively: leave it to collection)
+    scope(exit) GCHeapMallocator.instance.deallocate(buffer);
+    //...
+}
+
+pure @safe unittest
+{
+    auto b = GCHeapMallocator.instance.allocate(10_000);
+    assert(GCHeapMallocator.instance.expand(b, 1));
+}
+
+pure @system unittest
+{
+    import core.memory : GC;
+    import std.typecons : Ternary;
+
+    // test allocation sizes
+    assert((() nothrow @safe @nogc => GCHeapMallocator.instance.goodAllocSize(1))() == 16);
+    for (size_t s = 16; s <= 8192; s *= 2)
+    {
+        assert((() nothrow @safe @nogc => GCHeapMallocator.instance.goodAllocSize(s))() == s);
+        assert((() nothrow @safe @nogc => GCHeapMallocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
+
+        auto buffer = GCHeapMallocator.instance.allocate(s);
+        scope(exit) () nothrow @nogc { GCHeapMallocator.instance.deallocate(buffer); }();
+
+        void[] p;
+        assert((() nothrow @safe => GCHeapMallocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
+        assert((() nothrow @safe => GCHeapMallocator.instance.resolveInternalPointer(&buffer[0], p))() == Ternary.yes);
+        assert(p.ptr is buffer.ptr && p.length >= buffer.length);
+
+        assert(GC.sizeOf(buffer.ptr) == s);
+
+        // the GC should provide power of 2 as "good" sizes, but other sizes are allowed, too
+        version (none)
+        {
+            auto buffer2 = GCHeapMallocator.instance.allocate(s - (s / 2) + 1);
+            scope(exit) () nothrow @nogc { GCHeapMallocator.instance.deallocate(buffer2); }();
+
+            assert(GC.sizeOf(buffer2.ptr) == s);
+        }
+    }
+
+    // anything above a page is simply rounded up to next page
+    assert((() nothrow @safe @nogc => GCHeapMallocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
+}
+
+pure nothrow @safe unittest
+{
+    import std.typecons : Ternary;
+
+    void[] buffer = GCHeapMallocator.instance.allocate(42);
+    void[] result;
+    Ternary found = GCHeapMallocator.instance.resolveInternalPointer(&buffer[0], result);
+
+    assert(found == Ternary.yes && &result[0] == &buffer[0] && result.length >= buffer.length);
+    assert(GCHeapMallocator.instance.resolveInternalPointer(null, result) == Ternary.no);
+    void *badPtr = (() @trusted => cast(void*)(0xdeadbeef))();
+    assert(GCHeapMallocator.instance.resolveInternalPointer(badPtr, result) == Ternary.no);
 }
