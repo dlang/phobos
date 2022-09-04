@@ -1566,8 +1566,14 @@ class StdForwardLogger : Logger
     {
         sharedLog = oldSharedLog;
     }
-    () @trusted { new Thread(() { log("foo"); }).start(); }();
+    Thread toWaitFor;
+    () @trusted { toWaitFor = new Thread(() { log("foo"); }).start(); }();
     log("bar");
+
+    () @trusted
+    {
+        toWaitFor.join();
+    }();
 }
 
 /** This `LogLevel` is unqiue to every thread.
