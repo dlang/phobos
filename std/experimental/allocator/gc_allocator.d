@@ -8,7 +8,14 @@ module std.experimental.allocator.gc_allocator;
 import std.experimental.allocator.common;
 
 /**
-D's built-in garbage-collected allocator.
+Allocator interface to D's built-in garbage collector.
+
+Provides `@safe` memory management with no manual deallocation.
+
+See_Also:
+    - $(LINK2 https://dlang.org/spec/garbage.html, Garbage Collection) in the
+      D language specification.
+    - $(MREF core,memory)
 */
 struct GCAllocator
 {
