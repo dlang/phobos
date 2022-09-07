@@ -602,6 +602,44 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
+    /** 
+     * Creates a `JSONValue` representing an empty object.
+     * Returns: A `JSONValue` whose type is `JSONType.object`.
+     */
+    static JSONValue emptyObject() pure @safe
+    {
+        JSONValue[string] objData;
+        return JSONValue(objData);
+    }
+    ///
+    @system unittest
+    {
+        JSONValue j = JSONValue.emptyObject();
+        assert(j.type == JSONType.object);
+        // Ensure that assigning and reading values from the object works.
+        j.object["a"] = JSONValue(1);
+        assert(j.object["a"] == JSONValue(1));
+    }
+
+    /** 
+     * Creates a `JSONValue` representing an empty array.
+     * Returns: A `JSONValue` whose type is `JSONType.array`.
+     */
+    static JSONValue emptyArray() pure @safe
+    {
+        return JSONValue(JSONValue[].init);
+    }
+    ///
+    @system unittest
+    {
+        JSONValue j = JSONValue.emptyArray();
+        assert(j.type == JSONType.array);
+        // Ensure that operating on the array works as intended.
+        j.array ~= JSONValue("Hello");
+        assert(j.array.length == 1);
+        assert(j.array[0] == JSONValue("Hello"));
+    }
+
     void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
     {
         assign(arg);
