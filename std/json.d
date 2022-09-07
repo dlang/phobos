@@ -602,7 +602,7 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
-    /** 
+    /**
      * Creates a `JSONValue` representing an empty object.
      * Returns: A `JSONValue` whose type is `JSONType.object`.
      */
@@ -621,7 +621,7 @@ struct JSONValue
         assert(j.object["a"] == JSONValue(1));
     }
 
-    /** 
+    /**
      * Creates a `JSONValue` representing an empty array.
      * Returns: A `JSONValue` whose type is `JSONType.array`.
      */
@@ -635,6 +635,7 @@ struct JSONValue
         JSONValue j = JSONValue.emptyArray();
         assert(j.type == JSONType.array);
         // Ensure that operating on the array works as intended.
+        assert(j.array.length == 0);
         j.array ~= JSONValue("Hello");
         assert(j.array.length == 1);
         assert(j.array[0] == JSONValue("Hello"));
