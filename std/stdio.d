@@ -5210,7 +5210,7 @@ enum StdFileHandle: string
             {
                 with (StdFileHandle)
                     assert(_iob == stdin || _iob == stdout || _iob == stderr);
-                impl.handle = mixin(_iob);
+                impl.handle = cast() mixin(_iob);
                 result._p = &impl;
                 atomicOp!"+="(spinlock, uint.max / 2);
                 break;
