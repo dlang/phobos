@@ -5152,7 +5152,7 @@ if (isInputRange!Range)
     void popFront()
     {
         assert(!empty, "Can not popFront of an empty Until");
-        switch(_endType) with(EndType) 
+        switch(_endType) with(EndType)
         {
             case sentinelIncluded:
             static if(isInputRange!Sentinel) {
