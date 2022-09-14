@@ -5060,6 +5060,8 @@ if (!is(Sentinel == OpenRight) &&!is(Sentinel == EndType))
 {
     return until!(pred,Range,Sentinel)(range,sentinel,openRight.toEndType);
 }
+
+/// Ditto
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, EndType endType )
@@ -5155,7 +5157,8 @@ if (isInputRange!Range)
         switch(_endType) with(EndType)
         {
             case sentinelIncluded:
-                static if(isInputRange!Sentinel) {
+                static if(isInputRange!Sentinel)
+                {
                     _input.popFront();
                     if(_matchStarted)
                     {
@@ -5172,7 +5175,9 @@ if (isInputRange!Range)
                         }
                     }
                     break;
-                } else {
+                }
+                else
+                {
                     assert(0,"Use firstPartOfSentinelIncluded with non-range sentinels");
                 }
             case firstPartOfSentinelIncluded:
@@ -5274,7 +5279,8 @@ pure @safe unittest
     }
 }
 // https://issues.dlang.org/show_bug.cgi?id=14543
-pure unittest {
+pure unittest
+{
     import std.algorithm.comparison : equal;
     assert("one two three".until("two").equal("one "));
     assert("one two three".until("two", OpenRight.no).equal("one t"));
