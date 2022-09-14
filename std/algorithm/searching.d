@@ -5155,37 +5155,37 @@ if (isInputRange!Range)
         switch(_endType) with(EndType)
         {
             case sentinelIncluded:
-            static if(isInputRange!Sentinel) {
-               _input.popFront();
-            if(_matchStarted)
-            {
-                _sentinel.popFront;
-                _done = _input.empty || _sentinel.empty;
-            }
-            else
-            {
-               _matchStarted =  predSatisfied();
-               _done = _sentinel.empty;
-                if(_done)
-                {
-                    _sentinel.popFront;
+                static if(isInputRange!Sentinel) {
+                    _input.popFront();
+                    if(_matchStarted)
+                    {
+                        _sentinel.popFront;
+                        _done = _input.empty || _sentinel.empty;
+                    }
+                    else
+                    {
+                        _matchStarted =  predSatisfied();
+                        _done = _sentinel.empty;
+                        if(_done)
+                        {
+                            _sentinel.popFront;
+                        }
+                    }
+                    break;
+                } else {
+                    assert(0,"Use firstPartOfSentinelIncluded with non-range sentinels");
                 }
-            }
-            } else {
-                assert(0,"Use firstPartOfSentinelIncluded with non-range sentinels");
-            }
-               break;
             case firstPartOfSentinelIncluded:
-               _done = predSatisfied();
-               _input.popFront();
-               _done = _done || _input.empty;
-               break;
+                _done = predSatisfied();
+                _input.popFront();
+                _done = _done || _input.empty;
+                break;
             case sentinelExcluded:
-               _input.popFront();
-               _done = _input.empty || predSatisfied();
-               break;
+                _input.popFront();
+                _done = _input.empty || predSatisfied();
+                break;
             default:
-               assert(0,"Unexpected EndType in until");
+                assert(0,"Unexpected EndType in until");
         }
 
     }
