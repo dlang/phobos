@@ -5005,6 +5005,31 @@ Otherwise if set to `OpenRight.no`, then the interval is closed to the right
 (last element included).
  */
 alias OpenRight = Flag!"openRight";
+/**
+New Interval option specifier for `until` (below) and others.
+
+If set to `sentinelExcluded`, then only the part of the range before the
+match is included.
+
+If set to `sentinelIncluded`, then the part of the range up
+to the end of the match is included.
+
+If set to `firstPartOfSentinelIncluded`, then the part of the range up
+to the and including the start of the match is included.
+ */
+
+enum EndType
+{
+    sentinelExcluded,
+    sentinelIncluded,
+    firstPartOfSentinelIncluded
+}
+
+
+private auto toEndType(OpenRight openRight)
+{
+    return openRight? EndType.sentinelExcluded : EndType.firstPartOfSentinelIncluded;
+}
 
 /**
 Lazily iterates `range` _until the element `e` for which
@@ -5031,9 +5056,20 @@ Returns:
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, OpenRight openRight = Yes.openRight)
-if (!is(Sentinel == OpenRight))
+if (!is(Sentinel == OpenRight) &&!is(Sentinel == EndType))
 {
-    return typeof(return)(range, sentinel, openRight);
+    return until!(pred,Range,Sentinel)(range,sentinel,openRight.toEndType);
+}
+Until!(pred, Range, Sentinel)
+until(alias pred = "a == b", Range, Sentinel)
+(Range range, Sentinel sentinel, EndType endType )
+if (!is(Sentinel == OpenRight) &&!is(Sentinel == EndType))
+{
+    if(endType == EndType.sentinelIncluded && !isInputRange!Sentinel)
+    {
+        endType = EndType.firstPartOfSentinelIncluded;
+    }
+    return typeof(return)(range, sentinel, endType);
 }
 
 /// Ditto
@@ -5041,7 +5077,7 @@ Until!(pred, Range, void)
 until(alias pred, Range)
 (Range range, OpenRight openRight = Yes.openRight)
 {
-    return typeof(return)(range, openRight);
+    return typeof(return)(range, openRight.toEndType);
 }
 
 /// ditto
@@ -5051,42 +5087,42 @@ if (isInputRange!Range)
     private Range _input;
     static if (!is(Sentinel == void))
         private Sentinel _sentinel;
-    private OpenRight _openRight;
+    private EndType _endType;
+    private bool _matchStarted;
     private bool _done;
 
     static if (!is(Sentinel == void))
     {
         ///
-        this(Range input, Sentinel sentinel,
-                OpenRight openRight = Yes.openRight)
+        this(Range input, Sentinel sentinel, EndType endType = EndType.sentinelExcluded)
         {
             _input = input;
             _sentinel = sentinel;
-            _openRight = openRight;
-            _done = _input.empty || openRight && predSatisfied();
+            _endType = endType;
+            _done = _input.empty || endType == EndType.sentinelExcluded && predSatisfied();
         }
-        private this(Range input, Sentinel sentinel, OpenRight openRight,
+        private this(Range input, Sentinel sentinel, EndType endType,
             bool done)
         {
             _input = input;
             _sentinel = sentinel;
-            _openRight = openRight;
+            _endType = endType;
             _done = done;
         }
     }
     else
     {
         ///
-        this(Range input, OpenRight openRight = Yes.openRight)
+        this(Range input, EndType endType = EndType.sentinelExcluded)
         {
             _input = input;
-            _openRight = openRight;
-            _done = _input.empty || openRight && predSatisfied();
+            _endType = endType;
+            _done = _input.empty || endType == EndType.sentinelExcluded && predSatisfied();
         }
-        private this(Range input, OpenRight openRight, bool done)
+        private this(Range input, EndType endType, bool done)
         {
             _input = input;
-            _openRight = openRight;
+            _endType = endType;
             _done = done;
         }
     }
@@ -5116,17 +5152,42 @@ if (isInputRange!Range)
     void popFront()
     {
         assert(!empty, "Can not popFront of an empty Until");
-        if (!_openRight)
+        switch(_endType) with(EndType) 
         {
-            _done = predSatisfied();
-            _input.popFront();
-            _done = _done || _input.empty;
+            case sentinelIncluded:
+            static if(isInputRange!Sentinel) {
+               _input.popFront();
+            if(_matchStarted)
+            {
+                _sentinel.popFront;
+                _done = _input.empty || _sentinel.empty;
+            }
+            else
+            {
+               _matchStarted =  predSatisfied();
+               _done = _sentinel.empty;
+                if(_done)
+                {
+                    _sentinel.popFront;
+                }
+            }
+            } else {
+                assert(0,"Use firstPartOfSentinelIncluded with non-range sentinels");
+            }
+               break;
+            case firstPartOfSentinelIncluded:
+               _done = predSatisfied();
+               _input.popFront();
+               _done = _done || _input.empty;
+               break;
+            case sentinelExcluded:
+               _input.popFront();
+               _done = _input.empty || predSatisfied();
+               break;
+            default:
+               assert(0,"Unexpected EndType in until");
         }
-        else
-        {
-            _input.popFront();
-            _done = _input.empty || predSatisfied();
-        }
+
     }
 
     static if (isForwardRange!Range)
@@ -5135,9 +5196,9 @@ if (isInputRange!Range)
         @property Until save()
         {
             static if (is(Sentinel == void))
-                return Until(_input.save, _openRight, _done);
+                return Until(_input.save, _endType, _done);
             else
-                return Until(_input.save, _sentinel, _openRight, _done);
+                return Until(_input.save, _sentinel, _endType, _done);
         }
     }
 }
@@ -5212,3 +5273,13 @@ pure @safe unittest
         assert(equal(r.save, "foo"));
     }
 }
+// https://issues.dlang.org/show_bug.cgi?id=14543
+pure unittest {
+    import std.algorithm.comparison : equal;
+    assert("one two three".until("two").equal("one "));
+    assert("one two three".until("two", OpenRight.no).equal("one t"));
+    assert("one two three".until("two", EndType.sentinelIncluded).equal("one two"));
+    assert("one two three".until("two", EndType.firstPartOfSentinelIncluded).equal("one t"));
+    assert("one two three".until("two", EndType.sentinelExcluded).equal("one "));
+}
+
