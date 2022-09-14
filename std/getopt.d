@@ -401,6 +401,27 @@ getopt(args,
 An unrecognized option such as "--baz" will be found untouched in
 `args` after `getopt` returns.
 
+Treat an option like some additional help option:
+If an application needs to add some own option, which is treated like the
+--help (-h) option and therefore circumvents the checks for required arguments,
+it can pass the `std.getopt.config.helpLike` directive to `getopt`:
+
+---------
+bool foo, bar, showVersion;
+getopt(args,
+    std.getopt.config.required,
+    "foo", &foo,
+    std.getopt.config.helpLike,
+    "version", &showVersion
+    "bar", &bar);
+---------
+
+If the "--version" argument is passed, it will be treated like the "--help" target. The check
+for required arguments is circumvented in this case. After `getopt` returns, you must check your
+bool variable to be set and act accordingly. Note that required arguments might be missing,
+so you must end programm execution after printing your help-like information, e.g. version
+in this case.
+
 Help_Information_Generation:
 If an option string is followed by another string, this string serves as a
 description for this option. The `getopt` function returns a struct of type
@@ -478,7 +499,9 @@ enum config {
     /// Do not erase the endOfOptions separator from args
     keepEndOfOptions,
     /// Make the next option a required option
-    required
+    required,
+    /// Make the next option a help-like option
+    helpLike
 }
 
 /** The result of the `getopt` function.
@@ -488,6 +511,7 @@ enum config {
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
     Option[] options; /// All possible options
+    string requiredArgMissing; /// Flag to signal missing required argument
 }
 
 /** Information about an option.
@@ -749,10 +773,15 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 
             if (cfg.required && !optWasHandled)
             {
-                excep = new GetOptException("Required option "
-                    ~ option ~ " was not supplied", excep);
+                rslt.requiredArgMissing = option; // Defer exception to end of parsing
             }
             cfg.required = false;
+
+            if (cfg.helpLike && optWasHandled)
+            {
+                rslt.helpWanted = true;
+            }
+            cfg.helpLike = false;
 
             getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
                 visitedShortOpts, opts[lowSliceIdx .. $]);
@@ -789,6 +818,11 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
                 throw new GetOptException("Unrecognized option "~a, excep);
             }
             ++i;
+        }
+        if (!rslt.helpWanted && rslt.requiredArgMissing)
+        {
+            excep = new GetOptException("Required option "
+                ~ rslt.requiredArgMissing ~ " was not supplied", excep);
         }
 
         Option helpOpt;
@@ -1100,7 +1134,8 @@ private struct configuration
                 bool, "stopOnFirstNonOption", 1,
                 bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                ubyte, "", 2));
+                bool, "helpLike", 1,
+                ubyte, "", 1));
 }
 
 private bool optMatch(string arg, scope string optPattern, ref string value,
@@ -1174,6 +1209,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     case config.passThrough: cfg.passThrough = true; break;
     case config.noPassThrough: cfg.passThrough = false; break;
     case config.required: cfg.required = true; break;
+    case config.helpLike: cfg.helpLike = true; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
     case config.keepEndOfOptions:
@@ -1562,6 +1598,24 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
         &bar, config.passThrough));
     assert(foo);
     assert(!bar);
+}
+
+@safe unittest
+{
+    import std.exception;
+
+    bool foo;
+    bool bar;
+    auto args = ["prog", "--bar", "-z"];
+    GetoptResult r;
+    assertNotThrown(r = getopt(args, config.caseInsensitive,
+        config.required,
+        "foo|f", "Some foo", &foo, config.caseSensitive,
+        config.helpLike,
+        "bar|b", "Some bar", &bar, config.passThrough));
+    assert(r.helpWanted);
+    assert(!foo);
+    assert(bar);
 }
 
 @safe unittest

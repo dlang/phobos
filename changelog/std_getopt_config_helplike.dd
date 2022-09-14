@@ -1,0 +1,89 @@
+Add `std.getopt.config.helpLike` to `std.getopt` module
+
+The new option `std.getopt.config.helpLike` allows to use command-line arguments like
+additional 'help' arguments. 
+
+The argument following this new directive is treated like the built-in '-h' or '--help' 
+arguments: Any previous `std.getopt.config.required` option is circumvented and the 
+`helpWanted` flag is set.
+
+A common use-case in combination with a previously given `std.getopt.config.required` 
+option is an additional later commandline argument like `--version` to just output the 
+(git-)version of a programm and then return with no error. This is similiar to the
+`--help` argument, which will also circumvent checks for `required`parameters and set the
+`helpwanted`flag instead.
+
+The option `std.getopt.config.required` is commonly used in commandline utilities and D scripts
+to enforce required commandline arguments. It is also common to have extra arguments like 
+`--version`, which just output the the programm version.
+
+This doesn't work right now, because of the `std.getopt.config.required` option for some
+other argument. A workaround is to pass `--help`together with `--version`, which circumvents
+the check for `std.getopt.config.required`.
+
+For practical reasons it is desirable to just pass `--version`.
+
+So, in the current implementation of `getOpt()` it is needed to either
+- Check the args array passed to main() to contain your special option '--version' before
+  `getOpt()` is called.
+or
+- Remove the `std.getopt.config.required` option and add extra check code after `getOpt()` to
+  enforce required arguments and check for `--version`.
+or 
+- Also add `--help`together with `--version` to circumvent check for `std.getopt.config.required`.
+  This is ugly and just some workaround.
+
+With this patch the option can be directly added to your `getOpt()` call to increase readability
+of code and removed any special case-handling of arguments before/after calling getOpt().
+
+Code using `std.getopt.config.required` currently looks like the following:
+---------
+import std.getopt;
+
+int main(string[] args)
+{
+    /* Just test for '--version' in args here, before doing anything else.
+       Without this check, the following getOpt() would abort with an exception
+       due to the `std.getopt.config.required` option!
+     */
+    auto printVersion = args.find!((a,b) => toLower(a) == b)("--version");
+    if (printVersion.length) {
+        printVersion();
+        return 0;
+    }
+
+    bool foo, bar, showVersion;
+    auto result = getopt(args,
+        std.getopt.config.required, // --foo is required!
+        "foo", &foo,
+        "version", &showVersion, // Must be added here as well for `--help` output!
+        "bar", &bar);
+    if (result.helpWanted) {
+        printHelp();
+        return 0;
+    }
+}
+---------
+
+can be changed to:
+---------
+import std.getopt;
+
+int main(string[] args)
+{
+    bool foo, bar, showVersion;
+    auto result = getopt(args,
+        std.getopt.config.required, // --foo is required!
+        "foo", &foo,
+        std.getopt.config.helpLike, // --version behaves like --help!
+        "version", &showVersion,
+        "bar", &bar);
+    if (result.helpWanted) {
+        if (showVersion)
+            printVersion();
+        else
+            printHelp();
+        return 0;
+    }
+}
+---------
