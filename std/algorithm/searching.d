@@ -5067,10 +5067,6 @@ until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, EndType endType )
 if (!is(Sentinel == OpenRight) &&!is(Sentinel == EndType))
 {
-    if (endType == EndType.sentinelIncluded && !isInputRange!Sentinel)
-    {
-        endType = EndType.firstPartOfSentinelIncluded;
-    }
     return typeof(return)(range, sentinel, endType);
 }
 
@@ -5101,7 +5097,19 @@ if (isInputRange!Range)
             _input = input;
             _sentinel = sentinel;
             _endType = endType;
-            _done = _input.empty || endType == EndType.sentinelExcluded && predSatisfied();
+            static if (isInputRange!Sentinel)
+            {
+                _matchStarted = predSatisfied();
+                _done = _input.empty || _sentinel.empty || endType == EndType.sentinelExcluded && _matchStarted;
+                if (_matchStarted && !_done && endType == EndType.sentinelIncluded)
+                {
+                    _sentinel.popFront;
+                }
+            }
+            else
+            {
+                _done = _input.empty || endType == EndType.sentinelExcluded && predSatisfied();
+            }
         }
         private this(Range input, Sentinel sentinel, EndType endType,
             bool done)
@@ -5154,31 +5162,34 @@ if (isInputRange!Range)
     void popFront()
     {
         assert(!empty, "Can not popFront of an empty Until");
-        switch (_endType) with(EndType)
+        final switch (_endType) with(EndType)
         {
             case sentinelIncluded:
                 static if (isInputRange!Sentinel)
                 {
                     _input.popFront();
-                    if (_matchStarted)
-                    {
-                        _sentinel.popFront;
-                        _done = _input.empty || _sentinel.empty;
-                    }
-                    else
-                    {
-                        _matchStarted =  predSatisfied();
-                        _done = _sentinel.empty;
-                        if (_done)
+                    _done = _input.empty || _sentinel.empty;
+                    if (!_done) {
+                        if (_matchStarted)
                         {
                             _sentinel.popFront;
+                        }
+                        else
+                        {
+                            _matchStarted = predSatisfied();
+                            if (_matchStarted)
+                            {
+                                _sentinel.popFront;
+                            }
                         }
                     }
                     break;
                 }
                 else
                 {
-                    assert(0,"Use firstPartOfSentinelIncluded with non-range sentinels");
+                    //The sentinel is not a range so it only has a first part to match.
+                    //Therfore we fall through to matching the "first part".
+                    goto case;
                 }
             case firstPartOfSentinelIncluded:
                 _done = predSatisfied();
@@ -5189,8 +5200,6 @@ if (isInputRange!Range)
                 _input.popFront();
                 _done = _input.empty || predSatisfied();
                 break;
-            default:
-                assert(0,"Unexpected EndType in until");
         }
 
     }
@@ -5287,5 +5296,20 @@ pure unittest
     assert("one two three".until("two", EndType.sentinelIncluded).equal("one two"));
     assert("one two three".until("two", EndType.firstPartOfSentinelIncluded).equal("one t"));
     assert("one two three".until("two", EndType.sentinelExcluded).equal("one "));
+    assert("one two three".until('t', EndType.sentinelExcluded).equal("one "));
+    assert("one two three".until("", EndType.sentinelExcluded).equal(""));
+    assert("one two three".until("", EndType.sentinelIncluded).equal(""));
+    assert("one two three".until("three", EndType.sentinelIncluded).equal("one two three"));
+    assert("one two three".until("three", EndType.firstPartOfSentinelIncluded).equal("one two t"));
+    assert("one two three".until("three", EndType.sentinelExcluded).equal("one two "));
+    assert("one two three".until("one", EndType.sentinelIncluded).equal("one"));
+    assert("one two three".until("one", EndType.firstPartOfSentinelIncluded).equal("o"));
+    assert("one two three".until("one", EndType.sentinelExcluded).equal(""));
+    assert("one two three".until("o", EndType.sentinelIncluded).equal("o"));
+    assert("one two three".until("o", EndType.firstPartOfSentinelIncluded).equal("o"));
+    assert("one two three".until("", EndType.sentinelExcluded).equal(""));
+    assert("one two three".until("", EndType.sentinelIncluded).equal(""));
+    assert("one two three".until("", EndType.firstPartOfSentinelIncluded).equal(""));
+    assert("one two three".until("o", EndType.sentinelExcluded).equal(""));
 }
 
