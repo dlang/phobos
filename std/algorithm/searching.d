@@ -5005,8 +5005,9 @@ Otherwise if set to `OpenRight.no`, then the interval is closed to the right
 (last element included).
  */
 alias OpenRight = Flag!"openRight";
+
 /**
-New Interval option specifier for `until` (below) and others.
+Interval option specifier for `until` (below) and others.
 
 If set to `sentinelExcluded`, then only the part of the range before the
 match is included.
@@ -5015,9 +5016,8 @@ If set to `sentinelIncluded`, then the part of the range up
 to the end of the match is included.
 
 If set to `firstPartOfSentinelIncluded`, then the part of the range up
-to the and including the start of the match is included.
+to, and including, the start of the match is included.
  */
-
 enum EndType
 {
     sentinelExcluded,
@@ -5067,7 +5067,7 @@ until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, EndType endType )
 if (!is(Sentinel == OpenRight) &&!is(Sentinel == EndType))
 {
-    if(endType == EndType.sentinelIncluded && !isInputRange!Sentinel)
+    if (endType == EndType.sentinelIncluded && !isInputRange!Sentinel)
     {
         endType = EndType.firstPartOfSentinelIncluded;
     }
@@ -5154,13 +5154,13 @@ if (isInputRange!Range)
     void popFront()
     {
         assert(!empty, "Can not popFront of an empty Until");
-        switch(_endType) with(EndType)
+        switch (_endType) with(EndType)
         {
             case sentinelIncluded:
-                static if(isInputRange!Sentinel)
+                static if (isInputRange!Sentinel)
                 {
                     _input.popFront();
-                    if(_matchStarted)
+                    if (_matchStarted)
                     {
                         _sentinel.popFront;
                         _done = _input.empty || _sentinel.empty;
@@ -5169,7 +5169,7 @@ if (isInputRange!Range)
                     {
                         _matchStarted =  predSatisfied();
                         _done = _sentinel.empty;
-                        if(_done)
+                        if (_done)
                         {
                             _sentinel.popFront;
                         }
