@@ -5291,25 +5291,34 @@ pure @safe unittest
 pure unittest
 {
     import std.algorithm.comparison : equal;
+    import std.uni : toUpper;
     assert("one two three".until("two").equal("one "));
     assert("one two three".until("two", OpenRight.no).equal("one t"));
+
     assert("one two three".until("two", EndType.sentinelIncluded).equal("one two"));
     assert("one two three".until("two", EndType.firstPartOfSentinelIncluded).equal("one t"));
     assert("one two three".until("two", EndType.sentinelExcluded).equal("one "));
+
     assert("one two three".until('t', EndType.sentinelExcluded).equal("one "));
     assert("one two three".until("", EndType.sentinelExcluded).equal(""));
     assert("one two three".until("", EndType.sentinelIncluded).equal(""));
+
     assert("one two three".until("three", EndType.sentinelIncluded).equal("one two three"));
     assert("one two three".until("three", EndType.firstPartOfSentinelIncluded).equal("one two t"));
     assert("one two three".until("three", EndType.sentinelExcluded).equal("one two "));
+
     assert("one two three".until("one", EndType.sentinelIncluded).equal("one"));
     assert("one two three".until("one", EndType.firstPartOfSentinelIncluded).equal("o"));
     assert("one two three".until("one", EndType.sentinelExcluded).equal(""));
+
     assert("one two three".until("o", EndType.sentinelIncluded).equal("o"));
     assert("one two three".until("o", EndType.firstPartOfSentinelIncluded).equal("o"));
-    assert("one two three".until("", EndType.sentinelExcluded).equal(""));
+    assert("one two three".until("o", EndType.sentinelExcluded).equal(""));
+
     assert("one two three".until("", EndType.sentinelIncluded).equal(""));
     assert("one two three".until("", EndType.firstPartOfSentinelIncluded).equal(""));
-    assert("one two three".until("o", EndType.sentinelExcluded).equal(""));
+    assert("one two three".until("", EndType.sentinelExcluded).equal(""));
+
+    assert("one two three".until!((a,b)=>a.toUpper==b)("TWO", EndType.sentinelIncluded).equal("one two"));
 }
 
