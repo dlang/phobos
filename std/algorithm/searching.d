@@ -5024,7 +5024,18 @@ enum EndType
     sentinelIncluded,
     firstPartOfSentinelIncluded
 }
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    assert([1,2,3,4].until([2,3], EndType.sentinelIncluded).equal([1,2,3]));
+    assert([1,2,3,4].until([2,3], EndType.firstPartOfSentinelIncluded).equal([1,2]));
+    assert([1,2,3,4].until([2,3], EndType.sentinelExcluded).equal([1]));
 
+    assert([1,2,3,4].until(2, EndType.sentinelIncluded).equal([1,2]));
+    assert([1,2,3,4].until(2, EndType.firstPartOfSentinelIncluded).equal([1,2]));
+    assert([1,2,3,4].until(2, EndType.sentinelExcluded).equal([1]));
+}
 
 private auto toEndType(OpenRight openRight)
 {
@@ -5288,7 +5299,7 @@ pure @safe unittest
     }
 }
 // https://issues.dlang.org/show_bug.cgi?id=14543
-pure unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.uni : toUpper;
