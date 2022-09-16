@@ -5331,6 +5331,6 @@ pure @safe unittest
     assert("one two three".until("", EndType.firstPartOfSentinelIncluded).equal(""));
     assert("one two three".until("", EndType.sentinelExcluded).equal(""));
 
-    assert("one two three".until!((a,b)=>a.toUpper==b)("TWO", EndType.sentinelIncluded).equal("one two"));
+    assert("one two three".until!((a,b)=>a.toUpper == b)("TWO", EndType.sentinelIncluded).equal("one two"));
 }
 
