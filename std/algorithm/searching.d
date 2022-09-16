@@ -5180,7 +5180,8 @@ if (isInputRange!Range)
                 {
                     _input.popFront();
                     _done = _input.empty || _sentinel.empty;
-                    if (!_done) {
+                    if (!_done)
+                    {
                         if (_matchStarted)
                         {
                             _sentinel.popFront;
