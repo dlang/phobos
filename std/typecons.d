@@ -6585,6 +6585,27 @@ enum RefCountedAutoInitialize
     assert(rcNoAuto.refCountedPayload.a == 42);
 }
 
+// Same the above but for old RefCounted and not documented
+@system unittest
+{
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+
+    struct Foo
+    {
+        int a = 42;
+    }
+
+    RefCounted!(Foo, RefCountedAutoInitialize.yes) rcAuto;
+    RefCounted!(Foo, RefCountedAutoInitialize.no) rcNoAuto;
+
+    assert(rcAuto.refCountedPayload.a == 42);
+
+    assertThrown!AssertError(rcNoAuto.refCountedPayload);
+    rcNoAuto.refCountedStore.ensureInitialized;
+    assert(rcNoAuto.refCountedPayload.a == 42);
+}
+
 /**
 Defines a reference-counted object containing a `T` value as
 payload.
@@ -6952,45 +6973,47 @@ pure @safe nothrow @nogc unittest
     rc1._refCounted.initialize();
 }
 
-
 pure @system unittest
 {
-    SafeRefCounted!int* p;
+    foreach (MyRefCounted; AliasSeq!(SafeRefCounted, RefCounted))
     {
-        auto rc1 = SafeRefCounted!int(5);
-        p = &rc1;
-        assert(rc1 == 5);
-        assert(rc1._refCounted._store._count == 1);
-        auto rc2 = rc1;
-        assert(rc1._refCounted._store._count == 2);
-        // Reference semantics
-        rc2 = 42;
-        assert(rc1 == 42);
-        rc2 = rc2;
-        assert(rc2._refCounted._store._count == 2);
-        rc1 = rc2;
-        assert(rc1._refCounted._store._count == 2);
-    }
-    assert(p._refCounted._store == null);
+        MyRefCounted!int* p;
+        {
+            auto rc1 = MyRefCounted!int(5);
+            p = &rc1;
+            assert(rc1 == 5);
+            assert(rc1._refCounted._store._count == 1);
+            auto rc2 = rc1;
+            assert(rc1._refCounted._store._count == 2);
+            // Reference semantics
+            rc2 = 42;
+            assert(rc1 == 42);
+            rc2 = rc2;
+            assert(rc2._refCounted._store._count == 2);
+            rc1 = rc2;
+            assert(rc1._refCounted._store._count == 2);
+        }
+        assert(p._refCounted._store == null);
 
-    // SafeRefCounted as a member
-    struct A
-    {
-        SafeRefCounted!int x;
-        this(int y)
+        // [Safe]RefCounted as a member
+        struct A
         {
-            x._refCounted.initialize(y);
+            MyRefCounted!int x;
+            this(int y)
+            {
+                x._refCounted.initialize(y);
+            }
+            A copy()
+            {
+                auto another = this;
+                return another;
+            }
         }
-        A copy()
-        {
-            auto another = this;
-            return another;
-        }
-    }
-    auto a = A(4);
-    auto b = a.copy();
-    assert(a.x._refCounted._store._count == 2,
-           "https://issues.dlang.org/show_bug.cgi?id=4356 still unfixed");
+        auto a = A(4);
+        auto b = a.copy();
+        assert(a.x._refCounted._store._count == 2,
+               "https://issues.dlang.org/show_bug.cgi?id=4356 still unfixed");
+   }
 }
 
 @betterC pure @safe nothrow @nogc unittest
@@ -6998,6 +7021,15 @@ pure @system unittest
     import std.algorithm.mutation : swap;
 
     SafeRefCounted!int p1, p2;
+    swap(p1, p2);
+}
+
+// Same as above but for old RefCounted and not @safe
+@betterC pure @system nothrow @nogc unittest
+{
+    import std.algorithm.mutation : swap;
+
+    RefCounted!int p1, p2;
     swap(p1, p2);
 }
 
@@ -7016,6 +7048,21 @@ pure @system unittest
     alias SRC = SafeRefCounted!S;
 }
 
+// Same as above but for old RefCounted and not @safe
+@betterC @system pure nothrow @nogc unittest
+{
+    union U {
+       size_t i;
+       void* p;
+    }
+
+    struct S {
+       U u;
+    }
+
+    alias SRC = RefCounted!S;
+}
+
 // https://issues.dlang.org/show_bug.cgi?id=6436
 @betterC @system pure unittest
 {
@@ -7025,10 +7072,13 @@ pure @system unittest
         this(ref int lval) { assert(lval == 3); ++lval; }
     }
 
-    auto s1 = SafeRefCounted!S(1);
-    int lval = 3;
-    auto s2 = SafeRefCounted!S(lval);
-    assert(lval == 4);
+    foreach (MyRefCounted; AliasSeq!(SafeRefCounted, RefCounted))
+    {
+        auto s1 = MyRefCounted!S(1);
+        int lval = 3;
+        auto s2 = MyRefCounted!S(lval);
+        assert(lval == 4);
+    }
 }
 
 // gc_addRange coverage
@@ -7039,17 +7089,28 @@ pure @system unittest
     auto s = SafeRefCounted!S(null);
 }
 
+// Same as above but for old RefCounted and not @safe
+@betterC @system pure unittest
+{
+    struct S { int* p; }
+
+    auto s = RefCounted!S(null);
+}
+
 @betterC @system pure nothrow @nogc unittest
 {
-    SafeRefCounted!int a;
-    a = 5; //This should not assert
-    assert(a == 5);
+    foreach (MyRefCounted; AliasSeq!(SafeRefCounted, RefCounted))
+    {
+        MyRefCounted!int a;
+        a = 5; //This should not assert
+        assert(a == 5);
 
-    SafeRefCounted!int b;
-    b = a; //This should not assert either
-    assert(b == 5);
+        MyRefCounted!int b;
+        b = a; //This should not assert either
+        assert(b == 5);
 
-    SafeRefCounted!(int*) c;
+        MyRefCounted!(int*) c;
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21638
@@ -7061,33 +7122,45 @@ pure @system unittest
         this(int x) @nogc nothrow pure { this.x = x; }
         int x;
     }
-    auto rc = SafeRefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
-    assert(rc.x == 5);
+
+    foreach (MyRefCounted; AliasSeq!(SafeRefCounted, RefCounted))
+    {
+        auto rc = MyRefCounted!(NoDefaultCtor, RefCountedAutoInitialize.no)(5);
+        assert(rc.x == 5);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=20502
 @system unittest
 {
-    import std.conv : to;
-    // Check that string conversion is transparent for refcounted
-    // structs that do not have either toString or alias this.
-    static struct A { Object a; }
-    auto a  = A(new Object());
-    auto r = safeRefCounted(a);
-    assert(to!string(r) == to!string(a));
-    assert(to!string(cast(const) r) == to!string(cast(const) a));
-    // Check that string conversion is still transparent for refcounted
-    // structs that have alias this.
-    static struct B { int b; alias b this; }
-    static struct C { B b; alias b this; }
-    assert(to!string(safeRefCounted(C(B(123)))) == to!string(C(B(123))));
-    // https://issues.dlang.org/show_bug.cgi?id=22093
-    // Check that uninitialized refcounted structs that previously could be
-    // converted to strings still can be.
-    alias R = typeof(r);
-    R r2;
-    cast(void) (((const ref R a) => to!string(a))(r2));
-    cast(void) to!string(SafeRefCounted!(A, RefCountedAutoInitialize.no).init);
+    alias Types = AliasSeq!(SafeRefCounted, RefCounted);
+    alias funcs = AliasSeq!(safeRefCounted, refCounted);
+    static foreach (aliasI; 0 .. 2)
+    {{
+        alias MyRefCounted = Types[aliasI];
+        alias myRefCounted = funcs[aliasI];
+        import std.conv : to;
+
+        // Check that string conversion is transparent for refcounted
+        // structs that do not have either toString or alias this.
+        static struct A { Object a; }
+        auto a  = A(new Object());
+        auto r = myRefCounted(a);
+        assert(to!string(r) == to!string(a));
+        assert(to!string(cast(const) r) == to!string(cast(const) a));
+        // Check that string conversion is still transparent for refcounted
+        // structs that have alias this.
+        static struct B { int b; alias b this; }
+        static struct C { B b; alias b this; }
+        assert(to!string(myRefCounted(C(B(123)))) == to!string(C(B(123))));
+        // https://issues.dlang.org/show_bug.cgi?id=22093
+        // Check that uninitialized refcounted structs that previously could be
+        // converted to strings still can be.
+        alias R = typeof(r);
+        R r2;
+        cast(void) (((const ref R a) => to!string(a))(r2));
+        cast(void) to!string(MyRefCounted!(A, RefCountedAutoInitialize.no).init);
+    }}
 }
 
 // We tried to make `refCountedPayload` `@safe` in
@@ -10255,6 +10328,8 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
     assert(rc1 == 42);
 }
 
+// More unit tests below SafeRefCounted
+
 /**
  * Like $(LREF safeRefCounted) but used to initialize $(LREF RefCounted)
  * instead. Intended for backwards compatibility, otherwise it is preferable
@@ -10298,15 +10373,4 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
     assert(File.nDestroyed == 2);
 }
 
-// We don't comprehensively test the old reference counter since it's not
-// expected to change anymore, but we still do this to weed out the most basic
-// copy/paste errors.
-@system unittest
-{
-    auto s1 = refCounted(1);
-    auto s2 = s1;
-    s2 = 5;
-    assert(s1 == 5);
-    static assert(is(typeof(s2)
-        == RefCounted!(int, RefCountedAutoInitialize.no)));
-}
+// More unit tests below safeRefCounted
