@@ -23,7 +23,7 @@ $(TR $(TD Flags) $(TD
 ))
 $(TR $(TD Memory allocation) $(TD
     $(LREF SafeRefCounted)
-    $(LREF rafeRefCounted)
+    $(LREF safeRefCounted)
     $(LREF RefCountedAutoInitialize)
     $(LREF scoped)
     $(LREF Unique)
@@ -4164,15 +4164,13 @@ if (is (typeof(nullValue) == T))
     assert(ntts.to!string() == "2.5");
 }
 
-
+// apply
 /**
-Unpacks the content of a $(LREF Nullable), performs an operation and packs it
-again. Does nothing if isNull.
+Unpacks the content of a `Nullable`, performs an operation and packs it again. Does nothing if isNull.
 
-When called on a `Nullable`, `apply` will unpack the value contained in the
-`Nullable`, pass it to the function you provide and wrap the result in
-another `Nullable` (if necessary). If the `Nullable` is null, `apply` will
-return null itself.
+When called on a `Nullable`, `apply` will unpack the value contained in the `Nullable`,
+pass it to the function you provide and wrap the result in another `Nullable` (if necessary).
+If the `Nullable` is null, `apply` will return null itself.
 
 Params:
     t = a `Nullable`
@@ -4182,9 +4180,7 @@ Returns:
     `fun(t.get).nullable` if `!t.isNull`, else `Nullable.init`.
 
 See also:
-    $(HTTPS
-    en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad,
-    The `Maybe` monad)
+    $(HTTPS en.wikipedia.org/wiki/Monad_(functional_programming)#The_Maybe_monad, The `Maybe` monad)
 */
 template apply(alias fun)
 {
@@ -4222,8 +4218,6 @@ template apply(alias fun)
             return ReturnType.init;
         }
     }
-
-
 }
 
 ///
@@ -10045,9 +10039,8 @@ unittest
 /// The old version of $(LREF SafeRefCounted), before $(LREF borrow) existed.
 /// Old code may be relying on `@safe`ty of some of the member functions which
 /// cannot be safe in the new scheme, and
-/// can avoid immediate breakage by using this. `SafeRefCounted` should be
-/// preferred, as this type is likely to be renamed and deprecated in the
-/// future.
+/// can avoid breakage by continuing to use this. `SafeRefCounted` should be
+/// preferred, as this type is outdated and unrecommended for new code.
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
     RefCountedAutoInitialize.yes)
 {
@@ -10264,9 +10257,8 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
 
 /**
  * Like $(LREF safeRefCounted) but used to initialize $(LREF RefCounted)
- * instead. Use only for backwards compatibility, otherwise use
- * `safeRefCounted`. This function is likely to be renamed and deprecated in
- * the future.
+ * instead. Intended for backwards compatibility, otherwise it is preferable
+ *  to use `safeRefCounted`.
  */
 RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 {
