@@ -3571,7 +3571,7 @@ enum dchar replacementDchar = '\uFFFD';
  *      of characters (including strings) or a type that implicitly converts to a string type.
  * Returns:
  *      If `r` is not an auto-decodable string (i.e. a narrow string or a
- *      user-defined type that implicits converts to a string type), then `r`
+ *      user-defined type that implicitly converts to a string type), then `r`
  *      is returned.
  *
  *      Otherwise, `r` is converted to its corresponding string type (if it's
@@ -4275,10 +4275,10 @@ private int impureVariable;
  *                            UseReplacementDchar.no means throw `UTFException` for invalid UTF
  *
  * Throws:
- *      `UTFException` if invalid UTF sequence and `useReplacementDchar` is set to `UseReplacementDchar.yes`
+ *      `UTFException` if invalid UTF sequence and `useReplacementDchar` is set to `UseReplacementDchar.no`
  *
  * GC:
- *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.no`
+ *      Does not use GC if `useReplacementDchar` is set to `UseReplacementDchar.yes`
  *
  * Returns:
  *      A bidirectional range if `R` is a bidirectional range and not auto-decodable,

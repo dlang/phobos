@@ -3357,8 +3357,16 @@ in
 {
     // Verify that pattern[] is valid
     import std.algorithm.searching : balancedParens;
-    assert(balancedParens(pattern, '[', ']', 0));
-    assert(balancedParens(pattern, '{', '}', 0));
+
+    try
+    {
+        assert(balancedParens(pattern, '[', ']', 0));
+        assert(balancedParens(pattern, '{', '}', 0));
+    }
+    catch (Exception e)
+    {
+        assert(0);
+    }
 }
 do
 {

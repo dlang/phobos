@@ -478,6 +478,20 @@ if (isFloatingPoint!T)
         }
         return this;
     }
+
+    /** Returns a complex number instance that correponds in size and in ABI
+        to the associated C compiler's `_Complex` type.
+     */
+    auto toNative()
+    {
+        import core.stdc.config : c_complex_float, c_complex_double, c_complex_real;
+        static if (is(T == float))
+            return c_complex_float(re, im);
+        else static if (is(T == double))
+            return c_complex_double(re, im);
+        else
+            return c_complex_real(re, im);
+    }
 }
 
 @safe pure nothrow unittest
@@ -935,7 +949,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(const T modulus, const U argument)
     import std.math.operations : isClose;
     import std.math.algebraic : sqrt;
     import std.math.constants : PI_4;
-    auto z = fromPolar(core.math.sqrt(2.0), PI_4);
+    auto z = fromPolar(core.math.sqrt(2.0L), PI_4);
     assert(isClose(z.re, 1.0L));
     assert(isClose(z.im, 1.0L));
 }
@@ -1695,9 +1709,9 @@ Complex!T log(T)(Complex!T x) @safe pure nothrow @nogc
  */
 Complex!T log10(T)(Complex!T x) @safe pure nothrow @nogc
 {
-    static import std.math;
+    import std.math.constants : LN10;
 
-    return log(x) / Complex!T(std.math.log(10.0));
+    return log(x) / Complex!T(LN10);
 }
 
 ///
@@ -1908,5 +1922,16 @@ Complex!T pow(T)(const T x, Complex!T n) @trusted pure nothrow @nogc
              assert(abs(ref2 - res4) < eps);
              assert(abs(res3 - res4) < eps);
          }
+    }}
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+         auto c = Complex!T(123, 456);
+         auto n = c.toNative();
+         assert(c.re == n.re && c.im == n.im);
     }}
 }

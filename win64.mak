@@ -1,4 +1,4 @@
-# Makefile to build D runtime library phobos64.lib for Win64
+# Makefile to build D runtime library phobos{64,32mscoff}.lib for Windows MSVC
 # Prerequisites:
 #	Microsoft Visual Studio
 # Targets:
@@ -10,54 +10,41 @@
 #		Delete unneeded files created by build process
 #	make unittest
 #		Build phobos64.lib, build and run unit tests
-#	make phobos32mscoff
-#		Build phobos32mscoff.lib
-#	make unittest32mscoff
-#		Build phobos32mscoff.lib, build and run unit tests
 #	make cov
 #		Build for coverage tests, run coverage tests
+#	make MODEL=32mscoff phobos32mscoff.lib
+#		Build phobos32mscoff.lib (with x86 cl.exe in PATH, otherwise set CC & AR manually)
 
-## Memory model (32 or 64)
+## Memory model (32mscoff or 64)
 MODEL=64
 
-## Copy command
+## Assume MSVC cl.exe & lib.exe in PATH are set up for the target MODEL.
+## Otherwise set them explicitly, e.g., to `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\Hostx86\x86\cl.exe`.
+CC=cl
+AR=lib
 
-CP=cp
+MAKE=make
 
 ## Directory where dmd has been installed
 
 DIR=\dmd2
 
-## Visual C directories
-VCDIR=\Program Files (x86)\Microsoft Visual Studio 10.0\VC
-SDKDIR=\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
-
 ## Flags for VC compiler
 
-#CFLAGS=/Zi /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
-CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
+CFLAGS=/O2 /nologo
 
 ## Location of druntime tree
 
-DRUNTIME=../druntime
+DRUNTIME=../dmd/druntime
 DRUNTIMELIB=$(DRUNTIME)/lib/druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
 DFLAGS=-conf= -m$(MODEL) -O -release -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise -I$(DRUNTIME)\import
-#DFLAGS=-m$(MODEL) -unittest -g
-#DFLAGS=-m$(MODEL) -unittest -cov -g
 
 ## Flags for compiling unittests
 
 UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNTIME)\import -unittest -version=StdUnittest -version=CoreUnittest
-
-## C compiler, linker, librarian
-
-CC=$(VCDIR)\bin\amd64\cl
-LD=$(VCDIR)\bin\amd64\link
-AR=$(VCDIR)\bin\amd64\lib
-MAKE=make
 
 ## D compiler
 
@@ -71,7 +58,8 @@ DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 ZLIB=etc\c\zlib\zlib$(MODEL).lib
 
 .c.obj:
-	"$(CC)" -c $(CFLAGS) $*.c
+#	"$(CC)" -c $(CFLAGS) $*.c
+	$(DMD) -c $(DFLAGS) -I. -v $*.c
 
 .cpp.obj:
 	"$(CC)" -c $(CFLAGS) $*.cpp
@@ -133,7 +121,6 @@ SRC_STD_3c= \
 	std\typetuple.d \
 	std\traits.d \
 	std\encoding.d \
-	std\xml.d \
 	std\random.d \
 	std\exception.d \
 	std\compiler.d \
@@ -244,7 +231,6 @@ SRC_STD_DIGEST= \
 	std\digest\sha.d \
 	std\digest\md.d \
 	std\digest\ripemd.d \
-	std\digest\digest.d \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
@@ -276,6 +262,7 @@ SRC_STD_WIN= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
+	std\internal\memory.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
 	std\internal\unicode_decomp.d \
@@ -299,7 +286,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\checkedint.d std\experimental\checkedint.d std\experimental\typecons.d
+	std\checkedint.d std\experimental\checkedint.d
 
 SRC_STD_UNI = std\uni\package.d
 
@@ -339,6 +326,13 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
+SRC_STD_LOGGER= \
+	std\logger\core.d \
+	std\logger\filelogger.d \
+	std\logger\multilogger.d \
+	std\logger\nulllogger.d \
+	std\logger\package.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -372,6 +366,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
+	$(SRC_STD_LOGGER) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -458,7 +453,7 @@ unittest : $(LIB)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
-	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
+	"$(DMD)" $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest7a.obj $(SRC_STD_7a)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
 	"$(DMD)" $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
@@ -482,25 +477,11 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	"$(DMD)" -conf= -m$(MODEL) -cov $(UDFLAGS) -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
-################### Win32 COFF support #########################
-
-# default to 32-bit compiler relative to the location of the 64-bit compiler,
-# link and lib are architecture agnostic
-CC32=$(CC)\..\..\cl
-
-# build phobos32mscoff.lib
-phobos32mscoff:
-	"$(MAKE)" -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=$(CC32)" "AR=$(AR)" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)"
-
-# run unittests for 32-bit COFF version
-unittest32mscoff:
-	"$(MAKE)" -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=$(CC32)" "AR=$(AR)" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)" unittest
-
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	"$(MAKE)" -f win64.mak MODEL=$(MODEL) zlib$(MODEL).lib "CC=$(CC)" "LIB=$(AR)" "VCDIR=$(VCDIR)"
+	"$(MAKE)" -f win64.mak MODEL=$(MODEL) "CC=$(CC)" "AR=$(AR)" zlib$(MODEL).lib
 	cd ..\..\..
 
 ######################################################
@@ -520,8 +501,8 @@ clean:
 	del $(LIB)
 	del phobos.json
 
-install: phobos.zip
-	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib
+install: phobos.zip $(LIB)
+	copy /y /b $(LIB) $(DIR)\windows\lib
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 

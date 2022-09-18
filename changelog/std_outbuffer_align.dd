@@ -1,0 +1,42 @@
+Add custom fill value to std.outbuffer.OutBuffer class
+
+Extend the fill, alignSize, align{2,4} methods of `std.outbuffer.OutBuffer` to specify value to write
+when filling (up to an alignment).
+
+For flash device images it is desirable to use 0xff as the fill value,
+because 0xff is the value of the unprogrammed flash memory cell. Padding
+with 0 requires to programm the flash cell from 0xff to 0x00, which
+increases wear and tear on the flash memory device. Usually there is some
+larger block at the end if the flash memory image, which must be padded
+up to the size of the flash device (usually a power of two). Instead
+of padding with 0x00 the PR allows to fill with 0xff instead.
+
+There might be also some other use-cases, where it might be reasonable to fill
+the alignment gaps with some other value than 0x00, e.g. when debugging
+and viewing output data in a hex editor. It is easier to spot gaps, when
+the padded spaces contain a custom value like 0x55 or 0xaa.
+
+A new fill method was added, which allows filling with a user-defined value
+instead of the 0 as in the previous implementation.
+
+-------
+OutBuffer buf = new OutBuffer();
+buff.fill( 1234, 42 ); // Fills 1234 bytes with 42 starting at buf.offset
+buff.fill( 10 );       // Same as fill0( 10 );
+-------
+
+The alignSize, align{2,4} methods were modified to use some user-defined
+value for padding to the requested alignment boundary.
+
+-------
+OutBuffer buf = new OutBuffer();
+buf.write(cast(ubyte) 1);
+buf.align2(0x55);
+assert(buf.toBytes() == "\x01\x55");
+buf.write(cast(ubyte) 2);
+buf.align4(0x55);
+assert(buf.toBytes() == "\x01\x55\x02\x55");
+buf.write(cast(ubyte) 3);
+buf.alignSize(8, 0x55);
+assert(buf.toBytes() == "\x01\x55\x02\x55\x03\x55\x55\x55");
+-------
