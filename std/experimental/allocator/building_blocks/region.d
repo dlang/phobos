@@ -1355,7 +1355,7 @@ version (Posix) @system nothrow @nogc unittest
 The threadsafe version of the `Region` allocator.
 Allocations and deallocations are lock-free based using $(REF cas, core,atomic).
 */
-shared struct SharedRegion(ParentAllocator = NullAllocator,
+shared struct SharedRegion(ParentAllocator,
     uint minAlign = platformAlignment,
     Flag!"growDownwards" growDownwards = No.growDownwards)
 {
@@ -1394,17 +1394,14 @@ shared struct SharedRegion(ParentAllocator = NullAllocator,
 
     /**
     Constructs a region backed by a user-provided store.
-    Assumes the memory was allocated with `ParentAllocator`
-    (if different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator)).
+    Assumes the memory was allocated with `ParentAllocator`.
 
     Params:
-        store = User-provided store backing up the region. If `ParentAllocator`
-        is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
-        have been allocated with `ParentAllocator`.
-        n = Bytes to allocate using `ParentAllocator`. This constructor is only
-        defined If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
-        `parent.allocate(n)` returns `null`, the region will be initialized
-        as empty (correctly initialized but unable to allocate).
+        store = User-provided store backing up the region. Assumed to have been
+        allocated with `ParentAllocator`.
+        n = Bytes to allocate using `ParentAllocator`. If `parent.allocate(n)`
+        returns `null`, the region will be initialized as empty (correctly
+        initialized but unable to allocate).
     */
     this(ubyte[] store) pure nothrow @nogc
     {
@@ -1412,7 +1409,6 @@ shared struct SharedRegion(ParentAllocator = NullAllocator,
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
         this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
@@ -1509,12 +1505,10 @@ shared struct SharedRegion(ParentAllocator = NullAllocator,
     }
 
     /**
-    If `ParentAllocator` is not $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator) and defines `deallocate`,
-    the region defines a destructor that uses `ParentAllocator.deallocate` to free the
-    memory chunk.
+    If `ParentAllocator` defines `deallocate`, the region defines a destructor
+    that uses `ParentAllocator.deallocate` to free the memory chunk.
     */
-    static if (!is(ParentAllocator == NullAllocator)
-        && hasMember!(ParentAllocator, "deallocate"))
+    static if (hasMember!(ParentAllocator, "deallocate"))
     ~this()
     {
         with (_impl) parent.deallocate(cast(void[]) _begin[0 .. _end - _begin]);
