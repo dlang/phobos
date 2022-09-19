@@ -29,8 +29,7 @@ the store and the limits. One allocation entails rounding up the allocation
 size for alignment purposes, bumping the current pointer, and comparing it
 against the limit.
 
-If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), `Region`
-deallocates the chunk of memory during destruction.
+`Region` deallocates the chunk of memory during destruction.
 
 The `minAlign` parameter establishes alignment. If $(D minAlign > 1), the
 sizes of all allocation requests are rounded up to a multiple of `minAlign`.
@@ -38,7 +37,7 @@ Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
 control alignment externally.
 
 */
-struct Region(ParentAllocator = NullAllocator,
+struct Region(ParentAllocator,
     uint minAlign = platformAlignment,
     Flag!"growDownwards" growDownwards = No.growDownwards)
 {
@@ -76,17 +75,14 @@ struct Region(ParentAllocator = NullAllocator,
     }
     /**
     Constructs a region backed by a user-provided store.
-    Assumes the memory was allocated with `ParentAllocator`
-    (if different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator)).
+    Assumes the memory was allocated with `ParentAllocator`.
 
     Params:
-        store = User-provided store backing up the region. If $(D
-        ParentAllocator) is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator), memory is assumed to
-        have been allocated with `ParentAllocator`.
-        n = Bytes to allocate using `ParentAllocator`. This constructor is only
-        defined If `ParentAllocator` is different from $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator). If
-        `parent.allocate(n)` returns `null`, the region will be initialized
-        as empty (correctly initialized but unable to allocate).
+        store = User-provided store backing up the region. Assumed to have been
+        allocated with `ParentAllocator`.
+        n = Bytes to allocate using `ParentAllocator`. If `parent.allocate(n)`
+        returns `null`, the region will be initialized as empty (correctly
+        initialized but unable to allocate).
         */
     this(ubyte[] store) pure nothrow @nogc
     {
@@ -94,14 +90,14 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator) && !stateSize!ParentAllocator)
+    static if (!stateSize!ParentAllocator)
     this(size_t n)
     {
         this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /// Ditto
-    static if (!is(ParentAllocator == NullAllocator) && stateSize!ParentAllocator)
+    static if (stateSize!ParentAllocator)
     this(ParentAllocator parent, size_t n)
     {
         this.parent = parent;
@@ -114,12 +110,10 @@ struct Region(ParentAllocator = NullAllocator,
     */
 
     /**
-    If `ParentAllocator` is not $(REF_ALTTEXT `NullAllocator`, NullAllocator, std,experimental,allocator,building_blocks,null_allocator) and defines `deallocate`,
-    the region defines a destructor that uses `ParentAllocator.deallocate` to free the
-    memory chunk.
+    If `ParentAllocator` defines `deallocate`, the region defines a destructor
+    that uses `ParentAllocator.deallocate` to free the memory chunk.
     */
-    static if (!is(ParentAllocator == NullAllocator)
-        && hasMember!(ParentAllocator, "deallocate"))
+    static if (hasMember!(ParentAllocator, "deallocate"))
     ~this()
     {
         with (_impl) parent.deallocate(_begin[0 .. _end - _begin]);
@@ -291,17 +285,6 @@ struct Region(ParentAllocator = NullAllocator,
     auto sharedReg = SharedRegion!(Mallocator, Mallocator.alignment,
         Yes.growDownwards)(1024 * 64);
     testAlloc(sharedReg);
-}
-
-@system nothrow @nogc unittest
-{
-    import std.experimental.allocator.mallocator : AlignedMallocator;
-    import std.typecons : Ternary;
-
-    ubyte[] buf = cast(ubyte[]) AlignedMallocator.instance.alignedAllocate(64, 64);
-    auto reg = Region!(NullAllocator, 64, Yes.growDownwards)(buf);
-    assert(reg.alignedAllocate(10, 32).length == 10);
-    assert(!reg.available);
 }
 
 @system nothrow @nogc unittest
@@ -676,6 +659,17 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
     myRegion.deallocateAll();
 
     assert(myRegion.empty == Ternary.yes);
+}
+
+@system nothrow @nogc unittest
+{
+    import std.experimental.allocator.mallocator : AlignedMallocator;
+    import std.typecons : Ternary;
+
+    ubyte[] buf = cast(ubyte[]) AlignedMallocator.instance.alignedAllocate(64, 64);
+    auto reg = BorrowedRegion!(64, Yes.growDownwards)(buf);
+    assert(reg.alignedAllocate(10, 32).length == 10);
+    assert(!reg.available);
 }
 
 /**
