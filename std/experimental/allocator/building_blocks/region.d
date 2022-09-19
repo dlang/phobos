@@ -491,6 +491,315 @@ version (StdUnittest)
 }
 
 /**
+A `BorrowedRegion` allocates directly from a user-provided block of memory.
+
+Unlike a `Region`, a `BorrowedRegion` does not own the memory it allocates from
+and will not deallocate that memory upon destruction. Instead, it is the user's
+responsibility to ensure that the memory is properly disposed of.
+
+In all other respects, a `BorrowedRegion` behaves exactly like a `Region`.
+*/
+struct BorrowedRegion(uint minAlign = platformAlignment,
+    Flag!"growDownwards" growDownwards = No.growDownwards)
+{
+    static assert(minAlign.isGoodStaticAlignment);
+
+    import std.typecons : Ternary;
+
+    // state
+    private void* _current, _begin, _end;
+
+    private void* roundedBegin() const pure nothrow @trusted @nogc
+    {
+        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
+    }
+
+    private void* roundedEnd() const pure nothrow @trusted @nogc
+    {
+        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
+    }
+    /**
+    Constructs a region backed by a user-provided store.
+
+    Params:
+        store = User-provided store backing up the region.
+    */
+    this(ubyte[] store) pure nothrow @nogc
+    {
+        _begin = store.ptr;
+        _end = store.ptr + store.length;
+        static if (growDownwards)
+            _current = roundedEnd();
+        else
+            _current = roundedBegin();
+    }
+
+    /*
+    TODO: The postblit of `BorrowedRegion` should be disabled because such objects
+    should not be copied around naively.
+    */
+
+    /**
+    Rounds the given size to a multiple of the `alignment`
+    */
+    size_t goodAllocSize(size_t n) const pure nothrow @safe @nogc
+    {
+        return n.roundUpToAlignment(alignment);
+    }
+
+    /**
+    Alignment offered.
+    */
+    alias alignment = minAlign;
+
+    /**
+    Allocates `n` bytes of memory. The shortest path involves an alignment
+    adjustment (if $(D alignment > 1)), an increment, and a comparison.
+
+    Params:
+        n = number of bytes to allocate
+
+    Returns:
+        A properly-aligned buffer of size `n` or `null` if request could not
+        be satisfied.
+    */
+    void[] allocate(size_t n) pure nothrow @trusted @nogc
+    {
+        const rounded = goodAllocSize(n);
+        if (n == 0 || rounded < n || available < rounded) return null;
+
+        static if (growDownwards)
+        {
+            assert(available >= rounded);
+            auto result = (_current - rounded)[0 .. n];
+            assert(result.ptr >= _begin);
+            _current = result.ptr;
+            assert(owns(result) == Ternary.yes);
+        }
+        else
+        {
+            auto result = _current[0 .. n];
+            _current += rounded;
+        }
+
+        return result;
+    }
+
+    /**
+    Allocates `n` bytes of memory aligned at alignment `a`.
+
+    Params:
+        n = number of bytes to allocate
+        a = alignment for the allocated block
+
+    Returns:
+        Either a suitable block of `n` bytes aligned at `a`, or `null`.
+    */
+    void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
+    {
+        import std.math.traits : isPowerOf2;
+        assert(a.isPowerOf2);
+
+        const rounded = goodAllocSize(n);
+        if (n == 0 || rounded < n || available < rounded) return null;
+
+        static if (growDownwards)
+        {
+            auto tmpCurrent = _current - rounded;
+            auto result = tmpCurrent.alignDownTo(a);
+            if (result <= tmpCurrent && result >= _begin)
+            {
+                _current = result;
+                return cast(void[]) result[0 .. n];
+            }
+        }
+        else
+        {
+            // Just bump the pointer to the next good allocation
+            auto newCurrent = _current.alignUpTo(a);
+            if (newCurrent < _current || newCurrent > _end)
+                return null;
+
+            auto save = _current;
+            _current = newCurrent;
+            auto result = allocate(n);
+            if (result.ptr)
+            {
+                assert(result.length == n);
+                return result;
+            }
+            // Failed, rollback
+            _current = save;
+        }
+        return null;
+    }
+
+    /// Allocates and returns all memory available to this region.
+    void[] allocateAll() pure nothrow @trusted @nogc
+    {
+        static if (growDownwards)
+        {
+            auto result = _begin[0 .. available];
+            _current = _begin;
+        }
+        else
+        {
+            auto result = _current[0 .. available];
+            _current = _end;
+        }
+        return result;
+    }
+
+    /**
+    Expands an allocated block in place. Expansion will succeed only if the
+    block is the last allocated. Defined only if `growDownwards` is
+    `No.growDownwards`.
+    */
+    static if (growDownwards == No.growDownwards)
+    bool expand(ref void[] b, size_t delta) pure nothrow @safe @nogc
+    {
+        assert(owns(b) == Ternary.yes || b is null);
+        assert((() @trusted => b.ptr + b.length <= _current)() || b is null);
+        if (b is null || delta == 0) return delta == 0;
+        auto newLength = b.length + delta;
+        if ((() @trusted => _current < b.ptr + b.length + alignment)())
+        {
+            immutable currentGoodSize = this.goodAllocSize(b.length);
+            immutable newGoodSize = this.goodAllocSize(newLength);
+            immutable goodDelta = newGoodSize - currentGoodSize;
+            // This was the last allocation! Allocate some more and we're done.
+            if (goodDelta == 0
+                || (() @trusted => allocate(goodDelta).length == goodDelta)())
+            {
+                b = (() @trusted => b.ptr[0 .. newLength])();
+                assert((() @trusted => _current < b.ptr + b.length + alignment)());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+    Deallocates `b`. This works only if `b` was obtained as the last call
+    to `allocate`; otherwise (i.e. another allocation has occurred since) it
+    does nothing.
+
+    Params:
+        b = Block previously obtained by a call to `allocate` against this
+        allocator (`null` is allowed).
+    */
+    bool deallocate(void[] b) pure nothrow @nogc
+    {
+        assert(owns(b) == Ternary.yes || b.ptr is null);
+        auto rounded = goodAllocSize(b.length);
+        static if (growDownwards)
+        {
+            if (b.ptr == _current)
+            {
+                _current += rounded;
+                return true;
+            }
+        }
+        else
+        {
+            if (b.ptr + rounded == _current)
+            {
+                assert(b.ptr !is null || _current is null);
+                _current = b.ptr;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+    Deallocates all memory allocated by this region, which can be subsequently
+    reused for new allocations.
+    */
+    bool deallocateAll() pure nothrow @nogc
+    {
+        static if (growDownwards)
+        {
+            _current = roundedEnd();
+        }
+        else
+        {
+            _current = roundedBegin();
+        }
+        return true;
+    }
+
+    /**
+    Queries whether `b` has been allocated with this region.
+
+    Params:
+        b = Arbitrary block of memory (`null` is allowed; `owns(null)` returns
+        `false`).
+
+    Returns:
+        `true` if `b` has been allocated with this region, `false` otherwise.
+    */
+    Ternary owns(const void[] b) const pure nothrow @trusted @nogc
+    {
+        return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
+    }
+
+    /**
+    Returns `Ternary.yes` if no memory has been allocated in this region,
+    `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
+    */
+    Ternary empty() const pure nothrow @safe @nogc
+    {
+        static if (growDownwards)
+            return Ternary(_current == roundedEnd());
+        else
+            return Ternary(_current == roundedBegin());
+    }
+
+    /// Nonstandard property that returns bytes available for allocation.
+    size_t available() const @safe pure nothrow @nogc
+    {
+        static if (growDownwards)
+        {
+            return _current - _begin;
+        }
+        else
+        {
+            return _end - _current;
+        }
+    }
+}
+
+///
+@system nothrow @nogc unittest
+{
+    import std.typecons : Ternary;
+
+    ubyte[1024] store;
+    auto myRegion = BorrowedRegion!(1)(store[]);
+
+    assert(myRegion.empty == Ternary.yes);
+    assert(myRegion.available == store.length);
+
+    void[] b = myRegion.allocate(101);
+
+    assert(b.length == 101);
+    assert(myRegion.empty == Ternary.no);
+    assert(myRegion.owns(b) == Ternary.yes);
+    assert(myRegion.available == store.length - b.length);
+
+    void[] b2 = myRegion.allocate(256);
+
+    // Can only free the most recent allocation
+    assert(myRegion.deallocate(b) == false);
+    assert(myRegion.deallocate(b2) == true);
+
+    myRegion.deallocateAll();
+
+    assert(myRegion.empty == Ternary.yes);
+}
+
+/**
 
 `InSituRegion` is a convenient region that carries its storage within itself
 (in the form of a statically-sized array).
