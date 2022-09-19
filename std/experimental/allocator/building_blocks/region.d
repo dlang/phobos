@@ -359,8 +359,7 @@ Unlike a `Region`, a `BorrowedRegion` does not own the memory it allocates from
 and will not deallocate that memory upon destruction. Instead, it is the user's
 responsibility to ensure that the memory is properly disposed of.
 
-In all other respects, a `BorrowedRegion` behaves exactly like a `Region` (if
-it is thread-local) or a `SharedRegion` (if it is `shared`).
+In all other respects, a `BorrowedRegion` behaves exactly like a `Region`.
 */
 struct BorrowedRegion(uint minAlign = platformAlignment,
     Flag!"growDownwards" growDownwards = No.growDownwards)
@@ -377,25 +376,13 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
         return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
     }
 
-    private void* roundedBegin() shared const pure nothrow @trusted @nogc
-    {
-        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
-    }
-
     private void* roundedEnd() const pure nothrow @trusted @nogc
-    {
-        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
-    }
-
-    private void* roundedEnd() shared const pure nothrow @trusted @nogc
     {
         return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
     }
 
     /**
     Constructs a region backed by a user-provided store.
-
-    When constructing a `shared(BorrowedRegion)`, `store` must not be aliased.
 
     Params:
         store = User-provided store backing up the region.
@@ -410,17 +397,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
             _current = roundedBegin();
     }
 
-    /// Ditto
-    this(ubyte[] store) shared pure nothrow @nogc
-    {
-        _begin = cast(typeof(_begin)) store.ptr;
-        _end = cast(typeof(_end)) (store.ptr + store.length);
-        static if (growDownwards)
-            _current = cast(typeof(_current)) roundedEnd();
-        else
-            _current = cast(typeof(_current)) roundedBegin();
-    }
-
     /*
     TODO: The postblit of `BorrowedRegion` should be disabled because such objects
     should not be copied around naively.
@@ -430,12 +406,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
     Rounds the given size to a multiple of the `alignment`
     */
     size_t goodAllocSize(size_t n) const pure nothrow @safe @nogc
-    {
-        return n.roundUpToAlignment(alignment);
-    }
-
-    /// Ditto
-    size_t goodAllocSize(size_t n) shared const pure nothrow @safe @nogc
     {
         return n.roundUpToAlignment(alignment);
     }
@@ -476,53 +446,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
         }
 
         return result;
-    }
-
-    /**
-    Allocates `n` bytes of memory. The allocation is served by atomically incrementing
-    a pointer which keeps track of the current used space.
-
-    Params:
-        n = number of bytes to allocate
-
-    Returns:
-        A properly-aligned buffer of size `n`, or `null` if request could not
-        be satisfied.
-    */
-    void[] allocate(size_t n) shared pure nothrow @trusted @nogc
-    {
-        import core.atomic : cas, atomicLoad;
-
-        if (n == 0) return null;
-        const rounded = goodAllocSize(n);
-
-        shared void* localCurrent, localNewCurrent;
-        static if (growDownwards)
-        {
-            do
-            {
-                localCurrent = atomicLoad(_current);
-                localNewCurrent = localCurrent - rounded;
-                if (localNewCurrent > localCurrent || localNewCurrent < _begin)
-                    return null;
-            } while (!cas(&_current, localCurrent, localNewCurrent));
-
-            return cast(void[]) localNewCurrent[0 .. n];
-        }
-        else
-        {
-            do
-            {
-                localCurrent = atomicLoad(_current);
-                localNewCurrent = localCurrent + rounded;
-                if (localNewCurrent < localCurrent || localNewCurrent > _end)
-                    return null;
-            } while (!cas(&_current, localCurrent, localNewCurrent));
-
-            return cast(void[]) localCurrent[0 .. n];
-        }
-
-        assert(0, "Unexpected error in shared(BorrowedRegion).allocate");
     }
 
     /**
@@ -572,50 +495,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
             _current = save;
         }
         return null;
-    }
-
-    /// Ditto
-    void[] alignedAllocate(size_t n, uint a) shared pure nothrow @trusted @nogc
-    {
-        import core.atomic : cas, atomicLoad;
-        import std.math.traits : isPowerOf2;
-
-        assert(a.isPowerOf2);
-        if (n == 0) return null;
-
-        const rounded = goodAllocSize(n);
-        shared void* localCurrent, localNewCurrent;
-
-        static if (growDownwards)
-        {
-            do
-            {
-                localCurrent = atomicLoad(_current);
-                auto alignedCurrent = cast(void*)(localCurrent - rounded);
-                localNewCurrent = cast(shared(void*)) alignedCurrent.alignDownTo(a);
-                if (alignedCurrent > localCurrent || localNewCurrent > alignedCurrent ||
-                    localNewCurrent < _begin)
-                    return null;
-            } while (!cas(&_current, localCurrent, localNewCurrent));
-
-            return cast(void[]) localNewCurrent[0 .. n];
-        }
-        else
-        {
-            do
-            {
-                localCurrent = atomicLoad(_current);
-                auto alignedCurrent = alignUpTo(cast(void*) localCurrent, a);
-                localNewCurrent = cast(shared(void*)) (alignedCurrent + rounded);
-                if (alignedCurrent < localCurrent || localNewCurrent < alignedCurrent ||
-                    localNewCurrent > _end)
-                    return null;
-            } while (!cas(&_current, localCurrent, localNewCurrent));
-
-            return cast(void[]) (localNewCurrent - rounded)[0 .. n];
-        }
-
-        assert(0, "Unexpected error in shared(BorrowedRegion).alignedAllocate");
     }
 
     /// Allocates and returns all memory available to this region.
@@ -696,32 +575,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
         return false;
     }
 
-    /// Ditto
-    bool deallocate(void[] b) shared pure nothrow @nogc
-    {
-        import core.atomic : cas, atomicLoad;
-
-        const rounded = goodAllocSize(b.length);
-        shared void* localCurrent, localNewCurrent;
-
-        // The cas is done only once, because only the last allocation can be reverted
-        localCurrent = atomicLoad(_current);
-        static if (growDownwards)
-        {
-            localNewCurrent = localCurrent + rounded;
-            if (b.ptr == localCurrent)
-                return cas(&_current, localCurrent, localNewCurrent);
-        }
-        else
-        {
-            localNewCurrent = localCurrent - rounded;
-            if (b.ptr == localNewCurrent)
-                return cas(&_current, localCurrent, localNewCurrent);
-        }
-
-        return false;
-    }
-
     /**
     Deallocates all memory allocated by this region, which can be subsequently
     reused for new allocations.
@@ -735,21 +588,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
         else
         {
             _current = roundedBegin();
-        }
-        return true;
-    }
-
-    /// Ditto
-    bool deallocateAll() shared pure nothrow @nogc
-    {
-        import core.atomic : atomicStore;
-        static if (growDownwards)
-        {
-            atomicStore(_current, cast(shared(void*)) roundedEnd());
-        }
-        else
-        {
-            atomicStore(_current, cast(shared(void*)) roundedBegin());
         }
         return true;
     }
@@ -769,12 +607,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
         return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
     }
 
-    /// Ditto
-    Ternary owns(const void[] b) shared const pure nothrow @trusted @nogc
-    {
-        return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
-    }
-
     /**
     Returns `Ternary.yes` if no memory has been allocated in this region,
     `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
@@ -785,18 +617,6 @@ struct BorrowedRegion(uint minAlign = platformAlignment,
             return Ternary(_current == roundedEnd());
         else
             return Ternary(_current == roundedBegin());
-    }
-
-    /// Ditto
-    Ternary empty() shared const pure nothrow @safe @nogc
-    {
-        import core.atomic : atomicLoad;
-
-        auto localCurrent = atomicLoad(_current);
-        static if (growDownwards)
-            return Ternary(localCurrent == roundedEnd());
-        else
-            return Ternary(localCurrent == roundedBegin());
     }
 
     /// Nonstandard property that returns bytes available for allocation.
@@ -1379,7 +1199,7 @@ shared struct SharedRegion(ParentAllocator,
     {
         alias parent = ParentAllocator.instance;
     }
-    private shared BorrowedRegion!(minAlign, growDownwards) _impl;
+    private shared SharedBorrowedRegion!(minAlign, growDownwards) _impl;
 
     private void* roundedBegin() const pure nothrow @trusted @nogc
     {
@@ -1644,4 +1464,251 @@ shared struct SharedRegion(ParentAllocator,
 
     testAlloc(a1, true);
     testAlloc(a2, false);
+}
+
+/**
+A `SharedBorrowedRegion` allocates directly from a user-provided block of memory.
+
+Unlike a `SharedRegion`, a `SharedBorrowedRegion` does not own the memory it
+allocates from and will not deallocate that memory upon destruction. Instead,
+it is the user's responsibility to ensure that the memory is properly disposed
+of.
+
+In all other respects, a `SharedBorrowedRegion` behaves exactly like a `SharedRegion`.
+*/
+shared struct SharedBorrowedRegion(uint minAlign = platformAlignment,
+    Flag!"growDownwards" growDownwards = No.growDownwards)
+{
+    static assert(minAlign.isGoodStaticAlignment);
+
+    import std.typecons : Ternary;
+
+    // state
+    private void* _current, _begin, _end;
+
+    private void* roundedBegin() shared const pure nothrow @trusted @nogc
+    {
+        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
+    }
+
+    private void* roundedEnd() shared const pure nothrow @trusted @nogc
+    {
+        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
+    }
+
+    /**
+    Constructs a region backed by a user-provided store.
+
+    Params:
+        store = User-provided store backing up the region. Must not be aliased.
+    */
+    this(ubyte[] store) shared pure nothrow @nogc
+    {
+        _begin = cast(typeof(_begin)) store.ptr;
+        _end = cast(typeof(_end)) (store.ptr + store.length);
+        static if (growDownwards)
+            _current = cast(typeof(_current)) roundedEnd();
+        else
+            _current = cast(typeof(_current)) roundedBegin();
+    }
+
+    /*
+    TODO: The postblit of `SharedBorrowedRegion` should be disabled because
+    such objects should not be copied around naively.
+    */
+
+    /**
+    Rounds the given size to a multiple of the `alignment`
+    */
+    size_t goodAllocSize(size_t n) shared const pure nothrow @safe @nogc
+    {
+        return n.roundUpToAlignment(alignment);
+    }
+
+    /**
+    Alignment offered.
+    */
+    alias alignment = minAlign;
+
+    /**
+    Allocates `n` bytes of memory. The allocation is served by atomically incrementing
+    a pointer which keeps track of the current used space.
+
+    Params:
+        n = number of bytes to allocate
+
+    Returns:
+        A properly-aligned buffer of size `n`, or `null` if request could not
+        be satisfied.
+    */
+    void[] allocate(size_t n) shared pure nothrow @trusted @nogc
+    {
+        import core.atomic : cas, atomicLoad;
+
+        if (n == 0) return null;
+        const rounded = goodAllocSize(n);
+
+        shared void* localCurrent, localNewCurrent;
+        static if (growDownwards)
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                localNewCurrent = localCurrent - rounded;
+                if (localNewCurrent > localCurrent || localNewCurrent < _begin)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localNewCurrent[0 .. n];
+        }
+        else
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                localNewCurrent = localCurrent + rounded;
+                if (localNewCurrent < localCurrent || localNewCurrent > _end)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localCurrent[0 .. n];
+        }
+
+        assert(0, "Unexpected error in SharedBorrowedRegion.allocate");
+    }
+
+    /**
+    Allocates `n` bytes of memory aligned at alignment `a`.
+
+    Params:
+        n = number of bytes to allocate
+        a = alignment for the allocated block
+
+    Returns:
+        Either a suitable block of `n` bytes aligned at `a`, or `null`.
+    */
+    void[] alignedAllocate(size_t n, uint a) shared pure nothrow @trusted @nogc
+    {
+        import core.atomic : cas, atomicLoad;
+        import std.math.traits : isPowerOf2;
+
+        assert(a.isPowerOf2);
+        if (n == 0) return null;
+
+        const rounded = goodAllocSize(n);
+        shared void* localCurrent, localNewCurrent;
+
+        static if (growDownwards)
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                auto alignedCurrent = cast(void*)(localCurrent - rounded);
+                localNewCurrent = cast(shared(void*)) alignedCurrent.alignDownTo(a);
+                if (alignedCurrent > localCurrent || localNewCurrent > alignedCurrent ||
+                    localNewCurrent < _begin)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) localNewCurrent[0 .. n];
+        }
+        else
+        {
+            do
+            {
+                localCurrent = atomicLoad(_current);
+                auto alignedCurrent = alignUpTo(cast(void*) localCurrent, a);
+                localNewCurrent = cast(shared(void*)) (alignedCurrent + rounded);
+                if (alignedCurrent < localCurrent || localNewCurrent < alignedCurrent ||
+                    localNewCurrent > _end)
+                    return null;
+            } while (!cas(&_current, localCurrent, localNewCurrent));
+
+            return cast(void[]) (localNewCurrent - rounded)[0 .. n];
+        }
+
+        assert(0, "Unexpected error in SharedBorrowedRegion.alignedAllocate");
+    }
+
+    /**
+    Deallocates `b`. This works only if `b` was obtained as the last call
+    to `allocate`; otherwise (i.e. another allocation has occurred since) it
+    does nothing.
+
+    Params:
+        b = Block previously obtained by a call to `allocate` against this
+        allocator (`null` is allowed).
+    */
+    bool deallocate(void[] b) shared pure nothrow @nogc
+    {
+        import core.atomic : cas, atomicLoad;
+
+        const rounded = goodAllocSize(b.length);
+        shared void* localCurrent, localNewCurrent;
+
+        // The cas is done only once, because only the last allocation can be reverted
+        localCurrent = atomicLoad(_current);
+        static if (growDownwards)
+        {
+            localNewCurrent = localCurrent + rounded;
+            if (b.ptr == localCurrent)
+                return cas(&_current, localCurrent, localNewCurrent);
+        }
+        else
+        {
+            localNewCurrent = localCurrent - rounded;
+            if (b.ptr == localNewCurrent)
+                return cas(&_current, localCurrent, localNewCurrent);
+        }
+
+        return false;
+    }
+
+    /**
+    Deallocates all memory allocated by this region, which can be subsequently
+    reused for new allocations.
+    */
+    bool deallocateAll() shared pure nothrow @nogc
+    {
+        import core.atomic : atomicStore;
+        static if (growDownwards)
+        {
+            atomicStore(_current, cast(shared(void*)) roundedEnd());
+        }
+        else
+        {
+            atomicStore(_current, cast(shared(void*)) roundedBegin());
+        }
+        return true;
+    }
+
+    /**
+    Queries whether `b` has been allocated with this region.
+
+    Params:
+        b = Arbitrary block of memory (`null` is allowed; `owns(null)` returns
+        `false`).
+
+    Returns:
+        `true` if `b` has been allocated with this region, `false` otherwise.
+    */
+    Ternary owns(const void[] b) shared const pure nothrow @trusted @nogc
+    {
+        return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
+    }
+
+    /**
+    Returns `Ternary.yes` if no memory has been allocated in this region,
+    `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
+    */
+    Ternary empty() shared const pure nothrow @safe @nogc
+    {
+        import core.atomic : atomicLoad;
+
+        auto localCurrent = atomicLoad(_current);
+        static if (growDownwards)
+            return Ternary(localCurrent == roundedEnd());
+        else
+            return Ternary(localCurrent == roundedBegin());
+    }
 }
