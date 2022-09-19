@@ -227,7 +227,7 @@ enum bool isInputRange(R) =
     }
     static assert(!isInputRange!VoidFront);
 }
-// Verify fix for: https://issues.dlang.org/show_bug.cgi?id=16034
+// https://issues.dlang.org/show_bug.cgi?id=16034
 @safe unittest
 {
     struct One
@@ -236,12 +236,7 @@ enum bool isInputRange(R) =
         @disable this(this);
     }
 
-    One[] ones = [One(), One()];
-
-    import std.algorithm.iteration : map;
-    import std.algorithm.comparison : equal;
-
-    assert(ones.map!`a.entry + 1`.equal([2, 2]));
+    assert(isInputRange!(One[]));
 }
 
 @safe unittest
