@@ -588,7 +588,7 @@ Throws: `ErrnoException` if the file could not be opened.
         detach();
     }
 
-    this(this) @safe nothrow
+    this(this) @safe pure nothrow @nogc
     {
         if (!_p) return;
         assert(atomicLoad(_p.refs));
