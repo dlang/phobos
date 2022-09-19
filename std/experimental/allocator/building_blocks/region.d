@@ -63,16 +63,16 @@ struct Region(ParentAllocator = NullAllocator,
         alias parent = ParentAllocator.instance;
     }
 
-    private void* _current, _begin, _end;
+    private BorrowedRegion!(minAlign, growDownwards) _impl;
 
     private void* roundedBegin() const pure nothrow @trusted @nogc
     {
-        return cast(void*) roundUpToAlignment(cast(size_t) _begin, alignment);
+        return _impl.roundedBegin;
     }
 
     private void* roundedEnd() const pure nothrow @trusted @nogc
     {
-        return cast(void*) roundDownToAlignment(cast(size_t) _end, alignment);
+        return _impl.roundedEnd;
     }
     /**
     Constructs a region backed by a user-provided store.
@@ -90,12 +90,7 @@ struct Region(ParentAllocator = NullAllocator,
         */
     this(ubyte[] store) pure nothrow @nogc
     {
-        _begin = store.ptr;
-        _end = store.ptr + store.length;
-        static if (growDownwards)
-            _current = roundedEnd();
-        else
-            _current = roundedBegin();
+        _impl = store;
     }
 
     /// Ditto
@@ -127,7 +122,7 @@ struct Region(ParentAllocator = NullAllocator,
         && hasMember!(ParentAllocator, "deallocate"))
     ~this()
     {
-        parent.deallocate(_begin[0 .. _end - _begin]);
+        with (_impl) parent.deallocate(_begin[0 .. _end - _begin]);
     }
 
     /**
@@ -135,7 +130,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     size_t goodAllocSize(size_t n) const pure nothrow @safe @nogc
     {
-        return n.roundUpToAlignment(alignment);
+        return _impl.goodAllocSize(n);
     }
 
     /**
@@ -156,24 +151,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] allocate(size_t n) pure nothrow @trusted @nogc
     {
-        const rounded = goodAllocSize(n);
-        if (n == 0 || rounded < n || available < rounded) return null;
-
-        static if (growDownwards)
-        {
-            assert(available >= rounded);
-            auto result = (_current - rounded)[0 .. n];
-            assert(result.ptr >= _begin);
-            _current = result.ptr;
-            assert(owns(result) == Ternary.yes);
-        }
-        else
-        {
-            auto result = _current[0 .. n];
-            _current += rounded;
-        }
-
-        return result;
+        return _impl.allocate(n);
     }
 
     /**
@@ -188,57 +166,13 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] alignedAllocate(size_t n, uint a) pure nothrow @trusted @nogc
     {
-        import std.math.traits : isPowerOf2;
-        assert(a.isPowerOf2);
-
-        const rounded = goodAllocSize(n);
-        if (n == 0 || rounded < n || available < rounded) return null;
-
-        static if (growDownwards)
-        {
-            auto tmpCurrent = _current - rounded;
-            auto result = tmpCurrent.alignDownTo(a);
-            if (result <= tmpCurrent && result >= _begin)
-            {
-                _current = result;
-                return cast(void[]) result[0 .. n];
-            }
-        }
-        else
-        {
-            // Just bump the pointer to the next good allocation
-            auto newCurrent = _current.alignUpTo(a);
-            if (newCurrent < _current || newCurrent > _end)
-                return null;
-
-            auto save = _current;
-            _current = newCurrent;
-            auto result = allocate(n);
-            if (result.ptr)
-            {
-                assert(result.length == n);
-                return result;
-            }
-            // Failed, rollback
-            _current = save;
-        }
-        return null;
+        return _impl.alignedAllocate(n, a);
     }
 
     /// Allocates and returns all memory available to this region.
     void[] allocateAll() pure nothrow @trusted @nogc
     {
-        static if (growDownwards)
-        {
-            auto result = _begin[0 .. available];
-            _current = _begin;
-        }
-        else
-        {
-            auto result = _current[0 .. available];
-            _current = _end;
-        }
-        return result;
+        return _impl.allocateAll;
     }
 
     /**
@@ -249,25 +183,7 @@ struct Region(ParentAllocator = NullAllocator,
     static if (growDownwards == No.growDownwards)
     bool expand(ref void[] b, size_t delta) pure nothrow @safe @nogc
     {
-        assert(owns(b) == Ternary.yes || b is null);
-        assert((() @trusted => b.ptr + b.length <= _current)() || b is null);
-        if (b is null || delta == 0) return delta == 0;
-        auto newLength = b.length + delta;
-        if ((() @trusted => _current < b.ptr + b.length + alignment)())
-        {
-            immutable currentGoodSize = this.goodAllocSize(b.length);
-            immutable newGoodSize = this.goodAllocSize(newLength);
-            immutable goodDelta = newGoodSize - currentGoodSize;
-            // This was the last allocation! Allocate some more and we're done.
-            if (goodDelta == 0
-                || (() @trusted => allocate(goodDelta).length == goodDelta)())
-            {
-                b = (() @trusted => b.ptr[0 .. newLength])();
-                assert((() @trusted => _current < b.ptr + b.length + alignment)());
-                return true;
-            }
-        }
-        return false;
+        return _impl.expand(b, delta);
     }
 
     /**
@@ -281,26 +197,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     bool deallocate(void[] b) pure nothrow @nogc
     {
-        assert(owns(b) == Ternary.yes || b.ptr is null);
-        auto rounded = goodAllocSize(b.length);
-        static if (growDownwards)
-        {
-            if (b.ptr == _current)
-            {
-                _current += rounded;
-                return true;
-            }
-        }
-        else
-        {
-            if (b.ptr + rounded == _current)
-            {
-                assert(b.ptr !is null || _current is null);
-                _current = b.ptr;
-                return true;
-            }
-        }
-        return false;
+        return _impl.deallocate(b);
     }
 
     /**
@@ -309,15 +206,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     bool deallocateAll() pure nothrow @nogc
     {
-        static if (growDownwards)
-        {
-            _current = roundedEnd();
-        }
-        else
-        {
-            _current = roundedBegin();
-        }
-        return true;
+        return _impl.deallocateAll;
     }
 
     /**
@@ -332,7 +221,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     Ternary owns(const void[] b) const pure nothrow @trusted @nogc
     {
-        return Ternary(b && (&b[0] >= _begin) && (&b[0] + b.length <= _end));
+        return _impl.owns(b);
     }
 
     /**
@@ -341,23 +230,13 @@ struct Region(ParentAllocator = NullAllocator,
     */
     Ternary empty() const pure nothrow @safe @nogc
     {
-        static if (growDownwards)
-            return Ternary(_current == roundedEnd());
-        else
-            return Ternary(_current == roundedBegin());
+        return _impl.empty;
     }
 
     /// Nonstandard property that returns bytes available for allocation.
     size_t available() const @safe pure nothrow @nogc
     {
-        static if (growDownwards)
-        {
-            return _current - _begin;
-        }
-        else
-        {
-            return _end - _current;
-        }
+        return _impl.available;
     }
 }
 
@@ -844,7 +723,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     @disable this(this);
 
     // state {
-    private Region!(NullAllocator, minAlign, growDownwards) _impl;
+    private BorrowedRegion!(minAlign, growDownwards) _impl;
     union
     {
         private ubyte[size] _store = void;
