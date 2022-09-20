@@ -7066,6 +7066,7 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=6436
 @betterC @system pure unittest
 {
+    import std.meta : AliasSeq;
     struct S
     {
         this(int rval) { assert(rval == 1); }
@@ -7099,6 +7100,7 @@ pure @system unittest
 
 @betterC @system pure nothrow @nogc unittest
 {
+    import std.meta : AliasSeq;
     foreach (MyRefCounted; AliasSeq!(SafeRefCounted, RefCounted))
     {
         MyRefCounted!int a;
@@ -7116,6 +7118,7 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=21638
 @betterC @system pure nothrow @nogc unittest
 {
+    import std.meta : AliasSeq;
     static struct NoDefaultCtor
     {
         @disable this();
