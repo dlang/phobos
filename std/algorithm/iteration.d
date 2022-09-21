@@ -7956,7 +7956,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
         next(2);
     }
-    static if (isForwardRange!Range) {
+    static if (isForwardRange!Range)
+    {
         ///
         auto save()
         {
@@ -7981,7 +7982,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : ElementType;
     import std.array : array;
     auto p = [1, 2, 3].permutations;
