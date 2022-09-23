@@ -827,7 +827,6 @@ Returns:
     A $(REF Tuple, std,typecons) of the three resulting ranges. These ranges are
     slices of the original range.
 
-BUGS: stable `partition3` has not been implemented yet.
  */
 auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
 (Range r, E pivot)
@@ -884,6 +883,49 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
             r[r.length - strictlyGreater .. r.length]);
 }
 
+///Dito
+auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.stable, Range, E)
+(Range r, E pivot, size_t[] buffer = (size_t[]).init)
+if (ss == SwapStrategy.stable && isRandomAccessRange!Range
+        && hasSwappableElements!Range && hasLength!Range && hasSlicing!Range
+        && is(typeof(binaryFun!less(r.front, pivot)) == bool)
+        && is(typeof(binaryFun!less(pivot, r.front)) == bool)
+        && is(typeof(binaryFun!less(r.front, r.front)) == bool))
+{
+    import std.typecons : tuple;
+
+    size_t b, m, t = r.length;
+
+    buffer.length = r.length*2;
+
+    auto buff1 = buffer[0 .. r.length];
+    auto buff2 = buffer[r.length .. $];
+
+
+    foreach (i, ref x; r)
+    {
+        if (less(x, pivot))
+        {
+            buff1[b++] = i;
+        }
+        else if (less(pivot, x))
+        {
+            buff2[--t] = i;
+        }
+        else
+        {
+            buff2[m++] = i;
+        }
+    }
+    buff1[b .. b + m] = buff2[0 .. m];
+    foreach (i, ref x; buff1[b + m .. $])
+    {
+        x = buff2[$ - 1 - i];
+    }
+    reorderAccordingTo(r, buff1);
+    return tuple(r[0 .. b], r[b .. t], r[t .. r.length]);
+}
+
 ///
 @safe unittest
 {
@@ -893,6 +935,54 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     assert(pieces[1] == [ 4, 4, 4 ]);
     assert(pieces[2] == [ 8, 7 ]);
 }
+
+//O(n) algorithm to swap elements according to a permutation
+//To see that is is O(n) note that all the elements visited in the inner
+//if and loop will be skipped over in the outer loop (since they will satisfy
+//start == indices[start].
+private void reorderAccordingTo(R, I)(R r, I indices)
+{
+    import std.range : ElementType;
+    size_t next, current;
+    ElementType!R tmp;
+    foreach (start; 0 .. r.length)
+    {
+        if (start != indices[start]) //Found element out of order
+        {
+            tmp = r[start];
+            for(current = start, next = indices[start]; start != next; current = next, next = indices[next])
+            {
+                r[current] = r[next];
+                indices[current] = current; //Indicate element is now in correct place
+            }
+            r[current] = tmp;
+            indices[current] = current; //Indeicate element is now in correct place
+        }
+    }
+}
+
+pure @safe unittest
+{
+    import std.algorithm : map;
+    import std.range : enumerate;
+    import std.array;
+
+    struct P
+    {
+        long x;
+        int y;
+    }
+
+    auto v = [1, 3, 4, 5, 2, 3, 7, 8, 9, 3, 2, 4, 7, 0, 1, 2].enumerate.map!(
+            t => P(t[0], t[1])).array;
+
+    auto p = partition3!((a, b) => a.y < b.y,SwapStrategy.stable)(v, P(0, 3));
+
+    assert(p[0] == [P(0, 1), P(4, 2), P(10, 2), P(13, 0), P(14, 1), P(15, 2)]);
+    assert(p[1] == [P(1, 3), P(5, 3), P(9, 3)]);
+    assert(p[2] == [P(2, 4), P(3, 5), P(6, 7), P(7, 8), P(8, 9), P(11, 4), P(12, 7)]);
+}
+
 
 @safe unittest
 {
