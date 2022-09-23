@@ -904,11 +904,11 @@ if (ss == SwapStrategy.stable && isRandomAccessRange!Range
 
     foreach (i, ref x; r)
     {
-        if (less(x, pivot))
+        if (binaryFun!less(x, pivot))
         {
             buff1[b++] = i;
         }
-        else if (less(pivot, x))
+        else if (binaryFun!less(pivot, x))
         {
             buff2[--t] = i;
         }
@@ -950,7 +950,7 @@ private void reorderAccordingTo(R, I)(R r, I indices)
         if (start != indices[start]) //Found element out of order
         {
             tmp = r[start];
-            for(current = start, next = indices[start]; start != next; current = next, next = indices[next])
+            for (current = start, next = indices[start]; start != next; current = next, next = indices[next])
             {
                 r[current] = r[next];
                 indices[current] = current; //Indicate element is now in correct place
