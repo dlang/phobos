@@ -7956,13 +7956,10 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
         next(2);
     }
-    static if (isForwardRange!Range)
+    /// Returns: an independent copy of the purmations range.
+    auto save()
     {
-        ///
-        auto save()
-        {
-            return typeof(this)(_indices.dup, _state.dup, _r.save, _empty);
-        }
+        return typeof(this)(_indices.dup, _state.dup, _r.save, _empty);
     }
 }
 
