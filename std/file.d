@@ -4957,7 +4957,8 @@ foreach (d; dFiles)
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
-    return DirIterator(path, mode, followSymlink);
+    import std.path : absolutePath;
+    return DirIterator(absolutePath(path), mode, followSymlink);
 }
 
 /// Duplicate functionality of D1's `std.file.listdir()`:
@@ -5028,7 +5029,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     foreach (string name; dirEntries(testdir, SpanMode.breadth))
     {
         //writeln(name);
-        assert(name.startsWith(testdir));
+        assert(name.startsWith(absolutePath(testdir)));
     }
     foreach (DirEntry e; dirEntries(absolutePath(testdir), SpanMode.breadth))
     {
@@ -5054,6 +5055,17 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
+
+    // issue 6138
+    string cwd = getcwd();
+    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
+    {
+        if (entry.isDir)
+        {
+             chdir(entry);
+        }
+    }
+    chdir (cwd); // needed for the directories to be removed
 }
 
 /// Ditto
