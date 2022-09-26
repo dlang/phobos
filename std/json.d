@@ -602,43 +602,44 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
-    /**
-     * Creates a `JSONValue` representing an empty object.
-     * Returns: A `JSONValue` whose type is `JSONType.object`.
-     */
-    static JSONValue emptyObject() pure @safe
-    {
-        JSONValue[string] objData;
-        return JSONValue(objData);
-    }
-    ///
-    @system unittest
-    {
-        JSONValue j = JSONValue.emptyObject();
-        assert(j.type == JSONType.object);
-        // Ensure that assigning and reading values from the object works.
-        j.object["a"] = JSONValue(1);
-        assert(j.object["a"] == JSONValue(1));
-    }
+    static enum : JSONValue {
+        /**
+         * An enum value that can be used to obtain a `JSONValue` representing
+         * an empty JSON object.
+         */
+        emptyObject = JSONValue(string[string].init),
 
-    /**
-     * Creates a `JSONValue` representing an empty array.
-     * Returns: A `JSONValue` whose type is `JSONType.array`.
-     */
-    static JSONValue emptyArray() pure @safe
-    {
-        return JSONValue(JSONValue[].init);
+        /**
+         * An enum value that can be used to obtain a `JSONValue` representing
+         * an empty JSON array.
+         */
+        emptyArray = JSONValue(JSONValue[].init)
     }
     ///
     @system unittest
     {
-        JSONValue j = JSONValue.emptyArray();
-        assert(j.type == JSONType.array);
-        // Ensure that operating on the array works as intended.
-        assert(j.array.length == 0);
-        j.array ~= JSONValue("Hello");
-        assert(j.array.length == 1);
-        assert(j.array[0] == JSONValue("Hello"));
+        // Test objects obtained via `JSONValue.emptyObject`
+        JSONValue obj1 = JSONValue.emptyObject;
+        assert(obj1.type == JSONType.object);
+        obj1.object["a"] = JSONValue(1);
+        assert(obj1.object["a"] == JSONValue(1));
+
+        JSONValue obj2 = JSONValue.emptyObject;
+        assert("a" !in obj2.object);
+        obj2.object["b"] = JSONValue(5);
+        assert(obj1 != obj2);
+
+        // Test arrays obtained via `JSONValue.emptyArray`
+        JSONValue arr1 = JSONValue.emptyArray;
+        assert(arr1.type == JSONType.array);
+        assert(arr1.array.length == 0);
+        arr1.array ~= JSONValue("Hello");
+        assert(arr1.array.length == 1);
+        assert(arr1.array[0] == JSONValue("Hello"));
+
+        JSONValue arr2 = JSONValue.emptyArray;
+        assert(arr2.array.length == 0);
+        assert(arr1 != arr2);
     }
 
     void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
