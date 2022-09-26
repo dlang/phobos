@@ -7956,7 +7956,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
         next(2);
     }
-    /// Returns: an independent copy of the purmations range.
+    /// Returns: an independent copy of the permutations range.
     auto save()
     {
         return typeof(this)(_indices.dup, _state.dup, _r.save, _empty);
