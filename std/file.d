@@ -4617,8 +4617,8 @@ enum SpanMode
         ["animals", "plants"]));
 }
 
-private struct DirIteratorImpl(alias pred = (const scope ref DirEntry entry) => true)
-// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
+private struct DirIteratorImpl(alias pred = (scope DirEntry entry) => true)
+if (is(typeof(pred(DirEntry.init)) : bool))
 {
   @safe:
     SpanMode _mode;
@@ -4867,8 +4867,8 @@ private struct DirIteratorImpl(alias pred = (const scope ref DirEntry entry) => 
     }
 }
 
-struct _DirIterator(alias pred = (const scope ref DirEntry entry) => true, bool useDIP1000)
-// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
+struct _DirIterator(alias pred = (scope DirEntry entry) => true, bool useDIP1000)
+if (is(typeof(pred(DirEntry.init)) : bool))
 // Must be a template, because the destructor is unsafe or safe depending on
 // whether `-preview=dip1000` is in use. Otherwise, linking errors would
 // result.
@@ -4891,7 +4891,7 @@ public:
 
 // This has the client code to automatically use and link to the correct
 // template instance
-alias DirIterator = _DirIterator!((const scope ref DirEntry entry) => true, dip1000Enabled);
+alias DirIterator = _DirIterator!((scope DirEntry entry) => true, dip1000Enabled);
 
 /++
     Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -4979,9 +4979,9 @@ foreach (d; dFiles)
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(alias pred = (const scope ref DirEntry entry) => true, bool useDIP1000 = dip1000Enabled)
+auto dirEntries(alias pred = (scope DirEntry entry) => true, bool useDIP1000 = dip1000Enabled)
     (string path, SpanMode mode, bool followSymlink = true)
-// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
+if (is(typeof(pred(DirEntry.init)) : bool))
 {
     return _DirIterator!(pred, useDIP1000)(path, mode, followSymlink);
 }
@@ -5084,7 +5084,7 @@ auto dirEntries(alias pred = (const scope ref DirEntry entry) => true, bool useD
 }
 
 /// Ditto
-auto dirEntries(alias pred = (const scope ref DirEntry entry) => true,
+auto dirEntries(alias pred = (scope DirEntry entry) => true,
                 bool useDIP1000 = dip1000Enabled)
     (string path, string pattern, SpanMode mode,
     bool followSymlink = true)
