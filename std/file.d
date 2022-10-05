@@ -4617,7 +4617,8 @@ enum SpanMode
         ["animals", "plants"]));
 }
 
-private struct DirIteratorImpl
+private struct DirIteratorImpl(alias pred = (const scope ref DirEntry entry) => true)
+// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
 {
   @safe:
     SpanMode _mode;
@@ -4721,6 +4722,8 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
+            if (pred(_cur))
+                return false;
             return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
     }
@@ -4864,16 +4867,17 @@ private struct DirIteratorImpl
     }
 }
 
+struct _DirIterator(bool useDIP1000, alias pred = (const scope ref DirEntry entry) => true)
+// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
 // Must be a template, because the destructor is unsafe or safe depending on
 // whether `-preview=dip1000` is in use. Otherwise, linking errors would
 // result.
-struct _DirIterator(bool useDIP1000)
 {
     static assert(useDIP1000 == dip1000Enabled,
         "Please don't override useDIP1000 to disagree with compiler switch.");
 
 private:
-    SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    SafeRefCounted!(DirIteratorImpl!(pred), RefCountedAutoInitialize.no) impl;
 
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
@@ -4975,10 +4979,11 @@ foreach (d; dFiles)
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
+auto dirEntries(bool useDIP1000 = dip1000Enabled, alias pred = (const scope ref DirEntry entry) => true)
     (string path, SpanMode mode, bool followSymlink = true)
+// TODO: if (is(typeof(pred(DirEntry.init)) : bool))
 {
-    return _DirIterator!useDIP1000(path, mode, followSymlink);
+    return _DirIterator!(useDIP1000, pred)(path, mode, followSymlink);
 }
 
 /// Duplicate functionality of D1's `std.file.listdir()`:
@@ -5087,7 +5092,7 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
     import std.path : globMatch, baseName;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+    return filter!f(_DirIterator!(useDIP1000)(path, mode, followSymlink));
 }
 
 @safe unittest
