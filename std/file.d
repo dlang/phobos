@@ -4722,7 +4722,7 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
 
         bool mayStepIn()
         {
-            if (pred(_cur))
+            if (!pred(_cur))
                 return false;
             return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
