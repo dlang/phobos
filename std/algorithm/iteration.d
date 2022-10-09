@@ -771,6 +771,23 @@ private struct MapResult(alias fun, Range)
     assert(dd.length == 4);
 }
 
+// Verify fix for: https://issues.dlang.org/show_bug.cgi?id=16034
+@safe unittest
+{
+    struct One
+    {
+        int entry = 1;
+        @disable this(this);
+    }
+
+    One[] ones = [One(), One()];
+
+    import std.algorithm.comparison : equal;
+
+    assert(ones.map!`a.entry + 1`.equal([2, 2]));
+}
+
+
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -7909,7 +7926,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
         _indices = iota(size_t(r.length)).array;
         _empty = r.length == 0;
     }
-
+    private this(size_t[] indices, size_t[] state, Range r, bool empty_)
+    {
+        _indices = indices;
+        _state = state;
+        _r = r;
+        _empty = empty_;
+    }
     /// Returns: `true` if the range is empty, `false` otherwise.
     @property bool empty() const pure nothrow @safe @nogc
     {
@@ -7950,6 +7973,11 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
         next(2);
     }
+    /// Returns: an independent copy of the permutations range.
+    auto save()
+    {
+        return typeof(this)(_indices.dup, _state.dup, _r.save, _empty);
+    }
 }
 
 ///
@@ -7964,4 +7992,16 @@ if (isRandomAccessRange!Range && hasLength!Range)
          [0, 2, 1],
          [1, 2, 0],
          [2, 1, 0]]));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : ElementType;
+    import std.array : array;
+    auto p = [1, 2, 3].permutations;
+    auto x = p.save.front;
+    p.popFront;
+    auto y = p.front;
+    assert(x != y);
 }

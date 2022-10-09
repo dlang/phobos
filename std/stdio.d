@@ -85,8 +85,7 @@ else version (CRuntime_Musl)
 }
 else version (CRuntime_UClibc)
 {
-    // uClibc supports GCC IO
-    version = GCC_IO;
+    version = GENERIC_IO;
 }
 else version (OSX)
 {
@@ -589,7 +588,7 @@ Throws: `ErrnoException` if the file could not be opened.
         detach();
     }
 
-    this(this) @safe nothrow
+    this(this) @safe pure nothrow @nogc
     {
         if (!_p) return;
         assert(atomicLoad(_p.refs));
@@ -5211,7 +5210,7 @@ enum StdFileHandle: string
             {
                 with (StdFileHandle)
                     assert(_iob == stdin || _iob == stdout || _iob == stderr);
-                impl.handle = mixin(_iob);
+                impl.handle = cast() mixin(_iob);
                 result._p = &impl;
                 atomicOp!"+="(spinlock, uint.max / 2);
                 break;
