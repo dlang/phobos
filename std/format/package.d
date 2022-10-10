@@ -1559,40 +1559,6 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     import std.range.primitives;
     import std.utf : encode;
 
-    static struct Sink
-    {
-        char[] buf;
-        size_t i;
-        void put(dchar c)
-        {
-            char[4] enc;
-            auto n = encode(enc, c);
-
-            if (buf.length < i + n)
-                throw new RangeError(__FILE__, __LINE__);
-
-            buf[i .. i + n] = enc[0 .. n];
-            i += n;
-        }
-        void put(scope const(char)[] s)
-        {
-            if (buf.length < i + s.length)
-                throw new RangeError(__FILE__, __LINE__);
-
-            buf[i .. i + s.length] = s[];
-            i += s.length;
-        }
-        void put(scope const(wchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-        void put(scope const(dchar)[] s)
-        {
-            for (; !s.empty; s.popFront())
-                put(s.front);
-        }
-    }
     auto sink = Sink(buf);
     auto n = formattedWrite(sink, fmt, args);
     version (all)
@@ -1685,6 +1651,45 @@ if (isSomeString!(typeof(fmt)))
     sformat(buf, "%s", 'c');
     const v = () @trusted { return GC.stats().usedSize; } ();
     assert(u == v);
+}
+
+private struct Sink
+{
+    import core.exception : RangeError;
+    import std.range.primitives;
+    import std.utf : encode;
+
+    char[] buf;
+    size_t i;
+    void put(dchar c)
+    {
+        char[4] enc;
+        auto n = encode(enc, c);
+
+        if (buf.length < i + n)
+            throw new RangeError(__FILE__, __LINE__);
+
+        buf[i .. i + n] = enc[0 .. n];
+        i += n;
+    }
+    void put(scope const(char)[] s)
+    {
+        if (buf.length < i + s.length)
+            throw new RangeError(__FILE__, __LINE__);
+
+        buf[i .. i + s.length] = s[];
+        i += s.length;
+    }
+    void put(scope const(wchar)[] s)
+    {
+        for (; !s.empty; s.popFront())
+            put(s.front);
+    }
+    void put(scope const(dchar)[] s)
+    {
+        for (; !s.empty; s.popFront())
+            put(s.front);
+    }
 }
 
 version (StdUnittest)
