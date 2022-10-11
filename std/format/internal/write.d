@@ -3019,15 +3019,10 @@ if (is(T == enum))
 
     if (f.spec == 's')
     {
-        foreach (i, e; EnumMembers!T)
-        {
-            if (val == e)
-            {
-                formatValueImpl(w, __traits(allMembers, T)[i], f);
-                return;
-            }
-        }
-
+        static immutable members = __traits(allMembers, T);
+        foreach (immutable member; members)
+            if (val == __traits(getMember, T, member))
+                return formatValueImpl(w, member, f);
         auto w2 = appender!string();
 
         // val is not a member of T, output cast(T) rawValue instead.
