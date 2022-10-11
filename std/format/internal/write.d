@@ -3019,11 +3019,11 @@ if (is(T == enum))
 
     if (f.spec == 's')
     {
-        foreach (i, e; EnumMembers!T)
+        static foreach (e; EnumMembers!T)
         {
             if (val == e)
             {
-                formatValueImpl(w, __traits(allMembers, T)[i], f);
+                formatValueImpl(w, __traits(identifier, e), f);
                 return;
             }
         }
