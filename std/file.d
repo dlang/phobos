@@ -4830,7 +4830,7 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
 
     void popFront()
     {
-        switch (_mode)
+        final switch (_mode)
         {
         case SpanMode.depth:
             if (next())
@@ -4858,7 +4858,7 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
             else
                 while (!empty && !next()){}
             break;
-        default:
+        case SpanMode.shallow:
             next();
         }
     }
