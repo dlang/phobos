@@ -5201,11 +5201,13 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
 
     assert(equal(files, result));
 
-    import std.algorithm : endsWith;
-    auto result2 = dirEntries!((scope ref DirEntry entry) => entry.name.endsWith("Hello World"))(dir, SpanMode.shallow).map!((return a) => a.name.normalize()).array();
-    import std.stdio;
-    writeln(result2);
-    assert(result2.length == 1);
+    foreach (const spanMode; [EnumMembers!(SpanMode)]) {
+        import std.algorithm : endsWith;
+        auto result2 = dirEntries!((scope ref DirEntry entry) => entry.name.endsWith("Hello World"))(dir, spanMode).map!((return a) => a.name.normalize()).array();
+        import std.stdio;
+        writeln(result2);
+        assert(result2.length == 1);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21250
