@@ -3031,9 +3031,8 @@ if (is(T == enum))
         auto w2 = appender!string();
 
         // val is not a member of T, output cast(T) rawValue instead.
-        put(w2, "cast(");
-        put(w2, T.stringof);
-        put(w2, ")");
+        enum prefix = "cast(" ~ T.stringof ~ ")";
+        put(w2, prefix);
         static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
             "must not be equal to " ~ T.stringof);
 
