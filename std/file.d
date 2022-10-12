@@ -4704,7 +4704,7 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
                     return false;
                 }
             _cur = DirEntry(_stack[$-1].dirpath, findinfo);
-            return true;
+            return pred(_cur);
         }
 
         void popDirStack() @trusted
@@ -4760,7 +4760,7 @@ if (__traits(compiles, { DirEntry entry; bool _ = pred(entry); }))
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
                     _cur = DirEntry(_stack[$-1].dirpath, fdata);
-                    return true;
+                    return pred(_cur);
                 }
             }
 
