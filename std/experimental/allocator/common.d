@@ -12,6 +12,26 @@ module std.experimental.allocator.common;
 import std.algorithm.comparison, std.traits;
 
 /**
+Is `true` iff `A` is an allocator.
+ */
+enum isAllocator(A) = (is(typeof(A.allocate(size_t.init)) == void[]) && is(typeof(A.alignment) : size_t));
+
+///
+@safe @nogc nothrow pure
+unittest
+{
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    static assert(isAllocator!NullAllocator);
+    static assert(isAllocator!Mallocator);
+    static assert(isAllocator!GCAllocator);
+    static assert(isAllocator!MmapAllocator);
+    static assert(!isAllocator!int);
+}
+
+/**
 Returns the size in bytes of the state that needs to be allocated to hold an
 object of type `T`. `stateSize!T` is zero for `struct`s that are not
 nested and have no nonstatic member variables.
@@ -44,6 +64,39 @@ unittest
     static assert(stateSize!C2 == 4 * size_t.sizeof);
     static class C3 { char c; }
     static assert(stateSize!C3 == 2 * size_t.sizeof + char.sizeof);
+}
+
+/**
+State of an allocator `A`.
+
+`AllocatorState!(A).sizeof` is zero for `A` being `NullAllocator`, `Mallocator`,
+`GCAllocator`, and `MMapAllocator` and typically non-zero for the other.
+ */
+mixin template AllocatorState(A)
+if (isAllocator!A)
+{
+    static if (stateSize!A == 0)
+        alias allocator = A.instance;
+    else
+        A allocator;
+}
+
+///
+@safe @nogc nothrow pure
+unittest
+{
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    struct S
+    {
+        mixin AllocatorState!NullAllocator n;
+        mixin AllocatorState!GCAllocator g;
+        mixin AllocatorState!Mallocator m;
+        mixin AllocatorState!MmapAllocator p;
+    }
+    static assert(S.sizeof == 1);
 }
 
 /**
