@@ -10129,15 +10129,11 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         private enum enableGCScan = hasIndirections!T;
     }
 
-    // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
     extern(C) private pure nothrow @nogc static
     {
         pragma(mangle, "free") void pureFree( void *ptr );
         static if (enableGCScan)
-        {
-            pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
-            pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
-        }
+            import core.memory : GC;
     }
 
     struct RefCountedStore
@@ -10176,7 +10172,7 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
             {
                 import std.internal.memory : enforceCalloc;
                 _store = cast(Impl*) enforceCalloc(1, Impl.sizeof);
-                pureGcAddRange(&_store._payload, T.sizeof);
+                GC.addRange(&_store._payload, T.sizeof);
             }
             else
             {
@@ -10189,7 +10185,7 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         {
             static if (enableGCScan)
             {
-                pureGcRemoveRange(&this._store._payload);
+                GC.removeRange(&this._store._payload);
             }
             pureFree(_store);
             _store = null;
