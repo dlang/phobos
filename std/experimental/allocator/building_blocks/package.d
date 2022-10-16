@@ -147,7 +147,8 @@ Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
 from 3585 bytes through 4072 KB are handled by a `BitmappedBlock` with a
 block size of 4 KB. Sizes above that are passed direct to the `GCAllocator`.
 
-----
+$(RUNNABLE_EXAMPLE
+    ----
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
         8, FreeList!(GCAllocator, 0, 8),
@@ -169,7 +170,8 @@ block size of 4 KB. Sizes above that are passed direct to the `GCAllocator`.
     assert(tuMalloc.expand(c, 14));
     tuMalloc.deallocate(b);
     tuMalloc.deallocate(c);
-----
+    ----
+)
 
 $(H2 Allocating memory for sharing across threads)
 
