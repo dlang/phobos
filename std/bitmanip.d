@@ -986,17 +986,17 @@ private:
     size_t* _ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
 
-    @property size_t fullWords() const @nogc pure nothrow
+    @property size_t fullWords() const scope @safe @nogc pure nothrow
     {
         return _len / bitsPerSizeT;
     }
     // Number of bits after the last full word
-    @property size_t endBits() const @nogc pure nothrow
+    @property size_t endBits() const scope @safe @nogc pure nothrow
     {
         return _len % bitsPerSizeT;
     }
     // Bit mask to extract the bits after the last full word
-    @property size_t endMask() const @nogc pure nothrow
+    @property size_t endMask() const scope @safe @nogc pure nothrow
     {
         return (size_t(1) << endBits) - 1;
     }
@@ -1440,15 +1440,15 @@ public:
     /**********************************************
      * Counts all the set bits in the `BitArray`
      */
-    size_t count() const @nogc pure nothrow
+    size_t count() const scope @safe @nogc pure nothrow
     {
         if (_ptr)
         {
             size_t bitCount;
             foreach (i; 0 .. fullWords)
-                bitCount += countBitsSet(_ptr[i]);
+                bitCount += (() @trusted => countBitsSet(_ptr[i]))();
             if (endBits)
-                bitCount += countBitsSet(_ptr[fullWords] & endMask);
+                bitCount += (() @trusted => countBitsSet(_ptr[fullWords] & endMask))();
             return bitCount;
         }
         else
@@ -4544,7 +4544,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 Counts the number of set bits in the binary representation of `value`.
 For signed integers, the sign bit is included in the count.
 */
-private uint countBitsSet(T)(const T value) @nogc pure nothrow
+private uint countBitsSet(T)(const T value)
 if (isIntegral!T)
 {
     static if (T.sizeof == 8)
