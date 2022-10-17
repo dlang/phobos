@@ -7755,6 +7755,7 @@ Returns:
     An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
     consecutively unique elements in the original range. If `r` is also a
     forward range or bidirectional range, the returned range will be likewise.
+    However, if a predicate is passed, the returned range will never be bidirectional.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
@@ -7812,7 +7813,7 @@ private struct UniqResult(alias pred, Range)
         return _input.front;
     }
 
-    static if (isBidirectionalRange!Range)
+    static if (isBidirectionalRange!Range && __traits(isSame, pred, binaryFun!"a == b"))
     {
         void popBack()
         {
@@ -7884,6 +7885,15 @@ private struct UniqResult(alias pred, Range)
 
     const(int)[] var = [0, 1, 1, 2];
     assert(var.uniq.equal([0, 1, 2]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23422
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto result = [0, 1].uniq!"true".map!"[a]".joiner;
+    assert(result.equal([0]));
 }
 
 /**
