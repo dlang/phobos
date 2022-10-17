@@ -844,7 +844,7 @@ Bad:
 
 $(RUNNABLE_EXAMPLE
 ----
-private char[] buffer;
+char[] buffer;
 string letters(char first, char last)
 {
   if (first >= last) return null; // fine
@@ -873,12 +873,12 @@ The call will duplicate the array appropriately.
 Note that checking for uniqueness during compilation is
 possible in certain cases, especially when a function is
 marked as a pure function. The following example does not
-need to call assumeUnique because the compiler can infer the
+need to call `assumeUnique` because the compiler can infer the
 uniqueness of the array in the pure function:
 
 $(RUNNABLE_EXAMPLE
 ----
-string letters() pure
+static string letters() pure
 {
   char[] result = new char['z' - 'a' + 1];
   foreach (i, ref e; result)
