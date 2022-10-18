@@ -212,17 +212,17 @@ There are several flags that affect the outcome of the formatting.
 $(BOOKTABLE ,
    $(TR $(TH Flag) $(TH Semantics))
    $(TR $(TD $(B '-'))
-        $(TD When the formatted result is shorter then the value
-             given by the width parameter, the output is right
-             justified. With the $(B '-') flag this is changed
-             to left justification.
+        $(TD When the formatted result is shorter than the value
+             given by the width parameter, the output is left
+             justified. Without the $(B '-') flag, the output remains
+             right justified.
 
              There are two exceptions where the $(B '-') flag has a
              different meaning: (1) with $(B 'r') it denotes to use little
              endian and (2) in case of a compound indicator it means that
              no special handling of the members is applied.))
    $(TR $(TD $(B '='))
-        $(TD When the formatted result is shorter then the value
+        $(TD When the formatted result is shorter than the value
              given by the width parameter, the output is centered.
              If the central position is not possible it is moved slightly
              to the right. In this case, if $(B '-') flag is present in
