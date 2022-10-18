@@ -213,7 +213,7 @@ $(BOOKTABLE ,
    $(TR $(TH Flag) $(TH Semantics))
    $(TR $(TD $(B '-'))
         $(TD When the formatted result is shorter than the value
-             given by the width parameter, then the output is left
+             given by the width parameter, the output is left
              justified. Without the $(B '-') flag, the output remains
              right justified.
 
@@ -223,7 +223,7 @@ $(BOOKTABLE ,
              no special handling of the members is applied.))
    $(TR $(TD $(B '='))
         $(TD When the formatted result is shorter than the value
-             given by the width parameter, then the output is centered.
+             given by the width parameter, the output is centered.
              If the central position is not possible it is moved slightly
              to the right. In this case, if $(B '-') flag is present in
              addition to the $(B '=') flag, it is moved slightly to the left.))
