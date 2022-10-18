@@ -214,7 +214,7 @@ $(BOOKTABLE ,
    $(TR $(TD $(B '-'))
         $(TD When the formatted result is shorter than the value
              given by the width parameter, then the output is left
-             justified. Without the $(B '-') flag the output remains
+             justified. Without the $(B '-') flag, the output remains
              right justified.
 
              There are two exceptions where the $(B '-') flag has a
