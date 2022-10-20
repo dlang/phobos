@@ -586,7 +586,7 @@ if (isInputRange!Range)
     static assert(isMutable!ValueType, "assocArray: value type must be mutable");
 
     ValueType[KeyType] aa;
-    foreach (t; r)
+    foreach (ref t; r)
         aa[t[0]] = t[1];
     return aa;
 }
