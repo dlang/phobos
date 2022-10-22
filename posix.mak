@@ -135,6 +135,12 @@ else
 		endif
 	endif
 endif
+ifeq (osx,$(OS))
+	ifeq (64,$(MODEL))
+		CFLAGS+=--target=x86_64-darwin-apple  # ARM cpu is not supported by dmd
+	endif
+endif
+
 
 # Set DFLAGS
 DFLAGS=
