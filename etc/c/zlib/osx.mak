@@ -3,6 +3,10 @@
 CC=gcc
 LD=link
 CFLAGS=-I. -O -g -DHAVE_UNISTD_H -DHAVE_STDARG_H
+ifeq (64,$(MODEL))
+	CFLAGS+=--target=x86_64-darwin-apple  # ARM cpu is not supported by dmd
+endif
+
 LDFLAGS=
 O=.o
 
