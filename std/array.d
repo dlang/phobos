@@ -3416,7 +3416,8 @@ do
 Implements an output range that appends data to an array. This is
 recommended over $(D array ~= data) when appending many elements because it is more
 efficient. `Appender` maintains its own array metadata locally, so it can avoid
-global locking for each append where $(LREF capacity) is non-zero.
+the $(DDSUBLINK spec/arrays, capacity-reserve, performance hit of looking up slice `capacity`)
+for each append.
 
 Params:
     A = the array type to simulate.
