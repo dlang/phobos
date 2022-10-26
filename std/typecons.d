@@ -3036,8 +3036,10 @@ struct Nullable(T)
      * Assigns `value` to the internally-held state. If the assignment
      * succeeds, `this` becomes non-null.
      *
+     * If assigned `null`, behaves as if $(REF nullify) was called.
+     *
      * Params:
-     *     value = A value of type `T` to assign to this `Nullable`.
+     *     value = A value of type `T` to assign to this `Nullable`, or `null`.
      */
     Nullable opAssign()(T value)
     {
@@ -3059,25 +3061,34 @@ struct Nullable(T)
         _isNull = false;
         return this;
     }
+    /// ditto
+    Nullable opAssign()(typeof(null) value)
+    {
+        assert(value is null);
+        nullify();
+        return this;
+    }
 
     /**
      * If this `Nullable` wraps a type that already has a null value
      * (such as a pointer), then assigning the null value to this
-     * `Nullable` is no different than assigning any other value of
-     * type `T`, and the resulting code will look very strange. It
-     * is strongly recommended that this be avoided by instead using
-     * the version of `Nullable` that takes an additional `nullValue`
-     * template argument.
+     * `Nullable` is no different than $(REF nullify) ing it.
      */
-    @safe unittest
+    @safe @nogc unittest
     {
-        //Passes
-        Nullable!(int*) npi;
+        int a;
+        auto npi = Nullable!(int*)(&a);
+        assert(!npi.isNull);
+        npi = null;
         assert(npi.isNull);
 
-        //Passes?!
-        npi = null;
-        assert(!npi.isNull);
+        Nullable!int nint = Nullable!int(10);
+        nint = null;
+        assert(nint.isNull);
+
+        // Cannot assign other types with `null` value
+        Object n = null;
+        static assert(!__traits(compiles, nint = n));
     }
 
     /**
