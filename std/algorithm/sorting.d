@@ -1642,8 +1642,43 @@ private bool multiSortPredFun(Range, funs...)(ElementType!Range a, ElementType!R
     }
     return false;
 }
+private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r, size_t[] buffer = (size_t[]).init)
+if (ss == SwapStrategy.stable)
+{
+    alias lessFun = binaryFun!(funs[0]);
+
+    static if (funs.length > 1)
+    {
+        if(buffer.length < 2*r.length)
+        {
+            buffer.length = 2*r.length;
+        }
+        while (r.length > 1)
+        {
+            auto p = getPivot!lessFun(r);
+            auto t = partition3!(funs[0], ss)(r, r[p], buffer);
+            if (t[0].length <= t[2].length)
+            {
+                multiSortImpl!(Range, ss, funs)(t[0], buffer);
+                multiSortImpl!(Range, ss, funs[1 .. $])(t[1], buffer);
+                r = t[2];
+            }
+            else
+            {
+                multiSortImpl!(Range, ss, funs[1 .. $])(t[1], buffer);
+                multiSortImpl!(Range, ss, funs)(t[2], buffer);
+                r = t[0];
+            }
+        }
+    }
+    else
+    {
+        sort!(lessFun, ss)(r);
+    }
+}
 
 private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
+if (ss == SwapStrategy.unstable)
 {
     alias lessFun = binaryFun!(funs[0]);
 
@@ -1690,6 +1725,24 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
 
     auto pts4 = iota(10).array;
     assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
+}
+
+unittest
+{
+    import std.datetime.stopwatch;
+    static struct Point { int x; int y; int z; }
+    auto pts1 = [ Point(5, 6, 0), Point(1, 0, 0), Point(5, 7, 0),
+                  Point(1, 1, 0), Point(1, 2, 0), Point(0, 1, 0),
+                  Point(5, 6, 1), Point(1, 0, 1), Point(5, 7, 1),
+                  Point(1, 1, 1), Point(1, 2, 1), Point(0, 1, 1) ];
+    auto pts2 = [ Point(0, 1, 0), Point(0, 1, 1), Point(1, 0, 0), Point(1, 0, 1),
+                  Point(1, 1, 0), Point(1, 1, 1), Point(1, 2, 0), Point(1, 2, 1),
+                  Point(5, 6, 0), Point(5, 6, 1), Point(5, 7, 0), Point(5, 7, 1) ];
+    
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.stable)(pts1);
+    assert(pts1 == pts2);
+      
+    
 }
 
 //https://issues.dlang.org/show_bug.cgi?id=9160 (L-value only comparators)
