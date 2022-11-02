@@ -3011,33 +3011,31 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
 /*
     `enum`s are formatted like their base value
  */
-void formatValueImpl(Writer, T, Char)(auto ref Writer w, const(T) val, scope const ref FormatSpec!Char f)
+void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, scope const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     import std.array : appender;
     import std.range.primitives : put;
 
-    if (f.spec == 's')
-    {
-        foreach (immutable member; __traits(allMembers, T))
-            if (val == __traits(getMember, T, member))
-                return formatValueImpl(w, member, f);
-        auto w2 = appender!string();
+    if (f.spec != 's')
+        return formatValueImpl(w, cast(OriginalType!T) val, f);
 
-        // val is not a member of T, output cast(T) rawValue instead.
-        put(w2, "cast(");
-        put(w2, T.stringof);
-        put(w2, ")");
-        static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
-            "must not be equal to " ~ T.stringof);
+    foreach (immutable member; __traits(allMembers, T))
+        if (val == __traits(getMember, T, member))
+            return formatValueImpl(w, member, f);
 
-        FormatSpec!Char f2 = f;
-        f2.width = 0;
-        formatValueImpl(w2, cast(OriginalType!T) val, f2);
-        writeAligned(w, w2.data, f);
-        return;
-    }
-    formatValueImpl(w, cast(OriginalType!T) val, f);
+    auto w2 = appender!string();
+
+    // val is not a member of T, output cast(T) rawValue instead.
+    enum prefix = "cast(" ~ T.stringof ~ ")";
+    put(w2, prefix);
+    static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
+                  "must not be equal to " ~ T.stringof);
+
+    FormatSpec!Char f2 = f;
+    f2.width = 0;
+    formatValueImpl(w2, cast(OriginalType!T) val, f2);
+    writeAligned(w, w2.data, f);
 }
 
 @safe unittest
