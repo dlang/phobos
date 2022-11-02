@@ -3020,14 +3020,9 @@ if (is(T == enum))
     if (f.spec != 's')
         return formatValueImpl(w, cast(OriginalType!T) val, f);
 
-    static foreach (e; EnumMembers!T)
-    {
-        if (val == e)
-        {
-            formatValueImpl(w, __traits(identifier, e), f);
-            return;
-        }
-    }
+    foreach (immutable member; __traits(allMembers, T))
+        if (val == __traits(getMember, T, member))
+            return formatValueImpl(w, member, f);
 
     auto w2 = appender!string();
 
