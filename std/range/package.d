@@ -6856,6 +6856,7 @@ if (!isIntegral!(CommonType!(B, E)) &&
             assert(!empty);
             ++current;
         }
+        @property auto save() { return this; }
     }
     return Result(begin, end);
 }
@@ -6888,6 +6889,13 @@ if (!isIntegral!(CommonType!(B, E)) &&
     // Wraparound case
     auto i2 = iota(Cycle5(3), Cycle5(2));
     assert(i2.equal([3, 4, 0, 1 ]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23453
+@safe unittest
+{
+    auto r = iota('a', 'z');
+    static assert(isForwardRange!(typeof(r)));
 }
 
 /**
