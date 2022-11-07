@@ -630,36 +630,36 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         import core.atomic : atomicLoad, MemoryOrder;
         static if (is(typeof(this.payload.atomicLoad!(MemoryOrder.acq)) P))
         {
-            auto payload = __ctfe ? cast(P) this.payload
+            auto local_payload = __ctfe ? cast(P) this.payload
                                   : this.payload.atomicLoad!(MemoryOrder.acq);
         }
         else
         {
-            alias payload = this.payload;
+            alias local_payload = this.payload;
         }
 
         static if (hasMember!(Hook, "hookToHash"))
         {
-            return hook.hookToHash(payload);
+            return hook.hookToHash(local_payload);
         }
         else static if (stateSize!Hook > 0)
         {
-            static if (hasMember!(typeof(payload), "toHash"))
+            static if (hasMember!(typeof(local_payload), "toHash"))
             {
-                return payload.toHash() ^ hashOf(hook);
+                return local_payload.toHash() ^ hashOf(hook);
             }
             else
             {
-                return hashOf(payload) ^ hashOf(hook);
+                return hashOf(local_payload) ^ hashOf(hook);
             }
         }
-        else static if (hasMember!(typeof(payload), "toHash"))
+        else static if (hasMember!(typeof(local_payload), "toHash"))
         {
-            return payload.toHash();
+            return local_payload.toHash();
         }
         else
         {
-            return .hashOf(payload);
+            return .hashOf(local_payload);
         }
     }
 

@@ -2646,17 +2646,17 @@ private:
 
             enum msecs = 1000;
             auto pair = socketPair();
-            auto sock = pair[0];
-            sock.setOption(SocketOptionLevel.SOCKET,
+            auto sockTest = pair[0];
+            sockTest.setOption(SocketOptionLevel.SOCKET,
                 SocketOption.RCVTIMEO, dur!"msecs"(msecs));
 
             auto sw = StopWatch(Yes.autoStart);
             ubyte[1] buf;
-            sock.receive(buf);
+            sockTest.receive(buf);
             sw.stop();
 
             Duration readBack = void;
-            sock.getOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, readBack);
+            sockTest.getOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, readBack);
 
             assert(readBack.total!"msecs" == msecs);
             assert(sw.peek().total!"msecs" > msecs - 100 && sw.peek().total!"msecs" < msecs + 100);

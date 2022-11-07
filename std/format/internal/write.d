@@ -3148,7 +3148,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 
     auto a = iota(0, 10);
     auto b = iota(0, 10);
-    auto p = () @trusted { auto p = &a; return p; }();
+    auto p = () @trusted { auto scoped_p = &a; return scoped_p; }();
 
     assert(format("%s",p) != format("%s",b));
 }
