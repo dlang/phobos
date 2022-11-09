@@ -10095,7 +10095,7 @@ else version (Windows)
 
         static void testScope(scope ref SysTime st) @safe
         {
-            auto local_result = SysTimeToSYSTEMTIME(st);
+            auto localResult = SysTimeToSYSTEMTIME(st);
         }
     }
 

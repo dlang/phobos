@@ -1952,10 +1952,10 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
         // An array that maps caseIds to handler indices ("hids").
         enum matches = ()
         {
-            size_t[numCases] scoped_matches;
+            size_t[numCases] result;
 
             // Workaround for https://issues.dlang.org/show_bug.cgi?id=19561
-            foreach (ref match; scoped_matches)
+            foreach (ref match; result)
             {
                 match = noMatch;
             }
@@ -1966,15 +1966,15 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
                 {
                     static if (canMatch!(handler, valueTypes!caseId))
                     {
-                        if (scoped_matches[caseId] == noMatch)
+                        if (result[caseId] == noMatch)
                         {
-                            scoped_matches[caseId] = hid;
+                            result[caseId] = hid;
                         }
                     }
                 }
             }
 
-            return scoped_matches;
+            return result;
         }();
 
         import std.algorithm.searching : canFind;

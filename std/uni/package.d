@@ -6271,8 +6271,8 @@ struct UnicodeSetParser(Range)
         {
             if (casefold_)
             {
-                auto local_range = simpleCaseFoldings(ch);
-                foreach (v; local_range)
+                auto foldings = simpleCaseFoldings(ch);
+                foreach (v; foldings)
                     set |= v;
             }
             else
