@@ -4986,7 +4986,7 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 {
     string[] listdir(string pathname)
     {
-        import std.algorithm : map, filter;
+        import std.algorithm.iteration : map, filter;
         import std.array : array;
         import std.path : baseName;
 

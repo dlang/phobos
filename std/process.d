@@ -1735,7 +1735,6 @@ version (Posix) @system unittest
         import std.file : tempDir, exists, remove;
         import std.uuid : randomUUID;
         import std.exception : collectException;
-        
         auto pipei = pipe();
         auto pipeo = pipe();
         auto pipee = pipe();
@@ -1760,7 +1759,6 @@ version (Posix) @system unittest
         import std.file : tempDir, exists, remove, readText, write;
         import std.uuid : randomUUID;
         import std.exception : collectException;
-        
         auto pathi = buildPath(tempDir(), randomUUID().toString());
         auto patho = buildPath(tempDir(), randomUUID().toString());
         auto pathe = buildPath(tempDir(), randomUUID().toString());
