@@ -8782,7 +8782,7 @@ if (alignment > 0 && !((alignment - 1) & alignment))
     {
         void test(size_t size)
         {
-            import core.stdc.stdlib;
+            import core.stdc.stdlib : alloca;
             cast(void) alloca(size);
             alignmentTest();
         }

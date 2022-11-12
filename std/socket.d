@@ -2641,8 +2641,8 @@ private:
     {
         if (runSlowTests)
         softUnittest({
-            import std.datetime.stopwatch;
-            import std.typecons;
+            import std.datetime.stopwatch : StopWatch;
+            import std.typecons : Yes;
 
             enum msecs = 1000;
             auto pair = socketPair();

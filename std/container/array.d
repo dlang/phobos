@@ -34,7 +34,7 @@ pure @system unittest
         float[] a0;
         {
             import std.range : iota;
-            import std.array;
+            import std.array : array;
             import std.algorithm.iteration : map;
             a0 = iota (0, n).map!(i => i * 1.1f).array;
         }
