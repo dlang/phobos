@@ -1,9 +1,0 @@
-`std.socket.Socket` methods now accept only `scope` arrays.
-
-To comply with dip1000, `std.socket.Socket` methods now all have `scope`
-attributes applied to any slice parameters. This includes `receive` and `send`
-flavors, and also `setOption`. While not technically a breaking change for
-users of `Socket`, if you derive from it, you must apply those attributes to your
-derivatives or it will fail to compile. However, applying the attributes is
-backwards compatible with previous versions of Phobos, so there is no need for
-a migration path.
