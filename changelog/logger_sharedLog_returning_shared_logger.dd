@@ -1,4 +1,0 @@
-Change std.experimental.logger.core.sharedLog to return shared(Logger)
-
-To make unsafe code more explicit std.experimental.logger.sharedLog
-now returns a shared(Logger) instead of a Logger.
