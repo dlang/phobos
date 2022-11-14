@@ -1,5 +1,0 @@
-std.digest.digest has been removed
-
-This module was initially deprecated in 2.076.1, and has been empty since
-2.092.0 when all deprecated symbols were removed in favour of importing
-`std.digest` or its submodules instead.

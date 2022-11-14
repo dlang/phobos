@@ -1,4 +1,0 @@
-std.experimental.typecons has been removed
-
-This was an attempt to update `std.typecons.wrap` with an implementation that could work with struct, but it did not go anywhere.
-See [this post on the forum](https://forum.dlang.org/post/ialskabybaxtqamgtwge@forum.dlang.org).

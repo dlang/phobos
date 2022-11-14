@@ -1,8 +1,0 @@
-remove std.experimental.logger's capability to set the minimal LogLevel at compile time
-
-Before this change std.experimental.logger had the capability to disable
-logging at compile time.
-It was also possible to set the minimal LogLevel at compile time.
-The trade-off between gained capability, added complexity, and error-proneness
-was too heavily tilted towards the second two items.
-This change removes these compile time features.
