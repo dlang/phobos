@@ -768,7 +768,7 @@ Throws: `ErrnoException` in case of error.
             _name = name;
     }
 
-    @system unittest // Test changing filename
+    @safe unittest // Test changing filename
     {
         import std.exception : assertThrown, assertNotThrown;
         static import std.file;
@@ -790,7 +790,7 @@ Throws: `ErrnoException` in case of error.
 
     version (CRuntime_DigitalMars) {} else // Not implemented
     version (CRuntime_Microsoft) {} else // Not implemented
-    @system unittest // Test changing mode
+    @safe unittest // Test changing mode
     {
         import std.exception : assertThrown, assertNotThrown;
         static import std.file;
@@ -1853,15 +1853,15 @@ void main()
 }
 ---
 */
-    S readln(S = string)(dchar terminator = '\n')
+    S readln(S = string)(dchar terminator = '\n') @safe
     if (isSomeString!S)
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return cast(S) buf;
+        return (() @trusted => cast(S) buf)();
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         static import std.file;
@@ -1885,7 +1885,7 @@ void main()
         }}
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         import std.typecons : Tuple;
@@ -1984,7 +1984,7 @@ void main()
 This is actually what $(LREF byLine) does internally, so its usage
 is recommended if you want to process a complete file.
 */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') @safe
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
     {
         import std.exception : enforce;
@@ -2020,9 +2020,8 @@ is recommended if you want to process a complete file.
         }
     }
 
-    @system unittest
+    @safe unittest
     {
-        // @system due to readln
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "123\n456789");
@@ -2039,7 +2038,7 @@ is recommended if you want to process a complete file.
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=15293
-    @system unittest
+    @safe unittest
     {
         // @system due to readln
         static import std.file;
@@ -2063,7 +2062,7 @@ is recommended if you want to process a complete file.
     }
 
 /** ditto */
-    size_t readln(C, R)(ref C[] buf, R terminator)
+    size_t readln(C, R)(ref C[] buf, R terminator) @safe
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
         isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
@@ -2093,7 +2092,7 @@ is recommended if you want to process a complete file.
         return buf.length;
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         import std.typecons : Tuple;
@@ -3735,9 +3734,8 @@ void main()
     assert(f.tell == 0);
 }
 
-@system unittest
+@safe unittest
 {
-    // @system due to readln
     static import std.file;
     import std.range : chain, only, repeat;
     import std.range.primitives : isOutputRange;
@@ -5458,7 +5456,7 @@ private struct ReadlnAppender
 }
 
 // Private implementation of readln
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @trusted
 {
     version (DIGITAL_MARS_STDIO)
     {
