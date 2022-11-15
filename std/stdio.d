@@ -5579,7 +5579,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 app.putonly(p[0 .. i]);
             }
             fp._cnt -= i;
-            fp._ptr += i;
+            () @trusted { fp._ptr += i; }();
         }
 
         buf = app.data;
