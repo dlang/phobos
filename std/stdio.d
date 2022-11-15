@@ -5386,7 +5386,7 @@ private struct ReadlnAppender
     size_t pos;
     bool safeAppend = false;
 
-    void initialize(char[] b)
+    void initialize(char[] b) @safe
     {
         buf = b;
         pos = 0;
@@ -5456,17 +5456,22 @@ private struct ReadlnAppender
 }
 
 // Private implementation of readln
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @trusted
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @safe
 {
+    alias trusted_FLOCK = (fps) @trusted => _FLOCK(fps);
+    alias trusted_FUNLOCK = (fps) @trusted => _FUNLOCK(fps);
+    alias trusted_FGETC = (fp) @trusted => _FGETC(fp);
+    alias trusted_FGETWC = (fp) @trusted => _FGETWC(fp);
+
     version (DIGITAL_MARS_STDIO)
     {
-        _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
+        trusted_FLOCK(fps);
+        scope(exit) trusted_FUNLOCK(fps);
 
         /* Since fps is now locked, we can create an "unshared" version
          * of fp.
          */
-        auto fp = cast(_iobuf*) fps;
+        auto fp = (() @trusted => cast(_iobuf*) fps)();
 
         ReadlnAppender app;
         app.initialize(buf);
@@ -5476,7 +5481,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
              * Read them and convert to chars.
              */
             static assert(wchar_t.sizeof == 2);
-            for (int c = void; (c = _FGETWC(fp)) != -1; )
+            for (int c = void; (c = trusted_FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
                 {
@@ -5489,7 +5494,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     if (c >= 0xD800 && c <= 0xDBFF)
                     {
                         int c2 = void;
-                        if ((c2 = _FGETWC(fp)) != -1 ||
+                        if ((c2 = trusted_FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
                             StdioException("unpaired UTF-16 surrogate");
@@ -5511,7 +5516,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
              */
         L1:
             int c;
-            while ((c = _FGETC(fp)) != -1)
+            while ((c = trusted_FGETC(fp)) != -1)
             {
                 app.putchar(cast(char) c);
                 if (c == terminator)
@@ -5538,7 +5543,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    c = p[i];
+                    c = (() @trusted => p[i])();
                     i++;
                     if (c != '\r')
                     {
@@ -5549,12 +5554,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         goto L1;
                     }
                     else
-                    {   if (i != u && p[i] == terminator)
+                    {   if (i != u && (() @trusted => p[i])() == terminator)
                             break;
                         goto L1;
                     }
                 }
-                app.putonly(p[0 .. i]);
+                app.putonly((() @trusted => p[0 .. i])());
                 app.buf[i - 1] = cast(char) terminator;
                 if (terminator == '\n' && c == '\r')
                     i++;
@@ -5565,12 +5570,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    auto c = p[i];
+                    auto c = (() @trusted => p[i])();
                     i++;
                     if (c == terminator)
                         break;
                 }
-                app.putonly(p[0 .. i]);
+                app.putonly((() @trusted => p[0 .. i])());
             }
             fp._cnt -= i;
             fp._ptr += i;
@@ -5581,19 +5586,19 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     }
     else version (MICROSOFT_STDIO)
     {
-        _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
+        trusted_FLOCK(fps);
+        scope(exit) trusted_FUNLOCK(fps);
 
         /* Since fps is now locked, we can create an "unshared" version
          * of fp.
          */
-        auto fp = cast(_iobuf*) fps;
+        auto fp = (() @trusted => cast(_iobuf*) fps)();
 
         ReadlnAppender app;
         app.initialize(buf);
 
         int c;
-        while ((c = _FGETC(fp)) != -1)
+        while ((c = (() @trusted => trusted_FGETC(fp))()) != -1)
         {
             app.putchar(cast(char) c);
             if (c == terminator)
@@ -5619,13 +5624,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             /* Stream is in wide characters.
              * Read them and convert to chars.
              */
-            _FLOCK(fps);
-            scope(exit) _FUNLOCK(fps);
-            auto fp = cast(_iobuf*) fps;
+            trusted_FLOCK(fps);
+            scope(exit) trusted_FUNLOCK(fps);
+            auto fp = (() @trusted => cast(_iobuf*) fps)();
             version (Windows)
             {
                 buf.length = 0;
-                for (int c = void; (c = _FGETWC(fp)) != -1; )
+                for (int c = void; (c = trusted_FGETWC(fp)) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5637,7 +5642,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = _FGETWC(fp)) != -1 ||
+                            if ((c2 = trusted_FGETWC(fp)) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5655,7 +5660,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             else version (Posix)
             {
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = trusted_FGETWC(fp)) != -1; )
                 {
                     import std.utf : encode;
 
@@ -5713,9 +5718,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     {
         import core.stdc.wchar_ : fwide;
 
-        _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
-        auto fp = cast(_iobuf*) fps;
+        trusted_FLOCK(fps);
+        scope(exit) trusted_FUNLOCK(fps);
+        auto fp = (() @trusted => cast(_iobuf*) fps)();
         if (orientation == File.Orientation.wide)
         {
             /* Stream is in wide characters.
@@ -5724,7 +5729,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             version (Windows)
             {
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = trusted_FGETWC(fp)) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5736,7 +5741,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = _FGETWC(fp)) != -1 ||
+                            if ((c2 = trusted_FGETWC(fp)) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5755,7 +5760,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             {
                 import std.utf : encode;
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = trusted_FGETWC(fp)) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                         buf ~= cast(char) c;
@@ -5778,7 +5783,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         // First, fill the existing buffer
         for (size_t bufPos = 0; bufPos < buf.length; )
         {
-            immutable c = _FGETC(fp);
+            immutable c = trusted_FGETC(fp);
             if (c == -1)
             {
                 buf.length = bufPos;
@@ -5793,7 +5798,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
         }
         // Then, append to it
-        for (int c; (c = _FGETC(fp)) != -1; )
+        for (int c; (c = trusted_FGETC(fp)) != -1; )
         {
             buf ~= cast(char) c;
             if (c == terminator)
