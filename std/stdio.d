@@ -5443,7 +5443,7 @@ private struct ReadlnAppender
         foreach (c; ubuf)
             buf.ptr[pos++] = c;
     }
-    void putonly(char[] b) @trusted
+    void putonly(const char[] b) @trusted
     {
         import core.stdc.string : memcpy;
         assert(pos == 0);   // assume this is the only put call
