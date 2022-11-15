@@ -5167,13 +5167,13 @@ Initialize with a message and an error code.
     }
 
 /** Convenience functions that throw an `StdioException`. */
-    static void opCall(string msg)
+    static void opCall(string msg) @safe
     {
         throw new StdioException(msg);
     }
 
 /// ditto
-    static void opCall()
+    static void opCall() @safe
     {
         throw new StdioException(null, core.stdc.errno.errno);
     }
