@@ -5689,13 +5689,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             if (n > 128 * 1024)
             {
                 // Bound memory used by readln
-                free(lineptr);
+                () @trusted { free(lineptr); }();
                 lineptr = null;
                 n = 0;
             }
         }
 
-        auto s = core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps);
+        const s = (() @trusted => core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps))();
         if (s < 0)
         {
             if (ferror(fps))
@@ -5704,14 +5704,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             return 0;
         }
 
+        const line = (() @trusted => lineptr[0 .. s])();
         if (s <= buf.length)
         {
             buf = buf[0 .. s];
-            buf[] = lineptr[0 .. s];
+            buf[] = line;
         }
         else
         {
-            buf = lineptr[0 .. s].dup;
+            buf = line.dup;
         }
         return s;
     }
