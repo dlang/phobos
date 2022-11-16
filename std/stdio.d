@@ -5598,7 +5598,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         app.initialize(buf);
 
         int c;
-        while ((c = (() @trusted => trusted_FGETC(fp))()) != -1)
+        while ((c = trusted_FGETC(fp)) != -1)
         {
             app.putchar(cast(char) c);
             if (c == terminator)
