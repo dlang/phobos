@@ -5532,9 +5532,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
         else
         {
-            const int u = fp._cnt;
-            const char* ptr = fp._ptr;
-            const p = (() @trusted => ptr[0 .. u])();
+            int u = fp._cnt;
+            char* p = fp._ptr;
             int i;
             if (fp._flag & _IOTRAN)
             {   /* Translated mode ignores \r and treats ^Z as end-of-file
@@ -5544,7 +5543,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    c = p[i];
+                    c = (() @trusted => p[i])();
                     i++;
                     if (c != '\r')
                     {
@@ -5555,12 +5554,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         goto L1;
                     }
                     else
-                    {   if (i != u && p[i] == terminator)
+                    {   if (i != u && (() @trusted => p[i])() == terminator)
                             break;
                         goto L1;
                     }
                 }
-                app.putonly(p[0 .. i]);
+                app.putonly((() @trusted => p[0 .. i])());
                 app.buf[i - 1] = cast(char) terminator;
                 if (terminator == '\n' && c == '\r')
                     i++;
@@ -5571,12 +5570,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    auto c = p[i];
+                    auto c = (() @trusted => p[i])();
                     i++;
                     if (c == terminator)
                         break;
                 }
-                app.putonly(p[0 .. i]);
+                app.putonly((() @trusted => p[0 .. i])());
             }
             fp._cnt -= i;
             () @trusted { fp._ptr += i; }();
@@ -5599,7 +5598,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         app.initialize(buf);
 
         int c;
-        while ((c = trusted_FGETC(fp)) != -1)
+        while ((c = (() @trusted => trusted_FGETC(fp))()) != -1)
         {
             app.putchar(cast(char) c);
             if (c == terminator)
