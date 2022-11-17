@@ -5455,23 +5455,61 @@ private struct ReadlnAppender
     }
 }
 
+private struct LockedFile
+{
+    private @system FILE* fps;
+
+    this(FILE* fps) @trusted
+    {
+        this.fps = fps;
+        _FLOCK(fps);
+    }
+
+    @disable this();
+    @disable this(this);
+    @disable void opAssign(LockedFile);
+
+    /* Since fps is now locked, we can create an "unshared" version
+     * of fp.
+     */
+    @trusted fp() return scope => cast(_iobuf*) fps;
+
+    ~this() @trusted
+    {
+        _FUNLOCK(fps);
+    }
+}
+
+@safe unittest
+{
+    _iobuf* f() @safe
+    {
+        FILE* fps;
+        auto lf = LockedFile(fps);
+        scope fp = lf.fp;
+        static assert(!__traits(compiles, lf = LockedFile(fps)));
+        static assert(!__traits(compiles, { if (fps) return fp; }));
+        version (ShouldFail)
+        {
+            lf.destroy; // fail in @safe because of @system field?
+            auto x = fp; // demonstrates use after unlock
+            lf.fps = null; // @system field
+        }
+        return null;
+    }
+}
+
 // Private implementation of readln
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @safe
 {
-    alias trusted_FLOCK = (fps) @trusted => _FLOCK(fps);
-    alias trusted_FUNLOCK = (fps) @trusted => _FUNLOCK(fps);
-    alias trusted_FGETC = (fp) @trusted => _FGETC(fp);
-    alias trusted_FGETWC = (fp) @trusted => _FGETWC(fp);
+    // fp is not shared so these calls are safe
+    alias trusted_FGETC = (scope _iobuf* fp) @trusted => _FGETC(fp);
+    alias trusted_FGETWC = (scope _iobuf* fp) @trusted => _FGETWC(fp);
 
     version (DIGITAL_MARS_STDIO)
     {
-        trusted_FLOCK(fps);
-        scope(exit) trusted_FUNLOCK(fps);
-
-        /* Since fps is now locked, we can create an "unshared" version
-         * of fp.
-         */
-        auto fp = (() @trusted => cast(_iobuf*) fps)();
+        auto lf = LockedFile(fps);
+        auto fp = lf.fp;
 
         ReadlnAppender app;
         app.initialize(buf);
@@ -5586,13 +5624,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     }
     else version (MICROSOFT_STDIO)
     {
-        trusted_FLOCK(fps);
-        scope(exit) trusted_FUNLOCK(fps);
-
-        /* Since fps is now locked, we can create an "unshared" version
-         * of fp.
-         */
-        auto fp = (() @trusted => cast(_iobuf*) fps)();
+        auto lf = LockedFile(fps);
+        auto fp = lf.fp;
 
         ReadlnAppender app;
         app.initialize(buf);
@@ -5621,12 +5654,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
         if (orientation == File.Orientation.wide)
         {
+            auto lf = LockedFile(fps);
+            auto fp = lf.fp;
             /* Stream is in wide characters.
              * Read them and convert to chars.
              */
-            trusted_FLOCK(fps);
-            scope(exit) trusted_FUNLOCK(fps);
-            auto fp = (() @trusted => cast(_iobuf*) fps)();
             version (Windows)
             {
                 buf.length = 0;
@@ -5719,9 +5751,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     {
         import core.stdc.wchar_ : fwide;
 
-        trusted_FLOCK(fps);
-        scope(exit) trusted_FUNLOCK(fps);
-        auto fp = (() @trusted => cast(_iobuf*) fps)();
+        auto lf = LockedFile(fps);
+        auto fp = lf.fp;
         if (orientation == File.Orientation.wide)
         {
             /* Stream is in wide characters.
