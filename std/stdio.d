@@ -5469,12 +5469,10 @@ private struct LockedFile
     @disable this(this);
     @disable void opAssign(LockedFile);
 
-    // Since fps is now locked, we can cast away shared
-    @trusted fp() return scope => cast(_iobuf*) fps;
-
     // these use unlocked fgetc calls
-    @trusted fgetc() => _FGETC(fp);
-    @trusted fgetwc() => _FGETWC(fp);
+    // Since fps is now locked, we can cast away shared
+    @trusted fgetc() { return _FGETC(cast(_iobuf*) fps); }
+    @trusted fgetwc() { return _FGETWC(cast(_iobuf*) fps); }
 
     ~this() @trusted
     {
@@ -5484,20 +5482,15 @@ private struct LockedFile
 
 @safe unittest
 {
-    _iobuf* f() @safe
+    void f() @safe
     {
         FILE* fps;
         auto lf = LockedFile(fps);
-        auto fp = lf.fp;
         static assert(!__traits(compiles, lf = LockedFile(fps)));
-        static assert(!__traits(compiles, { if (fps) return fp; }));
         version (ShouldFail)
         {
-            lf.destroy; // fail in @safe because of @system field?
-            auto x = fp; // demonstrates use after unlock
             lf.fps = null; // error with -preview=systemVariables
         }
-        return null;
     }
 }
 
@@ -5507,7 +5500,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     version (DIGITAL_MARS_STDIO)
     {
         auto lf = LockedFile(fps);
-        auto fp = lf.fp;
+        // Since fps is now locked, we can cast away shared
+        auto fp = (() @trusted => cast(_iobuf*) fps)();
 
         ReadlnAppender app;
         app.initialize(buf);
@@ -5681,7 +5675,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(lf.fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
@@ -5779,7 +5773,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(lf.fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
