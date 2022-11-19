@@ -5652,7 +5652,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         if (orientation == File.Orientation.wide)
         {
             auto lf = LockedFile(fps);
-            auto fp = lf.fp;
             /* Stream is in wide characters.
              * Read them and convert to chars.
              */
@@ -5682,7 +5681,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(fp))
+                if (ferror(lf.fp))
                     StdioException();
                 return buf.length;
             }
@@ -5749,7 +5748,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         import core.stdc.wchar_ : fwide;
 
         auto lf = LockedFile(fps);
-        auto fp = lf.fp;
         if (orientation == File.Orientation.wide)
         {
             /* Stream is in wide characters.
@@ -5781,7 +5779,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(fp))
+                if (ferror(lf.fp))
                     StdioException();
                 return buf.length;
             }
