@@ -5457,26 +5457,28 @@ private struct ReadlnAppender
 
 private struct LockedFile
 {
-    private @system FILE* fps;
+    private @system _iobuf* fp;
 
     this(FILE* fps) @trusted
     {
-        this.fps = fps;
         _FLOCK(fps);
+        // Since fps is now locked, we can cast away shared
+        fp = cast(_iobuf*) fps;
     }
 
     @disable this();
     @disable this(this);
     @disable void opAssign(LockedFile);
 
+    @safe ref opDispatch(string s)() { return mixin("fp."~s); }
+
     // these use unlocked fgetc calls
-    // Since fps is now locked, we can cast away shared
-    @trusted fgetc() { return _FGETC(cast(_iobuf*) fps); }
-    @trusted fgetwc() { return _FGETWC(cast(_iobuf*) fps); }
+    @trusted fgetc() { return _FGETC(fp); }
+    @trusted fgetwc() { return _FGETWC(fp); }
 
     ~this() @trusted
     {
-        _FUNLOCK(fps);
+        _FUNLOCK(cast(FILE*)fp);
     }
 }
 
@@ -5500,13 +5502,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     version (DIGITAL_MARS_STDIO)
     {
         auto lf = LockedFile(fps);
-        // Since fps is now locked, we can cast away shared
-        auto fp = (() @trusted => cast(_iobuf*) fps)();
-
         ReadlnAppender app;
         app.initialize(buf);
 
-        if (__fhnd_info[fp._file] & FHND_WCHAR)
+        if (__fhnd_info[lf._file] & FHND_WCHAR)
         {   /* Stream is in wide characters.
              * Read them and convert to chars.
              */
@@ -5538,7 +5537,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 StdioException();
         }
 
-        else if (fp._flag & _IONBF)
+        else if (lf._flag & _IONBF)
         {
             /* Use this for unbuffered I/O, when running
              * across buffer boundaries, or for any but the common
@@ -5562,10 +5561,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
         else
         {
-            int u = fp._cnt;
-            char* p = fp._ptr;
+            int u = lf._cnt;
+            char* p = lf._ptr;
             int i;
-            if (fp._flag & _IOTRAN)
+            if (lf._flag & _IOTRAN)
             {   /* Translated mode ignores \r and treats ^Z as end-of-file
                  */
                 char c;
@@ -5607,8 +5606,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 }
                 app.putonly((() @trusted => p[0 .. i])());
             }
-            fp._cnt -= i;
-            () @trusted { fp._ptr += i; }();
+            lf._cnt -= i;
+            () @trusted { lf._ptr += i; }();
         }
 
         buf = app.data;
