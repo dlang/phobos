@@ -5469,9 +5469,7 @@ private struct LockedFile
     @disable this(this);
     @disable void opAssign(LockedFile);
 
-    /* Since fps is now locked, we can create an "unshared" version
-     * of fp.
-     */
+    // Since fps is now locked, we can cast away shared
     @trusted fp() return scope => cast(_iobuf*) fps;
 
     // these use unlocked fgetc calls
@@ -5490,14 +5488,14 @@ private struct LockedFile
     {
         FILE* fps;
         auto lf = LockedFile(fps);
-        scope fp = lf.fp;
+        auto fp = lf.fp;
         static assert(!__traits(compiles, lf = LockedFile(fps)));
         static assert(!__traits(compiles, { if (fps) return fp; }));
         version (ShouldFail)
         {
             lf.destroy; // fail in @safe because of @system field?
             auto x = fp; // demonstrates use after unlock
-            lf.fps = null; // @system field
+            lf.fps = null; // error with -preview=systemVariables
         }
         return null;
     }
