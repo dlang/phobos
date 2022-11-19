@@ -5474,6 +5474,10 @@ private struct LockedFile
      */
     @trusted fp() return scope => cast(_iobuf*) fps;
 
+    // these use unlocked fgetc calls
+    @trusted fgetc() => _FGETC(fp);
+    @trusted fgetwc() => _FGETWC(fp);
+
     ~this() @trusted
     {
         _FUNLOCK(fps);
@@ -5502,10 +5506,6 @@ private struct LockedFile
 // Private implementation of readln
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @safe
 {
-    // fp is not shared so these calls are safe
-    alias trusted_FGETC = (scope _iobuf* fp) @trusted => _FGETC(fp);
-    alias trusted_FGETWC = (scope _iobuf* fp) @trusted => _FGETWC(fp);
-
     version (DIGITAL_MARS_STDIO)
     {
         auto lf = LockedFile(fps);
@@ -5519,7 +5519,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
              * Read them and convert to chars.
              */
             static assert(wchar_t.sizeof == 2);
-            for (int c = void; (c = trusted_FGETWC(fp)) != -1; )
+            for (int c = void; (c = lf.fgetwc()) != -1; )
             {
                 if ((c & ~0x7F) == 0)
                 {
@@ -5532,7 +5532,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     if (c >= 0xD800 && c <= 0xDBFF)
                     {
                         int c2 = void;
-                        if ((c2 = trusted_FGETWC(fp)) != -1 ||
+                        if ((c2 = lf.fgetwc()) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
                             StdioException("unpaired UTF-16 surrogate");
@@ -5554,7 +5554,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
              */
         L1:
             int c;
-            while ((c = trusted_FGETC(fp)) != -1)
+            while ((c = lf.fgetc()) != -1)
             {
                 app.putchar(cast(char) c);
                 if (c == terminator)
@@ -5625,13 +5625,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     else version (MICROSOFT_STDIO)
     {
         auto lf = LockedFile(fps);
-        auto fp = lf.fp;
 
         ReadlnAppender app;
         app.initialize(buf);
 
         int c;
-        while ((c = trusted_FGETC(fp)) != -1)
+        while ((c = lf.fgetc()) != -1)
         {
             app.putchar(cast(char) c);
             if (c == terminator)
@@ -5662,7 +5661,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             version (Windows)
             {
                 buf.length = 0;
-                for (int c = void; (c = trusted_FGETWC(fp)) != -1; )
+                for (int c = void; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5674,7 +5673,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = trusted_FGETWC(fp)) != -1 ||
+                            if ((c2 = lf.fgetwc()) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5692,7 +5691,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             else version (Posix)
             {
                 buf.length = 0;
-                for (int c; (c = trusted_FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     import std.utf : encode;
 
@@ -5761,7 +5760,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             version (Windows)
             {
                 buf.length = 0;
-                for (int c; (c = trusted_FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5773,7 +5772,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = trusted_FGETWC(fp)) != -1 ||
+                            if ((c2 = lf.fgetwc()) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5792,7 +5791,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             {
                 import std.utf : encode;
                 buf.length = 0;
-                for (int c; (c = trusted_FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                         buf ~= cast(char) c;
@@ -5815,7 +5814,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         // First, fill the existing buffer
         for (size_t bufPos = 0; bufPos < buf.length; )
         {
-            immutable c = trusted_FGETC(fp);
+            immutable c = lf.fgetc();
             if (c == -1)
             {
                 buf.length = bufPos;
@@ -5830,7 +5829,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
         }
         // Then, append to it
-        for (int c; (c = trusted_FGETC(fp)) != -1; )
+        for (int c; (c = lf.fgetc()) != -1; )
         {
             buf ~= cast(char) c;
             if (c == terminator)
