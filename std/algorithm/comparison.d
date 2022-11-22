@@ -932,13 +932,6 @@ nothrow pure @safe @nogc unittest
     assert(result > 0);
 }
 
-nothrow pure @safe unittest
-{
-    // Parallelism (was broken by inferred return type "immutable int")
-    import std.parallelism : task;
-    auto t = task!cmp("foo", "bar");
-}
-
 // equal
 /**
 Compares two or more ranges for equality, as defined by predicate `pred`

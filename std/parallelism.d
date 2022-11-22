@@ -4914,3 +4914,10 @@ version (parallelismStressTest)
     try foreach (rnd; rndGen.parallel) break;
     catch (ParallelForeachError e) {}
 }
+
+nothrow pure @safe unittest
+{
+    // Parallelism (was broken by inferred return type "immutable int")
+    import std.algorithm.comparison;
+    auto t = task!cmp("foo", "bar");
+}
