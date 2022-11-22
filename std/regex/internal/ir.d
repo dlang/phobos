@@ -49,10 +49,11 @@ CharMatcher[CodepointSet] matcherCache;
     }
 }
 
-@property ref wordMatcher()()
+static immutable CharMatcher wordMatcher;
+
+shared static this()
 {
-    static immutable CharMatcher matcher = CharMatcher(wordCharacter);
-    return matcher;
+    wordMatcher = immutable CharMatcher(wordCharacter);
 }
 
 // some special Unicode white space characters
@@ -965,6 +966,13 @@ struct CharMatcher {
     Trie trie;      // slow path for Unicode
 
     this(CodepointSet set)
+    {
+        auto asciiSet = set & unicode.ASCII;
+        ascii = BitTable(asciiSet);
+        trie = makeTrie(set);
+    }
+
+    immutable this(CodepointSet set)
     {
         auto asciiSet = set & unicode.ASCII;
         ascii = BitTable(asciiSet);
