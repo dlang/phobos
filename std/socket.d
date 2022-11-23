@@ -2751,6 +2751,21 @@ public:
     }
 
     /**
+     * Releases the underlying socket handle from the Socket object. Once it
+     * is released, you cannot use the Socket object's methods anymore. This
+     * also means the Socket destructor will no longer close the socket - it
+     * becomes your responsibility.
+     *
+     * To get the handle without releasing it, use the `handle` property.
+     */
+    @property socket_t release() pure nothrow @nogc
+    {
+        auto h = sock;
+        this.sock = socket_t.init;
+        return h;
+    }
+
+    /**
      * Get/set socket's blocking flag.
      *
      * When a socket is blocking, calls to receive(), accept(), and send()
