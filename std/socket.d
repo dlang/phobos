@@ -2628,7 +2628,7 @@ private:
     AddressFamily _family;
 
     version (Windows)
-        bool _blocking = false;         /// Property to get or set whether the socket is blocking or nonblocking.
+        bool _blocking = true;         /// Property to get or set whether the socket is blocking or nonblocking.
 
     // The WinSock timeouts seem to be effectively skewed by a constant
     // offset of about half a second (value in milliseconds). This has
