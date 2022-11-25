@@ -5470,15 +5470,13 @@ private struct LockedFile
     @disable this(this);
     @disable void opAssign(LockedFile);
 
-    @safe ref opDispatch(string s)() { return mixin("fp."~s); }
-
     // these use unlocked fgetc calls
     @trusted fgetc() { return _FGETC(fp); }
     @trusted fgetwc() { return _FGETWC(fp); }
 
     ~this() @trusted
     {
-        _FUNLOCK(cast(FILE*)fp);
+        _FUNLOCK(cast(FILE*) fp);
     }
 }
 
@@ -5500,12 +5498,12 @@ private struct LockedFile
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @safe
 {
     version (DIGITAL_MARS_STDIO)
-    {
+    return () @trusted {
         auto lf = LockedFile(fps);
         ReadlnAppender app;
         app.initialize(buf);
 
-        if (__fhnd_info[lf._file] & FHND_WCHAR)
+        if (__fhnd_info[lf.fp._file] & FHND_WCHAR)
         {   /* Stream is in wide characters.
              * Read them and convert to chars.
              */
@@ -5536,8 +5534,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             if (ferror(fps))
                 StdioException();
         }
-
-        else if (lf._flag & _IONBF)
+        else if (lf.fp._flag & _IONBF)
         {
             /* Use this for unbuffered I/O, when running
              * across buffer boundaries, or for any but the common
@@ -5561,10 +5558,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
         else
         {
-            int u = lf._cnt;
-            char* p = lf._ptr;
+            int u = lf.fp._cnt;
+            char* p = lf.fp._ptr;
             int i;
-            if (lf._flag & _IOTRAN)
+            if (lf.fp._flag & _IOTRAN)
             {   /* Translated mode ignores \r and treats ^Z as end-of-file
                  */
                 char c;
@@ -5606,13 +5603,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 }
                 app.putonly((() @trusted => p[0 .. i])());
             }
-            lf._cnt -= i;
-            () @trusted { lf._ptr += i; }();
+            lf.fp._cnt -= i;
+            () @trusted { lf.fp._ptr += i; }();
         }
 
         buf = app.data;
         return buf.length;
-    }
+    }();
     else version (MICROSOFT_STDIO)
     {
         auto lf = LockedFile(fps);
