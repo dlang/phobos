@@ -5636,11 +5636,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     }
     else static if (__traits(compiles, core.sys.posix.stdio.getdelim))
     {
-        import core.stdc.stdlib : free;
-        import core.stdc.wchar_ : fwide;
-
         if (orientation == File.Orientation.wide)
         {
+            import core.stdc.wchar_ : fwide;
+
             auto lf = LockedFile(fps);
             /* Stream is in wide characters.
              * Read them and convert to chars.
@@ -5698,40 +5697,43 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 static assert(0);
             }
         }
+        return () @trusted {
+            import core.stdc.stdlib : free;
 
-        static char *lineptr = null;
-        static size_t n = 0;
-        scope(exit)
-        {
-            if (n > 128 * 1024)
+            static char *lineptr = null;
+            static size_t n = 0;
+            scope(exit)
             {
-                // Bound memory used by readln
-                () @trusted { free(lineptr); }();
-                lineptr = null;
-                n = 0;
+                if (n > 128 * 1024)
+                {
+                    // Bound memory used by readln
+                    free(lineptr);
+                    lineptr = null;
+                    n = 0;
+                }
             }
-        }
 
-        const s = (() @trusted => core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps))();
-        if (s < 0)
-        {
-            if (ferror(fps))
-                StdioException();
-            buf.length = 0;                // end of file
-            return 0;
-        }
+            const s = core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps);
+            if (s < 0)
+            {
+                if (ferror(fps))
+                    StdioException();
+                buf.length = 0;                // end of file
+                return 0;
+            }
 
-        const line = (() @trusted => lineptr[0 .. s])();
-        if (s <= buf.length)
-        {
-            buf = buf[0 .. s];
-            buf[] = line;
-        }
-        else
-        {
-            buf = line.dup;
-        }
-        return s;
+            const line = lineptr[0 .. s];
+            if (s <= buf.length)
+            {
+                buf = buf[0 .. s];
+                buf[] = line;
+            }
+            else
+            {
+                buf = line.dup;
+            }
+            return s;
+        }();
     }
     else // version (NO_GETDELIM)
     {
