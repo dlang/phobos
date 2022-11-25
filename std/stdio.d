@@ -5569,7 +5569,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    c = (() @trusted => p[i])();
+                    c = p[i];
                     i++;
                     if (c != '\r')
                     {
@@ -5580,12 +5580,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         goto L1;
                     }
                     else
-                    {   if (i != u && (() @trusted => p[i])() == terminator)
+                    {   if (i != u && p[i] == terminator)
                             break;
                         goto L1;
                     }
                 }
-                app.putonly((() @trusted => p[0 .. i])());
+                app.putonly(p[0 .. i]);
                 app.buf[i - 1] = cast(char) terminator;
                 if (terminator == '\n' && c == '\r')
                     i++;
@@ -5596,15 +5596,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 {
                     if (i == u)         // if end of buffer
                         goto L1;        // give up
-                    auto c = (() @trusted => p[i])();
+                    auto c = p[i];
                     i++;
                     if (c == terminator)
                         break;
                 }
-                app.putonly((() @trusted => p[0 .. i])());
+                app.putonly(p[0 .. i]);
             }
             lf.fp._cnt -= i;
-            () @trusted { lf.fp._ptr += i; }();
+            lf.fp._ptr += i;
         }
 
         buf = app.data;
