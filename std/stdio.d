@@ -52,7 +52,7 @@ import std.algorithm.mutation : copy;
 import std.meta : allSatisfy;
 import std.range : ElementEncodingType, empty, front, isBidirectionalRange,
     isInputRange, isSomeFiniteCharInputRange, put;
-import std.traits : isSomeChar, isSomeString, Unqual, isPointer;
+import std.traits : isSomeChar, isSomeString, Unqual;
 import std.typecons : Flag, No, Yes;
 
 /++
