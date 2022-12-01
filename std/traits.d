@@ -5446,8 +5446,8 @@ private template isStorageClassImplicitlyConvertible(From, To)
 {
     alias Pointify(T) = void*;
 
-    enum isStorageClassImplicitlyConvertible = isImplicitlyConvertible!(
-            ModifyTypePreservingTQ!(Pointify, From),
+    enum isStorageClassImplicitlyConvertible = is(
+            ModifyTypePreservingTQ!(Pointify, From) :
             ModifyTypePreservingTQ!(Pointify,   To) );
 }
 
