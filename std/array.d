@@ -169,8 +169,8 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
 }
 
 /// ditto
-ForeachType!(PointerTarget!Range)[] array(Range)(Range r)
-if (isPointer!Range && isIterable!(PointerTarget!Range) && !isAutodecodableString!Range && !isInfinite!Range)
+ForeachType!(typeof((*Range).init))[] array(Range)(Range r)
+if (is(Range : U*, U) && isIterable!U && !isAutodecodableString!Range && !isInfinite!Range)
 {
     return array(*r);
 }
