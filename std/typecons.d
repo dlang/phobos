@@ -9253,7 +9253,7 @@ public:
     }
 
     Base opCast(B)() const
-        if (isImplicitlyConvertible!(Base, B))
+        if (is(Base : B))
     {
         return mValue;
     }

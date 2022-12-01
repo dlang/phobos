@@ -3588,7 +3588,7 @@ if (isDynamicArray!A)
     private template canPutItem(U)
     {
         enum bool canPutItem =
-            isImplicitlyConvertible!(Unqual!U, Unqual!T) ||
+            is(Unqual!U : Unqual!T) ||
             isSomeChar!T && isSomeChar!U;
     }
     private template canPutConstRange(Range)
