@@ -7138,7 +7138,7 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 /**
  * Detect whether type `T` is a pointer.
  */
-enum bool isPointer(T) = is(T == U*, U) && __traits(isScalar, T);
+enum bool isPointer(T) = is(T == U*, U);
 
 ///
 @safe unittest
