@@ -889,10 +889,10 @@ private template fqnType(T,
             );
         }
     }
-    else static if (isPointer!T)
+    else static if (is(T : U*, U))
     {
         enum fqnType = chain!(
-            fqnType!(PointerTarget!T, qualifiers) ~ "*"
+            fqnType!(U, qualifiers) ~ "*"
         );
     }
     else static if (is(T : __vector(V[N]), V, size_t N))
@@ -3925,8 +3925,8 @@ template hasStaticMember(T, string member)
 {
     static if (__traits(hasMember, T, member))
     {
-        static if (isPointer!T)
-            alias U = PointerTarget!T;
+        static if (is(T : V*, V))
+            alias U = V;
         else
             alias U = T;
 
