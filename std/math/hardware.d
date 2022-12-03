@@ -303,27 +303,26 @@ version (StdDdoc)
 
     static foreach (T; AliasSeq!(float, double, real))
     {{
-        T x; /* Needs to be here to trick -O. It would optimize away the
-            calculations if x were local to the function literals. */
+        T x; // Needs to be here to avoid `call without side effects` warning.
         auto tests = [
             Test(
-                () { x = 1; x += 0.1L; },
+                () { x = forceAddOp!T(1, 0.1L); },
                 () => ieeeFlags.inexact
             ),
             Test(
-                () { x = T.min_normal; x /= T.max; },
+                () { x = forceDivOp!T(T.min_normal, T.max); },
                 () => ieeeFlags.underflow
             ),
             Test(
-                () { x = T.max; x += T.max; },
+                () { x = forceAddOp!T(T.max, T.max); },
                 () => ieeeFlags.overflow
             ),
             Test(
-                () { x = 1; x /= 0; },
+                () { x = forceDivOp!T(1, 0); },
                 () => ieeeFlags.divByZero
             ),
             Test(
-                () { x = 0; x /= 0; },
+                () { x = forceDivOp!T(0, 0); },
                 () => ieeeFlags.invalid
             )
         ];
