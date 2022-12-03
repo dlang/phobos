@@ -2159,7 +2159,7 @@ public struct InversionList(SP=GcPolicy)
     /**
         Get range that spans all of the $(CODEPOINT) intervals in this $(LREF InversionList).
     */
-    @property auto byInterval() scope
+    @property auto byInterval() scope const
     {
         // TODO: change this to data[] once the -dip1000 errors have been fixed
         // see e.g. https://github.com/dlang/phobos/pull/6638
@@ -4282,7 +4282,7 @@ template isValidArgsForTrie(Key, Args...)
 public template codepointSetTrie(sizes...)
 if (sumOfIntegerTuple!sizes == 21)
 {
-    auto codepointSetTrie(Set)(Set set)
+    auto codepointSetTrie(Set)(const auto ref Set set) pure
         if (isCodepointSet!Set)
     {
         auto builder = TrieBuilder!(bool, dchar, lastDchar+1, GetBitSlicing!(21, sizes))(false);
