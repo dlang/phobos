@@ -739,6 +739,30 @@ if (Args.length && allSatisfy!(isType, Args))
     }
 }
 
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : tuple;
+
+    auto complete = "hello!34.5:124".formattedRead!(string, double, int)("%s!%s:%s");
+    assert(complete == tuple("hello", 34.5, 124));
+
+    // reading ends early
+    assertThrown!FormatException("hello!34.5:".formattedRead!(string, double, int)("%s!%s:%s"));
+}
+
+/// Skipping values
+@safe pure unittest
+{
+    import std.format : FormatException;
+    import std.typecons : tuple;
+
+    auto result = "orange: (12%) 15.25".formattedRead!(string, double)("%s: (%*d%%) %f");
+    assert(result == tuple("orange", 15.25));
+}
+
 /// ditto
 template formattedRead(alias fmt, Args...)
 if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isType, Args))
@@ -754,6 +778,29 @@ if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isTy
         enforceFmt(numArgsFilled == Args.length, "Failed reading into all format arguments");
         return args;
     }
+}
+
+/// The format string can be checked at compile-time
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : tuple;
+
+    auto expected = tuple("hello", 124, 34.5);
+    auto result = "hello!124:34.5".formattedRead!("%s!%s:%s", string, int, double);
+    assert(result == expected);
+
+    assertThrown!FormatException("hello!34.5:".formattedRead!("%s!%s:%s", string, double, int));
+}
+
+/// Compile-time consistency check
+@safe pure unittest
+{
+    import std.format : FormatException;
+    import std.typecons : tuple;
+
+    static assert(!__traits(compiles, "orange: (12%) 15.25".formattedRead!("%s: (%*d%%) %f", string, double)));
 }
 
 /**
