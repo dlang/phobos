@@ -741,6 +741,22 @@ if (Args.length && allSatisfy!(isType, Args))
     }
 }
 
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : No, tuple;
+
+    auto complete = "hello!34.5:124".formattedRead!(string, double, int)("%s!%s:%s");
+    assert(complete == tuple("hello", 34.5, 124));
+
+    assertThrown!FormatException("hello!34.5:".formattedRead!(string, double, int)("%s!%s:%s"));
+
+    auto missing = "hello!34.5:".formattedRead!(string, double, int)("%s!%s:%s", No.exhaustive);
+    assert(missing == tuple("hello", 34.5, int.init));
+}
+
 /// ditto
 template formattedRead(alias fmt, Args...)
 if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isType, Args))
@@ -757,6 +773,23 @@ if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isTy
         if (exhaustive) enforce!FormatException(numArgsFilled == Args.length);
         return args;
     }
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : No, tuple;
+
+    auto expected = tuple("hello", 124, 34.5);
+    auto result = "hello!124:34.5".formattedRead!("%s!%s:%s", string, int, double);
+    assert(result == expected);
+
+    assertThrown!FormatException("hello!34.5:".formattedRead!("%s!%s:%s", string, double, int));
+
+    auto missing = "hello!34.5:".formattedRead!("%s!%s:%s", string, double, int)(No.exhaustive);
+    assert(missing == tuple("hello", 34.5, int.init));
 }
 
 /**
