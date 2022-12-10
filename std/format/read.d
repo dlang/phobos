@@ -198,6 +198,7 @@ module std.format.read;
 
 import std.format.spec : FormatSpec;
 import std.format.internal.read;
+import std.meta : allSatisfy;
 import std.traits : isSomeString, isType;
 
 /**
@@ -690,6 +691,69 @@ if (!isType!fmt && isSomeString!(typeof(fmt)))
     int[string] aa2;
     formattedRead(`{"hello"=1; "world"=2}`, "{%(%s=%s; %)}", aa2);
     assert(aa2 == ["hello":1, "world":2]);
+}
+
+/**
+Reads an input range according to a format string and returns a tuple of Args
+with the read values.
+
+Format specifiers with format character $(B 'd'), $(B 'u') and $(B
+'c') can take a $(B '*') parameter for skipping values.
+
+The second version of `formattedRead` takes the format string as
+template argument. In this case, it is checked for consistency at
+compile-time.
+
+Params:
+    Args = a variadic list of types of the arguments
+ */
+template formattedRead(Args...)
+if (Args.length && allSatisfy!(isType, Args))
+{
+    import std.typecons : Tuple;
+
+    /**
+    Params:
+        r = an $(REF_ALTTEXT input range, isInputRange, std, range, primitives),
+            where the formatted input is read from
+        fmt = a $(MREF_ALTTEXT format string, std,format)
+        Range = the type of the input range `r`
+        Char = the character type used for `fmt`
+
+    Returns:
+        A Tuple!Args with the elements filled.
+
+    Throws:
+        A $(REF_ALTTEXT FormatException, FormatException, std, format)
+        if reading did not succeed.
+    */
+    Tuple!Args formattedRead(Range, Char)(auto ref Range r, const(Char)[] fmt)
+    {
+        import core.lifetime : forward;
+        import std.format : enforceFmt;
+
+        Tuple!Args args;
+        const numArgsFilled = .formattedRead(forward!r, fmt, args.expand);
+        enforceFmt(numArgsFilled == Args.length, "Failed reading into all format arguments");
+        return args;
+    }
+}
+
+/// ditto
+template formattedRead(alias fmt, Args...)
+if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isType, Args))
+{
+    import std.typecons : Flag, Tuple, Yes;
+    Tuple!Args formattedRead(Range)(auto ref Range r)
+    {
+        import core.lifetime : forward;
+        import std.format : enforceFmt;
+
+        Tuple!Args args;
+        const numArgsFilled = .formattedRead!fmt(forward!r, args.expand);
+        enforceFmt(numArgsFilled == Args.length, "Failed reading into all format arguments");
+        return args;
+    }
 }
 
 /**
