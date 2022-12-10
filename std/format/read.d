@@ -198,7 +198,7 @@ module std.format.read;
 
 import std.format.spec : FormatSpec;
 import std.format.internal.read;
-import std.traits : isSomeString;
+import std.traits : isSomeString, isType;
 
 /**
 Reads an input range according to a format string and stores the read
@@ -300,7 +300,7 @@ uint formattedRead(Range, Char, Args...)(auto ref Range r, const(Char)[] fmt, au
 
 /// ditto
 uint formattedRead(alias fmt, Range, Args...)(auto ref Range r, auto ref Args args)
-if (isSomeString!(typeof(fmt)))
+if (!isType!fmt && isSomeString!(typeof(fmt)))
 {
     import std.format : checkFormatException;
     import std.meta : staticMap;
