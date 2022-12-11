@@ -5,7 +5,9 @@
  * Authors: Dmitry Olshansky
  *
  */
-// Automatically generated from Unicode Character Database files, DO NOT EDIT
+// !!! DO NOT EDIT !!!
+// !!! Did you even read the comment? !!!
+// This module is automatically generated from Unicode Character Database files
 // https://github.com/dlang/phobos/blob/master/tools/unicode_table_generator.d
 //dfmt off
 module std.internal.unicode_norm;
