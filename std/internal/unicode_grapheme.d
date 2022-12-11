@@ -1,3 +1,12 @@
+//Written in the D programming language
+/**
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *
+ * Authors: Dmitry Olshansky
+ *
+ */
+//Automatically generated from Unicode Character Database files, DO NOT EDIT
+//dfmt off
 module std.internal.unicode_grapheme;
 import std.internal.unicode_tables;
 

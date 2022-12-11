@@ -158,6 +158,16 @@ enum {
     specialCasingSrc = UnicodeDatabaseDirectory ~ "SpecialCasing.txt"
 }
 
+enum HeaderComment = `//Written in the D programming language
+/**
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *
+ * Authors: Dmitry Olshansky
+ *
+ */
+//Automatically generated from Unicode Character Database files, DO NOT EDIT
+//dfmt off`;
+
 auto toPairs(K, V)(V[K] aa)
 {
     return aa.values.zip(aa.keys).array;
@@ -189,29 +199,25 @@ void main(string[] argv)
     auto graphSink = File(UnicodeTableDirectory ~ "unicode_grapheme.d", mode);
     if (!minimal)
     {
-        baseSink.writeln("//Written in the D programming language
-/**
- * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
- *
- * Authors: Dmitry Olshansky
- *
- */
-//Automatically generated from Unicode Character Database files\n
-//dfmt off
-module std.internal.unicode_tables;
-@safe pure nothrow @nogc package(std):\n");
+        baseSink.writeln(HeaderComment);
+        baseSink.writeln("module std.internal.unicode_tables;");
+        baseSink.writeln("\n@safe pure nothrow @nogc package(std):\n");
+
         compSink.writeln("module std.internal.unicode_comp;");
         compSink.writeln("import std.internal.unicode_tables;");
         compSink.writeln("\n@safe pure nothrow @nogc package(std):\n");
 
+        decompSink.writeln(HeaderComment);
         decompSink.writeln("module std.internal.unicode_decomp;");
         decompSink.writeln("import std.internal.unicode_tables;");
         decompSink.writeln("\n@safe pure nothrow @nogc package(std):\n");
 
+        normSink.writeln(HeaderComment);
         normSink.writeln("module std.internal.unicode_norm;");
         normSink.writeln("import std.internal.unicode_tables;");
         normSink.writeln("\npackage(std):\n");
 
+        graphSink.writeln(HeaderComment);
         graphSink.writeln("module std.internal.unicode_grapheme;");
         graphSink.writeln("import std.internal.unicode_tables;");
         graphSink.writeln("\npackage(std):\n");

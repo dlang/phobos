@@ -5,10 +5,10 @@
  * Authors: Dmitry Olshansky
  *
  */
-//Automatically generated from Unicode Character Database files
-
+//Automatically generated from Unicode Character Database files, DO NOT EDIT
 //dfmt off
 module std.internal.unicode_tables;
+
 @safe pure nothrow @nogc package(std):
 
 
