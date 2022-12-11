@@ -165,7 +165,8 @@ enum HeaderComment = `//Written in the D programming language
  * Authors: Dmitry Olshansky
  *
  */
-//Automatically generated from Unicode Character Database files, DO NOT EDIT
+// Automatically generated from Unicode Character Database files, DO NOT EDIT
+// https://github.com/dlang/phobos/blob/master/tools/unicode_table_generator.d
 //dfmt off`;
 
 auto toPairs(K, V)(V[K] aa)

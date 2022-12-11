@@ -5,7 +5,8 @@
  * Authors: Dmitry Olshansky
  *
  */
-//Automatically generated from Unicode Character Database files, DO NOT EDIT
+// Automatically generated from Unicode Character Database files, DO NOT EDIT
+// https://github.com/dlang/phobos/blob/master/tools/unicode_table_generator.d
 //dfmt off
 module std.internal.unicode_grapheme;
 import std.internal.unicode_tables;
