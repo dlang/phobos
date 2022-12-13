@@ -1,0 +1,15 @@
+Single- and double-precision implementations for log function families
+
+New `float` and `double` overloads of $(REF log, std, math, exponential),
+$(REF log10, std, math, exponential), $(REF log1p, std, math, exponential),
+ $(REF log2, std, math, exponential), and $(REF logb, std, math, exponential)
+have been added to Phobos with proper 'software' implementations in the
+corresponding precision. Furthermore, $(REF logb, std, math, exponential) is
+now `pure`.
+
+While this may result in a slowdown in some cases for DMD, the overall speed-up
+factor for GDC and LDC is over 3x, for both `double` and `float`.
+
+This also implies less precise results, especially in single-precision,
+so if your code depended on more accurate results via 80-bit intermediate
+precision, you'll have to cast the argument(s) explicitly now.
