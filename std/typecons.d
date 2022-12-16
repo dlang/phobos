@@ -304,7 +304,7 @@ private:
         ~this() @trusted
         {
             // context pointer doesn't exist when GC calls
-            if (&i > cast(void*)1024)
+            if (&i > cast(void*) 1024)
                 i++;
         }
     }
