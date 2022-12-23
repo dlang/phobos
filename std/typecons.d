@@ -303,8 +303,8 @@ private:
     {
         ~this() @trusted
         {
-            // context pointer doesn't exist when GC calls
-            if (&i > cast(void*) 1024)
+            // check context pointer still exists - dtor also called before GC frees struct
+            if (this.tupleof[0])
                 i++;
         }
     }
