@@ -262,7 +262,7 @@ private:
 ///
 @safe unittest
 {
-    static struct S
+    struct S
     {
         int i;
         this(int i){this.i = i;}
@@ -301,7 +301,7 @@ private:
     int i;
     struct S
     {
-        ~this() @trusted
+        ~this()
         {
             // check context pointer still exists - dtor also called before GC frees struct
             if (this.tupleof[0])
