@@ -1,0 +1,28 @@
+`std.typecons.Unique` now calls `destroy` on struct types
+
+When Unique goes out of scope, any destructor will now be called.
+Previously the destructor was not called then.
+
+$(RUNNABLE_EXAMPLE
+---
+static int i;
+
+struct S
+{
+    ~this()
+    {
+        i++;
+    }
+}
+{
+    Unique!S u = new S;
+    // S.~this now called here
+}
+assert(i == 1);
+---
+)
+
+$(NOTE Above, the struct destructor will also be called by the GC just
+before the memory for `new S` is reclaimed. Take care that any struct
+destructor used will handle being called again on the struct `.init`
+value.)
