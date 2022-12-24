@@ -301,7 +301,7 @@ private:
     int i;
     struct S
     {
-        ~this() @trusted
+        ~this()
         {
             // check context pointer still exists - dtor also called before GC frees struct
             if (this.tupleof[0])
