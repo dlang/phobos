@@ -262,7 +262,7 @@ private:
 ///
 @safe unittest
 {
-    static struct S
+    struct S
     {
         int i;
         this(int i){this.i = i;}
