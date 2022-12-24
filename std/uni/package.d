@@ -6031,11 +6031,11 @@ bool loadProperty(Set=CodepointSet, C)
     }
     else if (ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
-        target = asSet(uniProps.Co);
-        target |= asSet(uniProps.Lo);
-        target |= asSet(uniProps.No);
-        target |= asSet(uniProps.So);
-        target |= asSet(uniProps.Po);
+        target = asSet(uniProps.Cc);
+        target |= asSet(uniProps.Cf);
+        target |= asSet(uniProps.Cs);
+        target |= asSet(uniProps.Co);
+        target |= asSet(uniProps.Cn);
     }
     else if (ucmp(name, "graphical") == 0)
     {

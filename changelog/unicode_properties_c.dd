@@ -1,0 +1,24 @@
+The Unicode property "C" aka "Other" has had the wrong properties associated with it.
+
+If you use `unicode.c` or `unicode.Other` (case insensitive) from `std.uni`, you should mitigate or fix your codebase.
+
+This change makes it match the [Unicode Techical Report #44](https://www.unicode.org/reports/tr44/). Unfortunately if you are already using it with its previous wrong values, this will break your code, below is a function which reflects the original values that you can use to mitigate against any breakage.
+
+---
+@property auto loadPropertyOriginal(string name)() pure
+{
+    import std.uni : unicode;
+
+    static if (name == "C" || name == "c" || name == "other" || name == "Other")
+    {
+        auto target = unicode.Co;
+        target |= unicode.Lo;
+        target |= unicode.No;
+        target |= unicode.So;
+        target |= unicode.Po;
+        return target;
+    }
+    else
+        return unicode.opDispatch!name;
+}
+---
