@@ -22,7 +22,7 @@ assert(i == 1);
 ---
 )
 
-$(NOTE Above, the struct destructor will also be called by the GC just
+$(B Note:) Above, the struct destructor will also be called by the GC just
 before the memory for `new S` is reclaimed. Take care that any struct
 destructor used will handle being called again on the struct `.init`
-value.)
+value.
