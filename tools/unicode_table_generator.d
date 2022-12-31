@@ -37,6 +37,8 @@ PropertyTable general;
 PropertyTable blocks;
 PropertyTable scripts;
 PropertyTable hangul;
+PropertyTable graphemeBreaks;
+PropertyTable emojiData;
 
 //quick NO/MAYBE charaсter sets
 CodepointSet[string] normalization;
@@ -148,6 +150,8 @@ enum {
     caseFoldingSrc = UnicodeDatabaseDirectory ~ "CaseFolding.txt",
     blocksSrc = UnicodeDatabaseDirectory ~ "Blocks.txt",
     propListSrc = UnicodeDatabaseDirectory ~ "PropList.txt",
+    graphemeSrc = UnicodeDatabaseDirectory ~ "auxiliary/GraphemeBreakProperty.txt",
+    emojiDataSrc = UnicodeDatabaseDirectory ~ "emoji/emoji-data.txt",
     propertyValueAliases = UnicodeDatabaseDirectory ~ "PropertyValueAliases.txt",
     corePropSrc = UnicodeDatabaseDirectory ~ "DerivedCoreProperties.txt",
     normalizationPropSrc = UnicodeDatabaseDirectory ~ "DerivedNormalizationProps.txt",
@@ -231,6 +235,8 @@ void main(string[] argv)
     loadProperties(corePropSrc, general);
     loadProperties(scriptsSrc, scripts);
     loadProperties(hangulSyllableSrc, hangul);
+    loadProperties(graphemeSrc, graphemeBreaks);
+    loadProperties(emojiDataSrc, emojiData);
     loadPropertyAliases(propertyValueAliases);
 
     loadUnicodeData(unicodeDataSrc);
@@ -914,13 +920,21 @@ void writeNormalizationTries(File sink)
 
 void writeGraphemeTries(File sink)
 {
-    //few specifics for grapheme cluster breaking algorithm
-    //
-    auto props = general.table;
-    writeBest3Level(sink, "hangulLV", hangul.table["LV"]);
-    writeBest3Level(sink, "hangulLVT", hangul.table["LVT"]);
-    writeBest3Level(sink, "mc", props["Mc"]);
-    writeBest3Level(sink, "graphemeExtend", props["Grapheme_Extend"]);
+    auto table = graphemeBreaks.table;
+
+    foreach(key; table.byKey)
+    {
+        writeBest3Level(sink, key, table[key]);
+    }
+
+    sink.writeln();
+
+    writeBest3Level
+    (
+        sink,
+        "Extended_Pictographic",
+        emojiData.table["Extended_Pictographic"]
+    );
 }
 
 void writeCaseCoversion(File sink)
