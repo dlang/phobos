@@ -1563,6 +1563,14 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     {
         char[] buf;
         size_t i;
+        void put(char c)
+        {
+            if (buf.length <= i)
+                throw new RangeError(__FILE__, __LINE__);
+
+            buf[i] = c;
+            i += 1;
+        }
         void put(dchar c)
         {
             char[4] enc;
@@ -1685,6 +1693,19 @@ if (isSomeString!(typeof(fmt)))
     sformat(buf, "%s", 'c');
     const v = () @trusted { return GC.stats().usedSize; } ();
     assert(u == v);
+}
+
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=23488
+{
+    static struct R
+    {
+        string s = "Ü";
+        bool empty() { return s.length == 0; }
+        char front() { return s[0]; }
+        void popFront() { s = s[1 .. $]; }
+    }
+    char[2] buf;
+    assert(sformat(buf, "%s", R()) == "Ü");
 }
 
 version (StdUnittest)

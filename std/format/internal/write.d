@@ -3017,33 +3017,25 @@ if (is(T == enum))
     import std.array : appender;
     import std.range.primitives : put;
 
-    if (f.spec == 's')
-    {
-        foreach (i, e; EnumMembers!T)
-        {
-            if (val == e)
-            {
-                formatValueImpl(w, __traits(allMembers, T)[i], f);
-                return;
-            }
-        }
+    if (f.spec != 's')
+        return formatValueImpl(w, cast(OriginalType!T) val, f);
 
-        auto w2 = appender!string();
+    foreach (immutable member; __traits(allMembers, T))
+        if (val == __traits(getMember, T, member))
+            return formatValueImpl(w, member, f);
 
-        // val is not a member of T, output cast(T) rawValue instead.
-        put(w2, "cast(");
-        put(w2, T.stringof);
-        put(w2, ")");
-        static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
-            "must not be equal to " ~ T.stringof);
+    auto w2 = appender!string();
 
-        FormatSpec!Char f2 = f;
-        f2.width = 0;
-        formatValueImpl(w2, cast(OriginalType!T) val, f2);
-        writeAligned(w, w2.data, f);
-        return;
-    }
-    formatValueImpl(w, cast(OriginalType!T) val, f);
+    // val is not a member of T, output cast(T) rawValue instead.
+    enum prefix = "cast(" ~ T.stringof ~ ")";
+    put(w2, prefix);
+    static assert(!is(OriginalType!T == T), "OriginalType!" ~ T.stringof ~
+                  "must not be equal to " ~ T.stringof);
+
+    FormatSpec!Char f2 = f;
+    f2.width = 0;
+    formatValueImpl(w2, cast(OriginalType!T) val, f2);
+    writeAligned(w, w2.data, f);
 }
 
 @safe unittest
@@ -3156,7 +3148,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 
     auto a = iota(0, 10);
     auto b = iota(0, 10);
-    auto p = () @trusted { auto p = &a; return p; }();
+    auto p = () @trusted { auto result = &a; return result; }();
 
     assert(format("%s",p) != format("%s",b));
 }

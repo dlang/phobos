@@ -225,7 +225,10 @@ public:
     {
         if (_p !is null)
         {
-            destroy(_p);
+            static if (is(T == class) || is(T == interface))
+                destroy(_p);
+            else
+                destroy(*_p);
             _p = null;
         }
     }
@@ -259,7 +262,7 @@ private:
 ///
 @safe unittest
 {
-    static struct S
+    struct S
     {
         int i;
         this(int i){this.i = i;}
@@ -284,12 +287,31 @@ private:
     Unique!S u1;
     assert(u1.isEmpty);
     u1 = produce();
+    assert(u1.i == 5);
     increment(u1);
     assert(u1.i == 6);
     //consume(u1); // Error: u1 is not copyable
     // Transfer ownership of the resource
     consume(u1.release);
     assert(u1.isEmpty);
+}
+
+@safe unittest
+{
+    int i;
+    struct S
+    {
+        ~this()
+        {
+            // check context pointer still exists - dtor also called before GC frees struct
+            if (this.tupleof[0])
+                i++;
+        }
+    }
+    {
+        Unique!S u = new S;
+    }
+    assert(i == 1);
 }
 
 @system unittest
@@ -5536,7 +5558,7 @@ private static:
     }
 
     // handle each overload set
-    private string generateCodeForOverloadSet(alias oset)() @property
+    string generateCodeForOverloadSet(alias oset)() @property
     {
         string code = "";
 
@@ -5666,7 +5688,7 @@ private static:
      * "ref int a0, real a1, ..."
      */
     static struct GenParams { string imports, params; }
-    private GenParams generateParameters(string myFuncInfo, func...)()
+    GenParams generateParameters(string myFuncInfo, func...)()
     {
         alias STC = ParameterStorageClass;
         alias stcs = ParameterStorageClassTuple!(func);
@@ -5716,7 +5738,7 @@ private static:
 
     // Returns D code which enumerates n parameter variables using comma as the
     // separator.  "a0, a1, a2, a3"
-    private string enumerateParameters(size_t n)() @property
+    string enumerateParameters(size_t n)() @property
     {
         string params = "";
 
@@ -8782,7 +8804,7 @@ if (alignment > 0 && !((alignment - 1) & alignment))
     {
         void test(size_t size)
         {
-            import core.stdc.stdlib;
+            import core.stdc.stdlib : alloca;
             cast(void) alloca(size);
             alignmentTest();
         }
@@ -9253,7 +9275,7 @@ public:
     }
 
     Base opCast(B)() const
-        if (isImplicitlyConvertible!(Base, B))
+        if (is(Base : B))
     {
         return mValue;
     }

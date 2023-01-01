@@ -4348,7 +4348,7 @@ version (StdUnittest)
 
     foreach (i, elem; logs)
     {
-        assert(isClose(elem, cast(double) log(i + 1)));
+        assert(isClose(elem, log(double(i + 1))));
     }
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
