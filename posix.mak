@@ -702,20 +702,12 @@ $(ROOT)/betterctests/betterc_module_tests: test/betterc_module_tests.d $(addsuff
 ################################################################################
 
 .PHONY : auto-tester-build
-ifneq (,$(findstring Darwin_64_32, $(PWD)))
 auto-tester-build:
-	echo "Darwin_64_32_disabled"
-else
-auto-tester-build: all checkwhitespace
-endif
+	echo "Auto-Tester has been disabled"
 
 .PHONY : auto-tester-test
-ifneq (,$(findstring Darwin_64_32, $(PWD)))
 auto-tester-test:
-	echo "Darwin_64_32_disabled"
-else
-auto-tester-test: unittest
-endif
+	echo "Auto-Tester has been disabled"
 
 .PHONY: buildkite-test
 buildkite-test: unittest betterc

@@ -507,12 +507,10 @@ install: phobos.zip $(LIB)
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 
 auto-tester-build:
-	echo "Windows builds have been disabled on auto-tester"
+	echo "Auto-Tester has been disabled"
 
 JOBS=$(NUMBER_OF_PROCESSORS)
 GMAKE=gmake
 
 auto-tester-test:
-	echo "Windows builds have been disabled on auto-tester"
-	#"$(GMAKE)" -j$(JOBS) -f posix.mak unittest BUILD=release DMD="$(DMD)" OS=win$(MODEL) \
-	#CUSTOM_DRUNTIME=1 PIC=0 MODEL=$(MODEL) DRUNTIME=$(DRUNTIMELIB) CC=$(CC)
+	echo "Auto-Tester has been disabled"
