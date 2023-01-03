@@ -40,9 +40,9 @@ linux_task:
 
 # Mac
 macos_task:
-  name: macOS 11.x x64
-  osx_instance:
-    image: big-sur-xcode
+  name: macOS 12.x x64 (M1)
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
   timeout_in: 60m
   environment:
     OS_NAME: darwin
