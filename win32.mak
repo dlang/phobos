@@ -568,7 +568,7 @@ install: phobos.zip
 	unzip -o phobos.zip -d $(DIR)\src\phobos
 
 auto-tester-build:
-	echo "Windows builds have been disabled on auto-tester"
+	echo "Auto-Tester has been disabled"
 
 auto-tester-test:
-	echo "Windows builds have been disabled on auto-tester"
+	echo "Auto-Tester has been disabled"
