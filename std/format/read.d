@@ -376,6 +376,20 @@ if (isSomeString!(typeof(fmt)))
     assert(t[0] == 1 && t[1] == 2.125);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=23600
+@safe pure unittest
+{
+    import std.typecons : Tuple, tuple;
+
+    string h, w;
+    Tuple!(int, float) t;
+
+    assert("hello 1 2.34 world".formattedRead!"%s %d %f %s"(h, t, w) == 3);
+    assert(h == "hello");
+    assert(t == tuple(1, 2.34f));
+    assert(w == "world");
+}
+
 @safe unittest
 {
     import std.math.operations : isClose;
