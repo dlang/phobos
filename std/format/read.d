@@ -303,8 +303,23 @@ uint formattedRead(alias fmt, Range, Args...)(auto ref Range r, auto ref Args ar
 if (isSomeString!(typeof(fmt)))
 {
     import std.format : checkFormatException;
+    import std.meta : staticMap;
+    import std.typecons : Tuple;
 
-    alias e = checkFormatException!(fmt, Args);
+
+    // formattedRead supports std.typecons.Tuple
+    // however, checkFormatException does not
+    // this means that all std.typecons.Tuple's types in Args must be unwrapped
+    // and passed to checkFormatException
+    template Flatten(T)
+    {
+        static if (is(T : Tuple!Args, Args...))
+            alias Flatten = Args;
+        else
+            alias Flatten = T;
+    }
+
+    alias e = checkFormatException!(fmt, staticMap!(Flatten, Args));
     static assert(!e, e);
     return .formattedRead(r, fmt, args);
 }
