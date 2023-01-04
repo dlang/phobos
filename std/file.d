@@ -4975,7 +4975,6 @@ foreach (d; dFiles)
     writeln(d.name);
 --------------------
 To handle subdirectories with denied read permission, use `SpanMode.shallow`:
-$(RUNNABLE_EXAMPLE
 ---
 void scan(string path)
 {
@@ -4993,8 +4992,7 @@ void scan(string path)
 
 scan("");
 ---
-)
- +/
++/
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
