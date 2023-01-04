@@ -4931,8 +4931,8 @@ alias DirIterator = _DirIterator!dip1000Enabled;
 
     Throws:
         $(UL
-        $(LI $(LREF FileException) if the *path* directory does not exist or read permission is denied.)
-        $(LI $(LREF FileException) if *mode* is not `shallow` and a subdirectory cannot be read.)
+        $(LI $(LREF FileException) if the $(B path) directory does not exist or read permission is denied.)
+        $(LI $(LREF FileException) if $(B mode) is not `shallow` and a subdirectory cannot be read.)
         )
 
 Example:
