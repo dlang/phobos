@@ -4930,7 +4930,10 @@ alias DirIterator = _DirIterator!dip1000Enabled;
         $(LREF DirEntry).
 
     Throws:
-        $(LREF FileException) if the directory does not exist.
+        $(UL
+        $(LI $(LREF FileException) if the $(B path) directory does not exist or read permission is denied.)
+        $(LI $(LREF FileException) if $(B mode) is not `shallow` and a subdirectory cannot be read.)
+        )
 
 Example:
 --------------------
@@ -4971,7 +4974,25 @@ auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
 foreach (d; dFiles)
     writeln(d.name);
 --------------------
- +/
+To handle subdirectories with denied read permission, use `SpanMode.shallow`:
+---
+void scan(string path)
+{
+    foreach (DirEntry entry; dirEntries(path, SpanMode.shallow))
+    {
+        try
+        {
+            writeln(entry.name);
+            if (entry.isDir)
+                scan(entry.name);
+        }
+        catch (FileException fe) { continue; } // ignore
+    }
+}
+
+scan("");
+---
++/
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
