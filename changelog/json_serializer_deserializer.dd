@@ -1,0 +1,17 @@
+JSON Serialization and Deserialization capabilities
+
+Added `@jsonField` and `@jsonRequired` attributes to allow generating serialization / deserialization code for arbitrary types.
+
+Serialization is implemented via `serializeJSON`. Deserialization is implemented via `deserializeJSON`.
+
+Sample code:
+
+---
+struct SomeData
+{
+    @jsonField int a;
+    @jsonField string b;
+}
+
+auto deserialized = deserializeJSON!SomeData(parseJSON(q{{"a": 12, "b": "test"}}));
+---
