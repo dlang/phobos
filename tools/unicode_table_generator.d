@@ -37,6 +37,8 @@ PropertyTable general;
 PropertyTable blocks;
 PropertyTable scripts;
 PropertyTable hangul;
+PropertyTable graphemeBreaks;
+PropertyTable emojiData;
 
 //quick NO/MAYBE charaсter sets
 CodepointSet[string] normalization;
@@ -155,7 +157,9 @@ enum {
     hangulSyllableSrc = UnicodeDatabaseDirectory ~ "HangulSyllableType.txt",
     unicodeDataSrc = UnicodeDatabaseDirectory ~ "UnicodeData.txt",
     compositionExclusionsSrc = UnicodeDatabaseDirectory ~ "CompositionExclusions.txt",
-    specialCasingSrc = UnicodeDatabaseDirectory ~ "SpecialCasing.txt"
+    specialCasingSrc = UnicodeDatabaseDirectory ~ "SpecialCasing.txt",
+    graphemeSrc = UnicodeDatabaseDirectory ~ "auxiliary/GraphemeBreakProperty.txt",
+    emojiDataSrc = UnicodeDatabaseDirectory ~ "emoji/emoji-data.txt"
 }
 
 enum HeaderComment = `//Written in the D programming language
@@ -231,6 +235,8 @@ void main(string[] argv)
     loadProperties(corePropSrc, general);
     loadProperties(scriptsSrc, scripts);
     loadProperties(hangulSyllableSrc, hangul);
+    loadProperties(graphemeSrc, graphemeBreaks);
+    loadProperties(emojiDataSrc, emojiData);
     loadPropertyAliases(propertyValueAliases);
 
     loadUnicodeData(unicodeDataSrc);
@@ -921,6 +927,13 @@ void writeGraphemeTries(File sink)
     writeBest3Level(sink, "hangulLVT", hangul.table["LVT"]);
     writeBest3Level(sink, "mc", props["Mc"]);
     writeBest3Level(sink, "graphemeExtend", props["Grapheme_Extend"]);
+
+    // emoji related data
+    writeBest3Level(sink, "prepend", graphemeBreaks.table["Prepend"]);
+    writeBest3Level(sink, "control", graphemeBreaks.table["Control"]);
+    writeBest3Level(sink, "Extended_Pictographic", emojiData.table["Extended_Pictographic"]);
+
+    sink.writeln();
 }
 
 void writeCaseCoversion(File sink)
