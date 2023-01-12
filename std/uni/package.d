@@ -7109,7 +7109,7 @@ template genericDecodeGrapheme(bool getValue)
             case Prepend:
                 // Unlike the starting state, we must not eat control
                 // characters here.
-                if(ccTrie[ch] || ch == '\r' || ch == '\n')
+                if (ccTrie[ch] || ch == '\r' || ch == '\n')
                     goto L_End;
                 else
                     goto case Start;
