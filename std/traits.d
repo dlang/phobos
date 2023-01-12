@@ -2302,7 +2302,7 @@ if (isCallable!func)
         int  test(int);
         int  test() @property;
     }
-    alias ov = __traits(getVirtualFunctions, Overloads, "test");
+    alias ov = __traits(getVirtualMethods, Overloads, "test");
     alias F_ov0 = FunctionTypeOf!(ov[0]);
     alias F_ov1 = FunctionTypeOf!(ov[1]);
     alias F_ov2 = FunctionTypeOf!(ov[2]);
@@ -4529,7 +4529,7 @@ if (is(C == class) || is(C == interface))
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias inSight = __traits(getVirtualFunctions, Node, name);
+                alias inSight = __traits(getVirtualMethods, Node, name);
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
