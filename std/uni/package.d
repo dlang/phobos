@@ -6962,13 +6962,10 @@ private:
 
 enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
-// control - '\r'
-enum controlSwitch = `
-    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..
-    case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
-`;
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
+// Use combined trie instead of checking for '\r' | '\n' | ccTrie,
+//   or extend | '\u200D' separately
 
 private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 {
@@ -6977,8 +6974,12 @@ private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 
 template genericDecodeGrapheme(bool getValue)
 {
-    alias graphemeExtend = graphemeExtendTrie;
+    alias extend = graphemeExtendTrie;
     alias spacingMark = mcTrie;
+    alias prepend = prependTrie;
+    alias ccTrie = graphemeControlTrie;
+    alias xpicto = xpictoTrie;
+
     static if (getValue)
         alias Value = Grapheme;
     else
@@ -6993,7 +6994,10 @@ template genericDecodeGrapheme(bool getValue)
             RI,
             L,
             V,
-            LVT
+            LVT,
+            Emoji,
+            EmojiZWJ,
+            Prepend
         }
         static if (getValue)
             Grapheme grapheme;
@@ -7015,6 +7019,8 @@ template genericDecodeGrapheme(bool getValue)
                 mixin(eat);
                 if (ch == '\r')
                     state = CR;
+                else if (ccTrie[ch] || ch == '\n')
+                    goto L_End;
                 else if (isRegionalIndicator(ch))
                     state = RI;
                 else if (isHangL(ch))
@@ -7025,21 +7031,42 @@ template genericDecodeGrapheme(bool getValue)
                     state = LVT;
                 else if (isHangT(ch))
                     state = LVT;
+                else if (prepend[ch])
+                    state = Prepend;
+                else if (xpicto[ch])
+                    state = Emoji;
                 else
-                {
-                    switch (ch)
-                    {
-                    mixin(controlSwitch);
-                        goto L_End;
-                    default:
-                        goto L_End_Extend;
-                    }
-                }
+                    goto L_End_Extend;
             break;
             case CR:
                 if (ch == '\n')
                     mixin(eat);
-                goto L_End_Extend;
+                goto L_End;
+            case Emoji:
+                if (!extend[ch])
+                {
+                    static assert(!extend['\u200D']);
+                    if (ch == '\u200D')
+                        state = EmojiZWJ;
+                    else
+                    {
+                        // We will recheck for extensions since spacing
+                        // marks are allowed at the end, but not at middle of
+                        // emoji sequences, unlike extend code points.
+                        goto L_End_Extend;
+                    }
+                }
+
+                mixin(eat);
+                break;
+            case EmojiZWJ:
+                state = Emoji;
+                if (xpicto[ch])
+                {
+                    mixin(eat);
+                    break;
+                }
+                goto case Emoji;
             case RI:
                 if (isRegionalIndicator(ch))
                     mixin(eat);
@@ -7079,6 +7106,13 @@ template genericDecodeGrapheme(bool getValue)
                 else
                     goto L_End_Extend;
             break;
+            case Prepend:
+                // Unlike the starting state, we must not eat control
+                // characters here.
+                if(ccTrie[ch] || ch == '\r' || ch == '\n')
+                    goto L_End;
+                else
+                    goto case Start;
             }
         }
     L_End_Extend:
@@ -7086,7 +7120,7 @@ template genericDecodeGrapheme(bool getValue)
         {
             ch = range.front;
             // extend & spacing marks
-            if (!graphemeExtend[ch] && !spacingMark[ch])
+            if (!extend[ch] && !spacingMark[ch] && ch != '\u200D')
                 break;
             mixin(eat);
         }
@@ -7141,6 +7175,29 @@ if (is(C : dchar))
 
     enum c2 = graphemeStride("A\u0301", 0);
     static assert(c2 == 3); // \u0301 has 2 UTF-8 code units
+}
+
+@safe pure nothrow unittest
+{
+    // grinning face ~ emoji modifier fitzpatrick type-5 ~ grinning face
+    assert(graphemeStride("\U0001F600\U0001f3FE\U0001F600"d, 0) == 2);
+    // skier ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\u2640€"d, 0) == 1);
+    // skier ~ emoji modifier fitzpatrick type-5 ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\U0001f3FE\u2640€"d, 0) == 2);
+    // skier ~ zero-width joiner ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\u200D\u2640€"d, 0) == 3);
+    // skier ~ emoji modifier fitzpatrick type-5 ~ zero-width joiner
+    // ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\U0001f3FE\u200D\u2640€"d, 0) == 4);
+    // skier ~ zero-width joiner ~ '€'
+    assert(graphemeStride("\u26F7\u200D€"d, 0) == 2);
+    //'€' ~ zero-width joiner ~ skier
+    assert(graphemeStride("€\u200D\u26F7"d, 0) == 2);
+    // Kaithi number sign ~ Devanagari digit four ~ Devanagari digit two
+    assert(graphemeStride("\U000110BD\u096A\u0968"d, 0) == 2);
+    // Kaithi number sign ~ null
+    assert(graphemeStride("\U000110BD\0"d, 0) == 1);
 }
 
 /++
@@ -7283,6 +7340,13 @@ private static @safe struct InputRangeString
     auto nonForwardRange = InputRangeString("noe\u0308l").byGrapheme;
     static assert(!isForwardRange!(typeof(nonForwardRange)));
     assert(nonForwardRange.walkLength == 4);
+}
+
+// Issue 23474
+@safe pure unittest
+{
+    import std.range.primitives : walkLength;
+    assert(byGrapheme("\r\u0308").walkLength == 2);
 }
 
 /++
@@ -10580,29 +10644,50 @@ private:
     //grapheme breaking algorithm tables
     auto mcTrie()
     {
-        import std.internal.unicode_grapheme : mcTrieEntries;
-        static immutable res = asTrie(mcTrieEntries);
+        import std.internal.unicode_grapheme : SpacingMarkTrieEntries;
+        static immutable res = asTrie(SpacingMarkTrieEntries);
         return res;
     }
 
     auto graphemeExtendTrie()
     {
-        import std.internal.unicode_grapheme : graphemeExtendTrieEntries;
-        static immutable res = asTrie(graphemeExtendTrieEntries);
+        import std.internal.unicode_grapheme : ExtendTrieEntries;
+        static immutable res = asTrie(ExtendTrieEntries);
         return res;
     }
 
     auto hangLV()
     {
-        import std.internal.unicode_grapheme : hangulLVTrieEntries;
-        static immutable res = asTrie(hangulLVTrieEntries);
+        import std.internal.unicode_grapheme : LVTrieEntries;
+        static immutable res = asTrie(LVTrieEntries);
         return res;
     }
 
     auto hangLVT()
     {
-        import std.internal.unicode_grapheme : hangulLVTTrieEntries;
-        static immutable res = asTrie(hangulLVTTrieEntries);
+        import std.internal.unicode_grapheme : LVTTrieEntries;
+        static immutable res = asTrie(LVTTrieEntries);
+        return res;
+    }
+
+    auto prependTrie()
+    {
+        import std.internal.unicode_grapheme : PrependTrieEntries;
+        static immutable res = asTrie(PrependTrieEntries);
+        return res;
+    }
+
+    auto graphemeControlTrie()
+    {
+        import std.internal.unicode_grapheme : ControlTrieEntries;
+        static immutable res = asTrie(ControlTrieEntries);
+        return res;
+    }
+
+    auto xpictoTrie()
+    {
+        import std.internal.unicode_grapheme : Extended_PictographicTrieEntries;
+        static immutable res = asTrie(Extended_PictographicTrieEntries);
         return res;
     }
 
