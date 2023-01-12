@@ -10672,15 +10672,15 @@ private:
 
     auto prependTrie()
     {
-        import std.internal.unicode_grapheme : PrependTrieEntries;
-        static immutable res = asTrie(PrependTrieEntries);
+        import std.internal.unicode_grapheme : prependTrieEntries;
+        static immutable res = asTrie(prependTrieEntries);
         return res;
     }
 
     auto graphemeControlTrie()
     {
-        import std.internal.unicode_grapheme : ControlTrieEntries;
-        static immutable res = asTrie(ControlTrieEntries);
+        import std.internal.unicode_grapheme : controlTrieEntries;
+        static immutable res = asTrie(controlTrieEntries);
         return res;
     }
 
