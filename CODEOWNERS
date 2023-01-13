@@ -11,7 +11,6 @@
 # Later matches take precedence.
 
 .dscanner.ini @wilzbach
-circleci.sh @CyberShadow @MartinNowak @wilzbach
 etc/c/* @CyberShadow
 posix.mak @CyberShadow @MartinNowak @wilzbach
 # tools/unicode_table_generator.d
