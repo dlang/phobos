@@ -6975,7 +6975,7 @@ private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 template genericDecodeGrapheme(bool getValue)
 {
     alias graphemeExtend = graphemeExtendTrie;
-    alias spacingMark = mcTrie;
+    alias spacingMark = spacingMarkTrie;
     alias prepend = prependTrie;
     alias ccTrie = graphemeControlTrie;
     alias xpicto = xpictoTrie;
@@ -10642,10 +10642,10 @@ private:
     }
 
     //grapheme breaking algorithm tables
-    auto mcTrie()
+    auto spacingMarkTrie()
     {
-        import std.internal.unicode_grapheme : mcTrieEntries;
-        static immutable res = asTrie(mcTrieEntries);
+        import std.internal.unicode_grapheme : spacingMarkTrieEntries;
+        static immutable res = asTrie(spacingMarkTrieEntries);
         return res;
     }
 
