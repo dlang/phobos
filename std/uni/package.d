@@ -7002,13 +7002,14 @@ template genericDecodeGrapheme(bool getValue)
         static if (getValue)
             Grapheme grapheme;
         auto state = GraphemeState.Start;
-        enum eat = q{
+        dchar ch;
+
+        void popCodePoint() {
             static if (getValue)
                 grapheme ~= ch;
             range.popFront();
-        };
+        }
 
-        dchar ch;
         assert(!range.empty, "Attempting to decode grapheme from an empty " ~ Input.stringof);
         while (!range.empty)
         {
@@ -7016,7 +7017,7 @@ template genericDecodeGrapheme(bool getValue)
             final switch (state) with(GraphemeState)
             {
             case Start:
-                mixin(eat);
+                popCodePoint();
                 if (ch == '\r')
                     state = CR;
                 else if (ccTrie[ch] || ch == '\n')
@@ -7040,7 +7041,7 @@ template genericDecodeGrapheme(bool getValue)
             break;
             case CR:
                 if (ch == '\n')
-                    mixin(eat);
+                    popCodePoint();
                 goto L_End;
             case Emoji:
                 if (!graphemeExtend[ch])
@@ -7057,43 +7058,43 @@ template genericDecodeGrapheme(bool getValue)
                     }
                 }
 
-                mixin(eat);
+                popCodePoint();
                 break;
             case EmojiZWJ:
                 state = Emoji;
                 if (xpicto[ch])
                 {
-                    mixin(eat);
+                    popCodePoint();
                     break;
                 }
                 goto case Emoji;
             case RI:
                 if (isRegionalIndicator(ch))
-                    mixin(eat);
+                    popCodePoint();
                 goto L_End_Extend;
             case L:
                 if (isHangL(ch))
-                    mixin(eat);
+                    popCodePoint();
                 else if (isHangV(ch) || hangLV[ch])
                 {
                     state = V;
-                    mixin(eat);
+                    popCodePoint();
                 }
                 else if (hangLVT[ch])
                 {
                     state = LVT;
-                    mixin(eat);
+                    popCodePoint();
                 }
                 else
                     goto L_End_Extend;
             break;
             case V:
                 if (isHangV(ch))
-                    mixin(eat);
+                    popCodePoint();
                 else if (isHangT(ch))
                 {
                     state = LVT;
-                    mixin(eat);
+                    popCodePoint();
                 }
                 else
                     goto L_End_Extend;
@@ -7101,13 +7102,13 @@ template genericDecodeGrapheme(bool getValue)
             case LVT:
                 if (isHangT(ch))
                 {
-                    mixin(eat);
+                    popCodePoint();
                 }
                 else
                     goto L_End_Extend;
             break;
             case Prepend:
-                // Unlike the starting state, we must not eat control
+                // Unlike the starting state, we must not pop control
                 // characters here.
                 if (ccTrie[ch] || ch == '\r' || ch == '\n')
                     goto L_End;
@@ -7122,7 +7123,8 @@ template genericDecodeGrapheme(bool getValue)
             // extend & spacing marks
             if (!graphemeExtend[ch] && !spacingMark[ch] && ch != '\u200D')
                 break;
-            mixin(eat);
+
+            popCodePoint();
         }
     L_End:
         static if (getValue)
