@@ -920,12 +920,26 @@ void writeNormalizationTries(File sink)
 
 void writeGraphemeTries(File sink)
 {
-    auto table = graphemeBreaks.table;
+    //few specifics for grapheme cluster breaking algorithm
+    //
+    auto props = general.table;
+    writeBest3Level(sink, "hangulLV", hangul.table["LV"]);
+    writeBest3Level(sink, "hangulLVT", hangul.table["LVT"]);
 
-    foreach(key; table.byKey)
-    {
-        writeBest3Level(sink, key, table[key]);
-    }
+    // Grapheme specific information
+    writeBest3Level(sink, "prepend", graphemeBreaks.table["Prepend"]);
+    writeBest3Level(sink, "control", graphemeBreaks.table["Control"]);
+
+    // We use Grapheme_Cluster_Break=SpacingMark instead of GC=Mc,
+    //  Grapheme_Cluster_Break=SpacingMark is derived from GC=Mc and includes other general category values
+    writeBest3Level(sink, "spacingMark", graphemeBreaks.table["SpacingMark"]);
+
+    // We use the Grapheme_Cluster_Break=Extend instead of Grapheme_Extend,
+    //  Grapheme_Cluster_Break=Extend is derived from Grapheme_Extend and is more complete
+    writeBest3Level(sink, "graphemeExtend", graphemeBreaks.table["Extend"]);
+
+    // emoji related data
+    writeBest3Level(sink, "Extended_Pictographic", emojiData.table["Extended_Pictographic"]);
 
     sink.writeln();
 
