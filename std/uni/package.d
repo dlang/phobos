@@ -7043,9 +7043,9 @@ template genericDecodeGrapheme(bool getValue)
                     mixin(eat);
                 goto L_End;
             case Emoji:
-                if (!extend[ch])
+                if (!graphemeExtend[ch])
                 {
-                    static assert(!extend['\u200D']);
+                    static assert(!graphemeExtend['\u200D']);
                     if (ch == '\u200D')
                         state = EmojiZWJ;
                     else
@@ -7120,7 +7120,7 @@ template genericDecodeGrapheme(bool getValue)
         {
             ch = range.front;
             // extend & spacing marks
-            if (!extend[ch] && !spacingMark[ch] && ch != '\u200D')
+            if (!graphemeExtend[ch] && !spacingMark[ch] && ch != '\u200D')
                 break;
             mixin(eat);
         }
@@ -10651,22 +10651,22 @@ private:
 
     auto graphemeExtendTrie()
     {
-        import std.internal.unicode_grapheme : ExtendTrieEntries;
-        static immutable res = asTrie(ExtendTrieEntries);
+        import std.internal.unicode_grapheme : graphemeExtendTrieEntries;
+        static immutable res = asTrie(graphemeExtendTrieEntries);
         return res;
     }
 
     auto hangLV()
     {
-        import std.internal.unicode_grapheme : LVTrieEntries;
-        static immutable res = asTrie(LVTrieEntries);
+        import std.internal.unicode_grapheme : hangulLVTrieEntries;
+        static immutable res = asTrie(hangulLVTrieEntries);
         return res;
     }
 
     auto hangLVT()
     {
-        import std.internal.unicode_grapheme : LVTTrieEntries;
-        static immutable res = asTrie(LVTTrieEntries);
+        import std.internal.unicode_grapheme : hangulLVTTrieEntries;
+        static immutable res = asTrie(hangulLVTTrieEntries);
         return res;
     }
 
