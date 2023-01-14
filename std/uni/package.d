@@ -712,6 +712,8 @@ import std.traits : isConvertibleToString, isIntegral, isSomeChar,
     isSomeString, Unqual, isDynamicArray;
 // debug = std_uni;
 
+import std.internal.unicode_tables; // generated file
+
 debug(std_uni) import std.stdio; // writefln, writeln
 
 private:
@@ -6963,7 +6965,6 @@ private:
 enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
-// kill unrolled switches
 // Use combined trie instead of checking for '\r' | '\n' | ccTrie,
 //   or extend | '\u200D' separately
 
@@ -6972,14 +6973,156 @@ private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
     return ch >= '\U0001F1E6' && ch <= '\U0001F1FF';
 }
 
+// Our grapheme decoder is a state machine, this is list of all possible
+// states before each code point.
+private enum GraphemeState {
+    Start,
+    CR,
+    RI,
+    L,
+    V,
+    LVT,
+    Emoji,
+    EmojiZWJ,
+    Prepend,
+    End
+}
+
+// Message values whether end of grapheme is reached
+private enum TransformRes {
+    goOn, // No, unless the source range ends here
+    redo, // Run last character again with new state
+    retInclude, // Yes, after the just iterated character
+    retExclude // Yes, before the just iterated character
+}
+
+// The logic of the grapheme decoding is all here
+private enum TransformRes
+    function(ref GraphemeState, dchar) @safe pure nothrow @nogc [] graphemeTransforms =
+[
+    GraphemeState.Start: (ref state, ch)
+    {
+        if (graphemeControlTrie[ch] || ch == '\n')
+            return TransformRes.retInclude;
+
+        with (GraphemeState) state =
+            ch == '\r' ? CR :
+            isRegionalIndicator(ch) ? RI :
+            isHangL(ch) ? L :
+            hangLV[ch] || isHangV(ch) ? V :
+            hangLVT[ch] || isHangT(ch) ? LVT :
+            prependTrie[ch] ? Prepend :
+            xpictoTrie[ch] ? Emoji :
+            End;
+
+        // No matter what we encountered, we always include the
+        // first code point in the grapheme.
+        return TransformRes.goOn;
+    },
+
+    GraphemeState.CR: (ref state, ch) => ch == '\n' ?
+        TransformRes.retInclude :
+        TransformRes.retExclude,
+
+    GraphemeState.RI: (ref state, ch)
+    {
+        state = GraphemeState.End;
+
+        return isRegionalIndicator(ch) ?
+            TransformRes.goOn :
+            TransformRes.redo;
+    },
+
+    GraphemeState.L: (ref state, ch)
+    {
+        if (isHangL(ch))
+            return TransformRes.goOn;
+        else if (isHangV(ch) || hangLV[ch])
+        {
+            state = GraphemeState.V;
+            return TransformRes.goOn;
+        }
+        else if (hangLVT[ch])
+        {
+            state = GraphemeState.LVT;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    GraphemeState.V: (ref state, ch)
+    {
+        if (isHangV(ch))
+            return TransformRes.goOn;
+        else if (isHangT(ch))
+        {
+            state = GraphemeState.LVT;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    GraphemeState.LVT: (ref state, ch)
+    {
+        if (isHangT(ch))
+            return TransformRes.goOn;
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    GraphemeState.Emoji: (ref state, ch)
+    {
+        if (graphemeExtendTrie[ch])
+            return TransformRes.goOn;
+
+        static assert(!graphemeExtendTrie['\u200D']);
+
+        if (ch == '\u200D')
+        {
+            state = GraphemeState.EmojiZWJ;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        // There might still be spacing marks are
+        // at the end, which are not allowed in
+        // middle of emoji sequences
+        return TransformRes.redo;
+    },
+
+    GraphemeState.EmojiZWJ: (ref state, ch)
+    {
+        state = GraphemeState.Emoji;
+        if (xpictoTrie[ch])
+            return TransformRes.goOn;
+        return TransformRes.redo;
+    },
+
+    GraphemeState.Prepend: (ref state, ch)
+    {
+        // Control characters need to be special cased
+        // because the starting state would include them in
+        // the current grapheme.
+        if (graphemeControlTrie[ch] || ch == '\r' || ch == '\n')
+            return TransformRes.retExclude;
+
+        state = GraphemeState.Start;
+        return TransformRes.redo;
+    },
+
+    GraphemeState.End: (ref state, ch)
+        => !graphemeExtendTrie[ch] && !spacingMarkTrie[ch] && ch != '\u200D' ?
+            TransformRes.retExclude :
+            TransformRes.goOn
+];
+
 template genericDecodeGrapheme(bool getValue)
 {
-    alias graphemeExtend = graphemeExtendTrie;
-    alias spacingMark = spacingMarkTrie;
-    alias prepend = prependTrie;
-    alias ccTrie = graphemeControlTrie;
-    alias xpicto = xpictoTrie;
-
     static if (getValue)
         alias Value = Grapheme;
     else
@@ -6987,150 +7130,44 @@ template genericDecodeGrapheme(bool getValue)
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
-        import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
-        enum GraphemeState {
-            Start,
-            CR,
-            RI,
-            L,
-            V,
-            LVT,
-            Emoji,
-            EmojiZWJ,
-            Prepend
-        }
         static if (getValue)
             Grapheme grapheme;
         auto state = GraphemeState.Start;
         dchar ch;
 
-        void popCodePoint() {
-            static if (getValue)
-                grapheme ~= ch;
-            range.popFront();
-        }
-
         assert(!range.empty, "Attempting to decode grapheme from an empty " ~ Input.stringof);
+    outer:
         while (!range.empty)
         {
             ch = range.front;
-            final switch (state) with(GraphemeState)
-            {
-            case Start:
-                popCodePoint();
-                if (ch == '\r')
-                    state = CR;
-                else if (ccTrie[ch] || ch == '\n')
-                    goto L_End;
-                else if (isRegionalIndicator(ch))
-                    state = RI;
-                else if (isHangL(ch))
-                    state = L;
-                else if (hangLV[ch] || isHangV(ch))
-                    state = V;
-                else if (hangLVT[ch])
-                    state = LVT;
-                else if (isHangT(ch))
-                    state = LVT;
-                else if (prepend[ch])
-                    state = Prepend;
-                else if (xpicto[ch])
-                    state = Emoji;
-                else
-                    goto L_End_Extend;
-            break;
-            case CR:
-                if (ch == '\n')
-                    popCodePoint();
-                goto L_End;
-            case Emoji:
-                if (!graphemeExtend[ch])
-                {
-                    static assert(!graphemeExtend['\u200D']);
-                    if (ch == '\u200D')
-                        state = EmojiZWJ;
-                    else
-                    {
-                        // We will recheck for extensions since spacing
-                        // marks are allowed at the end, but not at middle of
-                        // emoji sequences, unlike extend code points.
-                        goto L_End_Extend;
-                    }
-                }
 
-                popCodePoint();
-                break;
-            case EmojiZWJ:
-                state = Emoji;
-                if (xpicto[ch])
-                {
-                    popCodePoint();
-                    break;
-                }
-                goto case Emoji;
-            case RI:
-                if (isRegionalIndicator(ch))
-                    popCodePoint();
-                goto L_End_Extend;
-            case L:
-                if (isHangL(ch))
-                    popCodePoint();
-                else if (isHangV(ch) || hangLV[ch])
-                {
-                    state = V;
-                    popCodePoint();
-                }
-                else if (hangLVT[ch])
-                {
-                    state = LVT;
-                    popCodePoint();
-                }
-                else
-                    goto L_End_Extend;
-            break;
-            case V:
-                if (isHangV(ch))
-                    popCodePoint();
-                else if (isHangT(ch))
-                {
-                    state = LVT;
-                    popCodePoint();
-                }
-                else
-                    goto L_End_Extend;
-            break;
-            case LVT:
-                if (isHangT(ch))
-                {
-                    popCodePoint();
-                }
-                else
-                    goto L_End_Extend;
-            break;
-            case Prepend:
-                // Unlike the starting state, we must not pop control
-                // characters here.
-                if (ccTrie[ch] || ch == '\r' || ch == '\n')
-                    goto L_End;
-                else
-                    goto case Start;
+        rerun:
+            final switch (graphemeTransforms[state](state, ch))
+                with(TransformRes)
+            {
+            case goOn:
+                static if (getValue)
+                    grapheme ~= ch;
+                range.popFront();
+                continue;
+
+            case redo:
+                goto rerun;
+
+            case retInclude:
+                static if (getValue)
+                    grapheme ~= ch;
+                range.popFront();
+                break outer;
+
+            case retExclude:
+                break outer;
             }
         }
-    L_End_Extend:
-        while (!range.empty)
-        {
-            ch = range.front;
-            // extend & spacing marks
-            if (!graphemeExtend[ch] && !spacingMark[ch] && ch != '\u200D')
-                break;
 
-            popCodePoint();
-        }
-    L_End:
         static if (getValue)
             return grapheme;
     }
-
 }
 
 public: // Public API continues
@@ -7179,6 +7216,8 @@ if (is(C : dchar))
     static assert(c2 == 3); // \u0301 has 2 UTF-8 code units
 }
 
+// TODO: make this @nogc. Probably no big deal since the state machine is
+// already GC-free.
 @safe pure nothrow unittest
 {
     // grinning face ~ emoji modifier fitzpatrick type-5 ~ grinning face
@@ -10596,8 +10635,6 @@ private:
 
 @safe pure nothrow @nogc @property
 {
-    import std.internal.unicode_tables; // generated file
-
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
