@@ -6990,18 +6990,25 @@ private enum GraphemeState {
 
 // Message values whether end of grapheme is reached
 private enum TransformRes {
-    goOn, // No, unless the source range ends here
+    // No, unless the source range ends here
+    // (GB2 - break at end of text, unless text is empty)
+    goOn,
     redo, // Run last character again with new state
     retInclude, // Yes, after the just iterated character
     retExclude // Yes, before the just iterated character
 }
 
 // The logic of the grapheme decoding is all here
+// GB# means Grapheme Breaking rule number # - see Unicode standard annex #29
+// Note, getting GB1 (break at start of text, unless text is empty) right
+// relies on the user starting grapheme walking from beginning of the text, and
+// not attempting to walk an empty text.
 private enum TransformRes
     function(ref GraphemeState, dchar) @safe pure nothrow @nogc [] graphemeTransforms =
 [
     GraphemeState.Start: (ref state, ch)
     {
+        // GB4. Break after controls.
         if (graphemeControlTrie[ch] || ch == '\n')
             return TransformRes.retInclude;
 
@@ -7020,10 +7027,17 @@ private enum TransformRes
         return TransformRes.goOn;
     },
 
+    // GB3, GB4. Do not break between a CR and LF.
+    // Otherwise, break after controls.
     GraphemeState.CR: (ref state, ch) => ch == '\n' ?
         TransformRes.retInclude :
         TransformRes.retExclude,
 
+    // GB12 - GB13. Do not break within emoji flag sequences.
+    // That is, do not break between regional indicator (RI) symbols if
+    // there is an odd number of RI characters before the break point.
+    // This state applies if one and only one RI code point has been
+    // encountered.
     GraphemeState.RI: (ref state, ch)
     {
         state = GraphemeState.End;
@@ -7033,6 +7047,7 @@ private enum TransformRes
             TransformRes.redo;
     },
 
+    // GB6. Do not break Hangul syllable sequences.
     GraphemeState.L: (ref state, ch)
     {
         if (isHangL(ch))
@@ -7052,6 +7067,7 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB7. Do not break Hangul syllable sequences.
     GraphemeState.V: (ref state, ch)
     {
         if (isHangV(ch))
@@ -7066,6 +7082,7 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB8. Do not break Hangul syllable sequences.
     GraphemeState.LVT: (ref state, ch)
     {
         if (isHangT(ch))
@@ -7075,6 +7092,9 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB11. Do not break within emoji modifier sequences or emoji
+    // zwj sequences. This state applies when the last code point was
+    // NOT a ZWJ.
     GraphemeState.Emoji: (ref state, ch)
     {
         if (graphemeExtendTrie[ch])
@@ -7095,6 +7115,9 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB11. Do not break within emoji modifier sequences or emoji
+    // zwj sequences. This state applies when the last code point was
+    // a ZWJ.
     GraphemeState.EmojiZWJ: (ref state, ch)
     {
         state = GraphemeState.Emoji;
@@ -7103,11 +7126,10 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB9b. Do not break after Prepend characters.
     GraphemeState.Prepend: (ref state, ch)
     {
-        // Control characters need to be special cased
-        // because the starting state would include them in
-        // the current grapheme.
+        // GB5. Break before controls.
         if (graphemeControlTrie[ch] || ch == '\r' || ch == '\n')
             return TransformRes.retExclude;
 
@@ -7115,6 +7137,9 @@ private enum TransformRes
         return TransformRes.redo;
     },
 
+    // GB9, GB9a. Do not break before extending characters, ZWJ
+    // or SpacingMarks.
+    // GB999. Otherwise, break everywhere.
     GraphemeState.End: (ref state, ch)
         => !graphemeExtendTrie[ch] && !spacingMarkTrie[ch] && ch != '\u200D' ?
             TransformRes.retExclude :
