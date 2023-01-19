@@ -6975,7 +6975,8 @@ private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 
 // Our grapheme decoder is a state machine, this is list of all possible
 // states before each code point.
-private enum GraphemeState {
+private enum GraphemeState
+{
     Start,
     CR,
     RI,
@@ -6989,7 +6990,8 @@ private enum GraphemeState {
 }
 
 // Message values whether end of grapheme is reached
-private enum TransformRes {
+private enum TransformRes
+{
     // No, unless the source range ends here
     // (GB2 - break at end of text, unless text is empty)
     goOn,
