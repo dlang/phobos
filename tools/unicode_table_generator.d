@@ -37,6 +37,8 @@ PropertyTable general;
 PropertyTable blocks;
 PropertyTable scripts;
 PropertyTable hangul;
+PropertyTable graphemeBreaks;
+PropertyTable emojiData;
 
 //quick NO/MAYBE charaсter sets
 CodepointSet[string] normalization;
@@ -148,6 +150,8 @@ enum {
     caseFoldingSrc = UnicodeDatabaseDirectory ~ "CaseFolding.txt",
     blocksSrc = UnicodeDatabaseDirectory ~ "Blocks.txt",
     propListSrc = UnicodeDatabaseDirectory ~ "PropList.txt",
+    graphemeSrc = UnicodeDatabaseDirectory ~ "auxiliary/GraphemeBreakProperty.txt",
+    emojiDataSrc = UnicodeDatabaseDirectory ~ "emoji/emoji-data.txt",
     propertyValueAliases = UnicodeDatabaseDirectory ~ "PropertyValueAliases.txt",
     corePropSrc = UnicodeDatabaseDirectory ~ "DerivedCoreProperties.txt",
     normalizationPropSrc = UnicodeDatabaseDirectory ~ "DerivedNormalizationProps.txt",
@@ -231,6 +235,8 @@ void main(string[] argv)
     loadProperties(corePropSrc, general);
     loadProperties(scriptsSrc, scripts);
     loadProperties(hangulSyllableSrc, hangul);
+    loadProperties(graphemeSrc, graphemeBreaks);
+    loadProperties(emojiDataSrc, emojiData);
     loadPropertyAliases(propertyValueAliases);
 
     loadUnicodeData(unicodeDataSrc);
@@ -919,8 +925,30 @@ void writeGraphemeTries(File sink)
     auto props = general.table;
     writeBest3Level(sink, "hangulLV", hangul.table["LV"]);
     writeBest3Level(sink, "hangulLVT", hangul.table["LVT"]);
-    writeBest3Level(sink, "mc", props["Mc"]);
-    writeBest3Level(sink, "graphemeExtend", props["Grapheme_Extend"]);
+
+    // Grapheme specific information
+    writeBest3Level(sink, "prepend", graphemeBreaks.table["Prepend"]);
+    writeBest3Level(sink, "control", graphemeBreaks.table["Control"]);
+
+    // We use Grapheme_Cluster_Break=SpacingMark instead of GC=Mc,
+    //  Grapheme_Cluster_Break=SpacingMark is derived from GC=Mc and includes other general category values
+    writeBest3Level(sink, "spacingMark", graphemeBreaks.table["SpacingMark"]);
+
+    // We use the Grapheme_Cluster_Break=Extend instead of Grapheme_Extend,
+    //  Grapheme_Cluster_Break=Extend is derived from Grapheme_Extend and is more complete
+    writeBest3Level(sink, "graphemeExtend", graphemeBreaks.table["Extend"]);
+
+    // emoji related data
+    writeBest3Level(sink, "Extended_Pictographic", emojiData.table["Extended_Pictographic"]);
+
+    sink.writeln();
+
+    writeBest3Level
+    (
+        sink,
+        "Extended_Pictographic",
+        emojiData.table["Extended_Pictographic"]
+    );
 }
 
 void writeCaseCoversion(File sink)
