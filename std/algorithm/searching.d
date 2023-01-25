@@ -1296,6 +1296,8 @@ private enum bool hasConstEmptyMember(T) = is(typeof(((const T* a) => (*a).empty
 
 // Rebindable doesn't work with structs
 // see: https://github.com/dlang/phobos/pull/6136
+// Of course, Unqual doesn't work with immutable structs either.
+// (For details, see my DConf talk https://www.youtube.com/watch?v=eGX_fxlig8I --MBeer)
 private template RebindableOrUnqual(T)
 {
     import std.typecons : Rebindable;
@@ -1346,8 +1348,24 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    RebindableOrUnqual!CommonElement extremeElement = seedElement;
-
+    enum elementIsAssignable = isAssignable!(RebindableOrUnqual!CommonElement);
+    static if (elementIsAssignable)
+    {
+        RebindableOrUnqual!CommonElement extremeElement = seedElement;
+    }
+    else
+    {
+        bool seedIsExtremum = true;
+        static if (isRandomAccessRange!Range)
+        {
+            size_t extremeIndex;
+        }
+        else
+        {
+            // but surely at least the range is assignable? please?
+            Range extremeRange = Range.init;
+        }
+    }
 
     // if we only have one statement in the loop, it can be optimized a lot better
     static if (__traits(isSame, map, a => a))
@@ -1358,9 +1376,20 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             foreach (const i; 0 .. r.length)
             {
-                if (selectorFun(r[i], extremeElement))
+                static if (elementIsAssignable)
                 {
-                    extremeElement = r[i];
+                    if (selectorFun(r[i], extremeElement))
+                    {
+                        extremeElement = r[i];
+                    }
+                }
+                else
+                {
+                    if (selectorFun(r[i], seedIsExtremum ? seedElement : r[extremeIndex]))
+                    {
+                        seedIsExtremum = false;
+                        extremeIndex = i;
+                    }
                 }
             }
         }
@@ -1368,18 +1397,30 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             while (!r.empty)
             {
-                if (selectorFun(r.front, extremeElement))
+                static if (elementIsAssignable)
                 {
-                    extremeElement = r.front;
+                    if (selectorFun(r.front, extremeElement))
+                    {
+                        extremeElement = r.front;
+                    }
+                    r.popFront();
                 }
-                r.popFront();
+                else
+                {
+                    if (selectorFun(r.front, seedIsExtremum ? seedElement : extremeRange.front))
+                    {
+                        seedIsExtremum = false;
+                        extremeRange = r.save;
+                    }
+                    r.popFront();
+                }
             }
         }
     }
     else
     {
         alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
-        MapType extremeElementMapped = mapFun(extremeElement);
+        MapType extremeElementMapped = mapFun(seedElement);
 
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
@@ -1387,10 +1428,21 @@ if (isInputRange!Range && !isInfinite!Range &&
             foreach (const i; 0 .. r.length)
             {
                 MapType mapElement = mapFun(r[i]);
-                if (selectorFun(mapElement, extremeElementMapped))
+                static if (elementIsAssignable)
                 {
-                    extremeElement = r[i];
-                    extremeElementMapped = mapElement;
+                    if (selectorFun(mapElement, extremeElementMapped))
+                    {
+                        extremeElement = r[i];
+                        extremeElementMapped = mapElement;
+                    }
+                }
+                else
+                {
+                    if (selectorFun(mapElement, seedIsExtremum ? mapFun(seedElement) : mapFun(r[extremeIndex])))
+                    {
+                        seedIsExtremum = false;
+                        extremeIndex = i;
+                    }
                 }
             }
         }
@@ -1399,16 +1451,38 @@ if (isInputRange!Range && !isInfinite!Range &&
             while (!r.empty)
             {
                 MapType mapElement = mapFun(r.front);
-                if (selectorFun(mapElement, extremeElementMapped))
+                static if (elementIsAssignable)
                 {
-                    extremeElement = r.front;
-                    extremeElementMapped = mapElement;
+                    if (selectorFun(mapElement, extremeElementMapped))
+                    {
+                        extremeElement = r.front;
+                        extremeElementMapped = mapElement;
+                    }
+                }
+                else
+                {
+                    if (selectorFun(mapElement, seedIsExtremum ? mapFun(seedElement) : mapFun(extremeRange.front)))
+                    {
+                        seedIsExtremum = false;
+                        extremeRange = r.save;
+                    }
                 }
                 r.popFront();
             }
         }
     }
-    return extremeElement;
+    static if (elementIsAssignable)
+    {
+        return extremeElement;
+    }
+    else static if (isRandomAccessRange!Range)
+    {
+        return seedIsExtremum ? seedElement : r[extremeIndex];
+    }
+    else
+    {
+        return seedIsExtremum ? seedElement : extremeRange.front;
+    }
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
@@ -1522,6 +1596,17 @@ if (isInputRange!Range && !isInfinite!Range &&
     const(B)[] arr = [new B(0), new B(1)];
     // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
     assert(arr.extremum!"a.val".val == 0);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=22786
+@safe nothrow pure unittest
+{
+    immutable struct S
+    {
+        int val;
+    }
+    auto arr = [S(7), S(3), S(4), S(2), S(1), S(8)];
+    assert(arr.extremum!"a.val" == S(1));
 }
 
 // find
