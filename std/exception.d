@@ -1536,7 +1536,7 @@ version (StdUnittest)
 @safe unittest //more alias this opCast
 {
     void* p;
-    class A
+    struct A
     {
         void* opCast(T)() if (is(T == void*))
         {

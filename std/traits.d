@@ -6066,7 +6066,7 @@ template StringTypeOf(T)
                 static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
 
                 alias Str = Q!T[];
-                class C(S) { S val;  alias val this; }
+                struct C(S) { S val;  alias val this; }
                 static assert(is(StringTypeOf!(C!Str) == Str));
             }}
         }
