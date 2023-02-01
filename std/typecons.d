@@ -2739,6 +2739,16 @@ public:
     }
 
     /**
+     * Set the container to a value if there is already a value in it.
+     * Convenience shortcut for `clear; set(value);`
+     */
+    void replace(this This)(T value)
+    {
+        clear;
+        set(value);
+    }
+
+    /**
      * Return a copy of the stored value.
      * The container must be set to a value.
      */
