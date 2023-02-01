@@ -2332,7 +2332,7 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with `cast`.
 
 Params:
-    T = An object, interface, array slice type, or associative array type.
+    T = Any type.
  */
 template Rebindable(T)
 if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
