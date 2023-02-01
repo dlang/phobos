@@ -1,5 +1,0 @@
-Unicode table generator is now in Phobos, tables are updated to version 15.
-
-It is likely that this change will result in breakage in code and program usage.
-This is due to a number of factors, the tables being updated so significantly and the table generator not having all its changes commited throughout the years.
-
