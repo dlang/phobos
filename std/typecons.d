@@ -2474,183 +2474,6 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
 }
 
 /**
-Convenience function for creating a `Rebindable` using automatic type
-inference.
-
-Params:
-    obj = A reference to an object, interface, associative array, or an array slice.
-    s = Struct instance.
-
-Returns:
-    A newly constructed `Rebindable` initialized with the given data.
-*/
-Rebindable!T rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
-{
-    typeof(return) ret;
-    ret = obj;
-    return ret;
-}
-
-/// ditto
-Rebindable!S rebindable(S)(S s)
-if (is(S == struct) && !isInstanceOf!(Rebindable, S))
-{
-    // workaround for rebindableS = rebindable(s)
-    static if (isMutable!S)
-        return s;
-    else
-        return Rebindable!S(s);
-}
-
-///
-@system unittest
-{
-    class C
-    {
-        int payload;
-        this(int p) { payload = p; }
-    }
-    const c = new C(1);
-
-    auto c2 = c.rebindable;
-    assert(c2.payload == 1);
-    // passing Rebindable to rebindable
-    c2 = c2.rebindable;
-
-    c2 = new C(2);
-    assert(c2.payload == 2);
-
-    const c3 = c2.get;
-    assert(c3.payload == 2);
-}
-
-/**
-This function simply returns the `Rebindable` object passed in.  It's useful
-in generic programming cases when a given object may be either a regular
-`class` or a `Rebindable`.
-
-Params:
-    obj = An instance of Rebindable!T.
-
-Returns:
-    `obj` without any modification.
-*/
-Rebindable!T rebindable(T)(Rebindable!T obj)
-{
-    return obj;
-}
-
-// TODO: remove me once the rebindable overloads have been joined
-///
-@system unittest
-{
-    class C
-    {
-        int payload;
-        this(int p) { payload = p; }
-    }
-    const c = new C(1);
-
-    auto c2 = c.rebindable;
-    assert(c2.payload == 1);
-    // passing Rebindable to rebindable
-    c2 = c2.rebindable;
-    assert(c2.payload == 1);
-}
-
-@system unittest
-{
-    interface CI { int foo() const; }
-    class C : CI {
-      int foo() const { return 42; }
-      @property int bar() const { return 23; }
-    }
-    Rebindable!(C) obj0;
-    static assert(is(typeof(obj0) == C));
-
-    Rebindable!(const(C)) obj1;
-    static assert(is(typeof(obj1.get) == const(C)), typeof(obj1.get).stringof);
-    static assert(is(typeof(obj1.stripped) == C));
-    obj1 = new C;
-    assert(obj1.get !is null);
-    obj1 = new const(C);
-    assert(obj1.get !is null);
-
-    Rebindable!(immutable(C)) obj2;
-    static assert(is(typeof(obj2.get) == immutable(C)));
-    static assert(is(typeof(obj2.stripped) == C));
-    obj2 = new immutable(C);
-    assert(obj1.get !is null);
-
-    // test opDot
-    assert(obj2.foo() == 42);
-    assert(obj2.bar == 23);
-
-    interface I { final int foo() const { return 42; } }
-    Rebindable!(I) obj3;
-    static assert(is(typeof(obj3) == I));
-
-    Rebindable!(const I) obj4;
-    static assert(is(typeof(obj4.get) == const I));
-    static assert(is(typeof(obj4.stripped) == I));
-    static assert(is(typeof(obj4.foo()) == int));
-    obj4 = new class I {};
-
-    Rebindable!(immutable C) obj5i;
-    Rebindable!(const C) obj5c;
-    obj5c = obj5c;
-    obj5c = obj5i;
-    obj5i = obj5i;
-    static assert(!__traits(compiles, obj5i = obj5c));
-
-    // Test the convenience functions.
-    auto obj5convenience = rebindable(obj5i);
-    assert(obj5convenience is obj5i);
-
-    auto obj6 = rebindable(new immutable(C));
-    static assert(is(typeof(obj6) == Rebindable!(immutable C)));
-    assert(obj6.foo() == 42);
-
-    auto obj7 = rebindable(new C);
-    CI interface1 = obj7;
-    auto interfaceRebind1 = rebindable(interface1);
-    assert(interfaceRebind1.foo() == 42);
-
-    const interface2 = interface1;
-    auto interfaceRebind2 = rebindable(interface2);
-    assert(interfaceRebind2.foo() == 42);
-
-    auto arr = [1,2,3,4,5];
-    const arrConst = arr;
-    assert(rebindable(arr) == arr);
-    assert(rebindable(arrConst) == arr);
-
-    // https://issues.dlang.org/show_bug.cgi?id=7654
-    immutable(char[]) s7654;
-    Rebindable!(typeof(s7654)) r7654 = s7654;
-
-    static foreach (T; AliasSeq!(char, wchar, char, int))
-    {
-        static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
-        static assert(is(Rebindable!(const(T[])) == const(T)[]));
-        static assert(is(Rebindable!(T[]) == T[]));
-    }
-
-    // https://issues.dlang.org/show_bug.cgi?id=12046
-    static assert(!__traits(compiles, Rebindable!(int[1])));
-    static assert(!__traits(compiles, Rebindable!(const int[1])));
-
-    // Pull request 3341
-    Rebindable!(immutable int[int]) pr3341 = [123:345];
-    assert(pr3341[123] == 345);
-    immutable int[int] pr3341_aa = [321:543];
-    pr3341 = pr3341_aa;
-    assert(pr3341[321] == 543);
-    assert(rebindable(pr3341_aa)[321] == 543);
-}
-
-/**
  * Models safe reassignment of otherwise constant types.
  *
  * `Rebindable!S` always makes a copy.
@@ -3002,6 +2825,179 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
     }
     assert(post == 5);
     assert(del == 7);
+}
+
+/**
+Convenience function for creating a `Rebindable` using automatic type
+inference.
+
+Params:
+    obj = A reference to an object, interface, associative array, or an array slice.
+    s = Struct instance.
+
+Returns:
+    A newly constructed `Rebindable` initialized with the given data.
+*/
+Rebindable!T rebindable(T)(T obj)
+if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+{
+    typeof(return) ret;
+    ret = obj;
+    return ret;
+}
+
+/// ditto
+Rebindable!S rebindable(S)(S s)
+if (is(S == struct) && !isInstanceOf!(Rebindable, S))
+{
+    // workaround for rebindableS = rebindable(s)
+    static if (isMutable!S)
+        return s;
+    else
+        return Rebindable!S(s);
+}
+
+///
+@system unittest
+{
+    class C
+    {
+        int payload;
+        this(int p) { payload = p; }
+    }
+    const c = new C(1);
+
+    auto c2 = c.rebindable;
+    assert(c2.payload == 1);
+    // passing Rebindable to rebindable
+    c2 = c2.rebindable;
+
+    c2 = new C(2);
+    assert(c2.payload == 2);
+
+    const c3 = c2.get;
+    assert(c3.payload == 2);
+}
+
+/**
+This function simply returns the `Rebindable` object passed in.  It's useful
+in generic programming cases when a given object may be either a regular
+`class` or a `Rebindable`.
+
+Params:
+    obj = An instance of Rebindable!T.
+
+Returns:
+    `obj` without any modification.
+*/
+Rebindable!T rebindable(T)(Rebindable!T obj)
+{
+    return obj;
+}
+
+// TODO: remove me once the rebindable overloads have been joined
+///
+@system unittest
+{
+    class C
+    {
+        int payload;
+        this(int p) { payload = p; }
+    }
+    const c = new C(1);
+
+    auto c2 = c.rebindable;
+    assert(c2.payload == 1);
+    // passing Rebindable to rebindable
+    c2 = c2.rebindable;
+    assert(c2.payload == 1);
+}
+
+@system unittest
+{
+    interface CI { int foo() const; }
+    class C : CI {
+      int foo() const { return 42; }
+      @property int bar() const { return 23; }
+    }
+    Rebindable!(C) obj0;
+    static assert(is(typeof(obj0) == C));
+
+    Rebindable!(const(C)) obj1;
+    static assert(is(typeof(obj1.get) == const(C)), typeof(obj1.get).stringof);
+    static assert(is(typeof(obj1.stripped) == C));
+    obj1 = new C;
+    assert(obj1.get !is null);
+    obj1 = new const(C);
+    assert(obj1.get !is null);
+
+    Rebindable!(immutable(C)) obj2;
+    static assert(is(typeof(obj2.get) == immutable(C)));
+    static assert(is(typeof(obj2.stripped) == C));
+    obj2 = new immutable(C);
+    assert(obj1.get !is null);
+
+    // test opDot
+    assert(obj2.foo() == 42);
+    assert(obj2.bar == 23);
+
+    interface I { final int foo() const { return 42; } }
+    Rebindable!(I) obj3;
+    static assert(is(typeof(obj3) == I));
+
+    Rebindable!(const I) obj4;
+    static assert(is(typeof(obj4.get) == const I));
+    static assert(is(typeof(obj4.stripped) == I));
+    static assert(is(typeof(obj4.foo()) == int));
+    obj4 = new class I {};
+
+    Rebindable!(immutable C) obj5i;
+    Rebindable!(const C) obj5c;
+    obj5c = obj5c;
+    obj5c = obj5i;
+    obj5i = obj5i;
+    static assert(!__traits(compiles, obj5i = obj5c));
+
+    // Test the convenience functions.
+    auto obj5convenience = rebindable(obj5i);
+    assert(obj5convenience is obj5i);
+
+    auto obj6 = rebindable(new immutable(C));
+    static assert(is(typeof(obj6) == Rebindable!(immutable C)));
+    assert(obj6.foo() == 42);
+
+    auto obj7 = rebindable(new C);
+    CI interface1 = obj7;
+    auto interfaceRebind1 = rebindable(interface1);
+    assert(interfaceRebind1.foo() == 42);
+
+    const interface2 = interface1;
+    auto interfaceRebind2 = rebindable(interface2);
+    assert(interfaceRebind2.foo() == 42);
+
+    auto arr = [1,2,3,4,5];
+    const arrConst = arr;
+    assert(rebindable(arr) == arr);
+    assert(rebindable(arrConst) == arr);
+
+    // https://issues.dlang.org/show_bug.cgi?id=7654
+    immutable(char[]) s7654;
+    Rebindable!(typeof(s7654)) r7654 = s7654;
+
+    static foreach (T; AliasSeq!(char, wchar, char, int))
+    {
+        static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
+        static assert(is(Rebindable!(const(T[])) == const(T)[]));
+        static assert(is(Rebindable!(T[]) == T[]));
+    }
+
+    // Pull request 3341
+    Rebindable!(immutable int[int]) pr3341 = [123:345];
+    assert(pr3341[123] == 345);
+    immutable int[int] pr3341_aa = [321:543];
+    pr3341 = pr3341_aa;
+    assert(pr3341[321] == 543);
+    assert(rebindable(pr3341_aa)[321] == 543);
 }
 
 /**
