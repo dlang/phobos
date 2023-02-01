@@ -2711,29 +2711,23 @@ Convenience function for creating a `Rebindable` using automatic type
 inference.
 
 Params:
-    obj = A reference to an object, interface, associative array, or an array slice.
-    s = Struct instance.
+    value = Value to be stored in the `Rebindable`.
 
 Returns:
     A newly constructed `Rebindable` initialized with the given data.
 */
-Rebindable!T rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+Rebindable!T rebindable(T)(T value)
 {
-    typeof(return) ret;
-    ret = obj;
-    return ret;
-}
-
-/// ditto
-Rebindable!S rebindable(S)(S s)
-if (is(S == struct) && !isInstanceOf!(Rebindable, S))
-{
-    // workaround for rebindableS = rebindable(s)
-    static if (isMutable!S)
-        return s;
+    static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
+    {
+        Rebindable!T ret;
+        ret = value;
+        return ret;
+    }
     else
-        return Rebindable!S(s);
+    {
+        return Rebindable!T(value);
+    }
 }
 
 ///
@@ -2756,22 +2750,6 @@ if (is(S == struct) && !isInstanceOf!(Rebindable, S))
 
     const c3 = c2.get;
     assert(c3.payload == 2);
-}
-
-/**
-This function simply returns the `Rebindable` object passed in.  It's useful
-in generic programming cases when a given object may be either a regular
-`class` or a `Rebindable`.
-
-Params:
-    obj = An instance of Rebindable!T.
-
-Returns:
-    `obj` without any modification.
-*/
-Rebindable!T rebindable(T)(Rebindable!T obj)
-{
-    return obj;
 }
 
 // TODO: remove me once the rebindable overloads have been joined
