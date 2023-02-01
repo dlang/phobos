@@ -2650,121 +2650,77 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     assert(rebindable(pr3341_aa)[321] == 543);
 }
 
-/** Models safe reassignment of otherwise constant struct instances.
+/**
+ * Models safe reassignment of otherwise constant types.
  *
- * A constant struct with a field of reference type cannot be assigned to a mutable
- * struct of the same type. This protects the constant reference field from being
- * mutably aliased, potentially allowing mutation of `immutable` data. However, the
- * assignment could be safe if all reference fields are only exposed as `const`.
- *
- * `Rebindable!(const S)` accepts (re)assignment from
- * a `const S` while enforcing only `const` access to its fields.
- * It implicitly converts to `ref const S` when possible. Otherwise,
- * a copy is made on each implicit conversion to `const S`. Copies must be made
- * e.g. when the struct contains a head-immutable data field.
- *
- * `Rebindable!(immutable S)` always makes a copy on implicit conversion to
- * `immutable S`. This is required to preserve `immutable`'s
- * guarantees. A copy is currently always made for conversion to `const S`
- * (due to `alias this` limitations).
+ * `Rebindable!S` always makes a copy.
  */
 template Rebindable(S)
-if (is(S == struct))
+if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativeArray!S)
 {
-    static if (isMutable!S)
-        alias Rebindable = S;
-    else
     struct Rebindable
     {
     private:
         // mutPayload's pointers must be treated as tail const
-        void[S.sizeof] mutPayload;
+        MutableImitation!S mutPayload;
 
-        void emplacePayload(ref S s)
+        void emplacePayload(S s) @trusted
         {
             import std.conv : emplace;
-            static if (__traits(compiles, () @safe {S tmp = s;}))
-                () @trusted {emplace!S(mutPayload, s);}();
-            else
-                emplace!S(mutPayload, s);
+
+            // as MutableImitation won't call the destructor, deliberately leak a copy here:
+            static union DontCallDestructor
+            {
+                S value;
+            }
+            DontCallDestructor copy = DontCallDestructor(s);
+            mutPayload = *cast(MutableImitation!S*)&copy;
+        }
+
+        void destroyPayload()
+        {
+            import std.typecons : No;
+
+            // work around reinterpreting cast being impossible in CTFE
+            if (__ctfe)
+            {
+                return;
+            }
+
+            // call possible struct destructors
+            .destroy!(No.initialize)(*cast(S*) &mutPayload);
         }
 
     public:
-        this()(auto ref S s)
+        this(S s)
         {
             emplacePayload(s);
         }
 
-        // immutable S cannot be passed to auto ref S above
-        static if (!is(S == immutable))
-        this()(immutable S s)
+        void opAssign(S s)
         {
-            emplacePayload(s);
-        }
-
-        void opAssign()(auto ref S s)
-        {
-            movePayload;
-            emplacePayload(s);
-        }
-
-        static if (!is(S == immutable))
-        void opAssign()(immutable S s)
-        {
-            movePayload;
+            destroyPayload;
             emplacePayload(s);
         }
 
         void opAssign(Rebindable other)
         {
-            this = other.trustedPayload;
+            this = other.get;
         }
 
-        import std.traits : Fields, isMutable;
-        private template isConst(T)
+        /**
+         * Get the value stored in the `Rebindable` explicitly.
+         */
+        S get() @property
         {
-            static if (is(T == struct) || is(T == union))
-                enum isConst = !isMutable!T || haveConstHead!T;
-            else
-                enum isConst = !isMutable!T;
-        }
-        private enum bool haveConstHead(T) = anySatisfy!(isConst, Fields!T);
-        private enum bool unsafeRef = is(S == immutable) || haveConstHead!(Unqual!S);
-
-        // must not escape when unsafeRef
-        private ref S trustedPayload() @trusted
-        {
-            return *cast(S*) mutPayload.ptr;
+            return *cast(S*) &mutPayload;
         }
 
-        // expose payload as const ref when members have no head const data
-        static if (!unsafeRef)
-        ref S Rebindable_getRef() @property
-        {
-            return trustedPayload;
-        }
-
-        static if (unsafeRef)
-        S Rebindable_getCopy() @property
-        {
-            return trustedPayload;
-        }
-
-        static if (unsafeRef)
-            alias Rebindable_getCopy this;
-        else
-            alias Rebindable_getRef this;
-
-        private S movePayload() @trusted
-        {
-            import std.algorithm : move;
-            return cast(S) move(*cast(Unqual!S*) mutPayload.ptr);
-        }
+        alias get this;
 
         ~this()
         {
-            // call destructor with proper constness
-            movePayload;
+            destroyPayload;
         }
     }
 }
@@ -3046,6 +3002,95 @@ if (is(S == struct))
     }
     assert(post == 5);
     assert(del == 7);
+}
+
+/**
+ * A type "like" T, but mutable.
+ * Used internally in Rebindable!struct.
+ */
+private template MutableImitation(T)
+{
+    alias MutableImitation = MutableImitationImpl!T;
+
+    // sanity checks
+    static assert(T.sizeof == MutableImitation.sizeof, "sizeof sanity check violated");
+    static assert(T.alignof == MutableImitation.alignof, "alignof sanity check violated");
+    static assert(hasIndirections!T == hasIndirections!MutableImitation, "indirection sanity check violated");
+}
+
+private template MutableImitationImpl(T)
+{
+    static if (is(T == struct))
+    {
+        static if (anyPairwiseEqual!(staticMap!(offsetOf, T.tupleof)))
+        {
+            // Struct with anonymous unions detected!
+            // Danger, danger!
+            alias MutableImitationImpl = MutableImitationFallback!T;
+        }
+        else
+        {
+            align(T.alignof)
+            struct MutableImitationImpl
+            {
+                staticMap!(MutableImitation, typeof(T.init.tupleof)) fields;
+            }
+        }
+    }
+    else static if (is(T == union) || isAssociativeArray!T)
+    {
+        alias MutableImitationImpl = MutableImitationFallback!T;
+    }
+    else static if (is(T == function) || is(T == enum) || __traits(isArithmetic, T)
+        || is(T : U*, U) || is(T : K[], K) || is(T == delegate))
+    {
+        // types where Unqual strips head constness
+        alias MutableImitationImpl = Unqual!T;
+    }
+    else static if (is(T == class) || is(T == interface))
+    {
+        alias MutableImitationImpl = void*;
+    }
+    else static if (is(T == U[size], U, size_t size))
+    {
+        alias MutableImitationImpl = MutableImitation!U[size];
+    }
+    else
+    {
+        static assert(false, "Unsupported type " ~ T.stringof);
+    }
+}
+
+private template MutableImitationFallback(T)
+{
+    align(T.alignof)
+    private struct MutableImitationFallback
+    {
+        static if (hasIndirections!T)
+        {
+            void[T.sizeof] data;
+        }
+        else
+        {
+            // union of non-pointer types?
+            ubyte[T.sizeof] data;
+        }
+    }
+}
+
+private enum offsetOf(alias member) = member.offsetof;
+
+// True if any adjacent members of T are equal.
+private template anyPairwiseEqual(T...)
+{
+    static if (T.length == 0 || T.length == 1)
+    {
+        enum anyPairwiseEqual = false;
+    }
+    else
+    {
+        enum anyPairwiseEqual = T[0] == T[1] || anyPairwiseEqual!(T[1 .. $]);
+    }
 }
 
 /**
