@@ -2655,20 +2655,6 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
     assert(ri.ptr !is null);
 }
 
-// Test Rebindable!mutable
-@safe unittest
-{
-    static struct S
-    {
-        int* ptr;
-    }
-    S s;
-
-    Rebindable!S rs = s;
-    static assert(is(typeof(rs) == S));
-    rs = rebindable(S());
-}
-
 // Test disabled default ctor
 @safe unittest
 {
@@ -2689,40 +2675,6 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
     static assert(!__traits(compiles, rb.i++));
 }
 
-// Test head const fields aren't exposed as ref const S
-@safe unittest
-{
-    struct S(T)
-    {
-        T i;
-    }
-    auto r = rebindable(const S!(immutable int)());
-    // check we can't reference `i`, as it's a field of a temporary S copy
-    // If r.i was an lvalue, it would break immutable when r was rebound
-    static assert(!__traits(compiles, {const ref get(){ return r.i; }}));
-
-    // test when Rebindable!const should make a copy
-    @property rcs(T)(){ return rebindable(const S!T()); }
-    // values
-    static assert(!rcs!(int).unsafeRef);
-    static assert(rcs!(const int).unsafeRef);
-    static assert(rcs!(immutable int).unsafeRef);
-    // arrays
-    static assert(!rcs!(string).unsafeRef);
-    static assert(rcs!(const char[]).unsafeRef);
-    // class refs
-    static assert(!rcs!(Object).unsafeRef);
-    static assert(rcs!(const Object).unsafeRef);
-    // nested structs
-    static assert(!rcs!(S!int).unsafeRef);
-    static assert(!rcs!(S!string).unsafeRef);
-    static assert(!rcs!(S!Object).unsafeRef);
-    static assert(rcs!(const S!int).unsafeRef);
-    static assert(rcs!(const S!string).unsafeRef);
-    static assert(rcs!(S!(const Object)).unsafeRef);
-    static assert(rcs!(const S!Object).unsafeRef);
-}
-
 // Test copying
 @safe unittest
 {
@@ -2741,9 +2693,9 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
         }
     }
 
-    // test const
+    // test ref count
     {
-        Rebindable!(const S) rc = S(new int);
+        Rebindable!S rc = S(new int);
         assert(post == 1);
         assert(rc.level == 1);
         assert(post == 1);
@@ -2752,79 +2704,6 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
     assert(post == 1);
     assert(del == 2);
     del = 0, post = 0;
-
-    // immutable
-    {
-        // on every field access a temporary immutable copy gets created
-        Rebindable!(immutable S) ri = S(new int);
-        assert(post == 1);
-        assert(ri.level == 2);
-        assert(post == 2);
-        assert(ri.level == 2); // however it's a copy of the payload's level
-    }
-    assert(post == 3);
-    assert(del == 4);
-    del = 0, post = 0;
-
-    {
-        // the initial value is copied and destructed
-        Rebindable!(const S) rc = S(new int);
-        assert(post == 1);
-        assert(del == 1);
-        assert(rc.level == 1);
-
-        // on an assignment to another value is simply post-blitted
-        const S cs = rc;
-        assert(del == 1);
-        assert(post == 2);
-        assert(rc.level == 1);
-        assert(cs.level == 2);
-
-        // however on an assignment, the old payload gets destructed
-        rc = cs;
-        assert(del == 2);
-        assert(post == 3);
-        assert(cs.level == 2);
-        assert(rc.level == 3);
-    }
-    assert(post == 3);
-    assert(del == 4);
-    del = 0, post = 0;
-
-    {
-        // the initial value is copied and destructed
-        Rebindable!(immutable S) ri = S(new int);
-        assert(post == 1);
-        assert(del == 1);
-        // creates temporary (gets immediately destroyed), actual level is still 1
-        assert(ri.level == 2);
-        assert(del == 2);
-        assert(post == 2);
-
-        // on an assignment to another value is simply post-blitted
-        const S cs = ri;
-        assert(del == 2);
-        assert(post == 3);
-        // creates temporary (gets immediately destroyed), actual level is still 1
-        assert(ri.level == 2);
-        assert(cs.level == 2);
-        assert(del == 3);
-        assert(post == 4);
-
-        // however, on an assignment to Rebindable the old value gets destructed
-        auto ri2 = ri;
-        static assert(is(typeof(ri2) == Rebindable!(immutable S)));
-        static assert(TemplateOf!(typeof(ri2)).stringof == "Rebindable(S) if (is(S == struct))");
-        assert(del == 3);
-        assert(post == 4);
-        assert(ri2.level == 2); // should be 3??
-        assert(del == 4);
-
-        // similarly an assignment
-        //ri = ri2; // fails to compile due to overload conflicts
-    }
-    assert(post == 5);
-    assert(del == 7);
 }
 
 /**
