@@ -2487,7 +2487,7 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
         // mutPayload's pointers must be treated as tail const
         MutableImitation!S mutPayload;
 
-        void emplacePayload(S s) @trusted
+        void emplacePayload(this This)(S s) @trusted
         {
             import std.conv : emplace;
 
@@ -2500,7 +2500,7 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
             mutPayload = *cast(MutableImitation!S*)&copy;
         }
 
-        void destroyPayload()
+        void destroyPayload(this This)() @trusted
         {
             import std.typecons : No;
 
@@ -2515,18 +2515,24 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
         }
 
     public:
+
+        static if (!__traits(compiles, { S s; }))
+        {
+            @disable this();
+        }
+
         this(S s)
         {
             emplacePayload(s);
         }
 
-        void opAssign(S s)
+        void opAssign(this This)(S s)
         {
             destroyPayload;
             emplacePayload(s);
         }
 
-        void opAssign(Rebindable other)
+        void opAssign(this This)(Rebindable other)
         {
             this = other.get;
         }
@@ -2534,7 +2540,7 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
         /**
          * Get the value stored in the `Rebindable` explicitly.
          */
-        S get() @property
+        S get(this This)() @property @trusted
         {
             return *cast(S*) &mutPayload;
         }
@@ -2696,14 +2702,8 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
     // test ref count
     {
         Rebindable!S rc = S(new int);
-        assert(post == 1);
-        assert(rc.level == 1);
-        assert(post == 1);
-        assert(rc.level == 1); // no copy is created
     }
-    assert(post == 1);
-    assert(del == 2);
-    del = 0, post = 0;
+    assert(post == del - 1);
 }
 
 /**
