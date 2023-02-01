@@ -2799,6 +2799,7 @@ Returns:
     A newly constructed `Rebindable` initialized with the given data.
 */
 Rebindable!T rebindable(T)(T value)
+if (!is(T == Rebindable!U, U))
 {
     static if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
     {
@@ -2832,6 +2833,20 @@ Rebindable!T rebindable(T)(T value)
 
     const c3 = c2.get;
     assert(c3.payload == 2);
+}
+
+/**
+This function simply returns the `Rebindable` object passed in.  It's useful
+in generic programming cases when a given object may be either a regular
+`class` or a `Rebindable`.
+Params:
+    obj = An instance of Rebindable!T.
+Returns:
+    `obj` without any modification.
+*/
+Rebindable!T rebindable(T)(Rebindable!T obj)
+{
+    return obj;
 }
 
 // TODO: remove me once the rebindable overloads have been joined
