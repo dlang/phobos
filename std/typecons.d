@@ -2673,9 +2673,9 @@ public:
 }
 
 /**
- * Permits explicit control of the lifetime of a contained `S`.
+ * Permits explicit control of the lifetime of a contained `T`.
  *
- * This works regardless of the constness of `S`.
+ * This works regardless of the constness of `T`.
  *
  * The container starts out in an empty state. It may only be assigned to when empty,
  * and only once; it must be cleared before the next assignment.
