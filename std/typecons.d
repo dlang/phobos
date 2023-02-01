@@ -2478,79 +2478,45 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArr
  *
  * `Rebindable!S` always makes a copy.
  */
-template Rebindable(S)
+struct Rebindable(S)
 if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativeArray!S)
 {
-    struct Rebindable
+private:
+    ManagedLifetime!S payload;
+
+public:
+    static if (!__traits(compiles, { S s; }))
     {
-    private:
-        // mutPayload's pointers must be treated as tail const
-        MutableImitation!S mutPayload;
+        @disable this();
+    }
 
-        void emplacePayload(this This)(S s) @trusted
-        {
-            import std.conv : emplace;
+    this(S s)
+    {
+        payload.set(s);
+    }
 
-            // as MutableImitation won't call the destructor, deliberately leak a copy here:
-            static union DontCallDestructor
-            {
-                S value;
-            }
-            DontCallDestructor copy = DontCallDestructor(s);
-            mutPayload = *cast(MutableImitation!S*)&copy;
-        }
+    void opAssign(this This)(S s)
+    {
+        payload.clear;
+        payload.set(s);
+    }
 
-        void destroyPayload(this This)() @trusted
-        {
-            import std.typecons : No;
+    void opAssign(this This)(Rebindable other)
+    {
+        payload.clear;
+        payload.set(other.payload.get);
+    }
 
-            // work around reinterpreting cast being impossible in CTFE
-            if (__ctfe)
-            {
-                return;
-            }
+    S get(this This)() @property
+    {
+        return payload.get;
+    }
 
-            // call possible struct destructors
-            .destroy!(No.initialize)(*cast(S*) &mutPayload);
-        }
+    alias get this;
 
-    public:
-
-        static if (!__traits(compiles, { S s; }))
-        {
-            @disable this();
-        }
-
-        this(S s)
-        {
-            emplacePayload(s);
-        }
-
-        void opAssign(this This)(S s)
-        {
-            destroyPayload;
-            emplacePayload(s);
-        }
-
-        void opAssign(this This)(Rebindable other)
-        {
-            this = other.get;
-        }
-
-        /**
-         * Get the value stored in the `Rebindable` explicitly.
-         */
-        S get(this This)() @property @trusted
-        {
-            return *cast(S*) &mutPayload;
-        }
-
-        alias get this;
-
-        ~this()
-        {
-            destroyPayload;
-        }
+    ~this()
+    {
+        payload.clear;
     }
 }
 
@@ -2704,6 +2670,112 @@ if (!is(S == class) && !is(S == interface) && !isDynamicArray!S && !isAssociativ
         Rebindable!S rc = S(new int);
     }
     assert(post == del - 1);
+}
+
+/**
+ * Permits explicit control of the lifetime of a contained `S`.
+ *
+ * This works regardless of the constness of `S`.
+ *
+ * The container starts out in an empty state. It may only be assigned to when empty,
+ * and only once; it must be cleared before the next assignment.
+ * If the container contains a value when its lifetime expires, the destructor of the
+ * contained value will not be run.
+ *
+ * It is up to you to manage the lifetime of the contained value explicitly!
+ */
+struct ManagedLifetime(T)
+{
+private:
+    MutableImitation!T mutPayload;
+
+public:
+    /**
+     * Initializes the container with a value.
+     */
+    this(T value)
+    {
+        set(value);
+    }
+
+    /**
+     * Set the container to a value.
+     * The container must be empty.
+     */
+    void set(this This)(T value) @trusted
+    {
+        // as `mutPayload` won't call the destructor, we deliberately leak a copy here:
+        static union DontCallDestructor
+        {
+            T value;
+        }
+        DontCallDestructor copy = DontCallDestructor(value);
+        mutPayload = *cast(MutableImitation!T*)&copy;
+    }
+
+    /**
+     * Destroy the value saved in the container.
+     * The container must be set to a value.
+     */
+    void clear(this This)() @trusted
+    {
+        import std.typecons : No;
+
+        // work around reinterpreting cast being impossible in CTFE
+        if (__ctfe)
+        {
+            return;
+        }
+
+        static if (is(T == class) || is(T == interface))
+        {
+            mutPayload = null;
+        }
+        else
+        {
+            // call possible struct destructors
+            .destroy!(No.initialize)(*cast(T*) &mutPayload);
+        }
+    }
+
+    /**
+     * Return a copy of the stored value.
+     * The container must be set to a value.
+     */
+    T get(this This)() @property @trusted
+    {
+        return *cast(T*) &mutPayload;
+    }
+}
+
+///
+@safe unittest
+{
+    int del;
+    int post;
+    struct S
+    {
+        int* ptr;
+        this(this) {
+            post++;
+        }
+        ~this() {
+            del++;
+        }
+    }
+
+    {
+        ManagedLifetime!S container;
+
+        assert(post == 0 && del == 0);
+
+        container.set(S(new int));
+        assert(post == 1 && del == 1);
+
+        container.clear;
+        assert(post == 1 && del == 2);
+    }
+    assert(post == 1 && del == 2);
 }
 
 /**
