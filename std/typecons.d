@@ -2490,38 +2490,38 @@ public:
         @disable this();
     }
 
-    this(S s)
+    this(S s) @trusted
     {
         payload.set(s);
     }
 
-    void opAssign(this This)(S s)
+    void opAssign(this This)(S s) @trusted
     {
         payload.clear;
         payload.set(s);
     }
 
-    void opAssign(this This)(Rebindable other)
+    void opAssign(this This)(Rebindable other) @trusted
     {
         payload.clear;
         payload.set(other.payload.get);
     }
 
-    S get(this This)() @property
+    S get(this This)() @property @trusted
     {
         return payload.get;
     }
 
     alias get this;
 
-    ~this()
+    ~this() @trusted
     {
         payload.clear;
     }
 }
 
 ///
-@safe unittest
+@system unittest
 {
     static struct S
     {
@@ -2702,7 +2702,7 @@ public:
      * Set the container to a value.
      * The container must be empty.
      */
-    void set(this This)(T value) @trusted
+    void set(this This)(T value)
     {
         // as `mutPayload` won't call the destructor, we deliberately leak a copy here:
         static union DontCallDestructor
@@ -2717,7 +2717,7 @@ public:
      * Destroy the value saved in the container.
      * The container must be set to a value.
      */
-    void clear(this This)() @trusted
+    void clear(this This)()
     {
         import std.typecons : No;
 
@@ -2752,14 +2752,14 @@ public:
      * Return a copy of the stored value.
      * The container must be set to a value.
      */
-    T get(this This)() @property @trusted
+    T get(this This)() @property
     {
         return *cast(T*) &mutPayload;
     }
 }
 
 ///
-@safe unittest
+@system unittest
 {
     int del;
     int post;
