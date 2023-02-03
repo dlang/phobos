@@ -467,7 +467,7 @@ original Dyamic Array, but point to a new Dynamic Array.
     assert(a.equal([30, 14, 10, 8, 7, 9, 3, 2, 4, 1]));
 
     /* Making changes to the Store will be seen in the Heap */
-    a[0] = 40; 
+    a[0] = 40;
     assert(h.front() == 40);
 
     /* Inserting a new element will reallocate the Store, leaving
@@ -477,7 +477,7 @@ original Dyamic Array, but point to a new Dynamic Array.
     assert(a.equal([40, 14, 10, 8, 7, 9, 3, 2, 4, 1]));
 
     /* Making changes to the original Store will not affect the Heap anymore */
-    a[0] = 60; 
+    a[0] = 60;
     assert(h.front() == 40);
 }
 
