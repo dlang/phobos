@@ -1575,7 +1575,7 @@ private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
-            AliasSeq!(GENERIC_WRITE,
+            AliasSeq!(FILE_WRITE_ATTRIBUTES,
                       0,
                       null,
                       OPEN_EXISTING,
@@ -1662,6 +1662,16 @@ private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
         testTimes(123_456_7);
 
     rmdirRecurse(newdir);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23683
+@safe unittest
+{
+    scope(exit) deleteme.remove;
+    import std.stdio : File;
+    auto f = File(deleteme, "wb");
+    SysTime time = SysTime(DateTime(2018, 10, 4, 0, 0, 30));
+    setTimes(deleteme, time, time);
 }
 
 /++
