@@ -599,7 +599,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 }
 
 /**
-Example for unintuitive behaviour.
+Example for unintuitive behaviour
 It is important not to use the Store after a Heap has been instantiated from
 it, at least in the cases of Dynamic Arrays. For example, inserting a new element
 in a Heap, which is using a Dyamic Array as a Store, will cause a reallocation of
