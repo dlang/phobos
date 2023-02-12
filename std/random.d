@@ -3954,6 +3954,8 @@ Variable names are chosen to match those in Vitter's paper.
         }
         assert(_available && _available >= _toSelect);
         immutable size_t s = skip();
+        // randomly trips on macOS 13.x x64
+        // https://github.com/dlang/dmd/pull/14869#issuecomment-1426946072
         assert(s + _toSelect <= _available);
         static if (hasLength!Range)
         {
