@@ -2599,8 +2599,16 @@ private template TimSortImpl(alias pred, R)
             //Test for overflow
             if (newSize < minCapacity) newSize = minCapacity;
 
-            if (__ctfe) temp.length = newSize;
-            else temp = () @trusted { return uninitializedArray!(T[])(newSize); }();
+            // can't use `temp.length` if there's no default constructor
+            static if (__traits(compiles, { T defaultConstructed; cast(void) defaultConstructed; }))
+            {
+                if (__ctfe) temp.length = newSize;
+                else temp = () @trusted { return uninitializedArray!(T[])(newSize); }();
+            }
+            else
+            {
+                temp = () @trusted { return uninitializedArray!(T[])(newSize); }();
+            }
         }
         return temp;
     }
@@ -3035,6 +3043,18 @@ private template TimSortImpl(alias pred, R)
     sort!(cmp, SwapStrategy.unstable)(makeArray(20));
     sort!(cmp, SwapStrategy.stable)(makeArray(minMerge - 5));
     sort!(cmp, SwapStrategy.stable)(makeArray(minMerge + 5));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23668
+@safe unittest
+{
+    static struct S
+    {
+        int opCmp(const S) const { return 1; }
+        @disable this();
+    }
+    S[] array;
+    array.sort!("a < b", SwapStrategy.stable);
 }
 
 // schwartzSort
