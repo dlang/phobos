@@ -3675,6 +3675,16 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
             windows : `"foo bar" ^"'\^"^^\\^"`,
             posix   : `'foo bar' ''\''"^\'`
         },
+        {
+            args    : ["foo bar", ""],
+            windows : `"foo bar" ^"^"`,
+            posix   : `'foo bar' ''`
+        },
+        {
+            args    : ["foo bar", "2"],
+            windows : `"foo bar" ^"2^"`,
+            posix   : `'foo bar' '2'`
+        },
     ];
 
     foreach (test; tests)
