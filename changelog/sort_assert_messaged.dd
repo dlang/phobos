@@ -1,0 +1,8 @@
+Better static assert messages for `std.algorithm.sorting.sort`
+
+Up until now `sort` used a template constraint to check if the passed Range
+could be used. If it were not, it was very tedious to figure out why.
+
+As the template constraint is not used to overload the symbol template
+function, the constrains are move into static asserts with expressive error
+messages.

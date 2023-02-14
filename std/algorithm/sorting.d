@@ -1922,14 +1922,8 @@ See_Also:
     $(REF binaryFun, std,functional)
 */
 SortedRange!(Range, less)
-sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        Range)(Range r)
-if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
-    hasAssignableElements!Range)) ||
-    (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
-    isRandomAccessRange!Range &&
-    hasSlicing!Range &&
-    hasLength!Range)
+sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range)
+(Range r)
     /+ Unstable sorting uses the quicksort algorithm, which uses swapAt,
        which either uses swap(...), requiring swappable elements, or just
        swaps using assignment.
@@ -1937,21 +1931,46 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
        requiring assignable elements. +/
 {
     import std.range : assumeSorted;
-    alias lessFun = binaryFun!(less);
-    alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
-    static if (is(LessRet == bool))
+    static if (ss == SwapStrategy.unstable)
     {
-        static if (ss == SwapStrategy.unstable)
-            quickSortImpl!(lessFun)(r, r.length);
-        else //use Tim Sort for semistable & stable
-            TimSortImpl!(lessFun, Range).sort(r, null);
-
-        assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
+        static assert(hasSwappableElements!Range || hasAssignableElements!Range,
+                  "When using SwapStragety.unstable, the passed Range '"
+                ~ Range.stringof ~ "' must"
+                ~ " either fulfill hasSwappableElements, or"
+                ~ " hasAssignableElements, both were not the case");
     }
     else
     {
-        static assert(false, "Invalid predicate passed to sort: " ~ less.stringof);
+        static assert(hasAssignableElements!Range, "When using a SwapStragety"
+                ~ " != unstable, the"
+                ~ " passed Range '" ~ Range.stringof ~ "' must fulfill"
+                ~ " hasAssignableElements, which it did not");
     }
+
+    static assert(isRandomAccessRange!Range, "The passed Range '"
+            ~ Range.stringof ~ "' must be a Random AccessRange "
+            ~ "(isRandomAccessRange)");
+
+    static assert(hasSlicing!Range, "The passed Range '"
+            ~ Range.stringof ~ "' must allow Slicing (hasSlicing)");
+
+    static assert(hasLength!Range, "The passed Range '"
+            ~ Range.stringof ~ "' must have a length (hasLength)");
+
+    alias lessFun = binaryFun!(less);
+    alias LessRet = typeof(lessFun(r.front, r.front));    // instantiate lessFun
+
+    static assert(is(LessRet == bool), "The return type of the template"
+            ~ " argument 'less' when used with the binaryFun!less template"
+            ~ " must be a bool. This is not the case, the returned type is '"
+            ~ LessRet.stringof ~ "'");
+
+    static if (ss == SwapStrategy.unstable)
+        quickSortImpl!(lessFun)(r, r.length);
+    else //use Tim Sort for semistable & stable
+        TimSortImpl!(lessFun, Range).sort(r, null);
+
+    assert(isSorted!lessFun(r), "Failed to sort range of type " ~ Range.stringof);
     return assumeSorted!less(r);
 }
 
