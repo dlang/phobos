@@ -3678,10 +3678,14 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
     ];
 
     foreach (test; tests)
+    {
+        auto actual = escapeShellCommand(test.args);
         version (Windows)
-            assert(escapeShellCommand(test.args) == test.windows);
+            string expected = test.windows;
         else
-            assert(escapeShellCommand(test.args) == test.posix  );
+            string expected = test.posix;
+        assert(actual == expected, "\nExpected: " ~ expected ~ "\nGot: " ~ actual);
+    }
 }
 
 private string escapeShellCommandString(return scope string command) @safe pure
