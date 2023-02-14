@@ -3999,6 +3999,11 @@ version (unittest_burnin)
     // Then, test this module with:
     // rdmd --main -unittest -version=unittest_burnin process.d
 
+    import std.file : readText, remove;
+    import std.format : format;
+    import std.path : absolutePath;
+    import std.random : uniform;
+
     auto helper = absolutePath("std_process_unittest_helper");
     assert(executeShell(helper ~ " hello").output.split("\0")[1..$] == ["hello"], "Helper malfunction");
 
