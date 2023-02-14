@@ -3658,7 +3658,7 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
         {
             args    : ["foo bar", "hello"],
             windows : `"foo bar" hello`,
-            posix   : `'foo bar' 'hello'`
+            posix   : `'foo bar' hello`
         },
         {
             args    : ["foo bar", "hello world"],
@@ -3668,7 +3668,7 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
         {
             args    : ["foo bar", "hello", "world"],
             windows : `"foo bar" hello world`,
-            posix   : `'foo bar' 'hello' 'world'`
+            posix   : `'foo bar' hello world`
         },
         {
             args    : ["foo bar", `'"^\`],
@@ -3936,6 +3936,37 @@ private char[] escapePosixArgumentImpl(alias allocator)(scope const(char)[] arg)
     @safe nothrow
 if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
+    bool needQuoting = {
+        import std.ascii : isAlphaNum, isDigit;
+        import std.algorithm.comparison : among;
+
+        // Empty arguments need to be specified as ''
+        if (arg.length == 0)
+            return true;
+        // Arguments ending with digits need to be escaped,
+        // to disambiguate with 1>file redirection syntax
+        if (isDigit(arg[$-1]))
+            return true;
+
+        // Obtained using:
+        // for n in $(seq 1 255) ; do
+        //     c=$(printf \\$(printf "%o" $n))
+        //     q=$(/bin/printf '%q' "$c")
+        //     if [[ "$q" == "$c" ]] ; then printf "%s, " "'$c'" ; fi
+        // done
+        // printf '\n'
+        foreach (char c; arg)
+            if (!isAlphaNum(c) && !c.among('%', '+', ',', '-', '.', '/', ':', '@', ']', '_'))
+                return true;
+        return false;
+    }();
+    if (!needQuoting)
+    {
+        auto buf = allocator(arg.length);
+        buf[] = arg;
+        return buf;
+    }
+
     // '\'' means: close quoted part of argument, append an escaped
     // single quote, and reopen quotes
 
