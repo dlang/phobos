@@ -2505,7 +2505,7 @@ version (Windows)
     import std.exception : collectException;
     import std.typecons : tuple;
 
-    TestScript prog = ":Loop\ngoto Loop;";
+    TestScript prog = ":Loop\r\n" ~ "goto Loop";
     auto pid = spawnProcess(prog.path);
 
     // Doesn't block longer than one second
