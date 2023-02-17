@@ -889,7 +889,7 @@ private template fqnType(T,
             );
         }
     }
-    else static if (is(T : U*, U))
+    else static if (is(T == U*, U))
     {
         enum fqnType = chain!(
             fqnType!(U, qualifiers) ~ "*"
@@ -3925,7 +3925,7 @@ template hasStaticMember(T, string member)
 {
     static if (__traits(hasMember, T, member))
     {
-        static if (is(T : V*, V))
+        static if (is(T == V*, V))
             alias U = V;
         else
             alias U = T;
