@@ -10,6 +10,7 @@
  * $(TR $(TH Category) $(TH Templates))
  * $(TR $(TD Symbol Name traits) $(TD
  *           $(LREF fullyQualifiedName)
+ *           $(LREF mangledName)
  *           $(LREF moduleName)
  *           $(LREF packageName)
  * ))
@@ -67,9 +68,7 @@
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
  * ))
- * $(TR $(TD SomethingTypeOf) $(TD
- *           $(LREF rvalueOf)
- *           $(LREF lvalueOf)
+ * $(TR $(TD Type Constructors) $(TD
  *           $(LREF InoutOf)
  *           $(LREF ConstOf)
  *           $(LREF SharedOf)
@@ -138,7 +137,8 @@
  *           $(LREF Promoted)
  * ))
  * $(TR $(TD Misc) $(TD
- *           $(LREF mangledName)
+ *           $(LREF lvalueOf)
+ *           $(LREF rvalueOf)
  *           $(LREF Select)
  *           $(LREF select)
  * ))
