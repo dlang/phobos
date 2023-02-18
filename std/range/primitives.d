@@ -1675,7 +1675,7 @@ The following expression must be true for `hasSlicing` to be `true`:
 ----
     isForwardRange!R
     && !(isAutodecodableString!R && !isAggregateType!R)
-    && is(typeof(() { return lvalueOf!R[1 .. 1].length; } ()) == size_t)
+    && is(typeof((R r) { return r[1 .. 1].length; } (R.init)) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
     && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R
@@ -1688,7 +1688,7 @@ The following expression must be true for `hasSlicing` to be `true`:
  */
 enum bool hasSlicing(R) = isForwardRange!R
     && !(isAutodecodableString!R && !isAggregateType!R)
-    && is(typeof(() { return lvalueOf!R[1 .. 1].length; } ()) == size_t)
+    && is(typeof((R r) { return r[1 .. 1].length; } (R.init)) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
     && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R
