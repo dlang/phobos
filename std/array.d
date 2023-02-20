@@ -170,7 +170,7 @@ if (isIterable!Range && !isAutodecodableString!Range && !isInfinite!Range)
 
 /// ditto
 ForeachType!(typeof((*Range).init))[] array(Range)(Range r)
-if (is(Range : U*, U) && isIterable!U && !isAutodecodableString!Range && !isInfinite!Range)
+if (is(Range == U*, U) && isIterable!U && !isAutodecodableString!Range && !isInfinite!Range)
 {
     return array(*r);
 }
