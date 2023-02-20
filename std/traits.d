@@ -7481,24 +7481,10 @@ Params:
 Returns:
     A `bool`
  */
-template isSomeFunction(alias T)
-{
-    static if (is(typeof(& T) U : U*) && is(U == function) || is(typeof(& T) U == delegate))
-    {
-        // T is a (nested) function symbol.
-        enum bool isSomeFunction = true;
-    }
-    else static if (is(T W) || is(typeof(T) W))
-    {
-        // T is an expression or a type.  Take the type of it and examine.
-        static if (is(W F : F*) && is(F == function))
-            enum bool isSomeFunction = true; // function pointer
-        else
-            enum bool isSomeFunction = is(W == function) || is(W == delegate);
-    }
-    else
-        enum bool isSomeFunction = false;
-}
+enum bool isSomeFunction(alias T) =
+    is(T == return) ||
+    is(typeof(T) == return) ||
+    is(typeof(&T) == return); // @property
 
 ///
 @safe unittest
@@ -7513,17 +7499,16 @@ template isSomeFunction(alias T)
     auto c = new C;
     auto fp = &func;
     auto dg = &c.method;
-    real val;
 
     static assert( isSomeFunction!func);
     static assert( isSomeFunction!prop);
     static assert( isSomeFunction!(C.method));
     static assert( isSomeFunction!(C.prop));
     static assert( isSomeFunction!(c.prop));
-    static assert( isSomeFunction!(c.prop));
     static assert( isSomeFunction!fp);
     static assert( isSomeFunction!dg);
 
+    real val;
     static assert(!isSomeFunction!int);
     static assert(!isSomeFunction!val);
 }
