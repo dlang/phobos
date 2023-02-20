@@ -1934,14 +1934,14 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range)
     static if (ss == SwapStrategy.unstable)
     {
         static assert(hasSwappableElements!Range || hasAssignableElements!Range,
-                  "When using SwapStragety.unstable, the passed Range '"
+                  "When using SwapStrategy.unstable, the passed Range '"
                 ~ Range.stringof ~ "' must"
                 ~ " either fulfill hasSwappableElements, or"
                 ~ " hasAssignableElements, both were not the case");
     }
     else
     {
-        static assert(hasAssignableElements!Range, "When using a SwapStragety"
+        static assert(hasAssignableElements!Range, "When using a SwapStrategy"
                 ~ " != unstable, the"
                 ~ " passed Range '" ~ Range.stringof ~ "' must fulfill"
                 ~ " hasAssignableElements, which it did not");
