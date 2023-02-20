@@ -986,6 +986,10 @@ private template fqnType(T,
  * or a class with an `opCall`. Please note that $(D_KEYWORD ref)
  * is not part of a type, but the attribute of the function
  * (see template $(LREF functionAttributes)).
+ *
+ * $(NOTE To reduce template instantiations, consider instead using
+ * $(D typeof(() { return func(args); } ())) if the argument types are known or
+ * $(D static if (is(typeof(func) Ret == return))) if only that basic test is needed.)
  */
 template ReturnType(alias func)
 if (isCallable!func)
@@ -7969,7 +7973,7 @@ has both opApply and a range interface.
 */
 template ForeachType(T)
 {
-    alias ForeachType = ReturnType!(typeof(
+    alias ForeachType = typeof(
     (inout int x = 0)
     {
         foreach (elem; T.init)
@@ -7977,7 +7981,7 @@ template ForeachType(T)
             return elem;
         }
         assert(0);
-    }));
+    }());
 }
 
 ///
