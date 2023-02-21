@@ -1038,7 +1038,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 // signal safe functions list, but practically this should
                 // not be a problem. Java VM and CPython also use malloc()
                 // in its own implementation via opendir().
-                import core.stdc.stdlib : malloc;
+                import core.stdc.stdlib : malloc, free;
                 import core.sys.posix.poll : pollfd, poll, POLLNVAL;
                 import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
@@ -1055,6 +1055,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
                 // Call poll() to see which ones are actually open:
                 auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                scope(exit) free(pfds);
                 if (pfds is null)
                 {
                     abortOnError(forkPipeOut, InternalError.malloc, .errno);
