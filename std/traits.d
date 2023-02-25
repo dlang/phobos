@@ -3853,6 +3853,7 @@ package alias Identity(alias A) = A;
 /**
    Yields `true` if and only if `T` is an aggregate that defines
    a symbol called `name`.
+   $(NOTE Use `__traits(hasMember, T, name)` instead in new code.)
  */
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
@@ -4835,6 +4836,7 @@ package enum maxAlignment(U...) =
 
 /**
 Returns class instance alignment.
+$(NOTE Use `__traits(classInstanceAlignment, T)` instead in new code.)
  */
 template classInstanceAlignment(T)
 if (is(T == class))
@@ -6161,7 +6163,7 @@ template BuiltinTypeOf(T)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
- * Detect whether `T` is a built-in boolean type.
+ * Detect whether `T` is a built-in boolean type or enum of boolean base type.
  */
 enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 
@@ -6255,7 +6257,9 @@ template isIntegral(T)
 
 /**
  * Detect whether `T` is a built-in floating point type.
+ * $(NOTE Use `__traits(isFloating, T)` instead in new code.)
  */
+// is(T : real) to discount complex types
 enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
 
 ///
@@ -6393,7 +6397,9 @@ template isNumeric(T)
 /**
  * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
+ * $(NOTE Use `__traits(isScalar, T)` instead in new code.)
  */
+// is(T : real) to discount complex types
 enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
 
 ///
@@ -6922,6 +6928,7 @@ template isAutodecodableString(T)
 
 /**
  * Detect whether type `T` is a static array.
+ * $(NOTE Use `__traits(isStaticArray, T)` instead in new code.)
  */
 enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
@@ -7051,6 +7058,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
 /**
  * Detect whether `T` is an associative array type
+ * $(NOTE Use `__traits(isAssociativeArray, T)` instead in new code.)
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
@@ -7552,14 +7560,12 @@ template isCallable(alias callable)
     else static if (is(typeof(&callable.opCall) V : V*) && is(V == function))
         // T is a type which has a static member function opCall().
         enum bool isCallable = true;
-    else static if (is(typeof(&callable.opCall!())))
+    else static if (is(typeof(&callable.opCall!()) TemplateInstanceType))
     {
-        alias TemplateInstanceType = typeof(&callable.opCall!());
         enum bool isCallable = isCallable!TemplateInstanceType;
     }
-    else static if (is(typeof(&callable!())))
+    else static if (is(typeof(&callable!()) TemplateInstanceType))
     {
-        alias TemplateInstanceType = typeof(&callable!());
         enum bool isCallable = isCallable!TemplateInstanceType;
     }
     else
@@ -7623,14 +7629,15 @@ template isCallable(alias callable)
 
 
 /**
-Detect whether `T` is an abstract function.
+Detect whether `S` is an abstract function.
 
+$(NOTE Use `__traits(isAbstractFunction, S)` instead in new code.)
 Params:
-    T = The type to check
+    S = The symbol to check
 Returns:
     A `bool`
  */
-enum isAbstractFunction(alias T) = __traits(isAbstractFunction, T);
+enum isAbstractFunction(alias S) = __traits(isAbstractFunction, S);
 
 ///
 @safe unittest
@@ -7645,9 +7652,10 @@ enum isAbstractFunction(alias T) = __traits(isAbstractFunction, T);
 }
 
 /**
- * Detect whether `T` is a final function.
+ * Detect whether `S` is a final function.
+ * $(NOTE Use `__traits(isFinalFunction, S)` instead in new code.)
  */
-enum isFinalFunction(alias T) = __traits(isFinalFunction, T);
+enum isFinalFunction(alias S) = __traits(isFinalFunction, S);
 
 ///
 @safe unittest
@@ -7713,9 +7721,10 @@ template isNestedFunction(alias f)
 }
 
 /**
- * Detect whether `T` is an abstract class.
+ * Detect whether `S` is an abstract class.
+ * $(NOTE Use `__traits(isAbstractClass, S)` instead in new code.)
  */
-enum isAbstractClass(alias T) = __traits(isAbstractClass, T);
+enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 
 ///
 @safe unittest
@@ -7733,9 +7742,10 @@ enum isAbstractClass(alias T) = __traits(isAbstractClass, T);
 }
 
 /**
- * Detect whether `T` is a final class.
+ * Detect whether `S` is a final class.
+ * $(NOTE Use `__traits(isFinalClass, S)` instead in new code.)
  */
-enum isFinalClass(alias T) = __traits(isFinalClass, T);
+enum isFinalClass(alias S) = __traits(isFinalClass, S);
 
 ///
 @safe unittest
@@ -9077,12 +9087,13 @@ template isFinal(alias X)
  + If a type cannot be copied, then code such as `MyStruct x; auto y = x;` will fail to compile.
  + Copying for structs can be disabled by using `@disable this(this)`.
  +
+ + $(NOTE Use `__traits(isCopyable, S)` instead in new code.)
  + Params:
  +  S = The type to check.
  +
  + Returns:
  +  `true` if `S` can be copied. `false` otherwise.
- + ++/
+ +/
 enum isCopyable(S) = __traits(isCopyable, S);
 
 ///
