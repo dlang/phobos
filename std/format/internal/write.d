@@ -1829,7 +1829,8 @@ enum HasToStringResult
     customPutWriterFormatSpec,
 }
 
-private enum hasPreviewIn = !is(typeof(mixin(q{(in ref int a) => a})));
+private alias DScannerBug895 = int[256];
+private immutable bool hasPreviewIn = ((in DScannerBug895 a) { return __traits(isRef, a); })(DScannerBug895.init);
 
 template hasToString(T, Char)
 {
