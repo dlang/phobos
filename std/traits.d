@@ -5301,7 +5301,8 @@ enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lv
     static assert(!isAssignable!S5);
 
     // `-preview=in` is enabled
-    static if (!is(typeof(mixin(q{(in ref int a) => a}))))
+    alias DScannerBug895 = int[256];
+    static if (((in DScannerBug895 a) { return __traits(isRef, a); })(DScannerBug895.init))
     {
         struct S6 { void opAssign(in S5); }
 
