@@ -2568,6 +2568,7 @@ if (is(T == class))
 /**
 Determines whether `T` has its own context pointer.
 `T` must be either `class`, `struct`, or `union`.
+See also: `__traits(isNested, T)`
 */
 template isNested(T)
 if (is(T == class) || is(T == struct) || is(T == union))
@@ -3853,7 +3854,8 @@ package alias Identity(alias A) = A;
 /**
    Yields `true` if and only if `T` is an aggregate that defines
    a symbol called `name`.
-   $(NOTE Use `__traits(hasMember, T, name)` instead in new code.)
+
+   See also: `__traits(hasMember, T, name)`
  */
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
@@ -4836,7 +4838,7 @@ package enum maxAlignment(U...) =
 
 /**
 Returns class instance alignment.
-$(NOTE Use `__traits(classInstanceAlignment, T)` instead in new code.)
+See also: `__traits(classInstanceAlignment, T)`
  */
 template classInstanceAlignment(T)
 if (is(T == class))
@@ -6257,7 +6259,8 @@ template isIntegral(T)
 
 /**
  * Detect whether `T` is a built-in floating point type.
- * $(NOTE Use `__traits(isFloating, T)` instead in new code.)
+ *
+ * See also: `__traits(isFloating, T)`
  */
 // is(T : real) to discount complex types
 enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
@@ -6397,7 +6400,8 @@ template isNumeric(T)
 /**
  * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
- * $(NOTE Use `__traits(isScalar, T)` instead in new code.)
+ *
+ * See also: `__traits(isScalar, T)`
  */
 // is(T : real) to discount complex types
 enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
@@ -6928,7 +6932,8 @@ template isAutodecodableString(T)
 
 /**
  * Detect whether type `T` is a static array.
- * $(NOTE Use `__traits(isStaticArray, T)` instead in new code.)
+ *
+ * See also: `__traits(isStaticArray, T)`
  */
 enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
@@ -7058,7 +7063,8 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
 /**
  * Detect whether `T` is an associative array type
- * $(NOTE Use `__traits(isAssociativeArray, T)` instead in new code.)
+ *
+ * See also: `__traits(isAssociativeArray, T)`
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
@@ -7631,7 +7637,7 @@ template isCallable(alias callable)
 /**
 Detect whether `S` is an abstract function.
 
-$(NOTE Use `__traits(isAbstractFunction, S)` instead in new code.)
+See also: `__traits(isAbstractFunction, S)`
 Params:
     S = The symbol to check
 Returns:
@@ -7653,7 +7659,8 @@ enum isAbstractFunction(alias S) = __traits(isAbstractFunction, S);
 
 /**
  * Detect whether `S` is a final function.
- * $(NOTE Use `__traits(isFinalFunction, S)` instead in new code.)
+ *
+ * See also: `__traits(isFinalFunction, S)`
  */
 enum isFinalFunction(alias S) = __traits(isFinalFunction, S);
 
@@ -7722,7 +7729,8 @@ template isNestedFunction(alias f)
 
 /**
  * Detect whether `S` is an abstract class.
- * $(NOTE Use `__traits(isAbstractClass, S)` instead in new code.)
+ *
+ * See also: `__traits(isAbstractClass, S)`
  */
 enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 
@@ -7743,7 +7751,8 @@ enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 
 /**
  * Detect whether `S` is a final class.
- * $(NOTE Use `__traits(isFinalClass, S)` instead in new code.)
+ *
+ * See also: `__traits(isFinalClass, S)`
  */
 enum isFinalClass(alias S) = __traits(isFinalClass, S);
 
@@ -9087,7 +9096,7 @@ template isFinal(alias X)
  + If a type cannot be copied, then code such as `MyStruct x; auto y = x;` will fail to compile.
  + Copying for structs can be disabled by using `@disable this(this)`.
  +
- + $(NOTE Use `__traits(isCopyable, S)` instead in new code.)
+ + See also: `__traits(isCopyable, S)`
  + Params:
  +  S = The type to check.
  +
