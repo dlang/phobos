@@ -2568,6 +2568,7 @@ if (is(T == class))
 /**
 Determines whether `T` has its own context pointer.
 `T` must be either `class`, `struct`, or `union`.
+
 See also: `__traits(isNested, T)`
 */
 template isNested(T)
@@ -4838,6 +4839,7 @@ package enum maxAlignment(U...) =
 
 /**
 Returns class instance alignment.
+
 See also: `__traits(classInstanceAlignment, T)`
  */
 template classInstanceAlignment(T)
