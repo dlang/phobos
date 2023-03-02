@@ -1194,7 +1194,7 @@ if (isCallable!func)
 }
 
 /**
-Convert the result of `__traits(getParameterStorageClasses)`
+Convert the result of $(DDSUBLINK spec/traits, getParameterStorageClasses, `__traits(getParameterStorageClasses)`)
 to $(LREF ParameterStorageClass) `enum`s.
 
 Params:
@@ -2569,7 +2569,7 @@ if (is(T == class))
 Determines whether `T` has its own context pointer.
 `T` must be either `class`, `struct`, or `union`.
 
-See also: `__traits(isNested, T)`
+See also: $(DDSUBLINK spec/traits, isNested, `__traits(isNested, T)`)
 */
 template isNested(T)
 if (is(T == class) || is(T == struct) || is(T == union))
@@ -3856,7 +3856,7 @@ package alias Identity(alias A) = A;
    Yields `true` if and only if `T` is an aggregate that defines
    a symbol called `name`.
 
-   See also: `__traits(hasMember, T, name)`
+   See also: $(DDSUBLINK spec/traits, hasMember, `__traits(hasMember, T, name)`)
  */
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
@@ -4840,7 +4840,7 @@ package enum maxAlignment(U...) =
 /**
 Returns class instance alignment.
 
-See also: `__traits(classInstanceAlignment, T)`
+See also: $(DDSUBLINK spec/traits, classInstanceAlignment, `__traits(classInstanceAlignment, T)`)
  */
 template classInstanceAlignment(T)
 if (is(T == class))
@@ -5681,7 +5681,7 @@ private struct __InoutWorkaroundStruct{}
 
 /**
 Creates an lvalue or rvalue of type `T` for `typeof(...)` and
-`__traits(compiles, ...)` purposes. No actual value is returned.
+$(DDSUBLINK spec/traits, compiles, `__traits(compiles, ...)`) purposes. No actual value is returned.
 
 Params:
     T = The type to transform
@@ -6262,7 +6262,7 @@ template isIntegral(T)
 /**
  * Detect whether `T` is a built-in floating point type.
  *
- * See also: `__traits(isFloating, T)`
+ * See also: $(DDSUBLINK spec/traits, isFloating, `__traits(isFloating, T)`)
  */
 // is(T : real) to discount complex types
 enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
@@ -6403,7 +6403,7 @@ template isNumeric(T)
  * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
  *
- * See also: `__traits(isScalar, T)`
+ * See also: $(DDSUBLINK spec/traits, isScalar, `__traits(isScalar, T)`)
  */
 // is(T : real) to discount complex types
 enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
@@ -6935,7 +6935,7 @@ template isAutodecodableString(T)
 /**
  * Detect whether type `T` is a static array.
  *
- * See also: `__traits(isStaticArray, T)`
+ * See also: $(DDSUBLINK spec/traits, isStaticArray, `__traits(isStaticArray, T)`)
  */
 enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
@@ -7066,7 +7066,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 /**
  * Detect whether `T` is an associative array type
  *
- * See also: `__traits(isAssociativeArray, T)`
+ * See also: $(DDSUBLINK spec/traits, isAssociativeArray, `__traits(isAssociativeArray, T)`)
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
@@ -7639,7 +7639,7 @@ template isCallable(alias callable)
 /**
 Detect whether `S` is an abstract function.
 
-See also: `__traits(isAbstractFunction, S)`
+See also: $(DDSUBLINK spec/traits, isAbstractFunction, `__traits(isAbstractFunction, S)`)
 Params:
     S = The symbol to check
 Returns:
@@ -7662,7 +7662,7 @@ enum isAbstractFunction(alias S) = __traits(isAbstractFunction, S);
 /**
  * Detect whether `S` is a final function.
  *
- * See also: `__traits(isFinalFunction, S)`
+ * See also: $(DDSUBLINK spec/traits, isFinalFunction, `__traits(isFinalFunction, S)`)
  */
 enum isFinalFunction(alias S) = __traits(isFinalFunction, S);
 
@@ -7732,7 +7732,7 @@ template isNestedFunction(alias f)
 /**
  * Detect whether `S` is an abstract class.
  *
- * See also: `__traits(isAbstractClass, S)`
+ * See also: $(DDSUBLINK spec/traits, isAbstractClass, `__traits(isAbstractClass, S)`)
  */
 enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 
@@ -7754,7 +7754,7 @@ enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 /**
  * Detect whether `S` is a final class.
  *
- * See also: `__traits(isFinalClass, S)`
+ * See also: $(DDSUBLINK spec/traits, isFinalClass, `__traits(isFinalClass, S)`)
  */
 enum isFinalClass(alias S) = __traits(isFinalClass, S);
 
@@ -9098,7 +9098,7 @@ template isFinal(alias X)
  + If a type cannot be copied, then code such as `MyStruct x; auto y = x;` will fail to compile.
  + Copying for structs can be disabled by using `@disable this(this)`.
  +
- + See also: `__traits(isCopyable, S)`
+ + See also: $(DDSUBLINK spec/traits, isCopyable, `__traits(isCopyable, S)`)
  + Params:
  +  S = The type to check.
  +
