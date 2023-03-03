@@ -5313,7 +5313,7 @@ enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lv
     }
     else
     {
-        mixin(q{ struct S6 { void opAssign(in ref S5); } });
+        mixin(q{ struct S6 { void opAssign(scope const ref S5); } });
 
         static assert(!isRvalueAssignable!(S6, S5));
         static assert( isLvalueAssignable!(S6, S5));
