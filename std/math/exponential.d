@@ -39,7 +39,8 @@ static import core.stdc.math;
 
 version (DigitalMars)
 {
-    version = INLINE_YL2X;        // x87 has opcodes for these
+    version (OSX) { }             // macOS 13 (M1) has issues emulating instruction
+    else version = INLINE_YL2X;   // x87 has opcodes for these
 }
 
 version (D_InlineAsm_X86)    version = InlineAsm_X86_Any;
