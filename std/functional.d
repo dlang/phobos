@@ -16,6 +16,9 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
+    $(TR $(TD $(LREF bind))
+        $(TD Passes the fields of a struct as arguments to a function.
+    ))
     $(TR $(TD $(LREF compose), $(LREF pipe))
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
