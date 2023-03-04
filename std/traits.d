@@ -2184,7 +2184,7 @@ if (isCallable!func)
     void func() {}
     static assert(variadicFunctionStyle!func == Variadic.no);
 
-    extern(C) int printf(in char*, ...);
+    extern(C) int printf(const char*, ...);
     static assert(variadicFunctionStyle!printf == Variadic.c);
 }
 
