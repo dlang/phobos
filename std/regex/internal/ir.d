@@ -898,8 +898,13 @@ template BackLooper(E)
     return ret;
 }
 
-//
-@trusted uint lookupNamedGroup(String)(const(NamedGroup)[] dict, String name)
+/// Looks for the index of a named group.
+/// Params:
+///   dict = A sorted array of named groups to look in.
+///   name = The name to look for.
+/// Returns: The index of the named group in the array, or -1 if no matching
+/// group was found.
+@trusted int lookupNamedGroup(String)(const(NamedGroup)[] dict, String name)
 {//equal is @system?
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -907,9 +912,10 @@ template BackLooper(E)
     import std.range : assumeSorted;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
-    enforce(fnd < dict.length && equal(dict[fnd].name, name),
-        text("no submatch named ", name));
-    return dict[fnd].group;
+    if (fnd < dict.length && equal(dict[fnd].name, name)) {
+        return dict[fnd].group;
+    }
+    return -1;
 }
 
 // whether ch is one of unicode newline sequences

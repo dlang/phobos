@@ -685,13 +685,48 @@ public:
         //named groups are unaffected by range primitives
         assert(c["var"] =="a");
         assert(c.front == "42");
+        // Attempting to index an unknown group name will result in `null`.
+        assert(c["unknown"] is null);
         ----
     +/
     R opIndex(String)(String i) /*const*/ //@@@BUG@@@
         if (isSomeString!String)
     {
-        size_t index = lookupNamedGroup(_names, i);
+        int index = lookupNamedGroup(_names, i);
+        if (index < 0) return null;
         return getMatch(index);
+    }
+
+    @system unittest {
+        import std.range.primitives : popFrontN;
+
+        auto c = matchFirst("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
+        assert(c["var"] == "a");
+        assert(c["value"] == "42");
+        popFrontN(c, 2);
+        // Named groups are unaffected by range primitives.
+        assert(c["var"] == "a");
+        assert(c.front == "42");
+        // Attempting to index an unknown group name will result in `null`.
+        assert(c["unknown"] is null);
+    }
+
+    /// Implements the `in` operator for a Captures struct, which can be used
+    /// to determine if a named capture group exists for a given name.
+    /// Params:
+    ///   name = The name of the capture group to look for.
+    /// Returns: A pointer to the match group if such a named group exists, or
+    /// null if not.
+    R* opBinaryRight(string op : "in")(String name) if (isSomeString!String) {
+        int index = lookupNamedGroup(_names, name);
+        if (index < 0) return null;
+        return &matches[index];
+    }
+
+    @system unittest {
+        auto c = matchFirst("@abc#", regex(`(?P<a>\w+)`));
+        assert("a" in c);
+        assert("b" !in c);
     }
 
     ///Number of matches in this object.
