@@ -602,19 +602,18 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
-    static enum : JSONValue {
-        /**
-         * An enum value that can be used to obtain a `JSONValue` representing
-         * an empty JSON object.
-         */
-        emptyObject = JSONValue(string[string].init),
+    /**
+     * An enum value that can be used to obtain a `JSONValue` representing
+     * an empty JSON object.
+     */
+    enum emptyObject = JSONValue(string[string].init);
 
-        /**
-         * An enum value that can be used to obtain a `JSONValue` representing
-         * an empty JSON array.
-         */
-        emptyArray = JSONValue(JSONValue[].init)
-    }
+    /**
+     * An enum value that can be used to obtain a `JSONValue` representing
+     * an empty JSON array.
+     */
+    enum emptyArray = JSONValue(JSONValue[].init);
+
     ///
     @system unittest
     {
