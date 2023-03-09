@@ -602,6 +602,45 @@ struct JSONValue
         assert(j.type == JSONType.object);
     }
 
+    /**
+     * An enum value that can be used to obtain a `JSONValue` representing
+     * an empty JSON object.
+     */
+    enum emptyObject = JSONValue(string[string].init);
+    ///
+    @system unittest
+    {
+        JSONValue obj1 = JSONValue.emptyObject;
+        assert(obj1.type == JSONType.object);
+        obj1.object["a"] = JSONValue(1);
+        assert(obj1.object["a"] == JSONValue(1));
+
+        JSONValue obj2 = JSONValue.emptyObject;
+        assert("a" !in obj2.object);
+        obj2.object["b"] = JSONValue(5);
+        assert(obj1 != obj2);
+    }
+
+    /**
+     * An enum value that can be used to obtain a `JSONValue` representing
+     * an empty JSON array.
+     */
+    enum emptyArray = JSONValue(JSONValue[].init);
+    ///
+    @system unittest
+    {
+        JSONValue arr1 = JSONValue.emptyArray;
+        assert(arr1.type == JSONType.array);
+        assert(arr1.array.length == 0);
+        arr1.array ~= JSONValue("Hello");
+        assert(arr1.array.length == 1);
+        assert(arr1.array[0] == JSONValue("Hello"));
+
+        JSONValue arr2 = JSONValue.emptyArray;
+        assert(arr2.array.length == 0);
+        assert(arr1 != arr2);
+    }
+
     void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
     {
         assign(arg);
