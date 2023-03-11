@@ -986,7 +986,7 @@ if (Ranges.length > 0 &&
 
             void popFront()
             {
-                sw1: switch(frontIndex)
+                sw1: switch (frontIndex)
                 {
                     static foreach (i; 0 .. R.length)
                     {
@@ -1002,7 +1002,7 @@ if (Ranges.length > 0 &&
                     assert(0, "Shouldn't be possible to end up here");
                 }
 
-                sw2: switch(frontIndex)
+                sw2: switch (frontIndex)
                 {
                     static foreach (i; 0 .. R.length)
                     {
@@ -1026,7 +1026,7 @@ if (Ranges.length > 0 &&
 
             @property auto ref front()
             {
-                switch(frontIndex)
+                switch (frontIndex)
                 {
                     static foreach (i; 0 .. R.length)
                     {
@@ -1049,7 +1049,7 @@ if (Ranges.length > 0 &&
 
                 @property void front(RvalueElementType v)
                 {
-                    sw: switch(frontIndex)
+                    sw: switch (frontIndex)
                     {
                         static foreach (i; 0 .. R.length)
                         {
@@ -1071,7 +1071,7 @@ if (Ranges.length > 0 &&
             {
                 RvalueElementType moveFront()
                 {
-                    switch(frontIndex)
+                    switch (frontIndex)
                     {
                         static foreach (i; 0 .. R.length)
                         {
@@ -1110,7 +1110,7 @@ if (Ranges.length > 0 &&
 
                 void popBack()
                 {
-                    sw1: switch(backIndex)
+                    sw1: switch (backIndex)
                     {
                         static foreach_reverse (i; 1 .. R.length + 1)
                         {
@@ -1126,7 +1126,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Shouldn't be possible to end up here");
                     }
 
-                    sw2: switch(backIndex)
+                    sw2: switch (backIndex)
                     {
                         static foreach_reverse (i; 1 .. R.length + 1)
                         {
@@ -1152,7 +1152,7 @@ if (Ranges.length > 0 &&
                 {
                     RvalueElementType moveBack()
                     {
-                        switch(backIndex)
+                        switch (backIndex)
                         {
                             static foreach_reverse (i; 1 .. R.length + 1)
                             {
