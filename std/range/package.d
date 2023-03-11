@@ -235,7 +235,7 @@ public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
 import std.internal.attributes : betterC;
-import std.meta : allSatisfy, anySatisfy, staticMap;
+import std.meta : aliasSeqOf, allSatisfy, anySatisfy, staticMap;
 import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
     isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
 
@@ -872,6 +872,11 @@ result is a range that offers the `front`, `popFront`, and $(D
 empty) primitives. If all input ranges offer random access and $(D
 length), `Chain` offers them as well.
 
+Note that repeated random access of the resulting range is likely
+to perform somewhat badly since lengths of the ranges in the chain have to be
+added up for each random access operation. Random access to elements of
+the first remaining range is still efficient.
+
 If only one range is offered to `Chain` or `chain`, the $(D
 Chain) type exits the picture by aliasing itself directly to that
 range's type.
@@ -907,7 +912,12 @@ if (Ranges.length > 0 &&
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }
 
-            enum bool allSameType = allSatisfy!(sameET, R);
+            enum bool allSameType = allSatisfy!(sameET, R),
+                bidirectional = allSatisfy!(isBidirectionalRange, R),
+                mobileElements = allSatisfy!(hasMobileElements, R),
+                assignableElements = allSameType
+                    && allSatisfy!(hasAssignableElements, R);
+
             alias ElementType = RvalueElementType;
 
             static if (allSameType && allSatisfy!(hasLvalueElements, R))
@@ -925,17 +935,28 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            // This is the entire state
             R source;
-            // TODO: use a vtable (or more) instead of linear iteration
+            size_t frontIndex;
+            // Always points to index one past the last non-empty range,
+            // because otherwise decrementing while pointing to first range
+            // would overflow to size_t.max.
+            static if (bidirectional) size_t backIndex;
+            else enum backIndex = source.length;
 
         public:
             this(R input)
             {
-                // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
-                static foreach (i, v; input)
+                frontIndex = source.length;
+                static if (bidirectional) backIndex = 0;
+
+                foreach (i, v; input)
                 {
                     source[i] = v;
+                    if (!v.empty)
+                    {
+                        if (i < frontIndex) frontIndex = i;
+                        static if (bidirectional) backIndex = i+1;
+                    }
                 }
             }
 
@@ -948,120 +969,203 @@ if (Ranges.length > 0 &&
             }
             else
             {
-                @property bool empty()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (!source[i].empty) return false;
-                    }
-                    return true;
-                }
+                @property bool empty() {return frontIndex >= backIndex;}
             }
 
             static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
-                    auto saveSource(size_t len)()
-                    {
-                        import std.typecons : tuple;
-                        static assert(len > 0);
-                        static if (len == 1)
-                        {
-                            return tuple(source[0].save);
-                        }
-                        else
-                        {
-                            return saveSource!(len - 1)() ~
-                                tuple(source[len - 1].save);
-                        }
-                    }
-                    return Result(saveSource!(R.length).expand);
+                    auto saveI(size_t i)(){return source[i].save;}
+
+                    auto saveResult
+                        = Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
+                    saveResult.frontIndex = frontIndex;
+                    static if (bidirectional) saveResult.backIndex = backIndex;
+                    return saveResult;
                 }
 
             void popFront()
             {
-                foreach (i, Unused; R)
+                sw1: switch(frontIndex)
                 {
-                    if (source[i].empty) continue;
-                    source[i].popFront();
-                    return;
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        source[i].popFront();
+                        break sw1;
+                    }
+
+                case R.length:
+                    assert(0, "Attempt to `popFront` of empty `chain` range");
+
+                default:
+                    assert(0, "Shouldn't be possible to end up here");
                 }
-                assert(false, "Attempt to `popFront` of empty `chain` range");
+
+                sw2: switch(frontIndex)
+                {
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        if (source[i].empty)
+                        {
+                            frontIndex++;
+                            goto case;
+                        }
+                        else break sw2;
+                    }
+
+                // Only possible to reach from goto of previous case.
+                case R.length:
+                    break;
+
+                default:
+                    assert(0, "Shouldn't be possible to end up here");
+                }
             }
 
             @property auto ref front()
             {
-                foreach (i, Unused; R)
+                switch(frontIndex)
                 {
-                    if (source[i].empty) continue;
-                    return fixRef(source[i].front);
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        return fixRef(source[i].front);
+                    }
+
+                case R.length:
+                    assert(0, "Attempt to get `front` of empty `chain` range");
+
+                default:
+                    assert(0, "Shouldn't be possible to end up here");
                 }
-                assert(false, "Attempt to get `front` of empty `chain` range");
             }
 
-            static if (allSameType && allSatisfy!(hasAssignableElements, R))
+            static if (assignableElements)
             {
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
 
                 @property void front(RvalueElementType v)
                 {
-                    foreach (i, Unused; R)
+                    sw: switch(frontIndex)
                     {
-                        if (source[i].empty) continue;
-                        source[i].front = v;
-                        return;
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            source[i].front = v;
+                            break sw;
+                        }
+
+                    case R.length:
+                        assert(0, "Attempt to set `front` of empty `chain` range");
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    assert(false, "Attempt to set `front` of empty `chain` range");
                 }
             }
 
-            static if (allSatisfy!(hasMobileElements, R))
+            static if (mobileElements)
             {
                 RvalueElementType moveFront()
                 {
-                    foreach (i, Unused; R)
+                    switch(frontIndex)
                     {
-                        if (source[i].empty) continue;
-                        return source[i].moveFront();
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            return source[i].moveFront();
+                        }
+
+                    case R.length:
+                        assert(0, "Attempt to `moveFront` of empty `chain` range");
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    assert(false, "Attempt to `moveFront` of empty `chain` range");
                 }
             }
 
-            static if (allSatisfy!(isBidirectionalRange, R))
+            static if (bidirectional)
             {
                 @property auto ref back()
                 {
-                    foreach_reverse (i, Unused; R)
+                    switch (backIndex)
                     {
-                        if (source[i].empty) continue;
-                        return fixRef(source[i].back);
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            return fixRef(source[i-1].back);
+                        }
+
+                    case 0:
+                        assert(0, "Attempt to get `back` of empty `chain` range");
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    assert(false, "Attempt to get `back` of empty `chain` range");
                 }
 
                 void popBack()
                 {
-                    foreach_reverse (i, Unused; R)
+                    sw1: switch(backIndex)
                     {
-                        if (source[i].empty) continue;
-                        source[i].popBack();
-                        return;
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            source[i-1].popBack();
+                            break sw1;
+                        }
+
+                    case 0:
+                        assert(0, "Attempt to `popFront` of empty `chain` range");
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    assert(false, "Attempt to `popBack` of empty `chain` range");
+
+                    sw2: switch(backIndex)
+                    {
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            if (source[i-1].empty)
+                            {
+                                backIndex--;
+                                goto case;
+                            }
+                            else break sw2;
+                        }
+
+                    // Only possible to reach from goto of previous case.
+                    case 0:
+                        break;
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
+                    }
                 }
 
-                static if (allSatisfy!(hasMobileElements, R))
+                static if (mobileElements)
                 {
                     RvalueElementType moveBack()
                     {
-                        foreach_reverse (i, Unused; R)
+                        switch(backIndex)
                         {
-                            if (source[i].empty) continue;
-                            return source[i].moveBack();
+                            static foreach_reverse (i; 1 .. R.length + 1)
+                            {
+                            case i:
+                                return source[i-1].moveBack();
+                            }
+
+                        case 0:
+                            assert(0, "Attempt to `moveBack` of empty `chain` range");
+
+                        default:
+                            assert(0, "Shouldn't be possible to end up here");
                         }
-                        assert(false, "Attempt to `moveBack` of empty `chain` range");
                     }
                 }
 
@@ -1069,13 +1173,21 @@ if (Ranges.length > 0 &&
                 {
                     @property void back(RvalueElementType v)
                     {
-                        foreach_reverse (i, Unused; R)
+                        sw: switch (backIndex)
                         {
-                            if (source[i].empty) continue;
-                            source[i].back = v;
-                            return;
+                            static foreach_reverse (i; 1 .. R.length + 1)
+                            {
+                            case i:
+                                source[i-1].back = v;
+                                break sw;
+                            }
+
+                        case 0:
+                            assert(0, "Attempt to set `back` of empty `chain` range");
+
+                        default:
+                            assert(0, "Shouldn't be possible to end up here");
                         }
-                        assert(false, "Attempt to set `back` of empty `chain` range");
                     }
                 }
             }
@@ -1084,11 +1196,24 @@ if (Ranges.length > 0 &&
             {
                 @property size_t length()
                 {
-                    size_t result;
-                    foreach (i, Unused; R)
+                    size_t result = 0;
+                    sw: switch (frontIndex)
                     {
-                        result += source[i].length;
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            result += source[i].length;
+                            if (backIndex == i+1) break sw;
+                            else goto case;
+                        }
+
+                    case R.length:
+                        break;
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
+
                     return result;
                 }
 
@@ -1099,64 +1224,91 @@ if (Ranges.length > 0 &&
             {
                 auto ref opIndex(size_t index)
                 {
-                    foreach (i, Range; R)
+                    switch (frontIndex)
                     {
-                        static if (isInfinite!(Range))
+                        static foreach (i; 0 .. R.length)
                         {
-                            return source[i][index];
+                        case i:
+                            static if (!isInfinite!(R[i]))
+                            {
+                                immutable length = source[i].length;
+                                if (index >= length)
+                                {
+                                    index -= length;
+                                    goto case;
+                                }
+                            }
+
+                            return fixRef(source[i][index]);
                         }
-                        else
-                        {
-                            immutable length = source[i].length;
-                            if (index < length) return fixRef(source[i][index]);
-                            index -= length;
-                        }
+
+                    case R.length:
+                        assert(0, "Attempt to access out-of-bounds index of `chain` range");
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    assert(false, "Attempt to access out-of-bounds index of `chain` range");
                 }
 
-                static if (allSatisfy!(hasMobileElements, R))
+                static if (mobileElements)
                 {
                     RvalueElementType moveAt(size_t index)
                     {
-                        foreach (i, Range; R)
+                        switch (frontIndex)
                         {
-                            static if (isInfinite!(Range))
+                            static foreach (i; 0 .. R.length)
                             {
+                            case i:
+                                static if (!isInfinite!(R[i]))
+                                {
+                                    immutable length = source[i].length;
+                                    if (index >= length)
+                                    {
+                                        index -= length;
+                                        goto case;
+                                    }
+                                }
+
                                 return source[i].moveAt(index);
                             }
-                            else
-                            {
-                                immutable length = source[i].length;
-                                if (index < length) return source[i].moveAt(index);
-                                index -= length;
-                            }
+
+                        case R.length:
+                            assert(0, "Attempt to move out-of-bounds index of `chain` range");
+
+                        default:
+                            assert(0, "Shouldn't be possible to end up here");
                         }
-                        assert(false, "Attempt to move out-of-bounds index of `chain` range");
                     }
                 }
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
                     void opIndexAssign(ElementType v, size_t index)
                     {
-                        foreach (i, Range; R)
+                        sw: switch (frontIndex)
                         {
-                            static if (isInfinite!(Range))
+                            static foreach (i; 0 .. R.length)
                             {
-                                source[i][index] = v;
-                            }
-                            else
-                            {
-                                immutable length = source[i].length;
-                                if (index < length)
+                            case i:
+                                static if (!isInfinite!(R[i]))
                                 {
-                                    source[i][index] = v;
-                                    return;
+                                    immutable length = source[i].length;
+                                    if (index >= length)
+                                    {
+                                        index -= length;
+                                        goto case;
+                                    }
                                 }
-                                index -= length;
+
+                                source[i][index] = v;
+                                break sw;
                             }
+
+                        case R.length:
+                            assert(0, "Attempt to write out-of-bounds index of `chain` range");
+
+                        default:
+                            assert(0, "Shouldn't be possible to end up here");
                         }
-                        assert(false, "Attempt to write out-of-bounds index of `chain` range");
                     }
             }
 
@@ -1164,40 +1316,74 @@ if (Ranges.length > 0 &&
                 auto opSlice(size_t begin, size_t end) return scope
                 {
                     auto result = this;
-                    foreach (i, Unused; R)
+
+                    sw: switch (frontIndex)
                     {
-                        immutable len = result.source[i].length;
-                        if (len < begin)
+                        static foreach (i; 0 .. R.length)
                         {
-                            result.source[i] = result.source[i]
-                                [len .. len];
-                            begin -= len;
+                        case i:
+                            immutable len = result.source[i].length;
+                            if (len <= begin)
+                            {
+                                result.source[i] = result.source[i]
+                                    [len .. len];
+                                begin -= len;
+                                result.frontIndex++;
+                                goto case;
+                            }
+                            else
+                            {
+                                result.source[i] = result.source[i]
+                                    [begin .. len];
+                                break sw;
+                            }
                         }
-                        else
-                        {
-                            result.source[i] = result.source[i]
-                                [begin .. len];
-                            break;
-                        }
+
+                    case R.length:
+                        assert(begin == 0,
+                            "Attempt to access out-of-bounds slice of `chain` range");
+                        break;
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
-                    auto cut = length;
-                    cut = cut <= end ? 0 : cut - end;
-                    foreach_reverse (i, Unused; R)
+
+                    // Overflow intentional if end index too big.
+                    // This will trigger the bounds check failure below.
+                    auto cut = length - end;
+
+                    sw2: switch (backIndex)
                     {
-                        immutable len = result.source[i].length;
-                        if (cut > len)
+                        static foreach_reverse (i; 1 .. R.length + 1)
                         {
-                            result.source[i] = result.source[i]
-                                [0 .. 0];
-                            cut -= len;
+                        case i:
+                            immutable len = result.source[i-1].length;
+                            if (len <= cut)
+                            {
+                                result.source[i-1] = result.source[i-1]
+                                    [0 .. 0];
+                                cut -= len;
+                                result.backIndex--;
+                                goto case;
+                            }
+                            else
+                            {
+                                result.source[i-1] = result.source[i-1]
+                                    [0 .. len - cut];
+                                break sw2;
+                            }
                         }
-                        else
-                        {
-                            result.source[i] = result.source[i]
-                                [0 .. len - cut];
-                            break;
-                        }
+
+                    case 0:
+                        assert(cut == 0, end > length?
+                            "Attempt to access out-of-bounds slice of `chain` range":
+                            "Attempt to access negative length slice of `chain` range");
+                        break sw2;
+
+                    default:
+                        assert(0, "Shouldn't be possible to end up here");
                     }
+
                     return result;
                 }
         }
@@ -1293,6 +1479,10 @@ pure @safe nothrow unittest
         auto s = chain(arr1, arr2, arr3);
         assert(s[5] == 6);
         assert(equal(s, witness));
+        assert(s[4 .. 6].equal(arr2));
+        assert(s[2 .. 5].equal([3, 4, 5]));
+        assert(s[0 .. 0].empty);
+        assert(s[7 .. $].empty);
         assert(s[5] == 6);
     }
     {
