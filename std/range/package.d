@@ -2313,12 +2313,12 @@ if (isInputRange!(Unqual!Range) &&
         /// ditto
         @property void front(ElementType!R v)
         {
+            import std.algorithm.mutation : move;
+
             assert(!empty,
                 "Attempting to assign to the front of an empty "
                 ~ Take.stringof);
-            // This has to return auto instead of void because of
-            // https://issues.dlang.org/show_bug.cgi?id=4706
-            source.front = v;
+            source.front = move(v);
         }
 
     static if (hasMobileElements!R)
