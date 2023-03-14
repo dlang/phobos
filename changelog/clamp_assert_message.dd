@@ -1,0 +1,8 @@
+Better static assert messages for `std.algorithm.comparison.clamp`
+
+Until now, `clamp` used a template constraint to check if the passed types
+could be used. If they were not, it was very tedious to figure out why.
+
+As the template constraint is not used for overload resolution
+the constrains are moved into static asserts with expressive error
+messages.
