@@ -949,13 +949,29 @@ if (Ranges.length > 0 &&
                 frontIndex = source.length;
                 static if (bidirectional) backIndex = 0;
 
-                foreach (i, v; input)
+                foreach (i, ref v; input) source[i] = v;
+
+                // We do this separately to avoid invoking `empty` needlessly.
+                // While not recommended, a range may depend on side effects of
+                // `empty` call.
+                foreach (i, ref v; input) if (!v.empty)
                 {
-                    source[i] = v;
-                    if (!v.empty)
+                    frontIndex = i;
+                    static if (bidirectional) backIndex = i+1;
+                    break;
+                }
+
+                // backIndex is already set in the first loop to
+                // as frontIndex+1, so we'll use that if we don't find a
+                // non-empty range here.
+                static if (bidirectional)
+                    static foreach_reverse (i; 1 .. R.length + 1)
+                {
+                    if (i <= frontIndex + 1) return;
+                    if (!input[i-1].empty)
                     {
-                        if (i < frontIndex) frontIndex = i;
-                        static if (bidirectional) backIndex = i+1;
+                        backIndex = i;
+                        return;
                     }
                 }
             }
@@ -999,7 +1015,7 @@ if (Ranges.length > 0 &&
                     assert(0, "Attempt to `popFront` of empty `chain` range");
 
                 default:
-                    assert(0, "Shouldn't be possible to end up here");
+                    assert(0, "Internal library error. Please report it.");
                 }
 
                 sw2: switch (frontIndex)
@@ -1020,7 +1036,7 @@ if (Ranges.length > 0 &&
                     break;
 
                 default:
-                    assert(0, "Shouldn't be possible to end up here");
+                    assert(0, "Internal library error. Please report it.");
                 }
             }
 
@@ -1038,7 +1054,7 @@ if (Ranges.length > 0 &&
                     assert(0, "Attempt to get `front` of empty `chain` range");
 
                 default:
-                    assert(0, "Shouldn't be possible to end up here");
+                    assert(0, "Internal library error. Please report it.");
                 }
             }
 
@@ -1062,7 +1078,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Attempt to set `front` of empty `chain` range");
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
                 }
             }
@@ -1083,7 +1099,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Attempt to `moveFront` of empty `chain` range");
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
                 }
             }
@@ -1104,7 +1120,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Attempt to get `back` of empty `chain` range");
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
                 }
 
@@ -1123,7 +1139,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Attempt to `popFront` of empty `chain` range");
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
 
                     sw2: switch (backIndex)
@@ -1144,7 +1160,7 @@ if (Ranges.length > 0 &&
                         break;
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
                 }
 
@@ -1164,7 +1180,7 @@ if (Ranges.length > 0 &&
                             assert(0, "Attempt to `moveBack` of empty `chain` range");
 
                         default:
-                            assert(0, "Shouldn't be possible to end up here");
+                            assert(0, "Internal library error. Please report it.");
                         }
                     }
                 }
@@ -1186,7 +1202,7 @@ if (Ranges.length > 0 &&
                             assert(0, "Attempt to set `back` of empty `chain` range");
 
                         default:
-                            assert(0, "Shouldn't be possible to end up here");
+                            assert(0, "Internal library error. Please report it.");
                         }
                     }
                 }
@@ -1211,7 +1227,7 @@ if (Ranges.length > 0 &&
                         break;
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
 
                     return result;
@@ -1246,7 +1262,7 @@ if (Ranges.length > 0 &&
                         assert(0, "Attempt to access out-of-bounds index of `chain` range");
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
                 }
 
@@ -1276,7 +1292,7 @@ if (Ranges.length > 0 &&
                             assert(0, "Attempt to move out-of-bounds index of `chain` range");
 
                         default:
-                            assert(0, "Shouldn't be possible to end up here");
+                            assert(0, "Internal library error. Please report it.");
                         }
                     }
                 }
@@ -1307,7 +1323,7 @@ if (Ranges.length > 0 &&
                             assert(0, "Attempt to write out-of-bounds index of `chain` range");
 
                         default:
-                            assert(0, "Shouldn't be possible to end up here");
+                            assert(0, "Internal library error. Please report it.");
                         }
                     }
             }
@@ -1345,7 +1361,7 @@ if (Ranges.length > 0 &&
                         break;
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
 
                     // Overflow intentional if end index too big.
@@ -1381,7 +1397,7 @@ if (Ranges.length > 0 &&
                         break sw2;
 
                     default:
-                        assert(0, "Shouldn't be possible to end up here");
+                        assert(0, "Internal library error. Please report it.");
                     }
 
                     return result;
