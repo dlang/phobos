@@ -985,20 +985,24 @@ if (Ranges.length > 0 &&
             }
             else
             {
-                @property bool empty() {return frontIndex >= backIndex;}
+                @property bool empty() => frontIndex >= backIndex;
             }
 
             static if (allSatisfy!(isForwardRange, R))
+            {
                 @property auto save()
                 {
-                    auto saveI(size_t i)(){return source[i].save;}
+                    auto saveI(size_t i)() => source[i].save;
 
-                    auto saveResult
-                        = Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
-                    saveResult.frontIndex = frontIndex;
-                    static if (bidirectional) saveResult.backIndex = backIndex;
+                    // TODO: this has the constructor needlessly refind
+                    // frontIndex and backIndex. It'd be better to just copy
+                    // those from `.this`.
+                    auto saveResult =
+                        Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
+
                     return saveResult;
                 }
+            }
 
             void popFront()
             {
