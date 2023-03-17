@@ -23,7 +23,7 @@ SMTP) )
 )
 
 Note:
-You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
+You may need to link with the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
 to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
@@ -32,9 +32,9 @@ $(LINK2 https://downloads.dlang.org/other/index.html, download archive page).
 
 This module is not available for iOS, tvOS or watchOS.
 
-Compared to using libcurl directly this module allows simpler client code for
+Compared to using libcurl directly, this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
-of the language. Futhermore it provides $(MREF_ALTTEXT range, std,range)
+of the language. Furthermore it provides $(MREF_ALTTEXT range, std,range)
 access to protocols supported by libcurl both synchronously and asynchronously.
 
 A high level and a low level API are available. The high level API is built
@@ -147,8 +147,8 @@ Copyright: Copyright Jonas Drewsen 2011-2012
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
-Credits: The functionally is based on $(HTTP curl.haxx.se/libcurl, libcurl).
-         LibCurl is licensed under an MIT/X derivative license.
+Credits: The functionality is based on $(HTTP curl.haxx.se/libcurl, libcurl).
+         libcurl is licensed under an MIT/X derivative license.
 */
 /*
          Copyright Jonas Drewsen 2011 - 2012.
