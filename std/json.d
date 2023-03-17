@@ -1,7 +1,10 @@
 // Written in the D programming language.
 
 /**
-JavaScript Object Notation
+Implements functionality to read and write JavaScript Object Notation values.
+
+JavaScript Object Notation is a lightweight data interchange format commonly used in web services and configuration files.
+It's easy for humans to read and write, and it's easy for machines to parse and generate.
 
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
