@@ -1758,7 +1758,6 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 if (isSomeChar!C)
 {
     import std.array : array;
-    import std.exception : assumeUnique;
 
     const(C)[] chained;
     foreach (path; paths)
@@ -1772,6 +1771,26 @@ if (isSomeChar!C)
     // .array returns a copy, so it is unique
     return () @trusted { return assumeUnique(result.array); } ();
 }
+
+private immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
+{
+    return .assumeUnique(array);    // call ref version
+}
+
+private immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
+{
+    auto result = cast(immutable(T)[]) array;
+    array = null;
+    return result;
+}
+
+private immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
+{
+    auto result = cast(immutable(T[U])) array;
+    array = null;
+    return result;
+}
+
 
 ///
 @safe unittest
