@@ -534,7 +534,7 @@ Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library
-        $(HTTP cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
+        $(HTTP cplusplus.com/reference/cstdio/fopen, fopen)
         function)
 
 Throws: `ErrnoException` if the file could not be opened.
@@ -619,7 +619,7 @@ file.
 Detaches from the current file (throwing on failure), and then attempts to
 _open file `name` with mode `stdioOpenmode`. The mode has the
 same semantics as in the C standard library $(HTTP
-cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
+cplusplus.com/reference/cstdio/fopen, fopen) function.
 
 Throws: `ErrnoException` in case of error.
  */
@@ -933,7 +933,7 @@ Throws: `ErrnoException` in case of error.
 
 /**
 Returns `true` if the file is at end (see $(HTTP
-cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
+cplusplus.com/reference/cstdio/feof, feof)).
 
 Throws: `Exception` if the file is not opened.
  */
@@ -961,7 +961,7 @@ Throws: `Exception` if the file is not opened.
 
 /**
 If the file is closed or not yet opened, returns `true`. Otherwise, returns
-$(HTTP cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
+$(HTTP cplusplus.com/reference/cstdio/ferror, ferror) for
 the file handle.
  */
     @property bool error() const @trusted pure nothrow
@@ -1018,7 +1018,7 @@ Throws: `ErrnoException` on failure if closing the file.
 /**
 If the file was closed or not yet opened, succeeds vacuously. Otherwise
 closes the file (by calling $(HTTP
-cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
+cplusplus.com/reference/cstdio/fclose, fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from `detach` in that it
 always closes the file; consequently, all other `File` objects
@@ -1046,7 +1046,7 @@ Throws: `ErrnoException` on error.
 
 /**
 If the file is closed or not yet opened, succeeds vacuously. Otherwise, returns
-$(HTTP cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
+$(HTTP cplusplus.com/reference/cstdio/clearerr,
 _clearerr) for the file handle.
  */
     void clearerr() @safe pure nothrow
@@ -1058,7 +1058,7 @@ _clearerr) for the file handle.
 /**
 Flushes the C `FILE` buffers.
 
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
+Calls $(HTTP cplusplus.com/reference/cstdio/fflush, _fflush)
 for the file handle.
 
 Throws: `Exception` if the file is not opened or if the call to `fflush` fails.
@@ -1125,7 +1125,7 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
+Calls $(HTTP cplusplus.com/reference/cstdio/fread, fread) for the
 file handle. The number of items to read and the size of
 each item is inferred from the size and type of the input array, respectively.
 
@@ -1220,7 +1220,7 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+Calls $(HTTP cplusplus.com/reference/cstdio/fwrite, fwrite) for the file
 handle. The number of items to write and the size of each
 item is inferred from the size and type of the input array, respectively. An
 error is thrown if the buffer could not be written in its entirety.
@@ -1290,7 +1290,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
+Calls $(HTTP cplusplus.com/reference/cstdio/fseek, fseek)
 for the file handle to move its position indicator.
 
 Params:
@@ -1420,7 +1420,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind)
+Calls $(HTTP cplusplus.com/reference/cstdio/rewind, _rewind)
 for the file handle.
 
 Throws: `Exception` if the file is not opened.
@@ -1434,7 +1434,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
+Calls $(HTTP cplusplus.com/reference/cstdio/setvbuf, _setvbuf) for
 the file handle.
 
 Throws: `Exception` if the file is not opened.
@@ -1450,7 +1450,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
+Calls $(HTTP cplusplus.com/reference/cstdio/setvbuf,
 _setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
@@ -2253,7 +2253,7 @@ $(CONSOLE
 
 /**
  Returns a temporary file by calling
- $(HTTP cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
+ $(HTTP cplusplus.com/reference/cstdio/tmpfile, _tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
     {
