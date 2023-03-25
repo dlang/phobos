@@ -4037,7 +4037,9 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 /** Returns an array of the minimum and maximum element in `r`.
- * Makes `< 3n/2` comparisons.
+ * Performs `< 3n/2` comparisons, unlike the naive `< 2n`.
+ * Params:
+ *  r = The range to traverse.
  */
 // TODO alias map = a => a
 ElementType!Range[2] extrema(Range)(Range r)
@@ -4082,15 +4084,20 @@ in (!r.empty)
     return result;
 }
 
-unittest
+///
+@safe unittest
 {
     assert(extrema([5,2,9,4,1]) == [1, 9]);
+}
+
+@safe unittest
+{
     assert(extrema([8,3,7,4,9]) == [3, 9]);
     assert(extrema([1,5,3,2]) == [1, 5]);
     assert(extrema([2,3,3,2]) == [2, 3]);
 
     version (StdRandomTests)
-    foreach (i; 0..1000)
+    foreach (i; 0 .. 1000)
     {
         import std.random, std.range;
         auto arr = generate!(() => uniform(0, 100)).takeExactly(uniform(1, 10)).array;
