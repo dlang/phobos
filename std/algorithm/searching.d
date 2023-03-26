@@ -4140,14 +4140,21 @@ in (!r.empty)
     assert(extrema([1,5,3,2]) == [1, 5]);
     assert(extrema([2,3,3,2]) == [2, 3]);
 
+    import std.range;
+    assert(iota(2, 5).extrema == [2, 4]);
+    assert(iota(3, 7).retro.extrema == [3, 6]);
+
     import std.internal.test.dummyrange;
-    DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) r;
-    assert(r.extrema == [1u, 10u]);
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.extrema == [1, 10]);
+    }
 
     version (StdRandomTests)
     foreach (i; 0 .. 1000)
     {
-        import std.random, std.range;
+        import std.random;
         auto arr = generate!(() => uniform(0, 100)).takeExactly(uniform(1, 10)).array;
         auto result = arr.extrema;
         assert(result[0] == arr.minElement);
