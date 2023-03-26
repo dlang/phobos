@@ -4043,45 +4043,89 @@ if (isInputRange!Range && !isInfinite!Range &&
  */
 // TODO alias map = a => a
 ElementType!Range[2] extrema(Range)(Range r)
-if (isRandomAccessRange!Range && hasLength!Range)
+if (isInputRange!Range && !isInfinite!Range)
 in (!r.empty)
 {
-    if (r.length == 1)
-        return [r[0], r[0]];
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        if (r.length == 1)
+            return [r[0], r[0]];
 
-    typeof(return) result;
-    size_t i;
-    if (r.length & 1) // odd
-    {
-        result = [r[0], r[0]];
-        i = 1;
-    }
-    else
-    {
-        result = (r[0] < r[1]) ? [r[0], r[1]] : [r[1], r[0]];
-        i = 2;
-    }
-    // iterate pairs
-    const imax = r.length;
-    for (; i != imax; i += 2)
-    {
-        // save work
-        if (r[i] < r[i+1])
+        typeof(return) result;
+        size_t i;
+        if (r.length & 1) // odd
         {
-            if (r[i] < result[0])
-                result[0] = r[i];
-            if (r[i+1] > result[1])
-                result[1] = r[i+1];
+            result = [r[0], r[0]];
+            i = 1;
         }
         else
         {
-            if (r[i+1] < result[0])
-                result[0] = r[i+1];
-            if (r[i] > result[1])
-                result[1] = r[i];
+            result = (r[0] < r[1]) ? [r[0], r[1]] : [r[1], r[0]];
+            i = 2;
+        }
+        // iterate pairs
+        const imax = r.length;
+        for (; i != imax; i += 2)
+        {
+            // save work
+            if (r[i] < r[i+1])
+            {
+                if (r[i] < result[0])
+                    result[0] = r[i];
+                if (r[i+1] > result[1])
+                    result[1] = r[i+1];
+            }
+            else
+            {
+                if (r[i+1] < result[0])
+                    result[0] = r[i+1];
+                if (r[i] > result[1])
+                    result[1] = r[i];
+            }
+        }
+        return result;
+    }
+    else
+    {
+        auto first = r.front;
+        r.popFront;
+        if (r.empty)
+            return [first, first];
+
+        typeof(return) result = (first < r.front) ? [first, r.front] : [r.front, first];
+        // iterate pairs
+        while (true)
+        {
+            r.popFront;
+            if (r.empty)
+                return result;
+            first = r.front;
+            r.popFront;
+            if (r.empty)
+            {
+                if (first < result[0])
+                    result[0] = first;
+                else if (first > result[1])
+                    result[1] = first;
+                return result;
+            }
+            // save work
+            if (first < r.front)
+            {
+                if (first < result[0])
+                    result[0] = first;
+                if (r.front > result[1])
+                    result[1] = r.front;
+            }
+            else
+            {
+                if (r.front < result[0])
+                    result[0] = r.front;
+                if (first > result[1])
+                    result[1] = first;
+            }
         }
     }
-    return result;
 }
 
 ///
@@ -4095,6 +4139,10 @@ in (!r.empty)
     assert(extrema([8,3,7,4,9]) == [3, 9]);
     assert(extrema([1,5,3,2]) == [1, 5]);
     assert(extrema([2,3,3,2]) == [2, 3]);
+
+    import std.internal.test.dummyrange;
+    DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) r;
+    assert(r.extrema == [1u, 10u]);
 
     version (StdRandomTests)
     foreach (i; 0 .. 1000)
