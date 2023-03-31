@@ -1313,8 +1313,8 @@ returned.
 Params:
     map = custom accessor for the comparison key
     selector = custom mapping for the extrema selection
-    seed = custom seed to use as initial element
     r = Range from which the extreme value will be selected
+    seedElement = custom seed to use as initial element
 
 Returns:
     The extreme value according to `map` and `selector` of the passed-in values.
@@ -1552,7 +1552,7 @@ Complexity:
     `find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
     There are specializations that improve performance by taking
     advantage of $(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives)
-    or $(REF_ALTTEXT random access, isRandomAccess, std,range,primitives)
+    or $(REF_ALTTEXT random access, isRandomAccessRange, std,range,primitives)
     ranges (where possible).
 
 Params:
