@@ -1,8 +1,0 @@
-Better static assert messages for `std.algorithm.iteration.joiner`
-
-Up until now `filter` used a template constraint to check if the passed Data
-could be used. If it were not, it was very tedious to figure out why.
-
-As the template constraint is not used to overload the symbol template
-function, the constrains are move into static asserts with expressive error
-messages.

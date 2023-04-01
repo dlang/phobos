@@ -1,8 +1,0 @@
-Unicode grapheme walking updated to conform to Unicode version 15
-
-Up until now `graphemeStride`, `byGrapheme` and `decodeGrapheme` functions in
-`std.uni` have used obsolete rules from earlier Unicode standards.
-
-This release brings grapheme breaking rules up to date with Unicode version 15.
-This means Phobos functions now recognise extended pictogram sequences and
-prepend characters.
