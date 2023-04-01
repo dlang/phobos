@@ -887,7 +887,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      * Returns:
      *   true if node was added
      */
-    private bool _add(return scope Elem n)
+    private bool _add(Elem n)
     {
         Node result;
         static if (!allowDuplicates)
@@ -1282,7 +1282,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH m * log(n))
      */
-    size_t stableInsert(Stuff)(scope Stuff stuff)
+    size_t stableInsert(Stuff)(Stuff stuff)
         if (isInputRange!Stuff &&
             isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
@@ -2117,7 +2117,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     auto rbt3 = redBlackTree(chain([0, 1], [7, 5]));
     assert(equal(rbt3[], [0, 1, 5, 7]));
 
-    auto rbt4 = redBlackTree(chain(["hello"], ["world"]));
+    auto rbt4 = redBlackTree(chain(["hello"].idup, ["world"].idup));
     assert(equal(rbt4[], ["hello", "world"]));
 
     auto rbt5 = redBlackTree!true(chain([0, 1], [5, 7, 5]));
