@@ -119,12 +119,9 @@ template all(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
-    if (isInputRange!Range)
+    if (isInputRange!Range &&
+        (__traits(isTemplate, pred) || is(typeof(unaryFun!pred(range.front)))))
     {
-        static assert(is(typeof(unaryFun!pred(range.front))),
-                "`" ~ (isSomeString!(typeof(pred))
-                    ? pred.stringof[1..$-1] : pred.stringof)
-                ~ "` isn't a unary predicate function for range.front");
         import std.functional : not;
 
         return find!(not!(unaryFun!pred))(range).empty;
@@ -172,7 +169,8 @@ template any(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range &&
+        (__traits(isTemplate, pred) || is(typeof(unaryFun!pred(range.front)))))
     {
         return !find!pred(range).empty;
     }
