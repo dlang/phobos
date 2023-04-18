@@ -2259,7 +2259,7 @@ enum isTuple(T) = __traits(compiles,
 
 // used by both Rebindable and UnqualRef
 private mixin template RebindableCommon(T, U, alias This)
-if (is(T == class) || is(T == interface) || isAssociativeArray!T)
+if (is(T == class) || is(T == interface) || isAssociativeArray!T || isArray!T)
 {
     private union
     {
@@ -2337,24 +2337,9 @@ Params:
 template Rebindable(T)
 if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
-    static if (is(T == const U, U) || is(T == immutable U, U))
+    struct Rebindable
     {
-        static if (isDynamicArray!T)
-        {
-            import std.range.primitives : ElementEncodingType;
-            alias Rebindable = const(ElementEncodingType!T)[];
-        }
-        else
-        {
-            struct Rebindable
-            {
-                mixin RebindableCommon!(T, U, Rebindable);
-            }
-        }
-    }
-    else
-    {
-        alias Rebindable = T;
+        mixin RebindableCommon!(T, typeof(cast() T.init), Rebindable);
     }
 }
 
@@ -2876,7 +2861,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
       @property int bar() const { return 23; }
     }
     Rebindable!(C) obj0;
-    static assert(is(typeof(obj0) == C));
+    static assert(is(typeof(obj0.get) == C));
 
     Rebindable!(const(C)) obj1;
     static assert(is(typeof(obj1.get) == const(C)), typeof(obj1.get).stringof);
@@ -2898,7 +2883,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
     interface I { final int foo() const { return 42; } }
     Rebindable!(I) obj3;
-    static assert(is(typeof(obj3) == I));
+    static assert(is(typeof(obj3.get) == I));
 
     Rebindable!(const I) obj4;
     static assert(is(typeof(obj4.get) == const I));
@@ -2938,13 +2923,6 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
     // https://issues.dlang.org/show_bug.cgi?id=7654
     immutable(char[]) s7654;
     Rebindable!(typeof(s7654)) r7654 = s7654;
-
-    static foreach (T; AliasSeq!(char, wchar, char, int))
-    {
-        static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
-        static assert(is(Rebindable!(const(T[])) == const(T)[]));
-        static assert(is(Rebindable!(T[]) == T[]));
-    }
 
     // Pull request 3341
     Rebindable!(immutable int[int]) pr3341 = [123:345];
