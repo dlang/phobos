@@ -1498,6 +1498,10 @@ if (isInputRange!Range && !isInfinite!Range &&
         assert(d.extremum!`a > b` == 10);
         assert(d.extremum!(a => a, `a > b`) == 10);
     }
+
+    // compiletime
+    enum ctExtremum = iota(1, 5).extremum;
+    assert(ctExtremum == 1);
 }
 
 @nogc @safe nothrow pure unittest

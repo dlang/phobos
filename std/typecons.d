@@ -2400,20 +2400,31 @@ struct Rebindable(T)
 if (!is(T == class) && !is(T == interface) && !isDynamicArray!T && !isAssociativeArray!T)
 {
 private:
-    align(T.alignof)
-    static struct Payload
+    static if (isAssignable!(typeof(cast() T.init)))
     {
-        static if (hasIndirections!T)
-        {
-            void[T.sizeof] data;
-        }
-        else
-        {
-            ubyte[T.sizeof] data;
-        }
-    }
+        enum useQualifierCast = true;
 
-    Payload data;
+        typeof(cast() T.init) data;
+    }
+    else
+    {
+        enum useQualifierCast = false;
+
+        align(T.alignof)
+        static struct Payload
+        {
+            static if (hasIndirections!T)
+            {
+                void[T.sizeof] data;
+            }
+            else
+            {
+                ubyte[T.sizeof] data;
+            }
+        }
+
+        Payload data;
+    }
 
 public:
 
@@ -2427,7 +2438,14 @@ public:
      */
     this(T value) @trusted
     {
-        set(value);
+        static if (useQualifierCast)
+        {
+            this.data = cast() value;
+        }
+        else
+        {
+            set(value);
+        }
     }
 
     /**
@@ -2444,12 +2462,22 @@ public:
      */
     T get(this This)() @property @trusted
     {
-        return *cast(T*) &this.data;
+        static if (useQualifierCast)
+        {
+            return cast(T) this.data;
+        }
+        else
+        {
+            return *cast(T*) &this.data;
+        }
     }
 
-    ~this() @trusted
+    static if (!useQualifierCast)
     {
-        clear;
+        ~this() @trusted
+        {
+            clear;
+        }
     }
 
     ///
@@ -2459,13 +2487,20 @@ private:
 
     void set(this This)(T value)
     {
-        // As we're escaping a copy of `value`, deliberately leak a copy:
-        static union DontCallDestructor
+        static if (useQualifierCast)
         {
-            T value;
+            this.data = cast() value;
         }
-        DontCallDestructor copy = DontCallDestructor(value);
-        this.data = *cast(Payload*) &copy;
+        else
+        {
+            // As we're escaping a copy of `value`, deliberately leak a copy:
+            static union DontCallDestructor
+            {
+                T value;
+            }
+            DontCallDestructor copy = DontCallDestructor(value);
+            this.data = *cast(Payload*) &copy;
+        }
     }
 
     void clear(this This)()
@@ -2709,6 +2744,32 @@ private:
     // test ref count
     {
         Rebindable!S rc = S(new int);
+    }
+    assert(post == del - 1);
+}
+
+@safe unittest
+{
+    int del;
+    int post;
+    struct S
+    {
+        immutable int x;
+        int level;
+        this(this)
+        {
+            post++;
+            level++;
+        }
+        ~this()
+        {
+            del++;
+        }
+    }
+
+    // test ref count
+    {
+        Rebindable!S rc = S(0);
     }
     assert(post == del - 1);
 }
