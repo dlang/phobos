@@ -4297,7 +4297,7 @@ if (isInputRange!RoR && isInputRange!(Unqual!(ElementType!RoR)))
 @safe unittest
 {
 
-    import std.algorithm : joiner, map;
+    import std.algorithm.iteration : joiner, map;
     import std.array : array;
 
     static immutable struct S
