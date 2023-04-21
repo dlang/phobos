@@ -2029,8 +2029,8 @@ if (is(MTEngine : MersenneTwisterEngine!Params, Params...))
 /**
 Generates a number between `a` and `b`. The `boundaries`
 parameter controls the shape of the interval (open vs. closed on
-either side). Valid values for `boundaries` are `"[]"`, $(D
-"$(LPAREN)]"), `"[$(RPAREN)"`, and `"()"`. The default interval
+either side). Valid values for `boundaries` are `"[]"`,
+`"(]"`, `"[)"`, and `"()"`. The default interval
 is closed to the left and open to the right. The version that does not
 take `urng` uses the default generator `rndGen`.
 

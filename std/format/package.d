@@ -202,8 +202,8 @@ compound type. This $(I format specifier) can be a $(I compound
 indicator) itself.
 
 Note: Inside a $(I compound indicator), strings and characters are
-escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
-instead of `"%$(LPAREN)"`.
+escaped automatically. To avoid this behavior, use `"%-("`
+instead of `"%("`.
 
 $(SECTION4 Flags)
 
@@ -307,7 +307,7 @@ $(UL
        inside of compound types are surrounded by single and double quotes
        and unprintable characters are escaped. To avoid this, a $(B '-')
        flag can be specified for the compound specifier
-       $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"` instead of `"%$(LPAREN)%s%$(RPAREN)"` $(RPAREN).)
+       (e.g. `"%-(%s%)"` instead of `"%(%s%)"`).)
   $(LI Structs, unions, classes and interfaces are formatted by calling a
        `toString` method if available.
        See $(MREF_ALTTEXT $(D module std.format.write), std, format, write) for more
@@ -417,7 +417,7 @@ $(BOOKTABLE ,
                  character is surrounded by single quotes and non printable
                  characters are escaped. This can be avoided by preceding
                  the compound indicator with a $(B '-') flag
-                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+                 (e.g. `"%-(%s%)"`).)
    )
    $(TR $(TD $(B 'b'), $(B 'd'), $(B 'o'), $(B 'u'), $(B 'x'), $(B 'X'))
             $(TD As the integral that represents the character.)
@@ -432,7 +432,7 @@ $(BOOKTABLE ,
                  Inside of a compound indicator the string is surrounded by double quotes
                  and non printable characters are escaped. This can be avoided
                  by preceding the compound indicator with a $(B '-') flag
-                 $(LPAREN)e.g. `"%-$(LPAREN)%s%$(RPAREN)"`$(RPAREN).)
+                 (e.g. `"%-(%s%)"`).)
    )
    $(TR $(TD $(B 'r'))
             $(TD The sequence of characters, each formatted with $(B 'r').)
