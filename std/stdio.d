@@ -44,7 +44,7 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
            Alex Rønne Petersen
 Macros:
-CSTDIO=$(HTTP cplusplus.com/reference/cstdio/$1/, _$1)
+CSTDIO=$(HTTP cplusplus.com/reference/cstdio/$1/, $1)
  */
 module std.stdio;
 
