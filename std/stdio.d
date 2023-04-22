@@ -536,8 +536,7 @@ Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library
-        $(CSTDIO fopen)
-        function)
+        $(CSTDIO fopen) function)
 
 Throws: `ErrnoException` if the file could not be opened.
  */
@@ -832,7 +831,7 @@ Throws: `ErrnoException` in case of error.
 Params:
     fd = File descriptor to associate with this `File`.
     stdioOpenmode = Mode to associate with this File. The mode has the same semantics
-        semantics as in the C standard library $(CSTDIO fdopen) function, 
+        semantics as in the C standard library $(CSTDIO fdopen) function,
         and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
@@ -960,8 +959,7 @@ Throws: `Exception` if the file is not opened.
 
 /**
 If the file is closed or not yet opened, returns `true`. Otherwise, returns
-$(CSTDIO ferror) for
-the file handle.
+$(CSTDIO ferror) for the file handle.
  */
     @property bool error() const @trusted pure nothrow
     {
@@ -1055,8 +1053,7 @@ $(CSTDIO clearerr) for the file handle.
 /**
 Flushes the C `FILE` buffers.
 
-Calls $(CSTDIO fflush)
-for the file handle.
+Calls $(CSTDIO fflush) for the file handle.
 
 Throws: `Exception` if the file is not opened or if the call to `fflush` fails.
  */
@@ -1417,8 +1414,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(CSTDIO rewind)
-for the file handle.
+Calls $(CSTDIO rewind) for the file handle.
 
 Throws: `Exception` if the file is not opened.
  */
@@ -1431,8 +1427,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(CSTDIO setvbuf) for
-the file handle.
+Calls $(CSTDIO setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `setvbuf` fails.
@@ -2248,8 +2243,7 @@ $(CONSOLE
     }
 
 /**
- Returns a temporary file by calling
- $(CSTDIO tmpfile).
+ Returns a temporary file by calling $(CSTDIO tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
     {
