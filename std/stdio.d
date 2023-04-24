@@ -43,6 +43,8 @@ License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
            Alex Rønne Petersen
+Macros:
+CSTDIO=$(HTTP cplusplus.com/reference/cstdio/$1/, $1)
  */
 module std.stdio;
 
@@ -534,8 +536,7 @@ Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library
-        $(HTTP cplusplus.com/reference/cstdio/fopen, fopen)
-        function)
+        $(CSTDIO fopen) function)
 
 Throws: `ErrnoException` if the file could not be opened.
  */
@@ -618,8 +619,7 @@ file.
 /**
 Detaches from the current file (throwing on failure), and then attempts to
 _open file `name` with mode `stdioOpenmode`. The mode has the
-same semantics as in the C standard library $(HTTP
-cplusplus.com/reference/cstdio/fopen, fopen) function.
+same semantics as in the C standard library $(CSTDIO fopen) function.
 
 Throws: `ErrnoException` in case of error.
  */
@@ -735,8 +735,7 @@ Reuses the `File` object to either open a different file, or change
 the file mode. If `name` is `null`, the mode of the currently open
 file is changed; otherwise, a new file is opened, reusing the C
 `FILE*`. The function has the same semantics as in the C standard
-library $(HTTP cplusplus.com/reference/cstdio/freopen/, freopen)
-function.
+library $(CSTDIO freopen) function.
 
 Note: Calling `reopen` with a `null` `name` is not implemented
 in all C runtimes.
@@ -832,8 +831,8 @@ Throws: `ErrnoException` in case of error.
 Params:
     fd = File descriptor to associate with this `File`.
     stdioOpenmode = Mode to associate with this File. The mode has the same semantics
-        semantics as in the C standard library
-        $(HTTP cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
+        semantics as in the C standard library $(CSTDIO fdopen) function,
+        and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
@@ -932,8 +931,7 @@ Throws: `ErrnoException` in case of error.
     }
 
 /**
-Returns `true` if the file is at end (see $(HTTP
-cplusplus.com/reference/cstdio/feof, feof)).
+Returns `true` if the file is at end (see $(CSTDIO feof)).
 
 Throws: `Exception` if the file is not opened.
  */
@@ -961,8 +959,7 @@ Throws: `Exception` if the file is not opened.
 
 /**
 If the file is closed or not yet opened, returns `true`. Otherwise, returns
-$(HTTP cplusplus.com/reference/cstdio/ferror, ferror) for
-the file handle.
+$(CSTDIO ferror) for the file handle.
  */
     @property bool error() const @trusted pure nothrow
     {
@@ -1017,8 +1014,7 @@ Throws: `ErrnoException` on failure if closing the file.
 
 /**
 If the file was closed or not yet opened, succeeds vacuously. Otherwise
-closes the file (by calling $(HTTP
-cplusplus.com/reference/cstdio/fclose, fclose)),
+closes the file (by calling $(CSTDIO fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from `detach` in that it
 always closes the file; consequently, all other `File` objects
@@ -1046,8 +1042,7 @@ Throws: `ErrnoException` on error.
 
 /**
 If the file is closed or not yet opened, succeeds vacuously. Otherwise, returns
-$(HTTP cplusplus.com/reference/cstdio/clearerr,
-_clearerr) for the file handle.
+$(CSTDIO clearerr) for the file handle.
  */
     void clearerr() @safe pure nothrow
     {
@@ -1058,8 +1053,7 @@ _clearerr) for the file handle.
 /**
 Flushes the C `FILE` buffers.
 
-Calls $(HTTP cplusplus.com/reference/cstdio/fflush, _fflush)
-for the file handle.
+Calls $(CSTDIO fflush) for the file handle.
 
 Throws: `Exception` if the file is not opened or if the call to `fflush` fails.
  */
@@ -1125,7 +1119,7 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/fread, fread) for the
+Calls $(CSTDIO fread) for the
 file handle. The number of items to read and the size of
 each item is inferred from the size and type of the input array, respectively.
 
@@ -1220,7 +1214,7 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/fwrite, fwrite) for the file
+Calls $(CSTDIO fwrite) for the file
 handle. The number of items to write and the size of each
 item is inferred from the size and type of the input array, respectively. An
 error is thrown if the buffer could not be written in its entirety.
@@ -1290,7 +1284,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/fseek, fseek)
+Calls $(CSTDIO fseek)
 for the file handle to move its position indicator.
 
 Params:
@@ -1374,7 +1368,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/ftell.html, ftell)
+Calls $(CSTDIO ftell)
 for the managed file handle, which returns the current value of
 the position indicator of the file handle.
 
@@ -1420,8 +1414,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/rewind, _rewind)
-for the file handle.
+Calls $(CSTDIO rewind) for the file handle.
 
 Throws: `Exception` if the file is not opened.
  */
@@ -1434,8 +1427,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/setvbuf, _setvbuf) for
-the file handle.
+Calls $(CSTDIO setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `setvbuf` fails.
@@ -1450,8 +1442,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/cstdio/setvbuf,
-_setvbuf) for the file handle.
+Calls $(CSTDIO setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `setvbuf` fails.
@@ -2252,8 +2243,7 @@ $(CONSOLE
     }
 
 /**
- Returns a temporary file by calling
- $(HTTP cplusplus.com/reference/cstdio/tmpfile, _tmpfile).
+ Returns a temporary file by calling $(CSTDIO tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
     {
