@@ -6202,8 +6202,15 @@ enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 }
 
 /**
- * Detect whether `T` is a built-in integral type. Types `bool`,
- * `char`, `wchar`, and `dchar` are not considered integral.
+ * Detect whether `T` is a built-in integral type.
+ * Integral types are `byte`, `ubyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `cent`, `ucent`,
+ * and enums with an integral type as its base type.
+ * Params:
+ *      T = type to test
+ * Returns:
+ *      `true` if `T` is an integral type
+ * Note:
+ *      this is not the same as $(LINK2 https://dlang.org/spec/traits.html#isIntegral, `__traits(isIntegral)`)
  */
 template isIntegral(T)
 {
