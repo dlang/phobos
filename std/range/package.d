@@ -8995,7 +8995,8 @@ public:
         {
             // `nextSource` is used to "look one step into the future" and check for the end
             // this means `nextSource` is advanced by `stepSize` on every `popFront`
-            nextSource = source.save.drop(windowSize);
+            nextSource = source.save;
+            auto poppedElems = nextSource.popFrontN(windowSize);
         }
 
         if (source.empty)
@@ -9008,7 +9009,7 @@ public:
         {
             static if (needsEndTracker)
             {
-                if (nextSource.empty)
+                if (poppedElems < windowSize)
                     hasShownPartialBefore = true;
             }
             else
@@ -9016,14 +9017,13 @@ public:
                 if (source.length <= windowSize)
                     hasShownPartialBefore = true;
             }
-
         }
         else
         {
             // empty source range is needed, s.t. length, slicing etc. works properly
             static if (needsEndTracker)
             {
-                if (nextSource.empty)
+                if (poppedElems < windowSize)
                      _empty = true;
             }
             else
@@ -9978,6 +9978,15 @@ public:
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
     assert([1].map!(x => x).slide(2).equal!equal([[1]]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=19642
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
+
+    assert("ab cd".splitter(' ').slide!(No.withPartial)(2).equal!equal([["ab", "cd"]]));
 }
 
 private struct OnlyResult(Values...)
