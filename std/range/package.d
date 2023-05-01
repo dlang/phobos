@@ -313,12 +313,16 @@ if (isBidirectionalRange!(Unqual!Range))
             {
                 @property void front(ElementType!R val)
                 {
-                    source.back = val;
+                    import std.algorithm.mutation : move;
+
+                    source.back = move(val);
                 }
 
                 @property void back(ElementType!R val)
                 {
-                    source.front = val;
+                    import std.algorithm.mutation : move;
+
+                    source.front = move(val);
                 }
             }
 
@@ -330,7 +334,9 @@ if (isBidirectionalRange!(Unqual!Range))
                 {
                     void opIndexAssign(ElementType!R val, size_t n)
                     {
-                        source[retroIndex(n)] = val;
+                        import std.algorithm.mutation : move;
+
+                        source[retroIndex(n)] = move(val);
                     }
                 }
 
@@ -474,6 +480,19 @@ pure @safe nothrow @nogc unittest
     foreach (x; data.retro) {}
 }
 
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    immutable foo = [S(1), S(2), S(3)];
+    auto r = retro(foo);
+    assert(equal(r, [S(3), S(2), S(1)]));
+}
 
 /**
 Iterates range `r` with stride `n`. If the range is a
@@ -585,7 +604,9 @@ do
             {
                 @property void front(ElementType!R val)
                 {
-                    source.front = val;
+                    import std.algorithm.mutation : move;
+
+                    source.front = move(val);
                 }
             }
 
@@ -864,6 +885,20 @@ pure @safe nothrow unittest
     assert(equal(s, [1L, 4L, 7L]));
 }
 
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    immutable foo = [S(1), S(2), S(3), S(4), S(5)];
+    auto r = stride(foo, 3);
+    assert(equal(r, [S(1), S(4)]));
+}
+
 /**
 Spans multiple ranges in sequence. The function `chain` takes any
 number of ranges and returns a $(D Chain!(R1, R2,...)) object. The
@@ -1069,12 +1104,14 @@ if (Ranges.length > 0 &&
 
                 @property void front(RvalueElementType v)
                 {
+                    import std.algorithm.mutation : move;
+
                     sw: switch (frontIndex)
                     {
                         static foreach (i; 0 .. R.length)
                         {
                         case i:
-                            source[i].front = v;
+                            source[i].front = move(v);
                             break sw;
                         }
 
@@ -1193,12 +1230,14 @@ if (Ranges.length > 0 &&
                 {
                     @property void back(RvalueElementType v)
                     {
+                        import std.algorithm.mutation : move;
+
                         sw: switch (backIndex)
                         {
                             static foreach_reverse (i; 1 .. R.length + 1)
                             {
                             case i:
-                                source[i-1].back = v;
+                                source[i-1].back = move(v);
                                 break sw;
                             }
 
@@ -1304,6 +1343,8 @@ if (Ranges.length > 0 &&
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
                     void opIndexAssign(ElementType v, size_t index)
                     {
+                        import std.algorithm.mutation : move;
+
                         sw: switch (frontIndex)
                         {
                             static foreach (i; 0 .. R.length)
@@ -1319,7 +1360,7 @@ if (Ranges.length > 0 &&
                                     }
                                 }
 
-                                source[i][index] = v;
+                                source[i][index] = move(v);
                                 break sw;
                             }
 
@@ -1600,6 +1641,28 @@ pure @safe unittest
     auto r = refRange(&s).chain("bar");
     assert(equal(r.save, "foobar"));
     assert(equal(r, "foobar"));
+}
+
+pure @safe nothrow @nogc unittest
+{
+    // support non-copyable items
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    S[2] s0, s1;
+    foreach (ref el; chain(s0[], s1[]))
+    {
+        int n = el.v;
+    }
+
+    S[] s2, s3;
+    foreach (ref el; chain(s2, s3))
+    {
+        int n = el.v;
+    }
 }
 
 /**
@@ -2035,6 +2098,23 @@ pure @safe unittest
     auto chosen2 = chosen.save;
 }
 
+pure @safe nothrow unittest
+{
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    auto a = [S(1), S(2), S(3)];
+    auto b = [S(4), S(5), S(6)];
+
+    auto chosen = choose(true, a, b);
+    assert(chosen.front.v == 1);
+
+    auto chosen2 = choose(false, a, b);
+    assert(chosen2.front.v == 4);
+}
+
 /**
 Choose one of multiple ranges at runtime.
 
@@ -2331,6 +2411,20 @@ pure @safe unittest
     auto r = roundRobin(refRange(&f), refRange(&b));
     assert(equal(r.save, "fboaor"));
     assert(equal(r.save, "fboaor"));
+}
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    S[] a = [ S(1), S(2) ];
+    S[] b = [ S(10), S(20) ];
+    auto r = roundRobin(a, b);
+    assert(equal(r, [ S(1), S(10), S(2), S(20) ]));
 }
 
 /**
@@ -2904,10 +2998,12 @@ if (isInputRange!R)
             {
                 @property auto ref front(ElementType!R v)
                 {
+                    import std.algorithm.mutation : move;
+
                     assert(!empty,
                         "Attempting to assign to the front of an empty "
                         ~ typeof(this).stringof);
-                    return _input.front = v;
+                    return _input.front = move(v);
                 }
             }
         }
@@ -4139,7 +4235,9 @@ if (isForwardRange!R && !isInfinite!R)
             /// ditto
             @property void front(ElementType!R val)
             {
-                _original[_index] = val;
+                import std.algorithm.mutation : move;
+
+                _original[_index] = move(val);
             }
         }
 
@@ -4249,7 +4347,9 @@ if (isForwardRange!R && !isInfinite!R)
             /// ditto
             @property auto front(ElementType!R val)
             {
-                return _current.front = val;
+                import std.algorithm.mutation : move;
+
+                return _current.front = move(val);
             }
         }
 
@@ -7263,7 +7363,9 @@ struct FrontTransversal(Ror,
     {
         @property void front(ElementType val)
         {
-            _input.front.front = val;
+            import std.algorithm.mutation : move;
+
+            _input.front.front = move(val);
         }
     }
 
@@ -7320,7 +7422,9 @@ struct FrontTransversal(Ror,
         {
             @property void back(ElementType val)
             {
-                _input.back.front = val;
+                import std.algorithm.mutation : move;
+
+                _input.back.front = move(val);
             }
         }
     }
@@ -7353,7 +7457,9 @@ struct FrontTransversal(Ror,
         {
             void opIndexAssign(ElementType val, size_t n)
             {
-                _input[n].front = val;
+                import std.algorithm.mutation : move;
+
+                _input[n].front = move(val);
             }
         }
         mixin ImplementLength!_input;
