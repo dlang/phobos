@@ -258,8 +258,7 @@ STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 NO_AUTODECODE_MODULES= std/utf
 
 # Other D modules that aren't under std/
-EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
-  odbc/sqltypes odbc/sqlucode sqlite3 zlib)
+EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl sqlite3 zlib)
 
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_COMMON)
 

@@ -136,19 +136,6 @@ $(BOOKTABLE ,
         $(TD Interface to libcurl C library.)
     )
     $(TR
-        $(TDNW $(MREF etc,c,odbc,sql))
-        $(TD Interface to ODBC C library.)
-    )
-    $(TR
-        $(TDNW $(MREF etc,c,odbc,sqlext))
-    )
-    $(TR
-        $(TDNW $(MREF etc,c,odbc,sqltypes))
-    )
-    $(TR
-        $(TDNW $(MREF etc,c,odbc,sqlucode))
-    )
-    $(TR
         $(TDNW $(MREF etc,c,sqlite3))
         $(TD Interface to SQLite C library.)
     )
