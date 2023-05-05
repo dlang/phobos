@@ -971,13 +971,25 @@ template equal(alias pred = "a == b")
         for element, according to binary predicate `pred`.
     +/
     bool equal(Ranges...)(Ranges rs)
-    if (rs.length > 1
-        && allSatisfy!(isInputRange, Ranges)
-        && !allSatisfy!(isInfinite, Ranges)
-        && is(typeof(binaryFun!pred(rs[0].front, rs[1].front)))
-        && (rs.length == 2 || is(typeof(equal!pred(rs[1 .. $])) == bool))
-        )
     {
+        static assert(rs.length > 1, "More than one range is required");
+        static assert(allSatisfy!(isInputRange, Ranges), "All passed ranges "
+                , "must by InputRanges");
+        static assert(!allSatisfy!(isInfinite, Ranges), "No passed range "
+                , "must by an InfiniteRange");
+        static assert(is(typeof(binaryFun!pred(rs[0].front, rs[1].front)) : bool)
+                , "The expression binaryFun!pred(rs[0].front, rs[1].front)"
+                , " must yield a type that converts to bool");
+        //static assert(rs.length == 2 || is(typeof(equal!pred(rs[1 .. $])) == bool));
+        static if(rs.length > 2) {
+            static foreach(idx; 1 .. (rs.length - 1)) {
+                static assert(is(typeof(binaryFun!pred(rs[idx].front, rs[idx+1].front)) : bool)
+                    , "The expression is(typeof(binaryFun!pred(rs[", idx, "].front, rs["
+                    , idx + 1, "].front)) : bool) must yield a type that"
+                    , " converts to bool");
+            }
+        }
+
         alias ElementEncodingTypes = staticMap!(ElementEncodingType, Ranges);
         enum differentSize(T) = T.sizeof != ElementEncodingTypes[0].sizeof;
         enum useCodePoint = allSatisfy!(isSomeChar, ElementEncodingTypes) &&
