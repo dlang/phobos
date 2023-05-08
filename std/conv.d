@@ -1023,7 +1023,15 @@ if (!(is(S : T) &&
     else static if (isIntegral!S && !is(S == enum))
     {
         // other integral-to-string conversions with default radix
-        return toImpl!(T, S)(value, 10);
+
+        import core.internal.string : signedToTempString, unsignedToTempString;
+
+        alias EEType = Unqual!(ElementEncodingType!T);
+        EEType[long.sizeof * 3 + 1] buf = void;
+        EEType[] t = isSigned!S
+            ?   signedToTempString!(10, false, EEType)(value, buf)
+            : unsignedToTempString!(10, false, EEType)(value, buf);
+        return t.dup;
     }
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
