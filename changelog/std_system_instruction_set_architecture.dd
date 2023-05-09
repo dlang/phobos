@@ -1,0 +1,15 @@
+Added `std.system.instructionSetArchitecture` and `std.system.ISA`
+
+A new enum representing the instruction set architecture for the targeted
+system was added. It is intended for cases where a targeted CPU's ISA is only
+needed at runtime, such as providing human-readable messages as demonstrated
+below.
+-------
+import std.stdio;
+import std.system;
+
+void main()
+{
+    writeln("Hello ", instructionSetArchitecture, " world!");
+}
+-------
