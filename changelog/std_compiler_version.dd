@@ -1,0 +1,26 @@
+Added `std.compiler.Version`
+
+A new struct allowing for version conditions to be used as boolean values
+has been added to std.compiler.
+-------
+import std.compiler;
+
+static if (Version.D_InlineAsm_X86 || Version.D_InlineAsm_X86_64)
+{
+    version = UseX86Assembly;
+}
+
+int expensiveFunction()
+{
+    version(UseX86Assembly)
+    {
+        asm {
+            // x86 assembly implementation goes here
+        }
+    }
+    else
+    {
+        // a fallback implementation for non-x86 systems
+    }
+}
+-------

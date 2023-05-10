@@ -56,3 +56,48 @@ immutable
     uint D_major = 2;
     uint D_minor = 0;
 }
+
+/**
+ * Allows version conditions to be available as boolean values at compile
+ * time, allowing for more complex combinations of versions to be expressed
+ * more simply. Any valid version(x) will have an equivalent Version.x
+ * evaluating to either true or false depending on whether version(x) was
+ * defined.
+ */
+struct Version
+{
+    static bool opDispatch(string identifier)()
+    {
+        mixin("
+            version(", identifier, ")
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        ");
+    }
+}
+
+///
+@system unittest
+{
+    static if (Version.D_InlineAsm_X86 || Version.D_InlineAsm_X86_64)
+    {
+        asm {
+            // x86 assembly goes here
+        }
+    }
+    else
+    {
+        // a fallback implementation
+    }
+}
+
+@safe pure unittest
+{
+    static assert(Version.all);
+    static assert(!Version.none);
+}
