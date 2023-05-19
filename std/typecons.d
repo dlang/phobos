@@ -7420,8 +7420,8 @@ pure @system unittest
         rc1 = rc2;
         assert(rc1._refCounted._store._count == 2);
         // Artificially end scope of rc1 and rc2 by calling ~this() explicitly
-        rc2.__dtor();
-        rc1.__dtor();
+        rc2.__xdtor();
+        rc1.__xdtor();
         assert(p._refCounted._store == null);
 
         // [Safe]RefCounted as a member
