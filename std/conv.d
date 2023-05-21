@@ -102,21 +102,6 @@ private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE_
     return new ConvException(msg, fn, ln);
 }
 
-private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
-{
-    string msg;
-
-    if (source.empty)
-        msg = text("Unexpected end of input when converting from type " ~ S.stringof ~ " base ", radix,
-                " to type " ~ T.stringof);
-    else
-        msg = text("Unexpected '", source.front,
-            "' when converting from type " ~ S.stringof ~ " base ", radix,
-            " to type " ~ T.stringof);
-
-    return new ConvException(msg, fn, ln);
-}
-
 @safe pure/* nothrow*/  // lazy parameter bug
 private auto parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
