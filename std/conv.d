@@ -5719,33 +5719,13 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         {
             void initialize(UT value)
             {
-                bool neg = false;
-                if (value < 10)
-                {
-                    if (value >= 0)
-                    {
-                        lwr = 0;
-                        upr = 1;
-                        buf[0] = cast(char)(cast(uint) value + '0');
-                        return;
-                    }
-                    value = -value;
-                    neg = true;
-                }
-                auto i = cast(uint) buf.length - 1;
-                while (cast(Unsigned!UT) value >= 10)
-                {
-                    buf[i] = cast(ubyte)('0' + cast(Unsigned!UT) value % 10);
-                    value = unsigned(value) / 10;
-                    --i;
-                }
-                buf[i] = cast(char)(cast(uint) value + '0');
-                if (neg)
-                {
-                    buf[i - 1] = '-';
-                    --i;
-                }
-                lwr = i;
+                import core.internal.string : signedToTempString, unsignedToTempString;
+
+                char[] t = value < 0
+                    ?   signedToTempString!(10, false, char)(value, buf)
+                    : unsignedToTempString!(10, false, char)(value, buf);
+
+                lwr = cast(uint) (buf.length - t.length);
                 upr = cast(uint) buf.length;
             }
 
