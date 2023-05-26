@@ -7410,17 +7410,18 @@ pure @system unittest
         p = &rc1;
         assert(rc1 == 5);
         assert(rc1._refCounted._store._count == 1);
-        auto rc2 = rc1;
-        assert(rc1._refCounted._store._count == 2);
-        // Reference semantics
-        rc2 = 42;
-        assert(rc1 == 42);
-        rc2 = rc2;
-        assert(rc2._refCounted._store._count == 2);
-        rc1 = rc2;
-        assert(rc1._refCounted._store._count == 2);
-        // Artificially end scope of rc1 and rc2 by calling ~this() explicitly
-        rc2.__xdtor();
+        {
+            auto rc2 = rc1;
+            assert(rc1._refCounted._store._count == 2);
+            // Reference semantics
+            rc2 = 42;
+            assert(rc1 == 42);
+            rc2 = rc2;
+            assert(rc2._refCounted._store._count == 2);
+            rc1 = rc2;
+            assert(rc1._refCounted._store._count == 2);
+        }
+        // Artificially end scope of rc1 by calling ~this() explicitly
         rc1.__xdtor();
         assert(p._refCounted._store == null);
 
