@@ -978,7 +978,7 @@ if (Ranges.length > 0 &&
             static if (bidirectional) size_t backIndex;
             else enum backIndex = source.length;
 
-            this(typeof(this.tupleof) fields)
+            this(typeof(Result.tupleof) fields)
             {
                 this.tupleof = fields;
             }
