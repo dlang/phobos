@@ -1,3 +1,0 @@
-`std.uni.normalize` pure, `std.uni.decomposeJamo` pure nothrow
-
-Up until now, these functions didn't have any attributes besides `@safe`.
