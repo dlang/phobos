@@ -1349,13 +1349,23 @@ if (isInputRange!Range && !isInfinite!Range &&
     // if we only have one statement in the loop, it can be optimized a lot better
     static if (__traits(isSame, map, a => a))
     {
-
+        CommonElement getExtremeElement()
+        {
+            static if (is(typeof(extremeElement) == T[], T))
+            {
+                return extremeElement;
+            }
+            else
+            {
+                return extremeElement.get;
+            }
+        }
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
         {
             foreach (const i; 0 .. r.length)
             {
-                if (selectorFun(r[i], extremeElement))
+                if (selectorFun(r[i], getExtremeElement))
                 {
                     extremeElement = r[i];
                 }
@@ -1365,7 +1375,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             while (!r.empty)
             {
-                if (selectorFun(r.front, extremeElement))
+                if (selectorFun(r.front, getExtremeElement))
                 {
                     extremeElement = r.front;
                 }
@@ -3878,6 +3888,14 @@ if (isInputRange!Range && !isInfinite!Range &&
     const(B)[] arr = [new B(0), new B(1)];
     // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
     assert(arr.maxElement!"a.val".val == 1);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23993
+@safe unittest
+{
+    import std.bigint : BigInt;
+
+    assert([BigInt(2), BigInt(3)].maxElement == BigInt(3));
 }
 
 // minPos
