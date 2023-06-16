@@ -1950,7 +1950,7 @@ if (isFloatingPoint!T)
 
     // log2 is broken for x87-reals on some computers in CTFE
     // the following test excludes these computers from the test
-    // (issue 21757)
+    // (https://issues.dlang.org/show_bug.cgi?id=21757)
     enum test = cast(int) log2(3.05e2312L);
     static if (F.realFormat == RealFormat.ieeeExtended && test == 7681)
     {
