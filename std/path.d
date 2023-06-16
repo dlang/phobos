@@ -1595,7 +1595,7 @@ if (isSomeChar!C)
 
 @safe unittest
 {
-    // Test for issue 7397
+    // Test for https://issues.dlang.org/show_bug.cgi?id=7397
     string[] ary = ["a", "b"];
     version (Posix)
     {
@@ -1875,7 +1875,7 @@ if (isSomeChar!C)
 
 @safe unittest
 {
-    // Test for issue 7397
+    // Test for https://issues.dlang.org/show_bug.cgi?id=7397
     string[] ary = ["a", "b"];
     version (Posix)
     {
@@ -3572,7 +3572,8 @@ if (isConvertibleToString!Range)
     assert(!globMatch("foo.bar", "[gh]???bar"));
     assert(!globMatch("foo.bar"w, "[!fg]*bar"w));
     assert(!globMatch("foo.bar"d, "[fg]???baz"d));
-    assert(!globMatch("foo.di", "*.d")); // test issue 6634: triggered bad assertion
+    // https://issues.dlang.org/show_bug.cgi?id=6634
+    assert(!globMatch("foo.di", "*.d")); // triggered bad assertion
 
     assert(globMatch("foo.bar", "{foo,bif}.bar"));
     assert(globMatch("bif.bar"w, "{foo,bif}.bar"w));

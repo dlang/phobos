@@ -5337,7 +5337,7 @@ package template isBlitAssignable(T)
         enum isBlitAssignable = isBlitAssignable!(OriginalType!T);
     }
     else static if (isStaticArray!T && is(T == E[n], E, size_t n))
-    // Workaround for issue 11499 : isStaticArray!T should not be necessary.
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=11499 : isStaticArray!T should not be necessary.
     {
         enum isBlitAssignable = isBlitAssignable!E;
     }

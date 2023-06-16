@@ -550,7 +550,7 @@ Throws: `ErrnoException` if the file could not be opened.
                                 stdioOpenmode, "'")),
                 name);
 
-        // MSVCRT workaround (issue 14422)
+        // MSVCRT workaround (https://issues.dlang.org/show_bug.cgi?id=14422)
         version (MICROSOFT_STDIO)
         {
             setAppendWin(stdioOpenmode);
@@ -708,7 +708,7 @@ Throws: `ErrnoException` in case of error.
         {
             auto handle = _p.handle;
             _p.handle = null;
-            // fclose disassociates the FILE* even in case of error (issue 19751)
+            // fclose disassociates the FILE* even in case of error (https://issues.dlang.org/show_bug.cgi?id=19751)
             errnoEnforce(.fclose(handle) == 0,
                     "Could not close file `"~_name~"'");
         }
@@ -3795,7 +3795,7 @@ void main()
     assert(std.file.readText!string(deleteme) == "y");
 }
 
-@safe unittest // issue 18801
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=18801
 {
     static import std.file;
     import std.string : stripLeft;

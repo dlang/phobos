@@ -10339,7 +10339,7 @@ if (!is(CommonType!Values == void))
 /// ditto
 auto only()()
 {
-    // cannot use noreturn due to issue 22383
+    // cannot use noreturn due to https://issues.dlang.org/show_bug.cgi?id=22383
     struct EmptyElementType {}
     EmptyElementType[] result;
     return result;

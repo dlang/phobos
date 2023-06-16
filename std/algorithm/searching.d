@@ -1282,7 +1282,7 @@ if (isInputRange!R &&
 
 @safe pure unittest
 {
-    //example from issue 19727
+    //example from https://issues.dlang.org/show_bug.cgi?id=19727
     import std.path : asRelativePath;
     string[] ext = ["abc", "def", "ghi"];
     string path = "/foo/file.def";
@@ -2309,7 +2309,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
     @safe:
         string _impl;
 
-        // This is what triggers issue 7992.
+        // This is what triggers https://issues.dlang.org/show_bug.cgi?id=7992.
         @property size_t length() const { return _impl.length; }
         @property void length(size_t len) { _impl.length = len; }
 
@@ -2322,7 +2322,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
         @property CustomString save() { return this; }
     }
 
-    // If issue 7992 occurs, this will throw an exception from calling
+    // If https://issues.dlang.org/show_bug.cgi?id=7992 occurs, this will throw an exception from calling
     // popFront() on an empty range.
     auto r = find(CustomString("a"), CustomString("b"));
     assert(r.empty);
