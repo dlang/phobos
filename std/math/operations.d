@@ -1287,11 +1287,12 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
         // two numbers
         if (lhs == rhs) return true;
 
-        static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
-        {
-            if (lhs == lhs.infinity || rhs == rhs.infinity ||
-                lhs == -lhs.infinity || rhs == -rhs.infinity) return false;
-        }
+        static if (is(typeof(lhs.infinity)))
+            if (lhs == lhs.infinity || lhs == -lhs.infinity)
+                 return false;
+        static if (is(typeof(rhs.infinity)))
+            if (rhs == rhs.infinity || rhs == -rhs.infinity)
+                return false;
 
         import std.math.algebraic : abs;
 
@@ -1406,6 +1407,8 @@ bool isClose(T, U, V = CommonType!(FloatingPointBaseType!T,FloatingPointBaseType
     assert(!isClose(1,real.nan));
     assert(!isClose(real.nan,real.max));
     assert(!isClose(real.nan,real.nan));
+
+    assert(!isClose(-double.infinity, 1));
 }
 
 @safe pure nothrow @nogc unittest
