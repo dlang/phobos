@@ -1315,19 +1315,12 @@ in
 }
 do
 {
-    import std.typecons : Rebindable;
+    import std.typecons : Rebindable2;
 
     alias Element = ElementType!Range;
-    Rebindable!Element seed = r.front;
+    auto seed = Rebindable2!Element(r.front);
     r.popFront();
-    static if (is(Rebindable!Element == T[], T))
-    {
-        return extremum!(map, selector)(r, seed);
-    }
-    else
-    {
-        return extremum!(map, selector)(r, seed.get);
-    }
+    return extremum!(map, selector)(r, seed.get);
 }
 
 private auto extremum(alias map, alias selector = "a < b", Range,
@@ -1337,14 +1330,14 @@ if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
      is(typeof(unaryFun!map(ElementType!(Range).init))))
 {
-    import std.typecons : Rebindable;
+    import std.typecons : Rebindable2;
 
     alias mapFun = unaryFun!map;
     alias selectorFun = binaryFun!selector;
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    Rebindable!CommonElement extremeElement = seedElement;
+    auto extremeElement = Rebindable2!CommonElement(seedElement);
 
     // if we only have one statement in the loop, it can be optimized a lot better
     static if (__traits(isSame, map, a => a))
@@ -1355,7 +1348,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             foreach (const i; 0 .. r.length)
             {
-                if (selectorFun(r[i], extremeElement))
+                if (selectorFun(r[i], extremeElement.get))
                 {
                     extremeElement = r[i];
                 }
@@ -1365,7 +1358,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             while (!r.empty)
             {
-                if (selectorFun(r.front, extremeElement))
+                if (selectorFun(r.front, extremeElement.get))
                 {
                     extremeElement = r.front;
                 }
@@ -1376,7 +1369,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     else
     {
         alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
-        MapType extremeElementMapped = mapFun(extremeElement);
+        MapType extremeElementMapped = mapFun(extremeElement.get);
 
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
@@ -1405,15 +1398,7 @@ if (isInputRange!Range && !isInfinite!Range &&
             }
         }
     }
-    // Rebindable is an alias to T for arrays
-    static if (is(typeof(extremeElement) == T[], T))
-    {
-        return extremeElement;
-    }
-    else
-    {
-        return extremeElement.get;
-    }
+    return extremeElement.get;
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
