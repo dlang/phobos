@@ -1814,6 +1814,17 @@ if (isCallable!(F))
     {
         return fp;
     }
+    else static if (is(F Func == Func*) && is(Func == function) && is(Func Params == __parameters))
+    {
+        alias dg = delegate(Params params) const => F.init(params);
+        typeof(dg) result; // inlining `dg` infers attributes incorrectly
+        () @trusted
+        {
+            // assigning funcptr is @system, but it’s safe here because `fp` needs no context
+        	result.funcptr = cast(typeof(result.funcptr)) fp;
+        }();
+        return result;
+    }
     else static if (is(typeof(&F.opCall) == delegate)
                 || (is(typeof(&F.opCall) V : V*) && is(V == function)))
     {
@@ -1851,7 +1862,7 @@ if (isCallable!(F))
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static int inc(ref uint num) {
         num++;
@@ -1864,7 +1875,7 @@ if (isCallable!(F))
     assert(myNum == 1);
 }
 
-@system unittest // not @safe due to toDelegate
+@system unittest
 {
     static int inc(ref uint num) {
         num++;
