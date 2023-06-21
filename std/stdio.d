@@ -3108,10 +3108,13 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 // "wide-oriented" for us.
                 immutable int mode = __setmode(f.fileno, _O_TEXT);
                     // Set some arbitrary mode to obtain the previous one.
-                __setmode(f.fileno, mode); // Restore previous mode.
-                if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                if (mode != -1) // __setmode() succeeded
                 {
-                    orientation_ = 1; // wide
+                    __setmode(f.fileno, mode); // Restore previous mode.
+                    if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                    {
+                        orientation_ = 1; // wide
+                    }
                 }
             }
             else
