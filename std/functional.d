@@ -1815,8 +1815,16 @@ if (isCallable!(F))
     }
     else static if (is(F Func == Func*) && is(Func == function) && is(Func Params == __parameters))
     {
-        alias dg = delegate(Params params) const => F.init(params);
-        typeof(dg) result; // inlining `dg` infers attributes incorrectly
+        // https://issues.dlang.org/show_bug.cgi?id=24007 - cannot specify linkage on function literal:
+        //alias dg = delegate(Params params) const => F.init(params);
+        //typeof(dg) result;
+		// Workaround:
+        struct S
+        {
+            mixin("extern(", __traits(getLinkage, fp), ") auto ref dg(Params params) const => F.init(params);");
+        }
+        typeof(&S().dg) result; // inlining `dg` infers attributes incorrectly
+
         () @trusted
         {
             // assigning funcptr is @system, but it’s safe here because `fp` needs no context
@@ -1831,7 +1839,7 @@ if (isCallable!(F))
     }
     else
     {
-        alias DelType = typeof(&(new DelegateFaker!(F)).doIt);
+        alias DelType = typeof(&(new DelegateFaker!F).doIt);
 
         static struct DelegateFields {
             union {
@@ -1852,7 +1860,7 @@ if (isCallable!(F))
 
         df.contextPtr = cast(void*) fp;
 
-        DelegateFaker!(F) dummy;
+        DelegateFaker!F dummy;
         auto dummyDel = &dummy.doIt;
         df.funcPtr = dummyDel.funcptr;
 
