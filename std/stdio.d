@@ -129,6 +129,10 @@ else version (Solaris)
 {
     version = GENERIC_IO;
 }
+else
+{
+    static assert(0, "unsupported operating system");
+}
 
 // Character type used for operating system filesystem APIs
 version (Windows)
