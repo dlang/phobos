@@ -1706,7 +1706,6 @@ private struct DelegateFaker(F)
  *
  * BUGS:
  * $(UL
- *   $(LI Does not work with `@safe` functions.)
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */
