@@ -9142,7 +9142,7 @@ public:
         {
             static if (needsEndTracker)
             {
-                if (poppedElems < windowSize)
+                if (nextSource.empty)
                     hasShownPartialBefore = true;
             }
             else
@@ -10120,6 +10120,15 @@ public:
     import std.algorithm.iteration : splitter;
 
     assert("ab cd".splitter(' ').slide!(No.withPartial)(2).equal!equal([["ab", "cd"]]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23976
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
+
+    assert("1<2".splitter('<').slide(2).equal!equal([["1", "2"]]));
 }
 
 private struct OnlyResult(Values...)
