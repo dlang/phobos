@@ -1342,7 +1342,6 @@ if (isInputRange!Range && !isInfinite!Range &&
     // if we only have one statement in the loop, it can be optimized a lot better
     static if (__traits(isSame, map, a => a))
     {
-
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
         {
@@ -3863,6 +3862,14 @@ if (isInputRange!Range && !isInfinite!Range &&
     const(B)[] arr = [new B(0), new B(1)];
     // can't compare directly - https://issues.dlang.org/show_bug.cgi?id=1824
     assert(arr.maxElement!"a.val".val == 1);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23993
+@safe unittest
+{
+    import std.bigint : BigInt;
+
+    assert([BigInt(2), BigInt(3)].maxElement == BigInt(3));
 }
 
 // minPos
