@@ -1320,7 +1320,7 @@ do
     alias Element = ElementType!Range;
     Rebindable!Element seed = r.front;
     r.popFront();
-    static if (is(Rebindable!Element == T[], T))
+    static if (is(typeof(seed) == Unqual!Element))
     {
         return extremum!(map, selector)(r, seed);
     }
@@ -1351,7 +1351,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     {
         CommonElement getExtremeElement()
         {
-            static if (is(typeof(extremeElement) == T[], T))
+            static if (is(typeof(extremeElement) == Unqual!CommonElement))
             {
                 return extremeElement;
             }
@@ -1415,8 +1415,8 @@ if (isInputRange!Range && !isInfinite!Range &&
             }
         }
     }
-    // Rebindable is an alias to T for arrays
-    static if (is(typeof(extremeElement) == T[], T))
+    // For several cases, such as classes or arrays, Rebindable!T aliases itself to T or Unqual!T.
+    static if (is(typeof(extremeElement) == Unqual!CommonElement))
     {
         return extremeElement;
     }
@@ -1552,6 +1552,23 @@ if (isInputRange!Range && !isInfinite!Range &&
     }
 
     assert([S(5), S(6)].extremum!"a.value" == S(5));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24027
+@safe nothrow pure unittest
+{
+    class A
+    {
+        int a;
+        this(int a)
+        {
+            this.a = a;
+        }
+    }
+
+    auto test = new A(5);
+    A[] arr = [test];
+    assert(maxElement!"a.a"(arr) is test);
 }
 
 // find
