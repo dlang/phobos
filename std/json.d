@@ -1758,6 +1758,68 @@ if (isOutputRange!(Out,char))
     toValueImpl(root, 0);
 }
 
+/**
+Determines if the given type may be serialized into JSON. This includes both
+primitive values like numbers, strings, and booleans, as well as arrays and
+composite types like associative arrays, structs, and classes.
+*/
+bool isJSONSerializable(T)() {
+    static if (is(T : void) || isPointer!T) {
+        return false;
+    } else static if (is(T : JSONValue)) {
+        return true;
+    } else static if (is(T : long) || is(T : ulong) || isFloatingPoint!T || is(T : bool)) {
+        return true;
+    } else static if (isSomeString!T) {
+        return true;
+    } else static if (isArray!T) {
+        return isJSONSerializable!(ElementType!T);
+    } else static if (isAssociativeArray!T) {
+        return isSomeString!(KeyType!T) && isJSONSerializable!(ValueType!T);
+    } else static if (__traits(isPOD, T)) {
+        static foreach(field; Fields!T) {
+            static if (!isJSONSerializable!field) return false;
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+///
+unittest {
+    // Primitive types.
+    assert(isJSONSerializable!ubyte);
+    assert(isJSONSerializable!byte);
+    assert(isJSONSerializable!uint);
+    assert(isJSONSerializable!int);
+    assert(isJSONSerializable!(const int));
+    assert(isJSONSerializable!(immutable int));
+    assert(isJSONSerializable!float);
+    assert(isJSONSerializable!double);
+    assert(isJSONSerializable!real);
+    assert(isJSONSerializable!string);
+    assert(isJSONSerializable!dstring);
+    assert(!isJSONSerializable!void);
+    // Complex types.
+    assert(isJSONSerializable!(string[]));
+    assert(isJSONSerializable!(bool[]));
+    assert(isJSONSerializable!(string[string]));
+    assert(isJSONSerializable!(int[dstring]));
+    assert(isJSONSerializable!(typeof(JSONValue("hello world"))));
+    struct S1 {}
+    assert(isJSONSerializable!S1);
+    struct S2 { int a; }
+    assert(isJSONSerializable!S2);
+    struct S3 { int a; string b; bool[string] c; }
+    assert(isJSONSerializable!S3);
+    struct S4 { S3 a; S2 b; }
+    assert(isJSONSerializable!S4);
+    struct S5 { void[] data; }
+    assert(!isJSONSerializable!S5);
+    struct S6 { S2 a; S5 b; }
+    assert(!isJSONSerializable!S6);
+}
+
  // https://issues.dlang.org/show_bug.cgi?id=12897
 @safe unittest
 {
