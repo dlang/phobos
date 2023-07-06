@@ -1761,7 +1761,7 @@ if (isOutputRange!(Out,char))
 /**
 Determines if the given type may be serialized into JSON. This includes both
 primitive values like numbers, strings, and booleans, as well as arrays and
-composite types like associative arrays, structs, and classes.
+composite types like associative arrays and POD-style structs.
 */
 bool isJSONSerializable(T)() {
     static if (is(T : void) || isPointer!T) {
