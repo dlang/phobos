@@ -1777,7 +1777,7 @@ bool isJSONSerializable(T)() {
     } else static if (isAssociativeArray!T) {
         return isSomeString!(KeyType!T) && isJSONSerializable!(ValueType!T);
     } else static if (__traits(isPOD, T)) {
-        static foreach(field; Fields!T) {
+        static foreach (field; Fields!T) {
             static if (!isJSONSerializable!field) return false;
         }
         return true;
@@ -1818,6 +1818,34 @@ unittest {
     assert(!isJSONSerializable!S5);
     struct S6 { S2 a; S5 b; }
     assert(!isJSONSerializable!S6);
+}
+
+/**
+ * Converts an arbitrary value to an equivalent JSON representation.
+ * Params:
+ *   value = The value to convert to a JSON representation.
+ * Returns: The node that represents the given value.
+ */
+JSONValue toJSONValue(T)(T value) if (isJSONSerializable!T) {
+    static if (is(T : long) || is(T : ulong) || isFloatingPoint!T || is(T : bool) || isSomeString!T || isArray!T || isAssociativeArray!T) {
+        return JSONValue(value);
+    } else static if (__traits(isPOD, T)) {
+        JSONValue obj = JSONValue.emptyObject;
+        static foreach (field; FieldNameTuple!T) {
+            obj.object[field] = toJSONValue(__traits(getMember, value, field));
+        }
+        return obj;
+    } else {
+        static assert(false, T.stringof ~ " cannot be converted to a JSONValue.");
+    }
+}
+///
+unittest {
+    struct S1 { int a; bool b; char c; }
+    S1 s1 = S1(42, true, 'c');
+    JSONValue v1 = toJSONValue(s1);
+    import std.stdio;
+    writeln(toJSON(v1));
 }
 
  // https://issues.dlang.org/show_bug.cgi?id=12897
