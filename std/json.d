@@ -1821,13 +1821,17 @@ unittest {
 }
 
 /**
- * Converts an arbitrary value to an equivalent JSON representation.
+ * Converts an arbitrary value to an equivalent JSON representation. For a
+ * description of the types that may be converted to JSON, see $(LREF isJSONSerializable).
  * Params:
  *   value = The value to convert to a JSON representation.
  * Returns: The node that represents the given value.
  */
 JSONValue toJSONValue(T)(T value) if (isJSONSerializable!T) {
-    static if (is(T : long) || is(T : ulong) || isFloatingPoint!T || is(T : bool) || isSomeString!T || isArray!T || isAssociativeArray!T) {
+    static if (
+        is(T : long) || is(T : ulong) || isFloatingPoint!T || is(T : bool) || isSomeString!T ||
+        isArray!T || isAssociativeArray!T
+    ) {
         return JSONValue(value);
     } else static if (__traits(isPOD, T)) {
         JSONValue obj = JSONValue.emptyObject;
@@ -1836,16 +1840,42 @@ JSONValue toJSONValue(T)(T value) if (isJSONSerializable!T) {
         }
         return obj;
     } else {
-        static assert(false, T.stringof ~ " cannot be converted to a JSONValue.");
+        static assert(
+            false,
+            T.stringof ~ " cannot be converted to a JSONValue because it is not " ~
+            "a JSON-compatible basic type, or a POD-style struct."
+        );
     }
 }
 ///
 unittest {
+    // Test basic types.
+    assert(toJSONValue(1) == JSONValue(1));
+    assert(toJSONValue(25.42) == JSONValue(25.42));
+    assert(toJSONValue("Hello world") == JSONValue("Hello world"));
+
+    // Test structs.
     struct S1 { int a; bool b; char c; }
     S1 s1 = S1(42, true, 'c');
-    JSONValue v1 = toJSONValue(s1);
-    import std.stdio;
-    writeln(toJSON(v1));
+    JSONValue s1Expected = JSONValue.emptyObject;
+    s1Expected.object["a"] = JSONValue(42);
+    s1Expected.object["b"] = JSONValue(true);
+    s1Expected.object["c"] = JSONValue('c');
+    assert(toJSONValue(s1) == s1Expected);
+    struct S1Empty {} // Empty structs should serialize to an empty object.
+    assert(toJSONValue(S1Empty()) == JSONValue.emptyObject);
+
+    // Test a nested struct.
+    struct S2 { string a; S1 b; }
+    S2 s2 = S2("Hello world", S1(123, false, 'a'));
+    JSONValue s2Expected = JSONValue.emptyObject;
+    s2Expected.object["a"] = JSONValue("Hello world");
+    s2Expected.object["b"] = JSONValue.emptyObject;
+    s2Expected.object["b"].object["a"] = JSONValue(123);
+    s2Expected.object["b"].object["b"] = JSONValue(false);
+    s2Expected.object["b"].object["c"] = JSONValue('a');
+    JSONValue s2Json = toJSONValue(s2);
+    assert(s2Json == s2Expected);
 }
 
  // https://issues.dlang.org/show_bug.cgi?id=12897
