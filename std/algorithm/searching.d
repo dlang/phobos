@@ -1529,7 +1529,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=24027
-@safe nothrow pure unittest
+@safe nothrow unittest
 {
     class A
     {
