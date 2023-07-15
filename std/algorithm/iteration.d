@@ -2026,7 +2026,7 @@ private struct ChunkByGroup(alias eq, Range, bool eqEquivalenceAssured)
         }
     }
 
-    // Cannot be a copy constructor due to issue 22239
+    // Cannot be a copy constructor due to https://issues.dlang.org/show_bug.cgi?id=22239
     this(this) @trusted
     {
         import core.lifetime : emplace;
@@ -2128,7 +2128,7 @@ if (isForwardRange!Range)
         }();
     }
 
-    // Cannot be a copy constructor due to issue 22239
+    // Cannot be a copy constructor due to https://issues.dlang.org/show_bug.cgi?id=22239
     this(this) @trusted
     {
         import core.lifetime : emplace;
@@ -7939,15 +7939,23 @@ See_Also:
 $(REF nextPermutation, std,algorithm,sorting).
 */
 Permutations!Range permutations(Range)(Range r)
-if (isRandomAccessRange!Range && hasLength!Range)
 {
+    static assert(isRandomAccessRange!Range, Range.stringof,
+            " must be a RandomAccessRange");
+    static assert(hasLength!Range, Range.stringof
+            , " must have a length");
+
     return typeof(return)(r);
 }
 
 /// ditto
 struct Permutations(Range)
-if (isRandomAccessRange!Range && hasLength!Range)
 {
+    static assert(isRandomAccessRange!Range, Range.stringof,
+            " must be a RandomAccessRange");
+    static assert(hasLength!Range, Range.stringof
+            , " must have a length");
+
     private size_t[] _indices, _state;
     private Range _r;
     private bool _empty;

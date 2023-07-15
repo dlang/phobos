@@ -1282,7 +1282,7 @@ if (isInputRange!R &&
 
 @safe pure unittest
 {
-    //example from issue 19727
+    //example from https://issues.dlang.org/show_bug.cgi?id=19727
     import std.path : asRelativePath;
     string[] ext = ["abc", "def", "ghi"];
     string path = "/foo/file.def";
@@ -1315,19 +1315,12 @@ in
 }
 do
 {
-    import std.typecons : Rebindable;
+    import std.typecons : Rebindable2;
 
     alias Element = ElementType!Range;
-    Rebindable!Element seed = r.front;
+    auto seed = Rebindable2!Element(r.front);
     r.popFront();
-    static if (is(typeof(seed) == Unqual!Element))
-    {
-        return extremum!(map, selector)(r, seed);
-    }
-    else
-    {
-        return extremum!(map, selector)(r, seed.get);
-    }
+    return extremum!(map, selector)(r, seed.get);
 }
 
 private auto extremum(alias map, alias selector = "a < b", Range,
@@ -1337,35 +1330,24 @@ if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void) &&
      is(typeof(unaryFun!map(ElementType!(Range).init))))
 {
-    import std.typecons : Rebindable;
+    import std.typecons : Rebindable2;
 
     alias mapFun = unaryFun!map;
     alias selectorFun = binaryFun!selector;
 
     alias Element = ElementType!Range;
     alias CommonElement = CommonType!(Element, RangeElementType);
-    Rebindable!CommonElement extremeElement = seedElement;
+    auto extremeElement = Rebindable2!CommonElement(seedElement);
 
     // if we only have one statement in the loop, it can be optimized a lot better
     static if (__traits(isSame, map, a => a))
     {
-        CommonElement getExtremeElement()
-        {
-            static if (is(typeof(extremeElement) == Unqual!CommonElement))
-            {
-                return extremeElement;
-            }
-            else
-            {
-                return extremeElement.get;
-            }
-        }
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
         {
             foreach (const i; 0 .. r.length)
             {
-                if (selectorFun(r[i], getExtremeElement))
+                if (selectorFun(r[i], extremeElement.get))
                 {
                     extremeElement = r[i];
                 }
@@ -1375,7 +1357,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         {
             while (!r.empty)
             {
-                if (selectorFun(r.front, getExtremeElement))
+                if (selectorFun(r.front, extremeElement.get))
                 {
                     extremeElement = r.front;
                 }
@@ -1386,7 +1368,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     else
     {
         alias MapType = Unqual!(typeof(mapFun(CommonElement.init)));
-        MapType extremeElementMapped = mapFun(extremeElement);
+        MapType extremeElementMapped = mapFun(extremeElement.get);
 
         // direct access via a random access range is faster
         static if (isRandomAccessRange!Range)
@@ -1415,15 +1397,7 @@ if (isInputRange!Range && !isInfinite!Range &&
             }
         }
     }
-    // For several cases, such as classes or arrays, Rebindable!T aliases itself to T or Unqual!T.
-    static if (is(typeof(extremeElement) == Unqual!CommonElement))
-    {
-        return extremeElement;
-    }
-    else
-    {
-        return extremeElement.get;
-    }
+    return extremeElement.get;
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
@@ -1555,7 +1529,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=24027
-@safe nothrow pure unittest
+@safe nothrow unittest
 {
     class A
     {
@@ -2336,7 +2310,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
     @safe:
         string _impl;
 
-        // This is what triggers issue 7992.
+        // This is what triggers https://issues.dlang.org/show_bug.cgi?id=7992.
         @property size_t length() const { return _impl.length; }
         @property void length(size_t len) { _impl.length = len; }
 
@@ -2349,7 +2323,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
         @property CustomString save() { return this; }
     }
 
-    // If issue 7992 occurs, this will throw an exception from calling
+    // If https://issues.dlang.org/show_bug.cgi?id=7992 occurs, this will throw an exception from calling
     // popFront() on an empty range.
     auto r = find(CustomString("a"), CustomString("b"));
     assert(r.empty);
