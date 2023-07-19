@@ -80,10 +80,7 @@ class FileLogger : Logger
                                    " created in '", d,"' could not be created."));
         }
 
-        static if (is(This == shared))
-            () @trusted { (cast() this.file_).open(this.filename, "a"); }();
-        else
-            this.file_.open(this.filename, "a");
+        () @trusted { (cast() this.file_).open(this.filename, "a"); }();
     }
 
     /** A constructor for the `FileLogger` Logger that takes a reference to
