@@ -424,7 +424,7 @@ template to(T)
 }
 
 /**
- * Strings can convert to enum types. The enum member with the same name as the
+ * Strings can be converted to enum types. The enum member with the same name as the
  * input string is returned. The comparison is case-sensitive.
  *
  * A $(LREF ConvException) is thrown if the enum does not have the specified member.
