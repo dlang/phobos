@@ -423,6 +423,22 @@ template to(T)
     assert(c == "abcx");
 }
 
+/**
+ * Strings can convert to enum types. The enum member with the same name as the
+ * input string is returned. The comparison is case-sensitive.
+ *
+ * A $(LREF ConvException) is thrown if the enum does not have the specified member.
+ */
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    enum E { a, b, c }
+    assert(to!E("a") == E.a);
+    assert(to!E("b") == E.b);
+    assertThrown!ConvException(to!E("A"));
+}
+
 // Tests for https://issues.dlang.org/show_bug.cgi?id=6175
 @safe pure nothrow unittest
 {
