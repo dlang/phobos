@@ -190,8 +190,9 @@ Conversions from string _to numeric types differ from the C equivalents
 `atoi()` and `atol()` by checking for overflow and not allowing whitespace.
 
 For conversion of strings _to signed types, the grammar recognized is:
-$(PRE $(I Integer): $(I Sign UnsignedInteger)
-$(I UnsignedInteger)
+$(PRE $(I Integer):
+    $(I Sign UnsignedInteger)
+    $(I UnsignedInteger)
 $(I Sign):
     $(B +)
     $(B -))
@@ -260,7 +261,7 @@ template to(T)
 }
 
 /**
- * When converting strings _to numeric types, note that the D hexadecimal and binary
+ * When converting strings _to numeric types, note that D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
  * horizontal bar used _to separate groups of digits are recognized. This also
  * applies to the suffixes that indicate the type.
@@ -397,7 +398,7 @@ template to(T)
  *   $(LI Pointer to string conversions convert the pointer to a `size_t` value.
  *        If pointer is `char*`, treat it as C-style strings.
  *        In that case, this function is `@system`.))
- * See $(REF formatValue, std,format) on how toString should be defined.
+ * See $(REF formatValue, std,format) on how `toString` should be defined.
  */
 @system pure unittest // @system due to cast and ptr
 {
@@ -2263,19 +2264,21 @@ template roundTo(Target)
 }
 
 /**
-The `parse` family of functions works quite like the `to`
+$(PANEL
+The `parse` family of functions works quite like the $(LREF to)
 family, except that:
 $(OL
     $(LI It only works with character ranges as input.)
-    $(LI It takes the input by reference. (This means that rvalues - such
-    as string literals - are not accepted: use `to` instead.))
+    $(LI It takes the input by reference. This means that rvalues (such
+    as string literals) are not accepted: use `to` instead.)
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
+)
 
 This overload converts a character input range to a `bool`.
 
 Params:
-    Target = the type to convert to
+    Target = the boolean type to convert to
     source = the lvalue of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     doCount = the flag for deciding to report the number of consumed characters
 
@@ -2292,9 +2295,9 @@ Note:
     to `parse` and do not require lvalues.
 */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source)
-if (isInputRange!Source &&
-    isSomeChar!(ElementType!Source) &&
-    is(immutable Target == immutable bool))
+if (is(immutable Target == immutable bool) &&
+    isInputRange!Source &&
+    isSomeChar!(ElementType!Source))
 {
     import std.ascii : toLower;
 
@@ -2411,8 +2414,8 @@ Throws:
     if no character of the input was meaningfully converted.
 */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref scope Source s)
-if (isSomeChar!(ElementType!Source) &&
-    isIntegral!Target && !is(Target == enum))
+if (isIntegral!Target && !is(Target == enum) &&
+    isSomeChar!(ElementType!Source))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -2833,8 +2836,8 @@ Lerr:
 
 /// ditto
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source, uint radix)
-if (isSomeChar!(ElementType!Source) &&
-    isIntegral!Target && !is(Target == enum))
+if (isIntegral!Target && !is(Target == enum) &&
+    isSomeChar!(ElementType!Source))
 in
 {
     assert(radix >= 2 && radix <= 36, "radix must be in range [2,36]");
