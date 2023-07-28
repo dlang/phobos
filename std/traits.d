@@ -1311,7 +1311,8 @@ if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
-        template Get(size_t i)
+        alias ParameterIdentifierTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
@@ -1319,19 +1320,13 @@ if (isCallable!func)
                        // Filter out unnamed args, which look like (Type) instead of (Type name).
                        && PT[i].stringof != PT[i .. i+1].stringof[1..$-1])
             {
-                enum Get = __traits(identifier, PT[i .. i+1]);
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple,
+                    __traits(identifier, PT[i .. i+1]));
             }
             else
             {
-                enum Get = "";
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple, "");
             }
-        }
-
-        alias ParameterIdentifierTuple = AliasSeq!();
-        static foreach (i; 0 .. PT.length)
-        {
-            ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple,
-                Get!i);
         }
     }
     else
