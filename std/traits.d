@@ -1125,7 +1125,7 @@ if (isCallable!func && variadicFunctionStyle!func == Variadic.no)
 }
 
 /**
-Get tuple, one per function parameter, of the storage classes of the parameters.
+Get a tuple of the storage classes of a function's parameters.
 Params:
     func = function symbol or type of function, delegate, or pointer to function
 Returns:
@@ -1154,22 +1154,16 @@ if (isCallable!func)
 
     static if (is(Func PT == __parameters))
     {
-        template StorageClass(size_t i)
+        alias ParameterStorageClassTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
-            static if (i < PT.length)
-            {
-                alias StorageClass = AliasSeq!(
-                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)),
-                        StorageClass!(i + 1));
-            }
-            else
-                alias StorageClass = AliasSeq!();
+            ParameterStorageClassTuple = AliasSeq!(ParameterStorageClassTuple,
+                extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)));
         }
-        alias ParameterStorageClassTuple = StorageClass!0;
     }
     else
     {
-        static assert(0, func[0].stringof ~ " is not a function");
+        static assert(0, func.stringof, " is not a function");
         alias ParameterStorageClassTuple = AliasSeq!();
     }
 }
@@ -1332,25 +1326,20 @@ if (isCallable!func)
                 enum Get = "";
             }
         }
+
+        alias ParameterIdentifierTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
+        {
+            ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple,
+                Get!i);
+        }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterIdentifierTuple = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterIdentifierTuple = Impl!();
 }
 
 ///
@@ -1408,7 +1397,7 @@ if (isCallable!func)
 
 
 /**
-Get, as a tuple, the default value of the parameters to a function symbol.
+Get, as a tuple, the default values of the parameters to a function symbol.
 If a parameter doesn't have the default value, `void` is returned instead.
  */
 template ParameterDefaults(alias func)
@@ -1449,25 +1438,19 @@ if (isCallable!func)
                 alias Get = void;
                 // If default arg doesn't exist, returns void instead.
         }
+        alias ParameterDefaults = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
+        {
+            ParameterDefaults = AliasSeq!(ParameterDefaults,
+                Get!i);
+        }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterDefaults = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterDefaults = Impl!();
 }
 
 ///
