@@ -1410,22 +1410,17 @@ if (isCallable!func)
             enum args = "args" ~ (name == "args" ? "_" : "");
             enum val = "val" ~ (name == "val" ? "_" : "");
             enum ptr = "ptr" ~ (name == "ptr" ? "_" : "");
-            mixin("
-                enum hasDefaultArg = (PT[i .. i+1] " ~ args ~ ") { return true; };
-            ");
+            enum hasDefaultArg = mixin("(PT[i .. i+1] ", args, ") => true");
             static if (is(typeof(hasDefaultArg())))
             {
                 mixin("
-                // workaround scope escape check, see
-                // https://issues.dlang.org/show_bug.cgi?id=16582
-                // should use return scope once available
-                enum get = (PT[i .. i+1] " ~ args ~ ") @trusted
+                enum get = (return scope PT[i .. i+1] ", args, ")
                 {
                     // If the parameter is lazy, we force it to be evaluated
                     // like this.
-                    auto " ~ val ~ " = " ~ args ~ "[0];
-                    auto " ~ ptr ~ " = &" ~ val ~ ";
-                    return *" ~ ptr ~ ";
+                    auto ", val, " = ", args, "[0];
+                    auto ", ptr, " = &", val, ";
+                    return *", ptr, ";
                 };");
                 enum Get = get();
             }
