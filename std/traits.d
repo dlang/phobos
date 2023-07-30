@@ -1413,15 +1413,14 @@ if (isCallable!func)
             enum hasDefaultArg = mixin("(PT[i .. i+1] ", args, ") => true");
             static if (is(typeof(hasDefaultArg())))
             {
-                mixin("
-                enum get = (return scope PT[i .. i+1] ", args, ")
+                enum get = mixin("(return scope PT[i .. i+1] ", args, ")
                 {
                     // If the parameter is lazy, we force it to be evaluated
                     // like this.
                     auto ", val, " = ", args, "[0];
                     auto ", ptr, " = &", val, ";
                     return *", ptr, ";
-                };");
+                }");
                 enum Get = get();
             }
             else
