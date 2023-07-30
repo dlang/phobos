@@ -1165,7 +1165,7 @@ if (isCallable!func)
     }
     else
     {
-        static assert(0, func.stringof, " is not a function");
+        static assert(0, func.stringof ~" is not a function");
         alias ParameterStorageClassTuple = AliasSeq!();
     }
 }

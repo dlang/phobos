@@ -257,11 +257,11 @@ public:
 
         static if (op=="+")
         {
-            data = BigUint.addOrSubInt!ulong(data, u, wantSub: sign != (y<0), sign);
+            data = BigUint.addOrSubInt!ulong(data, u, sign != (y<0), sign);
         }
         else static if (op=="-")
         {
-            data = BigUint.addOrSubInt!ulong(data, u, wantSub: sign == (y<0), sign);
+            data = BigUint.addOrSubInt!ulong(data, u, sign == (y<0), sign);
         }
         else static if (op=="*")
         {
@@ -635,7 +635,7 @@ public:
         static if (op == "-")
         {
             r.sign = sign;
-            r.data = BigUint.addOrSubInt!ulong(data, u, wantSub: sign == (y<0), r.sign);
+            r.data = BigUint.addOrSubInt!ulong(data, u, sign == (y<0), r.sign);
             r.negate();
         }
         return r;
@@ -694,12 +694,12 @@ public:
     {
         static if (op=="++")
         {
-            data = BigUint.addOrSubInt!ulong(data, 1UL, wantSub: sign, sign);
+            data = BigUint.addOrSubInt!ulong(data, 1UL, sign, sign);
             return this;
         }
         else static if (op=="--")
         {
-            data = BigUint.addOrSubInt!ulong(data, 1UL, wantSub: !sign, sign);
+            data = BigUint.addOrSubInt!ulong(data, 1UL, !sign, sign);
             return this;
         }
     }

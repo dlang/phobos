@@ -253,7 +253,7 @@ template to(T)
     assert(to!long(a) == a);
     assertThrown!ConvOverflowException(to!byte(a));
 
-    assert(to!int(4.2e6) == 4200000);
+    assert(to!int(4.2e6) == 4_200_000);
     assertThrown!ConvOverflowException(to!uint(-3.14));
     assert(to!uint(3.14) == 3);
     assert(to!uint(3.99) == 3);
@@ -912,31 +912,46 @@ if (!is(S : T) &&
             enum isModConvertible = is(Unqual!S == S);
         }
     }
-    static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
-
-    auto result = ()@trusted{ return cast(T) value; }();
-    if (!result && value)
+    static assert(isModConvertible, "Invalid modifier conversion from " ~ S.stringof ~ " to " ~ T.stringof);
+    return cast(T) value; // Perform conversion
+}
+@trusted
+string name(TypeInfo ti)
+{
+    auto currentTypeInfo = cast(TypeInfo_Const)(ti);
+    while (currentTypeInfo)
     {
-        string name(TypeInfo ti) @trusted
-        {
-            while (auto tc = (cast(TypeInfo_Const) ti))
-            {
-                ti = tc.base;
-            }
-            if (auto tinf = cast(TypeInfo_Interface) ti)
-            {
-                ti = tinf.info;
-            }
-            TypeInfo_Class tc = cast(TypeInfo_Class) ti;
-            assert(tc);
-            return tc.name;
-        }
-        throw new ConvException("Cannot convert object of static type " ~
-                name(typeid(S)) ~ " and dynamic type " ~ name(typeid(value)) ~ " to type " ~ name(typeid(T)));
+        ti = currentTypeInfo.base;
+        currentTypeInfo = cast(TypeInfo_Const)(ti);
     }
-    return result;
+
+    if (auto tinf = cast(TypeInfo_Interface)(ti))
+    {
+        ti = tinf.info;
+    }
+
+    TypeInfo_Class tcClass = cast(TypeInfo_Class)(ti);
+    assert(tcClass, "TypeInfo_Class is null");
+    return tcClass.name;
 }
 
+
+T convert(S, T)(S value)
+{
+    static assert(is(S == T), "Conversion only supported between same types.");
+
+    // Attempt to cast the value
+    auto result = () @trusted { return cast(T) value; }();
+
+    // Handle cases where casting fails
+    if (!result && value)
+    {
+        throw new ConvException("Cannot convert object of static type " ~
+            name(typeid(S)) ~ " and dynamic type " ~ name(typeid(value)) ~ " to type " ~ name(typeid(T)));
+    }
+
+    return result;
+}
 // Unittest for 6288
 @safe pure unittest
 {

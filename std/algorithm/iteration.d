@@ -2973,22 +2973,27 @@ front to back, even if it is a bidirectional range too.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 {
-    static assert(isInputRange!RoR, "The type of RoR '", RoR.stringof
-            , " must be an InputRange (isInputRange!", RoR.stringof, ").");
-    static assert(isInputRange!(ElementType!RoR), "The ElementyType of RoR '"
-            , ElementType!(RoR).stringof, "' must be an InputRange "
-            , "(isInputRange!(ElementType!(", RoR.stringof , "))).");
-    static assert(isForwardRange!Separator, "The type of the Separator '"
-            , Separator.stringof, "' must be a ForwardRange (isForwardRange!("
-            , Separator.stringof, ")).");
-    static assert(is(ElementType!Separator : ElementType!(ElementType!RoR))
-            , "The type of the elements of the separator range does not match "
-            , "the type of the elements that are joined. Separator type '"
-            , ElementType!(Separator).stringof, "' is not implicitly"
-            , "convertible to range element type '"
-            , ElementType!(ElementType!RoR).stringof, "' (is(ElementType!"
-            , Separator.stringof, " : ElementType!(ElementType!", RoR.stringof
-            , "))).");
+    static assert(isInputRange!RoR,
+    "The type of RoR '" ~ RoR.stringof ~
+    "' must be an InputRange (isInputRange!" ~ RoR.stringof ~ ").");
+
+static assert(isInputRange!(ElementType!RoR),
+    "The ElementType of RoR '" ~ ElementType!(RoR).stringof ~
+    "' must be an InputRange (isInputRange!(ElementType!(" ~ RoR.stringof ~ "))).");
+
+static assert(isForwardRange!Separator,
+    "The type of the Separator '" ~ Separator.stringof ~
+    "' must be a ForwardRange (isForwardRange!(" ~ Separator.stringof ~ ")).");
+
+static assert(is(ElementType!Separator : ElementType!(ElementType!RoR)),
+    "The type of the elements of the separator range does not match " ~
+    "the type of the elements that are joined. Separator type '" ~
+    ElementType!(Separator).stringof ~
+    "' is not implicitly convertible to range element type '" ~
+    ElementType!(ElementType!RoR).stringof ~
+    "' (is(ElementType!" ~ Separator.stringof ~
+    " : ElementType!(ElementType!" ~ RoR.stringof ~ ")))).");
+
 
     static struct Result
     {
@@ -7959,10 +7964,10 @@ $(REF nextPermutation, std,algorithm,sorting).
 */
 Permutations!Range permutations(Range)(Range r)
 {
-    static assert(isRandomAccessRange!Range, Range.stringof,
-            " must be a RandomAccessRange");
+    static assert(isRandomAccessRange!Range, Range.stringof
+            ~ " must be a RandomAccessRange");
     static assert(hasLength!Range, Range.stringof
-            , " must have a length");
+            ~ " must have a length");
 
     return typeof(return)(r);
 }
@@ -7970,10 +7975,10 @@ Permutations!Range permutations(Range)(Range r)
 /// ditto
 struct Permutations(Range)
 {
-    static assert(isRandomAccessRange!Range, Range.stringof,
-            " must be a RandomAccessRange");
+    static assert(isRandomAccessRange!Range, Range.stringof
+            ~ " must be a RandomAccessRange");
     static assert(hasLength!Range, Range.stringof
-            , " must have a length");
+            ~ " must have a length");
 
     private size_t[] _indices, _state;
     private Range _r;
