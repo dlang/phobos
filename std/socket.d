@@ -3384,10 +3384,26 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout of $(REF Duration, core, time) or
-     * `TimeVal`, may be specified; if a timeout is not specified or the
-     * `TimeVal` is `null`, the maximum timeout is used. The `TimeVal`
-     * timeout has an unspecified value when `select` returns.
+     * Wait for a socket to change status.
+     *
+     * At least one of the provided `SocketSet`s must be non-null, and not
+     * empty. Calling this function with completely empty or null sets is not
+     * logically consistent with the purpose of this function.
+     *
+     * A wait timeout of $(REF Duration, core, time) or `TimeVal`, may be
+     * specified; if a timeout is not specified or the `TimeVal` is `null`,
+     * the maximum timeout is used. The `TimeVal` timeout, when passed as a
+     * pointer to the underlying `select` call, has an undefined value when
+     * this function returns.
+     *
+     * `SocketSet`s are updated to include only those sockets for which an
+     * event occured.
+     * For a `connect()`ing socket, writeability means connected.
+     * For a `listen()`ing socket, readability means listening.
+     *
+     * On Windows, note that the `Winsock` implementation may possibly be
+     * internally limited to 64 sockets per set.
+     *
      * Returns: The number of sockets with status changes, `0` on timeout,
      * or `-1` on interruption. If the return value is greater than `0`,
      * the `SocketSets` are updated to only contain the sockets having status
@@ -3395,14 +3411,6 @@ public:
      * connection is established and it's able to send. For a listening socket,
      * a read status change means there is an incoming connection request and
      * it's able to accept.
-     *
-     * `SocketSet`'s updated to include only those sockets which an event occured.
-     * For a `connect()`ing socket, writeability means connected.
-     * For a `listen()`ing socket, readability means listening
-     * `Winsock`; possibly internally limited to 64 sockets per set.
-     *
-     * Returns:
-     * the number of events, 0 on timeout, or -1 on interruption
      */
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout) @trusted
     {
@@ -3424,7 +3432,7 @@ public:
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* timeout) @trusted
     in
     {
-        //make sure none of the SocketSet's are the same object
+        // Make sure none of the SocketSets are the same object.
         if (checkRead)
         {
             assert(checkRead !is checkWrite);
@@ -3434,6 +3442,14 @@ public:
         {
             assert(checkWrite !is checkError);
         }
+        // Ensure that at least one of the given SocketSets is not null and not empty.
+        // Otherwise, waiting for no updates is pointless.
+        assert(
+            (checkRead  && checkRead.set.length  > 0) ||
+            (checkWrite && checkWrite.set.length > 0) ||
+            (checkError && checkError.set.length > 0),
+            "At least one non-null, non-empty set should be provided as an argument to Socket.select()."
+        );
     }
     do
     {
