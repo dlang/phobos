@@ -3246,6 +3246,41 @@ if ((isSomeFiniteCharInputRange!RO || isConvertibleToString!RO) &&
     }
 }
 
+version(Windows)
+{
+    import core.sys.windows.w32api:_WIN32_WINNT;;
+    static if(_WIN32_WINNT >= 0x600) //WindowsVista or later
+    {
+        void symlink(string original, string link)
+        {
+            import core.stdc.string:strlen;
+            import core.sys.windows.winbase;
+            import core.sys.windows.windef:DWORD, MAX_PATH, LPWSTR;
+            import std.utf:toUTF16z;
+            import std.file:FileException;
+    
+            DWORD typeFlag = 0; //File
+            if(std.file.isDir(original))
+                typeFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
+            typeFlag|= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+    
+            if(link.length > MAX_PATH) link = `\\?\`~link;
+            if(original.length > MAX_PATH) original = `\\?\`~original;
+    
+            if(!CreateSymbolicLinkW(link.toUTF16z, original.toUTF16z, typeFlag))
+            {
+                LPWSTR strBuffer;
+                DWORD length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, null, GetLastError(),0, cast(LPWSTR)&strBuffer, 0, null);
+                wchar[] str = new wchar[length];
+                str[] = strBuffer[0..str.length];
+                LocalFree(strBuffer);
+                import std.conv;
+                throw new FileException(original, str.to!string);
+            }
+        }
+    }
+}
+
 version (Posix) @safe unittest
 {
     if (system_directory.exists)
