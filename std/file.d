@@ -3248,9 +3248,15 @@ if ((isSomeFiniteCharInputRange!RO || isConvertibleToString!RO) &&
 
 version(Windows)
 {
-    import core.sys.windows.w32api:_WIN32_WINNT;;
+    import core.sys.windows.w32api:_WIN32_WINNT;
     static if(_WIN32_WINNT >= 0x600) //WindowsVista or later
     {
+        /** 
+		 * 
+		 * Params:
+		 *   original = The original path where the link will redirect
+		 *   link = The path where the link will be created
+		 */
         void symlink(string original, string link)
         {
             import core.stdc.string:strlen;
@@ -3264,22 +3270,33 @@ version(Windows)
                 typeFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
             typeFlag|= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
     
-            if(link.length > MAX_PATH) link = `\\?\`~link;
-            if(original.length > MAX_PATH) original = `\\?\`~original;
+            if (link.length > MAX_PATH) link = `\\?\`~link;
+            if (original.length > MAX_PATH) original = `\\?\`~original;
     
-            if(!CreateSymbolicLinkW(link.toUTF16z, original.toUTF16z, typeFlag))
+            if (!CreateSymbolicLinkW(link.toUTF16z, original.toUTF16z, typeFlag))
             {
                 LPWSTR strBuffer;
                 DWORD length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, null, GetLastError(),0, cast(LPWSTR)&strBuffer, 0, null);
                 wchar[] str = new wchar[length];
                 str[] = strBuffer[0..str.length];
                 LocalFree(strBuffer);
-                import std.conv;
+                import std.conv:to;
                 throw new FileException(original, str.to!string);
             }
         }
+        unittest
+        {
+        	import std.exception:assertThrown;
+        	std.file.mkdir("testDir");
+        	scope(exit) std.file.rmdir("testDir");
+        	symlink("testDir", "linkTestDir");
+        	scope(exit) std.file.rmdir("linkTestDir");
+        	assert(std.file.isSymlink("linkTestDir"));
+        	assertThrown!(std.file.FileException)(symlink("testDir", "linkTestDir"));
+        }
     }
 }
+
 
 version (Posix) @safe unittest
 {
