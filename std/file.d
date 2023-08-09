@@ -3207,7 +3207,7 @@ if (isConvertibleToString!R)
 }
 
 /++
-    $(BLUE This function is POSIX-Only.)
+    $(BLUE This function is POSIX and Windows Only.)
 
     Creates a symbolic _link (_symlink).
 
@@ -3252,7 +3252,8 @@ version(Windows)
     static if(_WIN32_WINNT >= 0x600) //WindowsVista or later
     {
         /** 
-		 * 
+		 * Creates a symbolic link. Requires Elevated Process (Administrator Rights), or Developer Mode.
+         *
 		 * Params:
 		 *   original = The original path where the link will redirect
 		 *   link = The path where the link will be created
@@ -3266,10 +3267,12 @@ version(Windows)
             import std.file:FileException;
     
             DWORD typeFlag = 0; //File
-            if (std.file.isDir(original))
+            if (std.file.exists(original) && std.file.isDir(original))
                 typeFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
+            //Allows to create symlink without elevating the process, only works on developer mode.
             typeFlag|= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-    
+
+            //Removes the MAX_PATH Limitator
             if (link.length > MAX_PATH) link = `\\?\`~link;
             if (original.length > MAX_PATH) original = `\\?\`~original;
     
