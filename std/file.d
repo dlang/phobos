@@ -3266,7 +3266,7 @@ version(Windows)
             import std.file:FileException;
     
             DWORD typeFlag = 0; //File
-            if(std.file.isDir(original))
+            if (std.file.isDir(original))
                 typeFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
             typeFlag|= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
     
