@@ -839,7 +839,7 @@ string letters()
 )
 
 The use in the example above is correct because `result`
-was private to `letters` and is inaccessible in writing
+was private to `letters` and the memory it referenced can no longer be written to
 after the function returns. The following example shows an
 incorrect use of `assumeUnique`.
 
@@ -862,8 +862,8 @@ string letters(char first, char last)
 ----
 )
 
-The example above wreaks havoc on client code because it is
-modifying arrays that callers considered immutable. To obtain an
+The example above wreaks havoc on client code because it modifies the
+returned array that the previous caller considered immutable. To obtain an
 immutable array from the writable array `buffer`, replace
 the last line with:
 
@@ -871,7 +871,7 @@ the last line with:
 return to!(string)(sneaky); // not that sneaky anymore
 ----
 
-The call will duplicate the array appropriately.
+The `to` call will duplicate the array appropriately.
 
 $(PANEL
 $(NOTE Checking for uniqueness during compilation is
