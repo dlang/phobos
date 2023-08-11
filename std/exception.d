@@ -416,13 +416,16 @@ void assertThrown(T : Throwable = Exception, E)
     Returns: `value`, if `cast(bool) value` is true. Otherwise,
     depending on the chosen overload, `new Exception(msg)`, `dg()` or `ex` is thrown.
 
-    Note:
-        `enforce` is used to throw exceptions and is therefore intended to
+        $(PANEL
+        $(NOTE `enforce` is used to throw exceptions and is therefore intended to
         aid in error handling. It is $(I not) intended for verifying the logic
-        of your program. That is what `assert` is for. Also, do not use
+        of your program - that is what `assert` is for.)
+
+        Do not use
         `enforce` inside of contracts (i.e. inside of `in` and `out`
         blocks and `invariant`s), because contracts are compiled out when
         compiling with $(I -release).
+        )
 
         If a delegate is passed, the safety and purity of this function are inferred
         from `Dg`'s safety and purity.
@@ -870,11 +873,12 @@ return to!(string)(sneaky); // not that sneaky anymore
 
 The call will duplicate the array appropriately.
 
-Note that checking for uniqueness during compilation is
+$(PANEL
+$(NOTE Checking for uniqueness during compilation is
 possible in certain cases, especially when a function is
-marked as a pure function. The following example does not
+marked (or inferred) as `pure`. The following example does not
 need to call `assumeUnique` because the compiler can infer the
-uniqueness of the array in the pure function:
+uniqueness of the array in the pure function:)
 
 $(RUNNABLE_EXAMPLE
 ----
@@ -894,6 +898,7 @@ For more on infering uniqueness see the $(B unique) and
 $(B lent) keywords in the
 $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
 language.
+)
 
 The downside of using `assumeUnique`'s
 convention-based usage is that at this time there is no
