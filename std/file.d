@@ -3328,10 +3328,10 @@ version (Windows)
         import core.sys.windows.winbase;
         import core.sys.windows.windef;
         import core.sys.windows.winioctl;
-        import std.utf:toUTF16z, toUTF16;
-        import std.conv:to;
-        import std.windows.syserror:wenforce;
-        import std.path:isAbsolute;
+        import std.utf : toUTF16z, toUTF16;
+        import std.conv : to;
+        import std.windows.syserror : wenforce;
+        import std.path : isAbsolute;
 
 
 
@@ -3389,7 +3389,7 @@ version (Windows)
     void createWindowsSymlink(in char[] original, in char[] link, WindowsSymlinkHint hint = WindowsSymlinkHint.autoDetect)
     {
         import core.sys.windows.winnt;
-        import std.path: buildNormalizedPath;
+        import std.path : buildNormalizedPath;
 
         hintHandling: final switch (hint) with (WindowsSymlinkHint)
         {
@@ -3420,7 +3420,7 @@ version (Windows)
 
     void createJunction(in char[] original, in char[] link)
     {
-        import std.path: absolutePath, dirName, buildNormalizedPath;
+        import std.path : absolutePath, dirName, buildNormalizedPath;
         mkdir(link);
         scope(failure) rmdir(link);
 
@@ -3437,7 +3437,7 @@ version (Windows)
 
     unittest
     {
-    	import std.exception:assertThrown;
+    	import std.exception : assertThrown;
     	std.file.mkdir("testDir");
     	scope(exit) std.file.rmdir("testDir");
     	createJunction("testDir", "linkTestDir");
