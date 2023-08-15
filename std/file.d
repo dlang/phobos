@@ -3391,7 +3391,7 @@ version (Windows)
         import core.sys.windows.winnt;
         import std.path: buildNormalizedPath;
 
-        hintHandling: final switch(hint) with(WindowsSymlinkHint)
+        hintHandling: final switch (hint) with (WindowsSymlinkHint)
         {
             case autoDetect:
                 // TODO: isDir(original) is not correct when original is a relative path?
