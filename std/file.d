@@ -3207,7 +3207,7 @@ if (isConvertibleToString!R)
 }
 
 /++
-    $(BLUE This function is POSIX and Windows Only.)
+    $(BLUE This function is POSIX Only.)
 
     Creates a symbolic _link (_symlink).
 
