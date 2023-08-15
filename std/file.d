@@ -3358,7 +3358,7 @@ version (Windows)
 
         auto pathBufferSize = targetW.length + 1 + printW.length + 1; // in chars
         auto buf = new ubyte[pathOffset + pathBufferSize * WCHAR.sizeof];
-        auto r = cast(REPARSE_DATA_BUFFER*)buf.ptr;
+        auto r = cast(REPARSE_DATA_BUFFER*) buf.ptr;
 
         r.ReparseTag = mixin(reparseTagName);
         r.ReparseDataLength = to!WORD(buf.length - mixin(q{r.} ~ reparseBufferName).offsetof);
@@ -3424,7 +3424,7 @@ version (Windows)
         mkdir(link);
         scope(failure) rmdir(link);
 
-        auto target = `\??\` ~ (cast(string)original).absolutePath((cast(string)link.dirName).absolutePath).buildNormalizedPath;
+        auto target = `\??\` ~ (cast(string) original).absolutePath((cast(string) link.dirName).absolutePath).buildNormalizedPath;
         if (target[$-1] != '\\')
             target ~= '\\';
 
