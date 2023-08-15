@@ -3386,10 +3386,6 @@ public:
     /**
      * Wait for a socket to change status.
      *
-     * At least one of the provided `SocketSet`s must be non-null, and not
-     * empty. Calling this function with completely empty or null sets is not
-     * logically consistent with the purpose of this function.
-     *
      * A wait timeout of $(REF Duration, core, time) or `TimeVal`, may be
      * specified; if a timeout is not specified or the `TimeVal` is `null`,
      * the maximum timeout is used. The `TimeVal` timeout, when passed as a
@@ -3402,7 +3398,8 @@ public:
      * For a `listen()`ing socket, readability means listening.
      *
      * On Windows, note that the `Winsock` implementation may possibly be
-     * internally limited to 64 sockets per set.
+     * internally limited to 64 sockets per set. Additionally on Windows, at
+     * least one of the provided socket sets must be non-null and not empty.
      *
      * Returns: The number of sockets with status changes, `0` on timeout,
      * or `-1` on interruption. If the return value is greater than `0`,
@@ -3442,14 +3439,6 @@ public:
         {
             assert(checkWrite !is checkError);
         }
-        // Ensure that at least one of the given SocketSets is not null and not empty.
-        // Otherwise, waiting for no updates is pointless.
-        assert(
-            (checkRead  && checkRead.set.length  > 0) ||
-            (checkWrite && checkWrite.set.length > 0) ||
-            (checkError && checkError.set.length > 0),
-            "At least one non-null, non-empty set should be provided as an argument to Socket.select()."
-        );
     }
     do
     {
@@ -3462,6 +3451,14 @@ public:
             fr = checkRead  && checkRead.count  ? checkRead.toFd_set()  : null;
             fw = checkWrite && checkWrite.count ? checkWrite.toFd_set() : null;
             fe = checkError && checkError.count ? checkError.toFd_set() : null;
+            // Ensure that at least one of the given SocketSets is not null and not empty.
+            // Windows requires at least one non-null set to be passed.
+            assert(
+                fr !is null ||
+                fw !is null ||
+                fe !is null,
+                "At least one non-null, non-empty set should be provided as an argument to Socket.select()."
+            );
         }
         else
         {
