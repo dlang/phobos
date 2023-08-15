@@ -3285,6 +3285,9 @@ version (StdDdoc)
             link = The location of the junction to create. A relative
                 path is relative to the current working directory.
 
+            hint = When creating links to inexistent files/folders, this
+                hint may be specified for the developer's intention.
+
         Throws:
             $(LREF WindowsException) on error.
       +/
