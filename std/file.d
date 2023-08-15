@@ -3368,13 +3368,13 @@ version (Windows)
 
         mixin(q{r.} ~ reparseBufferName).SubstituteNameOffset = to!WORD((p-pathBuffer) * WCHAR.sizeof);
         mixin(q{r.} ~ reparseBufferName).SubstituteNameLength = to!WORD(targetW.length * WCHAR.sizeof);
-        p[0..targetW.length] = targetW;
+        p[0 .. targetW.length] = targetW;
         p += targetW.length;
         *p++ = 0;
 
         mixin(q{r.} ~ reparseBufferName).PrintNameOffset      = to!WORD((p-pathBuffer) * WCHAR.sizeof);
         mixin(q{r.} ~ reparseBufferName).PrintNameLength      = to!WORD(printW .length * WCHAR.sizeof);
-        p[0..printW.length] = printW;
+        p[0 .. printW.length] = printW;
         p += printW.length;
         *p++ = 0;
 
