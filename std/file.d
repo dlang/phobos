@@ -3246,7 +3246,7 @@ if ((isSomeFiniteCharInputRange!RO || isConvertibleToString!RO) &&
     }
 }
 
-/** 
+/**
  *  Defined for allowing automatic detection on symlink type.
  *  Currently only used on Windows.
  */
