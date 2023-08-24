@@ -909,17 +909,20 @@ Params:
             iob._flag &= ~_IOTRAN;
             _FUNLOCK(fp);
         }
-        else
+        else version (CRuntime_Microsoft)
         {
-            version (Windows) // MSVCRT
-                auto fp = _fdopen(fd, modez);
-            else version (Posix)
-            {
-                import core.sys.posix.stdio : fdopen;
-                auto fp = fdopen(fd, modez);
-            }
+            auto fp = _fdopen(fd, modez);
             errnoEnforce(fp);
         }
+        else version (Posix)
+        {
+            import core.sys.posix.stdio : fdopen;
+            auto fp = fdopen(fd, modez);
+            errnoEnforce(fp);
+        }
+        else
+            static assert(0, "no fdopen() available");
+
         this = File(fp, name);
     }
 
