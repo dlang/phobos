@@ -1544,11 +1544,10 @@ template multiSort(less...) //if (less.length > 1)
 
 private bool multiSortPredFun(Range, funs...)(ElementType!Range a, ElementType!Range b)
 {
-    foreach (f; funs)
+    static foreach (f; funs)
     {
-        alias lessFun = binaryFun!(f);
-        if (lessFun(a, b)) return true;
-        if (lessFun(b, a)) return false;
+        if (binaryFun!(f)(a, b)) return true;
+        if (binaryFun!(f)(b, a)) return false;
     }
     return false;
 }
@@ -1557,7 +1556,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
 {
     alias lessFun = binaryFun!(funs[0]);
 
-    static if (funs.length > 1)
+    static if (funs.length > 1 && ss == SwapStrategy.unstable)
     {
         while (r.length > 1)
         {
@@ -1579,7 +1578,14 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     }
     else
     {
-        sort!(lessFun, ss)(r);
+        static if (funs.length > 1)
+        {
+            sort!(multiSortPredFun!(Range,funs), ss)(r);
+        }
+        else
+        {
+            sort!(lessFun, ss)(r);
+        }
     }
 }
 
@@ -1597,6 +1603,47 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
 
     auto pts3 = indexed(pts1, iota(pts1.length));
     assert(pts3.multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable).release.equal(pts2));
+
+    auto pts4 = iota(10).array;
+    assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
+}
+//https://issues.dlang.org/show_bug.cgi?id=15530
+@safe unittest
+{
+    int[] arr = [5,4,3,2,1];
+    static assert(validPredicates!(int, (a, b) => a < b, (a, b) => a < b));
+    arr.multiSort!((a, b) => a < b, (a, b) => a < b, SwapStrategy.stable);
+}
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range;
+
+    static struct Point { int x, y ,z; }
+    auto pts1 = [ Point(5, 6, 0), Point(1, 0, 0), Point(5, 7, 0),
+                  Point(1, 1, 1), Point(1, 2, 1), Point(0, 1, 1),
+                  Point(5, 6, 1), Point(1, 0, 1), Point(5, 7, 1),
+                  Point(1, 1, 0), Point(1, 2, 0), Point(0, 1, 0) ];
+    auto pts2 = [ Point(0, 1, 1), Point(0, 1, 0), Point(1, 0, 0), Point(1, 0, 1),
+                  Point(1, 1, 1), Point(1, 1, 0), Point(1, 2, 1), Point(1, 2, 0),
+                  Point(5, 6, 0), Point(5, 6, 1), Point(5, 7, 0), Point(5, 7, 1) ];
+    static assert(validPredicates!(Point, "a.x < b.x", "a.y < b.y"));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.stable)(pts1);
+}
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range;
+
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
+    auto pts2 = [ Point(0, 1), Point(1, 0), Point(1, 1), Point(1, 2), Point(5, 6), Point(5, 7) ];
+    static assert(validPredicates!(Point, "a.x < b.x", "a.y < b.y"));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.stable)(pts1);
+    assert(pts1 == pts2);
+
+    auto pts3 = indexed(pts1, iota(pts1.length));
+    assert(pts3.multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.stable).release.equal(pts2));
 
     auto pts4 = iota(10).array;
     assert(pts4.multiSort!("a > b").release.equal(iota(10).retro));
