@@ -20,7 +20,7 @@ version (ANSI) {} else version = Unicode;
 */
 
 // Import windows types or declare appropriate aliases if we are not.
-version(Windows) {
+version (Windows) {
     public import core.sys.windows.windef;
     public import core.sys.windows.basetyps; // for GUID
 } else {
