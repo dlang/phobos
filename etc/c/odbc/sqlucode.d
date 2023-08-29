@@ -15,7 +15,7 @@ module etc.c.odbc.sqlucode;
 
 version (ANSI) {} else version = Unicode;
 
-import core.sys.windows.sqlext;
+import etc.c.odbc.sqlext;
 
 enum SQL_WCHAR        = -8;
 enum SQL_WVARCHAR     = -9;

@@ -13,7 +13,7 @@ See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odb
  */
 module etc.c.odbc.sql;
 
-public import core.sys.windows.sqltypes;
+public import etc.c.odbc.sqltypes;
 
 enum ODBCVER = 0x0351;
 

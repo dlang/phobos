@@ -21,14 +21,15 @@ version (ANSI) {} else version = Unicode;
 
 // Import windows types or declare appropriate aliases if we are not.
 version(Windows) {
-    import core.sys.windows.windef;
-    import core.sys.windows.basetyps; // for GUID
+    public import core.sys.windows.windef;
+    public import core.sys.windows.basetyps; // for GUID
 } else {
     alias ushort USHORT, WORD;
-    alias uint ULONG, DWORD;
-    alias void* PVOID;
+    alias uint ULONG, LONG, BOOL, DWORD;
+    alias void VOID;
+    alias void* PVOID, HANDLE, HWND;
     alias ubyte UCHAR, BYTE;
-    alias TypeDef!(void*) HANDLE, HWND;
+    alias wchar* LPWSTR;
 
     align(1) struct GUID {  // size is 16
         align(1):

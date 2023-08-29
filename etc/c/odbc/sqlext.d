@@ -18,7 +18,7 @@ module etc.c.odbc.sqlext;
    creating a circular dependency!
 */
 
-public import core.sys.windows.sql;
+public import etc.c.odbc.sql;
 
 enum SQL_SPEC_MAJOR = 3;
 enum SQL_SPEC_MINOR = 51;
