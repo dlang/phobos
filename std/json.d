@@ -1173,6 +1173,45 @@ if (isSomeFiniteCharInputRange!T)
         return val;
     }
 
+	string parseJson5Identifier() {
+		static const reservedKeywords = [ "break", "do", "instanceof", "typeof"
+			, "case", "else", "new", "var"
+			, "catch", "finally", "return", "void"
+			, "continue", "for", "switch", "while"
+			, "debugger", "function", "this", "with"
+			, "default", "if", "throw"
+			, "delete", "in", "try"
+			
+			, "class", "enum", "extends", "super"
+			, "const", "export", "import"
+			
+			, "implements", "let", "private", "public", "yield"
+			, "interface", "package", "protected", "static"
+		];
+
+		auto app = appender!string();
+
+		Nullable!Char c = peekCharNullable();
+		while(!c.isNull()) {
+			Char cnn = c.get();
+			if(isWhite(cnn) || cnn == ':') {
+				break;
+			}
+			app.put(cnn);
+			c.nullify();
+			getChar();
+			c = peekCharNullable();
+		}
+
+		foreach(it; reservedKeywords) {
+			if(app.data() == it) {
+                throw new JSONException("The reserved keyword '"
+						~ it ~ "' can not be used as an identifier");
+			}
+		}
+		return app.data();
+	}
+
     string parseString()
     {
         import std.uni : isSurrogateHi, isSurrogateLo;
@@ -1291,8 +1330,12 @@ if (isSomeFiniteCharInputRange!T)
                     {
                         break;
                     }
-                    checkChar('"');
-                    string name = parseString();
+					string name;
+					if(testChar('"')) {
+                    	name = parseString();
+					} else {
+						name = parseJson5Identifier();
+					}
                     checkChar(':');
                     JSONValue member;
                     parseValue(member);
@@ -2549,6 +2592,39 @@ pure nothrow @safe unittest
     JSONValue j = parseJSON(s);
 	JSONValue* a = "a" in j;
 	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ a : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "a" in j;
+	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ $a : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "$a" in j;
+	assert(a !is null, "No '$a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ ßßüöäÄöPl : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "ßßüöäÄöPl" in j;
+	assert(a !is null, "No 'ßßüöäÄöPl' found");
 	assert(a.type == JSONType.integer, "A not an integer but " 
 			~ to!string(a.type));
 	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
