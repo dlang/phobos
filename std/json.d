@@ -1188,6 +1188,11 @@ if (isSomeFiniteCharInputRange!T)
 
 		auto app = appender!string();
 
+		// TODO technically we have to check if the first identifier character
+		// is a unicode defined letter, $, _, or \ unicode_escape_character
+		// but std.json is char all the way.
+		// Doing those checks is possible, but total overkill IMO
+
 		Nullable!Char c = peekCharNullable();
 		while(!c.isNull()) {
 			Char cnn = c.get();
@@ -1262,6 +1267,8 @@ if (isSomeFiniteCharInputRange!T)
                         immutable len = encode!(Yes.useReplacementDchar)(buf, val);
                         str.put(buf[0 .. len]);
                         break;
+                    case '\n': str.put('\n');   break;
+                    case '\r': str.put('\r');   break;
 
                     default:
                         error(text("Invalid escape sequence '\\", c, "'."));
@@ -2651,8 +2658,18 @@ pure nothrow @safe unittest
     // parse a file or string of json into a usable structure
     string s = `{ 'language': 'D', 'rating': 3.5, 'code': '42' }`;
     JSONValue j = parseJSON(s);
-    // j and j["language"] return JSONValue,
-    // j["language"].str returns a string
     assert(j["language"].str == "D");
     assert(j["rating"].floating == 3.5);
+}
+
+// JSON5 multi line string
+@safe unittest
+{
+    import std.conv : to;
+
+    // parse a file or string of json into a usable structure
+    string s = `{ 'a': 'D \
+Hello'}`;
+    JSONValue j = parseJSON(s);
+    assert(j["a"].str == "D \nHello");
 }
