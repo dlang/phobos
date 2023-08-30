@@ -1191,7 +1191,7 @@ if (isSomeFiniteCharInputRange!T)
 		Nullable!Char c = peekCharNullable();
 		while(!c.isNull()) {
 			Char cnn = c.get();
-			if(isWhite(cnn) || cnn == ':') {
+			if(cnn == ':' || isWhite(cnn)) {
 				break;
 			}
 			app.put(cnn);
@@ -1209,7 +1209,7 @@ if (isSomeFiniteCharInputRange!T)
 		return app.data();
 	}
 
-    string parseString()
+    string parseString(char delimiter = '"')()
     {
         import std.uni : isSurrogateHi, isSurrogateLo;
         import std.utf : encode, decode;
@@ -1219,7 +1219,7 @@ if (isSomeFiniteCharInputRange!T)
     Next:
         switch (peekChar())
         {
-            case '"':
+            case delimiter:
                 getChar();
                 break;
 
@@ -1330,6 +1330,8 @@ if (isSomeFiniteCharInputRange!T)
 					string name;
 					if(testChar('"')) {
                     	name = parseString();
+					} else if(testChar('\'')) {
+                    	name = parseString!('\'')();
 					} else {
 						name = parseJson5Identifier();
 					}
@@ -1371,6 +1373,20 @@ if (isSomeFiniteCharInputRange!T)
 
             case '"':
                 auto str = parseString();
+
+                // if special float parsing is enabled, check if string represents NaN/Inf
+                if ((options & JSONOptions.specialFloatLiterals) &&
+                    tryGetSpecialFloat(str, value.store.floating))
+                {
+                    // found a special float, its value was placed in value.store.floating
+                    value.type_tag = JSONType.float_;
+                    break;
+                }
+
+                value.assign(str);
+                break;
+            case '\'':
+                auto str = parseString!('\'')();
 
                 // if special float parsing is enabled, check if string represents NaN/Inf
                 if ((options & JSONOptions.specialFloatLiterals) &&
@@ -2625,4 +2641,18 @@ pure nothrow @safe unittest
 	assert(a.type == JSONType.integer, "A not an integer but " 
 			~ to!string(a.type));
 	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 single tick strings
+@safe unittest
+{
+    import std.conv : to;
+
+    // parse a file or string of json into a usable structure
+    string s = `{ 'language': 'D', 'rating': 3.5, 'code': '42' }`;
+    JSONValue j = parseJSON(s);
+    // j and j["language"] return JSONValue,
+    // j["language"].str returns a string
+    assert(j["language"].str == "D");
+    assert(j["rating"].floating == 3.5);
 }
