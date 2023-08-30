@@ -369,7 +369,7 @@ enum SQL_UNSPECIFIED=0;
 enum SQL_XOPEN_CLI_YEAR=10000;
 }//#endif /* ODBCVER >= 0x0300 */
 
-extern (Windows) {
+extern (System) {
     deprecated {
         SQLRETURN SQLAllocConnect(SQLHENV, SQLHDBC*);
         SQLRETURN SQLAllocEnv(SQLHENV*);
