@@ -560,7 +560,8 @@ enum SQL_PRED_SEARCHABLE = SQL_SEARCHABLE;
 //MACRO #define SQL_ADD_RECORD(s, r) SQLSetPos(s, r, SQL_ADD, SQL_LOCK_NO_CHANGE)
 
 
-static if (ODBCVER < 0x0300) {
+static if (ODBCVER < 0x0300)
+{
 enum SQL_CONNECT_OPT_DRVR_START = 1000;
 enum SQL_CONN_OPT_MAX = SQL_PACKET_SIZE;
 enum SQL_CONN_OPT_MIN = SQL_ACCESS_MODE;
@@ -572,7 +573,8 @@ enum SQL_TYPE_MIN = SQL_BIT;
 enum SQL_TYPE_MAX = SQL_VARCHAR;
 }
 
-static if (ODBCVER < 0x0300) {
+static if (ODBCVER < 0x0300)
+{
 enum SQL_NO_DATA_FOUND = 100;
 enum SQL_INTERVAL_YEAR = -80;
 enum SQL_INTERVAL_MONTH = -81;
@@ -587,7 +589,9 @@ enum SQL_INTERVAL_DAY_TO_SECOND = -89;
 enum SQL_INTERVAL_HOUR_TO_MINUTE = -90;
 enum SQL_INTERVAL_HOUR_TO_SECOND = -91;
 enum SQL_INTERVAL_MINUTE_TO_SECOND = -92;
-} else {
+}
+else 
+{
 enum SQL_NO_DATA_FOUND = SQL_NO_DATA;
 enum SQL_CODE_YEAR = 1;
 enum SQL_CODE_MONTH = 2;
@@ -618,16 +622,19 @@ enum SQL_INTERVAL_MINUTE_TO_SECOND = 100 + SQL_CODE_MINUTE_TO_SECOND;
 }//[Yes] #endif
 
 
-static if ((ODBCVER >= 0x0201) && (ODBCVER < 0x0300)) {
+static if ((ODBCVER >= 0x0201) && (ODBCVER < 0x0300))
+{
 enum SQL_OJ_CAPABILITIES = 65003;
 }
 
-static if (ODBCVER >= 0x0250) {
+static if (ODBCVER >= 0x0250)
+{
 enum SQL_NO_ACTION   = 3;
 enum SQL_SET_DEFAULT = 4;
 }
 
-static if (ODBCVER >= 0x0300) {
+static if (ODBCVER >= 0x0300)
+{
 enum SQL_ACTIVE_ENVIRONMENTS = 116;
 enum SQL_AD_ADD_CONSTRAINT_DEFERRABLE = 0x00000080L;
 enum SQL_AD_ADD_CONSTRAINT_INITIALLY_DEFERRED = 0x00000020L;
@@ -1199,7 +1206,8 @@ enum SQL_UPDATE_BY_BOOKMARK = 5;
 enum SQL_US_UNION = SQL_U_UNION;
 enum SQL_US_UNION_ALL = SQL_U_UNION_ALL;
 }//[Yes] #endif /* ODBCVER >= 0x300 */
-static if (ODBCVER >= 0x0350) {
+static if (ODBCVER >= 0x0350)
+{
 enum SQL_DESC_ROWVER = 35;
 enum SQL_GUID = -11;
 enum SQL_C_GUID = SQL_GUID;
@@ -1222,7 +1230,8 @@ enum SQL_C_GUID = SQL_GUID;
     //#endif /* ODBC_STD */
 }//#endif /* ODBCVER >= 0x0350 */
 
-//static if (ODBCVER >= 0x0351) {
+//static if (ODBCVER >= 0x0351)
+//{
 enum SQL_ATTR_ANSI_APP=115;
 enum SQL_AA_TRUE=1L;
 enum SQL_AA_FALSE=0L;
@@ -1289,7 +1298,8 @@ extern (System) {
     RETCODE TraceCloseLogFile();
     VOID TraceReturn(RETCODE, RETCODE);
     DWORD TraceVersion();
-    //static if (ODBCVER >= 0x0300) {
+    //static if (ODBCVER >= 0x0300)
+    //{
     SQLRETURN SQLBulkOperations(SQLHSTMT, SQLSMALLINT);
     SQLRETURN SQLAllocHandleStd( SQLSMALLINT, SQLHANDLE, SQLHANDLE*);
     //}

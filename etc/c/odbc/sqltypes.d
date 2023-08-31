@@ -20,10 +20,12 @@ version (ANSI) {} else version = Unicode;
 */
 
 // Import windows types or declare appropriate aliases if we are not.
-version (Windows) {
+version (Windows)
+{
     public import core.sys.windows.windef;
     public import core.sys.windows.basetyps; // for GUID
-} else {
+} else
+{
     alias ushort USHORT, WORD;
     alias uint ULONG, LONG, BOOL, DWORD;
     alias void VOID;
@@ -54,11 +56,14 @@ alias UCHAR SQLCHAR;
 alias UDWORD SQLUINTEGER;
 // #endif
 
-//static if (ODBCVER >= 0x0300) {
+//static if (ODBCVER >= 0x0300)
+//{
 alias HANDLE SQLHANDLE;
 alias SQLHANDLE SQLHENV, SQLHDBC, SQLHSTMT, SQLHDESC;
 /*
-} else {
+}
+else
+{
 alias void* SQLHENV;
 alias void* SQLHDBC;
 alias void* SQLHSTMT;
@@ -74,12 +79,16 @@ alias DWORD SQLTRANSID;
 alias SQLUSMALLINT SQLSETPOSIROW;
 alias wchar SQLWCHAR;
 
-version (Unicode) {
+version (Unicode)
+{
     alias SQLWCHAR SQLTCHAR;
-} else {
+}
+else
+{
     alias SQLCHAR  SQLTCHAR;
 }
-//static if (ODBCVER >= 0x0300) {
+//static if (ODBCVER >= 0x0300)
+//{
 alias ubyte  SQLDATE, SQLDECIMAL;
 alias double SQLDOUBLE, SQLFLOAT;
 alias ubyte  SQLNUMERIC;
@@ -111,7 +120,8 @@ struct TIMESTAMP_STRUCT {
     SQLUINTEGER fraction;
 }
 
-//static if (ODBCVER >= 0x0300) {
+//static if (ODBCVER >= 0x0300)
+//{
 alias DATE_STRUCT SQL_DATE_STRUCT;
 alias TIME_STRUCT SQL_TIME_STRUCT;
 alias TIMESTAMP_STRUCT SQL_TIMESTAMP_STRUCT;

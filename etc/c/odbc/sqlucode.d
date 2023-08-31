@@ -23,19 +23,25 @@ enum SQL_WLONGVARCHAR = -10;
 enum SQL_C_WCHAR      = SQL_WCHAR;
 
 enum SQL_SQLSTATE_SIZEW = 10;
-version (Unicode) {
+version (Unicode)
+{
 enum SQL_C_TCHAR = SQL_C_WCHAR;
-} else {
+}
+else
+{
 enum SQL_C_TCHAR = SQL_C_CHAR;
 }
 
 // Moved from sqlext
-static if (ODBCVER <= 0x0300) {
+static if (ODBCVER <= 0x0300)
+{
 enum SQL_UNICODE             = -95;
 enum SQL_UNICODE_VARCHAR     = -96;
 enum SQL_UNICODE_LONGVARCHAR = -97;
 enum SQL_UNICODE_CHAR        = SQL_UNICODE;
-} else {
+}
+else
+{
 enum SQL_UNICODE             = SQL_WCHAR;
 enum SQL_UNICODE_VARCHAR     = SQL_WVARCHAR;
 enum SQL_UNICODE_LONGVARCHAR = SQL_WLONGVARCHAR;
@@ -121,7 +127,8 @@ extern (System) {
     } // #endif /* (ODBCVER >= 0x0300) */
 }
 
-version (Unicode) {
+version (Unicode)
+{
     alias SQLBrowseConnectW SQLBrowseConnect;
     alias SQLColAttributeW SQLColAttribute;
     alias SQLColAttributesW SQLColAttributes;
