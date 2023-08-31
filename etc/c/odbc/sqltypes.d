@@ -24,7 +24,8 @@ version (Windows)
 {
     public import core.sys.windows.windef;
     public import core.sys.windows.basetyps; // for GUID
-} else
+}
+else
 {
     alias ushort USHORT, WORD;
     alias uint ULONG, LONG, BOOL, DWORD;
