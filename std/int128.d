@@ -153,6 +153,7 @@ public struct Int128
     {
         return tst(this.data);
     }
+  } // @safe pure nothrow @nogc
 
     /** Support binary arithmetic operators + - * / % & | ^ << >> >>>
      * Params:
@@ -190,21 +191,49 @@ public struct Int128
     }
 
     /// ditto
-    Int128 opBinary(string op)(long op2) const
-        if (op == "+" || op == "-" ||
+    Int128 opBinary(string op, Int)(const Int op2) const
+        if ((op == "+" || op == "-" ||
             op == "*" || op == "/" || op == "%" ||
-            op == "&" || op == "|" || op == "^")
+            op == "&" || op == "|" || op == "^") &&
+            is(Int : long) && __traits(isIntegral, Int))
     {
-        return mixin("this " ~ op ~ " Int128(0, op2)");
+        static if (__traits(isUnsigned, Int))
+            return mixin("this " ~ op ~ " Int128(0, op2)");
+        else
+            return mixin("this " ~ op ~ " Int128((cast(long) op2) >> 63 , op2)");
     }
 
     /// ditto
-    Int128 opBinaryRight(string op)(long op2) const
-        if (op == "+" || op == "-" ||
+    Int128 opBinary(string op, IntLike)(auto ref IntLike op2) const
+        if ((op == "+" || op == "-" ||
             op == "*" || op == "/" || op == "%" ||
-            op == "&" || op == "|" || op == "^")
+            op == "&" || op == "|" || op == "^") &&
+            is(IntLike : long) && !__traits(isIntegral, IntLike))
     {
-        mixin("return Int128(0, op2) " ~ op ~ " this;");
+        return opBinary!(op)(__traits(getMember, op2, __traits(getAliasThis, IntLike)[0]));
+    }
+
+    /// ditto
+    Int128 opBinaryRight(string op, Int)(const Int op2) const
+        if ((op == "+" || op == "-" ||
+            op == "*" || op == "/" || op == "%" ||
+            op == "&" || op == "|" || op == "^") &&
+            is(Int : long) && __traits(isIntegral, Int))
+    {
+        static if (__traits(isUnsigned, Int))
+            mixin("return Int128(0, op2) " ~ op ~ " this;");
+        else
+            mixin("return Int128((cast(long) op2) >> 63, op2) " ~ op ~ " this;");
+    }
+
+    /// ditto
+    Int128 opBinaryRight(string op, IntLike)(auto ref IntLike op2) const
+        if ((op == "+" || op == "-" ||
+            op == "*" || op == "/" || op == "%" ||
+            op == "&" || op == "|" || op == "^") &&
+            is(IntLike : long) && !__traits(isIntegral, IntLike))
+    {
+        return opBinaryRight!(op)(__traits(getMember, op2, __traits(getAliasThis, IntLike)[0]));
     }
 
     /// ditto
@@ -244,16 +273,16 @@ public struct Int128
     }
 
     /// ditto
-    ref Int128 opOpAssign(string op)(long op2)
-        if (op == "+" || op == "-" ||
+    ref Int128 opOpAssign(string op, Int)(auto ref Int op2)
+        if ((op == "+" || op == "-" ||
             op == "*" || op == "/" || op == "%" ||
             op == "&" || op == "|" || op == "^" ||
             op == "<<" || op == ">>" || op == ">>>")
+            && is(Int : long))
     {
         mixin("this = this " ~ op ~ " op2;");
         return this;
     }
-  } // @safe pure nothrow @nogc
 
     /** support arithmentic comparison operators < <= > >=
      * Params: op2 = right hand operand
@@ -411,4 +440,29 @@ unittest
     auto w = Wrapped!ulong(ulong.max);
     w.count++; // avoid invalid D-Scanner message that w could have been declared const
     assert(c < w);
+
+    const zero = Int128(0L);
+    const one = Int128(1L);
+    const neg_one = Int128(-1L);
+    const neg_two = Int128(-2L);
+    // Correct result with ulong.max:
+    assert(zero + ulong.max == ulong.max);
+    assert(one * ulong.max == ulong.max);
+    assert((neg_one & ulong.max) == ulong.max);
+    assert((zero | ulong.max) == ulong.max);
+    assert((zero ^ ulong.max) == ulong.max);
+    // Correct result with negative arguments:
+    assert(zero + -1L == -1L);
+    assert(neg_two * -3L == 6L);
+    assert(neg_two / -2L == 1L);
+    assert(neg_two % -2L == 0L);
+    assert((neg_one & -1L) == -1L);
+    assert((zero | -1L) == -1L);
+    assert((zero ^ -1L) == -1L);
+    // Ensure alias this still works.
+    {
+        Int128 a = zero;
+        assert((a ^= w) == ulong.max);
+    }
+    assert((Wrapped!long(-1L) + zero) == -1L);
 }
