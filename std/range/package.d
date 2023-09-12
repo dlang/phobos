@@ -1574,7 +1574,7 @@ pure @safe unittest
         }
 
     }
-    assert(OnlyOne.init.chain(RepeatOne.init).front==1);
+    assert(OnlyOne.init.chain(RepeatOne.init).front == 1);
 }
 
 pure @safe nothrow unittest
