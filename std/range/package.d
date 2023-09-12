@@ -1004,15 +1004,17 @@ if (Ranges.length > 0 &&
                 // backIndex is already set in the first loop to
                 // as frontIndex+1, so we'll use that if we don't find a
                 // non-empty range here.
+                bool done=false;  //work around for compiler detecting that lines marked A and B below are unreachable
                 static if (bidirectional)
                     static foreach_reverse (i; 1 .. R.length + 1)
                 {
-                    if (i <= frontIndex + 1) return;
-                    if (!input[i-1].empty)
+                    if (i <= frontIndex + 1) done = true;
+                    if (!done && !input[i-1].empty)
                     {
                         backIndex = i;
-                        return;
+                        done = true;
                     }
+                    if (done) return;
                 }
             }
 
