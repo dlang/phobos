@@ -1537,6 +1537,32 @@ pure @safe nothrow unittest
     static assert(is(typeof(r3.front) == immutable char));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=24143
+pure @safe unittest
+{
+    struct RepeatOne
+    {
+        enum empty = false;
+        const front = 1;
+        const back = 1;
+        void popFront() {}
+        void popBack() {}
+        auto save() { return RepeatOne.init; }
+    }
+
+    struct OnlyOne
+    {
+        bool empty = true;
+        auto front = 1;
+        auto back = 1;
+        void popFront() { empty=false; }
+        void popBack() { empty=false; }
+        auto save() { return typeof(this)(this.tupleof); }
+
+    }
+    assert(OnlyOne.init.chain(RepeatOne.init).front==1);
+}
+
 pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
