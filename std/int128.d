@@ -253,23 +253,32 @@ public struct Int128
         mixin("this = this " ~ op ~ " op2;");
         return this;
     }
+  } // @safe pure nothrow @nogc
 
-    /** support signed arithmentic comparison operators < <= > >=
+    /** support arithmentic comparison operators < <= > >=
      * Params: op2 = right hand operand
      * Returns: -1 for less than, 0 for equals, 1 for greater than
      */
-    int opCmp(Int128 op2) const
+    int opCmp(Int128 op2) const @nogc nothrow pure @safe
     {
         return this == op2 ? 0 : gt(this.data, op2.data) * 2 - 1;
     }
 
-    /** support signed arithmentic comparison operators < <= > >=
-     * Params: op2 = right hand operand
-     * Returns: -1 for less than, 0 for equals, 1 for greater than
-     */
-    int opCmp(long op2) const
+    /// ditto
+    int opCmp(Int)(const Int op2) const @nogc nothrow pure @safe
+    if (is(Int : long) && __traits(isIntegral, Int))
     {
-        return opCmp(Int128(0, op2));
+        static if (__traits(isUnsigned, Int))
+            return opCmp(Int128(0, op2));
+        else
+            return opCmp(Int128((cast(long) op2) >> 63, op2));
+    }
+
+    /// ditto
+    int opCmp(IntLike)(auto ref IntLike op2) const
+    if (is(IntLike : long) && !__traits(isIntegral, IntLike))
+    {
+        return opCmp(__traits(getMember, op2, __traits(getAliasThis, IntLike)[0]));
     }
   } // @safe pure nothrow @nogc
 
@@ -513,4 +522,35 @@ unittest
     assert(c == -1UL);
     c = Int128(-1L);
     assert(c == -1L);
+}
+
+@system unittest
+{
+    alias Seq(T...) = T;
+    Int128 c = Int128(-1L);
+    assert(c.opCmp(-1L) == 0);
+    // To avoid regression calling opCmp with any integral type needs to
+    // work without the compiler complaining "opCmp called with argument
+    // X matches both <...>".
+    static foreach (Int; Seq!(long, int, short, byte, ulong, uint, ushort, ubyte, dchar, wchar, char))
+        assert(c < Int.max);
+    static foreach (Int; Seq!(int, short, byte))
+        assert(c.opCmp(Int(-1)) == 0);
+    assert(c < true);
+    // To avoid regression calling opCmp with any type that converts to an
+    // integral type through alias this needs to work regardless of whether
+    // the alias is safe/pure/nothrow/nogc and regardless of whether the
+    // type has a disabled postblit.
+    static struct Wrapped(T)
+    {
+        T value;
+        uint count;
+        T get() @system { ++count; return value; } // not const
+        alias get this;
+        @disable this(this); // no implicit copies
+    }
+    assert(c.opCmp(Wrapped!long(-1)) == 0);
+    auto w = Wrapped!ulong(ulong.max);
+    w.count++; // avoid invalid D-Scanner message that w could have been declared const
+    assert(c < w);
 }
