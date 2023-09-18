@@ -559,7 +559,8 @@ abstract class Logger
     this(this This)(LogLevel lv)
     {
         this.logLevel_ = lv;
-        this.fatalHandler_ = delegate() {
+        this.fatalHandler_ = delegate()
+        {
             throw new Error("A fatal log message was logged");
         };
 
@@ -1420,7 +1421,8 @@ private @property shared(Logger) defaultSharedLoggerImpl() @trusted
         void[__traits(classInstanceSize, FileLogger)] _buffer = void;
 
     import std.concurrency : initOnce;
-    initOnce!stdSharedDefaultLogger({
+    initOnce!stdSharedDefaultLogger(
+    {
         auto buffer = cast(ubyte[]) _buffer;
         return cast(shared) emplace!(FileLogger)(buffer, stderr, LogLevel.info);
     }());
@@ -1711,13 +1713,9 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(tl1.line == __LINE__ - 3);
 
     auto oldunspecificLogger = sharedLog;
-    scope(exit) {
-        sharedLog = atomicLoad(oldunspecificLogger);
-    }
+    scope(exit) sharedLog = atomicLoad(oldunspecificLogger);
 
-    () @trusted {
-        sharedLog = cast(shared) tl1;
-    }();
+    () @trusted { sharedLog = cast(shared) tl1; }();
 
     log();
     assert(tl1.line == __LINE__ - 1);
@@ -1764,9 +1762,7 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
 {
     bool errorThrown = false;
     auto tl = new TestLogger;
-    auto dele = delegate() {
-        errorThrown = true;
-    };
+    auto dele = delegate() { errorThrown = true; };
     tl.fatalHandler = dele;
     tl.fatal();
     assert(errorThrown);
@@ -1815,17 +1811,13 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
-        assertThrown!Throwable(l.logf(LogLevel.fatal, msg, "Yet"));
-    } ();
+    () @trusted { assertThrown!Throwable(l.logf(LogLevel.fatal, msg, "Yet")); }();
     lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
-        assertThrown!Throwable(l.logf(LogLevel.fatal, true, msg, "Yet"));
-    } ();
+    () @trusted { assertThrown!Throwable(l.logf(LogLevel.fatal, true, msg, "Yet")); }();
     lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
@@ -1837,32 +1829,24 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 
     Logger oldunspecificLogger;
-    () @trusted {
-        oldunspecificLogger = cast() sharedLog;
-    }();
+    () @trusted { oldunspecificLogger = cast() sharedLog; }();
 
     assert(oldunspecificLogger.logLevel == LogLevel.info,
          to!string(oldunspecificLogger.logLevel));
 
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
-        sharedLog = cast(shared) l;
-    }();
+    () @trusted { sharedLog = cast(shared) l; }();
 
     assert(globalLogLevel == LogLevel.all,
             to!string(globalLogLevel));
 
     scope(exit)
     {
-        () @trusted {
-            sharedLog = atomicLoad(cast(shared) oldunspecificLogger);
-        }();
+        () @trusted { sharedLog = atomicLoad(cast(shared) oldunspecificLogger); }();
     }
 
-    () @trusted {
-        assert((cast() sharedLog).logLevel == LogLevel.all);
-    }();
+    () @trusted { assert((cast() sharedLog).logLevel == LogLevel.all); }();
 
     assert(stdThreadLocalLog.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
@@ -1904,7 +1888,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 
     msg = "%s Another message";
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(logf(LogLevel.fatal, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -1912,7 +1897,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(logf(LogLevel.fatal, true, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -1989,7 +1975,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     auto l = new FileLogger(filename);
     sharedLog = cast(shared) l;
 
-    () @trusted {
+    () @trusted
+    {
         (cast() sharedLog).logLevel = LogLevel.critical;
     }();
 
@@ -2034,7 +2021,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     auto mem = new TestLogger;
     mem.fatalHandler = delegate() {};
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) mem;
     }();
 
@@ -2284,7 +2272,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     auto mem = new TestLogger;
     mem.fatalHandler = delegate() {};
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) mem;
     }();
 
@@ -2542,7 +2531,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
 
     stdThreadLocalLog.logLevel = LogLevel.all;
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) mem;
     }();
 
@@ -2781,7 +2771,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
 
     auto tl = new TestLogger(LogLevel.info);
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) tl;
     }();
 
@@ -2810,7 +2801,8 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
     auto tl = new TestLogger(LogLevel.info);
     logger.insertLogger("required", tl);
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) logger;
     }();
 
@@ -2901,7 +2893,8 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
         sharedLog = atomicLoad(oldSharedLog);
     }
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) new IgnoredLog;
     }();
 
@@ -2924,7 +2917,8 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
 @safe unittest
 {
-    auto dl = () @trusted {
+    auto dl = () @trusted
+    {
         return cast(FileLogger) cast() sharedLog;
     }();
     assert(dl !is null);
@@ -3034,7 +3028,8 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
     auto fl = new FileLogger(fn);
 
-    () @trusted {
+    () @trusted
+    {
         sharedLog = cast(shared) fl;
     }();
 

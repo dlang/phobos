@@ -145,9 +145,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val) @trusted {
-            return (cast(const char*) &val)[0 .. val.sizeof];
-        }(val);
+        auto raw = (ref val) @trusted { return (cast(const char*) &val)[0 .. val.sizeof]; }(val);
         import std.range.primitives : put;
         if (needToSwapEndianess(f))
             foreach_reverse (c; raw)
@@ -580,9 +578,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val) @trusted {
-            return (cast(const char*) &val)[0 .. val.sizeof];
-        }(val);
+        auto raw = (ref val) @trusted { return (cast(const char*) &val)[0 .. val.sizeof]; }(val);
 
         if (needToSwapEndianess(f))
         {
@@ -1840,7 +1836,8 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.none;
     }
     else static if (is(typeof(
-        (T val) {
+        (T val)
+        {
             const FormatSpec!Char f;
             static struct S {void put(scope Char s){}}
             S s;
@@ -1854,7 +1851,8 @@ template hasToString(T, Char)
         enum hasToString = HasToStringResult.customPutWriterFormatSpec;
     }
     else static if (is(typeof(
-        (T val) {
+        (T val)
+        {
             static struct S {void put(scope Char s){}}
             S s;
             val.toString(s);
@@ -2206,6 +2204,7 @@ if (hasToString!(T, Char))
     static union UF2 { string toString() { return ""; } }
     static class CF2 { override string toString() { return ""; } }
 
+    //dfmt off
     static interface IK1 { void toString(scope void delegate(scope const(char)[]) sink,
                            FormatSpec!char) const; }
     static class CIK1 : IK1 { override void toString(scope void delegate(scope const(char)[]) sink,
@@ -2219,6 +2218,7 @@ if (hasToString!(T, Char))
     static class KC1 { void toString(scope void delegate(scope const(char)[]) sink,
                        FormatSpec!char) const { sink("KC1"); } }
 
+    //dfmt on
     IF1 cif1 = new CIF1;
     assertThrown!FormatException(format("%f", cif1));
     assertThrown!FormatException(format("%f", SF1()));

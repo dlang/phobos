@@ -1968,7 +1968,8 @@ unittest
 // https://issues.dlang.org/show_bug.cgi?id=6850
 @safe unittest
 {
-    pure long pureTest() {
+    pure long pureTest()
+    {
         BigInt a = 1;
         BigInt b = 1336;
         a += b;

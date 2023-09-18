@@ -54,8 +54,8 @@ private enum
 
 private immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-private immutable ubyte[128] uri_flags =      // indexed by character
-    ({
+private immutable ubyte[128] uri_flags = (   // indexed by character
+    {
         ubyte[128] uflags;
 
         // Compile time initialize

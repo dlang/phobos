@@ -1742,7 +1742,8 @@ pure @safe unittest
     import std.typecons : Ternary;
 
     auto a = (() @trusted => BitmappedBlock!(64, 64, NullAllocator, Yes.multiblock)(new ubyte[10_240]))();
-    () nothrow @nogc {
+    () nothrow @nogc
+    {
         assert(a.empty == Ternary.yes);
         const b = a.allocate(100);
         assert(b.length == 100);

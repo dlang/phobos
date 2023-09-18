@@ -2060,7 +2060,8 @@ class Base64Exception : Exception
     // Verify that any existing workaround that uses & still works.
     InputRange ir2;
     OutputRange or2;
-    () @trusted {
+    () @trusted
+    {
         assert(Base64.encode(ir2, &or2) == 8);
     }();
     assert(or2.result == "Gis8TV1u");
@@ -2092,7 +2093,8 @@ class Base64Exception : Exception
     // Verify that any existing workaround that uses & still works.
     InputRange ir2;
     OutputRange or2;
-    () @trusted {
+    () @trusted
+    {
         assert(Base64.decode(ir2, &or2) == 6);
     }();
     assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);

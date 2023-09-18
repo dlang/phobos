@@ -3132,7 +3132,8 @@ if (!isIntegral!T)
 {
     pragma(inline, true);
     import std.algorithm.mutation : swap;
-    enum canUseBinaryGcd = is(typeof(() {
+    enum canUseBinaryGcd = is(typeof(()
+    {
         T t, u;
         t <<= 1;
         t >>= 1;

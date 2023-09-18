@@ -717,7 +717,8 @@ it actually returns memory to the operating system when possible.
     from the garbage-collected heap. Each block is organized as a KR-style
     heap. More blocks are allocated and freed on a need basis.
     */
-    AllocatorList!((n) {
+    AllocatorList!((n)
+    {
         auto result = KRRegion!MmapAllocator(max(n * 2, 1024 * 1024));
         return result;
     }) alloc;

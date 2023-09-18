@@ -657,7 +657,8 @@ template staticMap(alias fun, args...)
 
     // @@@ BUG @@@ The test below exposes failure of the straightforward use.
     // See @adamdruppe's comment to https://github.com/dlang/phobos/pull/8039
-    template id(alias what) {
+    template id(alias what)
+    {
             enum id = __traits(identifier, what);
     }
     enum A { a }
@@ -1156,7 +1157,8 @@ private template SmartAlias(T...)
 
 @safe unittest
 {
-    static assert(is(typeof({
+    static assert(is(typeof(
+    {
         alias T(T0, int a, double b, alias T1, string c) = AliasSeq!(T0, a, b, T1, c);
         alias T0 = ApplyRight!(ApplyLeft, ApplyRight);
         alias T1 = T0!ApplyLeft;

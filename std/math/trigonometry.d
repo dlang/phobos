@@ -952,7 +952,8 @@ private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
 {
     version (Win64)
     {
-        asm pure nothrow @nogc {
+        asm pure nothrow @nogc
+        {
             naked;
             fld real ptr [RDX]; // y
             fld real ptr [RCX]; // x
@@ -962,7 +963,8 @@ private real atan2Asm(real y, real x) @trusted pure nothrow @nogc
     }
     else
     {
-        asm pure nothrow @nogc {
+        asm pure nothrow @nogc
+        {
             fld y;
             fld x;
             fpatan;

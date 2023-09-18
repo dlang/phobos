@@ -241,7 +241,8 @@ version (StdDdoc)
 {
     import std.math.traits : isNaN;
 
-    static void func() {
+    static void func()
+    {
         int a = 10 * 10;
     }
     real a = 3.5;
@@ -268,7 +269,8 @@ version (StdDdoc)
 {
     import std.math.traits : isNaN;
 
-    static void func() {
+    static void func()
+    {
         int a = 10 * 10;
     }
     real a = 3.5;

@@ -1668,7 +1668,8 @@ if (isSomeString!(typeof(fmt)))
         assert(sformat(buf[], "foo%%") == "foo%");
         assert(sformat(buf[], "foo%s", 'C') == "fooC");
         assert(sformat(buf[], "%s foo", "bar") == "bar foo");
-        () @trusted {
+        () @trusted
+        {
             assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
         } ();
         assert(sformat(buf[], "foo %d", -123) == "foo -123");
