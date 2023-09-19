@@ -165,16 +165,18 @@ See_Also:
 
 Params:
     R = type to be tested
+    E = the type of the elements of the range if not `void`
 
 Returns:
-    `true` if R is an input range, `false` if not
+    `true` if R is an input range (possibly with element type `E`), `false` if not
  */
-enum bool isInputRange(R) =
+enum bool isInputRange(R, E = void) =
     is(typeof(R.init) == R)
     && is(typeof((R r) { return r.empty; } (R.init)) == bool)
     && (is(typeof((return ref R r) => r.front)) || is(typeof(ref (return ref R r) => r.front)))
     && !is(typeof((R r) { return r.front; } (R.init)) == void)
-    && is(typeof((R r) => r.popFront));
+    && is(typeof((R r) => r.popFront))
+    && (is(E == void) || is(ElementType!R: E));
 
 ///
 @safe unittest
@@ -192,6 +194,9 @@ enum bool isInputRange(R) =
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
     static assert( isInputRange!(inout(int)[]));
+    static assert( isInputRange!(int[], int));
+    static assert( isInputRange!(int[], const int));
+    static assert(!isInputRange!(int[], string));
 
     static struct NotDefaultConstructible
     {
