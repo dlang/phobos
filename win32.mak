@@ -59,10 +59,10 @@ MAKE=make
 
 ## D compiler
 
-DMD_DIR=../dmd
+DMD_DIR=../dmd/compiler
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/32/dmd
+DMD=$(DMD_DIR)/../generated/$(OS)/$(BUILD)/32/dmd
 
 ## Zlib library
 

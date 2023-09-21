@@ -32,9 +32,9 @@ QUIET:=@
 
 DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
-DMD_DIR=../dmd
+DMD_DIR=../dmd/compiler
 
-include $(DMD_DIR)/compiler/src/osmodel.mak
+include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.9
@@ -94,7 +94,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
+	DMD = $(DMD_DIR)/../generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -182,7 +182,7 @@ LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=$(DMD_DIR)/VERSION
+VERSION=$(DMD_DIR)/../VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
