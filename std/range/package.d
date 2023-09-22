@@ -936,10 +936,9 @@ if (Ranges.length > 0 &&
         static assert(isInputRange!T, "`", T, "` is not an input range");
     }
     alias RvalueElementType = CommonType!(staticMap!(ElementType, R));
-    static if (is(RvalueElementType == void))
-    {
-        static assert(0, "No common element type for ranges `", Ranges, "`");
-    }
+    static assert(!is(RvalueElementType == void),
+        "No common element type for ranges `", Ranges, "`");
+
     static if (Ranges.length == 1)
     {
         return rs[0];
