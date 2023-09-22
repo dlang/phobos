@@ -928,9 +928,18 @@ See_Also: $(LREF only) to chain values to a range
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
-    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
-    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
+    anySatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 {
+    alias R = staticMap!(Unqual, Ranges);
+    static foreach (T; R)
+    {
+        static assert(isInputRange!T, "`", T, "` is not an input range");
+    }
+    alias RvalueElementType = CommonType!(staticMap!(ElementType, R));
+    static if (is(RvalueElementType == void))
+    {
+        static assert(0, "No common element type for ranges `", Ranges, "`");
+    }
     static if (Ranges.length == 1)
     {
         return rs[0];
@@ -940,8 +949,6 @@ if (Ranges.length > 0 &&
         static struct Result
         {
         private:
-            alias R = staticMap!(Unqual, Ranges);
-            alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
             template sameET(A)
             {
                 enum sameET = is(.ElementType!A == RvalueElementType);
