@@ -3131,7 +3131,7 @@ auto nativeToLittleEndian(T)(const T val) @trusted pure nothrow @nogc
 if (canSwapEndianness!T)
 {
     static if (isFloatOrDouble!T)
-        return nativeToLittleEndian(*cast(const UnsignedOfSize!(T.sizeof)*)&val);
+        return nativeToLittleEndian(*cast(const UnsignedOfSize!(T.sizeof)*) &val);
     else
     {
         enum len = T.sizeof;
@@ -3151,9 +3151,21 @@ if (canSwapEndianness!T)
     ubyte[4] swappedI = nativeToLittleEndian(i);
     assert(i == littleEndianToNative!int(swappedI));
 
+    float f = 123.45f;
+    ubyte[4] swappedF = nativeToLittleEndian(f);
+    assert(f == littleEndianToNative!float(swappedF));
+
+    const float cf = 123.45f;
+    ubyte[4] swappedCF = nativeToLittleEndian(cf);
+    assert(cf == littleEndianToNative!float(swappedCF));
+
     double d = 123.45;
     ubyte[8] swappedD = nativeToLittleEndian(d);
     assert(d == littleEndianToNative!double(swappedD));
+
+    const double cd = 123.45;
+    ubyte[8] swappedCD = nativeToLittleEndian(cd);
+    assert(cd == littleEndianToNative!double(swappedCD));
 }
 
 @safe unittest
