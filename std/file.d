@@ -16,6 +16,7 @@ $(TR $(TD General) $(TD
           $(LREF isFile)
           $(LREF isSymlink)
           $(LREF rename)
+          $(LREF thisExeDir)
           $(LREF thisExePath)
 ))
 $(TR $(TD Directories) $(TD
@@ -3632,6 +3633,32 @@ else version (Posix) string getcwd() @trusted
     assert(path.exists);
     assert(path.isAbsolute);
     assert(path.isFile);
+}
+
+/**
+ * Returns the full path to the directory containing the current executable.
+ *
+ * Returns:
+ *     The path of the directory as a `string`.
+ *
+ * Throws:
+ * $(REF1 Exception, object)
+ */
+@safe string thisExeDir()
+{
+    import std.path : dirName;
+    return dirName(thisExePath());
+}
+
+///
+@safe unittest
+{
+    import std.path : isAbsolute;
+    auto dir = thisExeDir();
+
+    assert(dir.exists);
+    assert(dir.isAbsolute);
+    assert(dir.isDir);
 }
 
 version (StdDdoc)
