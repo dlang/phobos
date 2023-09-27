@@ -176,8 +176,10 @@ enum bool isInputRange(R, E = void) =
     && (is(typeof((return ref R r) => r.front)) || is(typeof(ref (return ref R r) => r.front)))
     && !is(typeof((R r) { return r.front; } (R.init)) == void)
     && is(typeof((R r) => r.popFront))
-    && (is(E == void) || is(ElementType!R: E));
-
+    && (is(E == void) ||
+        is(ElementType!R == E) ||
+        is(const(ElementType!R) == E) ||
+        (is(const(ElementType!R) == immutable E) && is(const(E) == E)));
 ///
 @safe unittest
 {
