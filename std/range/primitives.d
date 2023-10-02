@@ -196,9 +196,18 @@ enum bool isInputRange(R, E = void) =
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
     static assert( isInputRange!(inout(int)[]));
+    static assert(!isInputRange!(int[], string));
     static assert( isInputRange!(int[], int));
     static assert( isInputRange!(int[], const int));
-    static assert(!isInputRange!(int[], string));
+    static assert(!isInputRange!(int[], immutable int));
+
+    static assert(!isInputRange!(const(int)[], int));
+    static assert( isInputRange!(const(int)[], const int));
+    static assert(!isInputRange!(const(int)[], immutable int));
+
+    static assert(!isInputRange!(immutable(int)[], int));
+    static assert( isInputRange!(immutable(int)[], const int));
+    static assert( isInputRange!(immutable(int)[], immutable int));
 
     static struct NotDefaultConstructible
     {
