@@ -1,7 +1,7 @@
 isInputRange now takes an optional element type.
 
-isInputRange now takes an optional 2nd template parameter that
-defaults to void. If not void, it only evaluates to true if the
-range's element type is convertible to passed-in parameter. For
-instance, `isInputRange!(int[], int)` is true, but
+isInputRange now has an optional 2nd template parameter that defaults
+to void. If not void, it only evaluates to true if the range's element
+type is the same type as this extra argument, modulo const. For
+instance, `isInputRange!(int[], const(int))` is true, but
 `isInputRange!(int[], string)` is false.
