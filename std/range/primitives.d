@@ -165,7 +165,10 @@ See_Also:
 
 Params:
     R = type to be tested
-    E = the type of the elements of the range if not `void`
+    E = If `void` (the default), ignore the type of the range's elemenents.
+        Otherwise the type of the elements of the range taking into
+        account constness. E = const(T) matches T/const(T)/immutable(T),
+        otherwise ElementType!R must be the same as E.
 
 Returns:
     `true` if R is an input range (possibly with element type `E`), `false` if not
@@ -176,7 +179,10 @@ enum bool isInputRange(R, E = void) =
     && (is(typeof((return ref R r) => r.front)) || is(typeof(ref (return ref R r) => r.front)))
     && !is(typeof((R r) { return r.front; } (R.init)) == void)
     && is(typeof((R r) => r.popFront))
-    && (is(E == void) ||
+    && (is(E == void) || // if void, we don't care about the element type of the range
+        // If not void, check if the element type is "const-equivalent" to E.
+        // This means that they're either the same type or E is const and the element
+        // type is the same or is "mutable"(E)/immutable(E).
         is(ElementType!R == E) ||
         is(const(ElementType!R) == E) ||
         (is(const(ElementType!R) == immutable E) && is(const(E) == E)));
