@@ -280,7 +280,7 @@ private template randAssignable(R)
     enum randAssignable = isRandomAccessRange!R && hasAssignableElements!R;
 }
 
-private enum TaskStatus : ubyte
+public enum TaskStatus : ubyte
 {
     notStarted,
     inProgress,
