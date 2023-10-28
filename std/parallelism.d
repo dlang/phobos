@@ -382,6 +382,36 @@ private struct AbstractTask
         return false;
     }
 
+    bool inProgress() @property
+    {
+        if (atomicReadUbyte(taskStatus) == TaskStatus.inProgress)
+        {
+            if (exception)
+            {
+                throw exception;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    bool notStarted() @property
+    {
+        if (atomicReadUbyte(taskStatus) == TaskStatus.notStarted)
+        {
+            if (exception)
+            {
+                throw exception;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     void job()
     {
         runTask(&this);
@@ -712,6 +742,30 @@ struct Task(alias fun, Args...)
     {
         // Explicitly forwarded for documentation purposes.
         return base.done;
+    }
+
+    /**
+    Returns `true` if the `Task` is running.
+
+    Throws:  Rethrows any exception thrown during the execution of the
+             `Task`.
+    */
+    @property bool running() @trusted
+    {
+        // Explicitly forwarded for documentation purposes.
+        return base.inProgress;
+    }
+
+    /**
+    Returns `true` if the `Task` is not started.
+
+    Throws:  Rethrows any exception thrown during the execution of the
+             `Task`.
+    */
+    @property bool notStarted() @trusted
+    {
+        // Explicitly forwarded for documentation purposes.
+        return base.notStarted;
     }
 
     /**
