@@ -4811,6 +4811,12 @@ Implements the homonym function (also known as `accumulate`, $(D
 compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor, iteratively calling one or more predicates.
 
+$(P Each predicate in `fun` must take two arguments:)
+* An accumulator value
+* An element of the range `r`
+$(P Each predicate must return a value which implicitly converts to the
+type of the accumulator.)
+
 $(P For a single predicate,
 the call `fold!(fun)(range, seed)` will:)
 
