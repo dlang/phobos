@@ -4876,10 +4876,10 @@ if (fun.length >= 1)
     immutable arr = [1, 2, 3, 4, 5];
 
     // Sum all elements
-    assert(arr.fold!((a, b) => a + b) == 15);
+    assert(arr.fold!((a, e) => a + e) == 15);
 
     // Sum all elements with explicit seed
-    assert(arr.fold!((a, b) => a + b)(6) == 21);
+    assert(arr.fold!((a, e) => a + e)(6) == 21);
 
     import std.algorithm.comparison : min, max;
     import std.typecons : tuple;
@@ -4891,10 +4891,10 @@ if (fun.length >= 1)
     assert(arr.fold!(min, max)(0, 7) == tuple(0, 7));
 
     // Can be used in a UFCS chain
-    assert(arr.map!(a => a + 1).fold!((a, b) => a + b) == 20);
+    assert(arr.map!(a => a + 1).fold!((a, e) => a + e) == 20);
 
     // Return the last element of any range
-    assert(arr.fold!((a, b) => b) == 5);
+    assert(arr.fold!((a, e) => e) == 5);
 }
 
 @safe @nogc pure nothrow unittest
