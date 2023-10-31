@@ -1,0 +1,13 @@
+Add Unshared to std.traits.
+
+`Unshared` is the `shared` equivalent of `Unconst`. It strips off the outer
+layer of `shared` from a type. e.g.
+
+```
+    static assert(Unshared!(shared int) == int);
+    static assert(Unshared!(shared(int[])) == shared(int)[]);
+```
+
+So, `Unconst` strips off the outer layer of `const`, `immutable`, and `inout`;
+`Unshared` strips off the outer layer of `shared`; and `Unqual` strips off all
+qualifiers from the outer layer of a type.
