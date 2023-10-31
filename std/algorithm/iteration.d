@@ -4820,7 +4820,8 @@ type of the accumulator.)
 $(P For a single predicate,
 the call `fold!(fun)(range, seed)` will:)
 
-* Assign `seed` to an internal variable `result` (also called the accumulator)
+* Use `seed` to initialize an internal variable `result` (also called
+  the accumulator).
 * For each element `e` in $(D range), evaluate `result = fun(result, e)`.
 * Return $(D result).
 
