@@ -147,13 +147,57 @@ public struct Int128
 
     /** Support casting to a bool
      * Params: T = bool
-     * Returns: boolean result
+     * Returns: true if value is not zero
      */
     bool opCast(T : bool)() const
     {
         return tst(this.data);
     }
   } // @safe pure nothrow @nogc
+
+    /** Support casting to an integral type
+     * Params: T = integral type
+     * Returns: low bits of value reinterpreted as T
+     */
+    T opCast(T : long)() const
+    if (is(byte : T))
+    {
+        return cast(T) this.data.lo;
+    }
+
+    ///
+    @safe unittest
+    {
+        const Int128 a = Int128(0xffff_ffff_ffff_ffffL, 0x0123_4567_89ab_cdefL);
+        assert(cast(long) a == 0x0123_4567_89ab_cdefL);
+        assert(cast(int)  a ==           0x89ab_cdef);
+        assert(cast(byte) a == cast(byte) 0xef);
+    }
+
+    /** Support casting to floating point type
+     * Params: T = floating point type
+     * Returns: value cast to floating point with environment-dependent
+     * rounding if the value is not exactly representable
+     */
+    T opCast(T : real)() const
+    {
+        import core.math : ldexp;
+        if (cast(long) this.data.hi >= 0)
+            return ldexp(cast(T) this.data.hi, 64) + this.data.lo;
+        else
+        {
+            const absData = neg(this.data);
+            return -ldexp(cast(T) absData.hi, 64) - absData.lo;
+        }
+    }
+
+    ///
+    @safe unittest
+    {
+        const Int128 a = Int128(-1L << 60);
+        assert(cast(double) a == -(2.0 ^^ 60));
+        assert(cast(double) (a * a) == 2.0 ^^ 120);
+    }
 
     /** Support binary arithmetic operators + - * / % & | ^ << >> >>>
      * Params:
@@ -308,6 +352,147 @@ public struct Int128
     if (is(IntLike : long) && !__traits(isIntegral, IntLike))
     {
         return opCmp(__traits(getMember, op2, __traits(getAliasThis, IntLike)[0]));
+    }
+
+    /**
+     * Formats `Int128` with either `%d`, `%x`, `%X`, or `%s` (same as `%d`).
+     *
+     * Params:
+     *   sink = $(REF_ALTTEXT Output range, isOutputRange, std, range, primitives)
+     *   to write to.
+     *   fmt = A $(REF FormatSpec, std,format) which controls how the number
+     *   is displayed.
+     *
+     * Throws:
+     *       $(REF FormatException, std,format) if the format specifier is
+     *       not one of 'd', 'x', 'X', 's'.
+     *
+     * See_Also: $(REF formatValue, std,format)
+     */
+    void toString(Writer, FormatSpec)(scope ref Writer sink, scope const ref FormatSpec fmt) const
+    {
+        import std.range.primitives : put;
+        import std.format : FormatException, Fmt = FormatSpec;
+
+        static if (is(FormatSpec == Fmt!Char, Char))
+        {
+            // Puts "Char" into scope if the pattern matches.
+        }
+        static assert(is(Char),
+            "Expecting `FormatSpec` to be instantiation of `std.format.FormatSpec`");
+
+        Char[39] buf = void;
+        size_t bufStart = void;
+        Char signChar = 0;
+        if (fmt.spec == 'd' || fmt.spec == 's')
+        {
+            const bool isNeg = 0 > cast(long) this.data.hi;
+            Cent val = isNeg ? neg(this.data) : this.data;
+            immutable Cent radix = { lo: 10, hi: 0 };
+            Cent modulus;
+            bufStart = buf.length;
+            do
+            {
+                uint x = void;
+                if (ugt(radix, val))
+                {
+                    x = cast(uint) val.lo;
+                    val = Cent(0, 0);
+                }
+                else
+                {
+                    val = udivmod(val, radix, modulus);
+                    x = cast(uint) modulus.lo;
+                }
+                buf[--bufStart] = cast(Char) ('0' + x);
+            } while (tst(val));
+            if (isNeg)
+                signChar = '-';
+            else if (fmt.flPlus)
+                signChar = '+';
+            else if (fmt.flSpace)
+                signChar = ' ';
+        }
+        else if (fmt.spec == 'x' || fmt.spec == 'X')
+        {
+            immutable hexDigits = fmt.spec == 'X' ? "0123456789ABCDEF" : "0123456789abcdef";
+            ulong a = data.lo;
+            bufStart = buf.length - 1;
+            size_t penPos = buf.length - 1;
+            do
+            {
+                if ((buf[penPos] = hexDigits[0xF & cast(uint) a]) != '0')
+                    bufStart = penPos;
+                a >>>= 4;
+            } while (--penPos >= buf.length - 16);
+            a = data.hi;
+            do
+            {
+                if ((buf[penPos] = hexDigits[0xF & cast(uint) a]) != '0')
+                    bufStart = penPos;
+                a >>>= 4;
+            } while (--penPos >= buf.length - 32);
+        }
+        else
+        {
+            throw new FormatException("Format specifier not understood: %" ~ fmt.spec);
+        }
+
+        const minw = (buf.length - bufStart) + int(signChar != 0);
+        const maxw = minw < fmt.width ? fmt.width : minw;
+        const difw = maxw - minw;
+
+        static void putRepeatedChars(Char c)(scope ref Writer sink, size_t n)
+        {
+            static immutable Char[8] array = [c, c, c, c, c, c, c, c];
+            foreach (_; 0 .. n / 8)
+                put(sink, array[0 .. 8]);
+            if (n & 7)
+                put(sink, array[0 .. n & 7]);
+        }
+
+        if (!fmt.flDash && !fmt.flZero && difw)
+            putRepeatedChars!' '(sink, difw);
+
+        if (signChar)
+        {
+            Char[1] signCharBuf = signChar;
+            put(sink, signCharBuf[0 .. 1]);
+        }
+
+        if (!fmt.flDash && fmt.flZero && difw)
+            putRepeatedChars!'0'(sink, difw);
+
+        put(sink, buf[bufStart .. $]);
+
+        if (fmt.flDash && difw)
+            putRepeatedChars!' '(sink, difw);
+    }
+
+    /**
+        `toString` is rarely directly invoked; the usual way of using it is via
+        $(REF format, std, format):
+     */
+    @safe unittest
+    {
+        import std.format : format;
+
+        assert(format("%s", Int128.max) == "170141183460469231731687303715884105727");
+        assert(format("%s", Int128.min) == "-170141183460469231731687303715884105728");
+        assert(format("%x", Int128.max) == "7fffffffffffffffffffffffffffffff");
+        assert(format("%X", Int128.max) == "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        assert(format("%032X", Int128(123L)) == "0000000000000000000000000000007B");
+        assert(format("%+ 40d", Int128(123L)) == "                                    +123");
+        assert(format("%+-40d", Int128(123L)) == "+123                                    ");
+    }
+
+    /// Also can format as `wchar` or `dchar`.
+    @safe unittest
+    {
+        import std.conv : to;
+
+        assert(to!wstring(Int128.max) == "170141183460469231731687303715884105727"w);
+        assert(to!dstring(Int128.max) == "170141183460469231731687303715884105727"d);
     }
 
     enum min = Int128(long.min, 0);             /// minimum value

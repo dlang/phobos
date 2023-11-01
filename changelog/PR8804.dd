@@ -1,0 +1,3 @@
+Undo etc.c.odbc deprecation and enable usage on non-Windows systems
+
+Previously, the etc.c.odbc bindings were deprecated and forwarded the core.sys.windows versions of the bindings via public import. However, ODBC is supported on all major platforms and the machine translated MinGW bindings in core.sys.windows have version(Windows) specified which results in being unable to use those bindings on non-Windows platforms. The bindings have been returned to etc.c.odbc, undeprecated, and support for non-Windows platforms enabled.

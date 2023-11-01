@@ -165,9 +165,12 @@ See_Also:
 
 Params:
     R = type to be tested
+    E = if present, the elements of the range must be
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
+        to this type
 
 Returns:
-    `true` if R is an input range, `false` if not
+    `true` if R is an input range (possibly with element type `E`), `false` if not
  */
 enum bool isInputRange(R) =
     is(typeof(R.init) == R)
@@ -175,6 +178,10 @@ enum bool isInputRange(R) =
     && (is(typeof((return ref R r) => r.front)) || is(typeof(ref (return ref R r) => r.front)))
     && !is(typeof((R r) { return r.front; } (R.init)) == void)
     && is(typeof((R r) => r.popFront));
+
+/// ditto
+enum bool isInputRange(R, E) =
+    .isInputRange!R && isQualifierConvertible!(ElementType!R, E);
 
 ///
 @safe unittest
@@ -192,6 +199,18 @@ enum bool isInputRange(R) =
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
     static assert( isInputRange!(inout(int)[]));
+    static assert(!isInputRange!(int[], string));
+    static assert( isInputRange!(int[], int));
+    static assert( isInputRange!(int[], const int));
+    static assert(!isInputRange!(int[], immutable int));
+
+    static assert(!isInputRange!(const(int)[], int));
+    static assert( isInputRange!(const(int)[], const int));
+    static assert(!isInputRange!(const(int)[], immutable int));
+
+    static assert(!isInputRange!(immutable(int)[], int));
+    static assert( isInputRange!(immutable(int)[], const int));
+    static assert( isInputRange!(immutable(int)[], immutable int));
 
     static struct NotDefaultConstructible
     {
@@ -524,13 +543,9 @@ private void putChar(R, E)(ref R r, E e)
 if (isSomeChar!E)
 {
     // https://issues.dlang.org/show_bug.cgi?id=9186: Can't use (E[]).init
-    ref const( char)[] cstringInit();
-    ref const(wchar)[] wstringInit();
-    ref const(dchar)[] dstringInit();
-
-    enum csCond = is(typeof(doPut(r, cstringInit())));
-    enum wsCond = is(typeof(doPut(r, wstringInit())));
-    enum dsCond = is(typeof(doPut(r, dstringInit())));
+    enum csCond = is(typeof(doPut(r, (){ ref const( char)[] cstringInit(); return cstringInit(); }())));
+    enum wsCond = is(typeof(doPut(r, (){ ref const(wchar)[] wstringInit(); return wstringInit(); }())));
+    enum dsCond = is(typeof(doPut(r, (){ ref const(dchar)[] dstringInit(); return dstringInit(); }())));
 
     //Use "max" to avoid static type demotion
     enum ccCond = is(typeof(doPut(r,  char.max)));

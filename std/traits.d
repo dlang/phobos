@@ -67,6 +67,7 @@
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
+ *           $(LREF isQualifierConvertible)
  * ))
  * $(TR $(TD Type Constructors) $(TD
  *           $(LREF InoutOf)
@@ -131,6 +132,7 @@
  *           $(LREF PointerTarget)
  *           $(LREF Signed)
  *           $(LREF Unconst)
+ *           $(LREF Unshared)
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
@@ -1125,7 +1127,7 @@ if (isCallable!func && variadicFunctionStyle!func == Variadic.no)
 }
 
 /**
-Get tuple, one per function parameter, of the storage classes of the parameters.
+Get a tuple of the storage classes of a function's parameters.
 Params:
     func = function symbol or type of function, delegate, or pointer to function
 Returns:
@@ -1154,22 +1156,16 @@ if (isCallable!func)
 
     static if (is(Func PT == __parameters))
     {
-        template StorageClass(size_t i)
+        alias ParameterStorageClassTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
-            static if (i < PT.length)
-            {
-                alias StorageClass = AliasSeq!(
-                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)),
-                        StorageClass!(i + 1));
-            }
-            else
-                alias StorageClass = AliasSeq!();
+            ParameterStorageClassTuple = AliasSeq!(ParameterStorageClassTuple,
+                extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)));
         }
-        alias ParameterStorageClassTuple = StorageClass!0;
     }
     else
     {
-        static assert(0, func[0].stringof ~ " is not a function");
+        static assert(0, func.stringof, " is not a function");
         alias ParameterStorageClassTuple = AliasSeq!();
     }
 }
@@ -1317,7 +1313,8 @@ if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
-        template Get(size_t i)
+        alias ParameterIdentifierTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
@@ -1325,32 +1322,21 @@ if (isCallable!func)
                        // Filter out unnamed args, which look like (Type) instead of (Type name).
                        && PT[i].stringof != PT[i .. i+1].stringof[1..$-1])
             {
-                enum Get = __traits(identifier, PT[i .. i+1]);
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple,
+                    __traits(identifier, PT[i .. i+1]));
             }
             else
             {
-                enum Get = "";
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple, "");
             }
         }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterIdentifierTuple = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterIdentifierTuple = Impl!();
 }
 
 ///
@@ -1408,7 +1394,7 @@ if (isCallable!func)
 
 
 /**
-Get, as a tuple, the default value of the parameters to a function symbol.
+Get, as a tuple, the default values of the parameters to a function symbol.
 If a parameter doesn't have the default value, `void` is returned instead.
  */
 template ParameterDefaults(alias func)
@@ -1426,48 +1412,36 @@ if (isCallable!func)
             enum args = "args" ~ (name == "args" ? "_" : "");
             enum val = "val" ~ (name == "val" ? "_" : "");
             enum ptr = "ptr" ~ (name == "ptr" ? "_" : "");
-            mixin("
-                enum hasDefaultArg = (PT[i .. i+1] " ~ args ~ ") { return true; };
-            ");
+            enum hasDefaultArg = mixin("(PT[i .. i+1] ", args, ") => true");
             static if (is(typeof(hasDefaultArg())))
             {
-                mixin("
-                // workaround scope escape check, see
-                // https://issues.dlang.org/show_bug.cgi?id=16582
-                // should use return scope once available
-                enum get = (PT[i .. i+1] " ~ args ~ ") @trusted
+                enum get = mixin("(return scope PT[i .. i+1] ", args, ")
                 {
                     // If the parameter is lazy, we force it to be evaluated
                     // like this.
-                    auto " ~ val ~ " = " ~ args ~ "[0];
-                    auto " ~ ptr ~ " = &" ~ val ~ ";
-                    return *" ~ ptr ~ ";
-                };");
+                    auto ", val, " = ", args, "[0];
+                    auto ", ptr, " = &", val, ";
+                    return *", ptr, ";
+                }");
                 enum Get = get();
             }
             else
                 alias Get = void;
                 // If default arg doesn't exist, returns void instead.
         }
+        alias ParameterDefaults = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
+        {
+            ParameterDefaults = AliasSeq!(ParameterDefaults,
+                Get!i);
+        }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterDefaults = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterDefaults = Impl!();
 }
 
 ///
@@ -5195,6 +5169,62 @@ enum bool isImplicitlyConvertible(From, To) = is(From : To);
 }
 
 /**
+Is `From` $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible) to `To`?
+*/
+enum bool isQualifierConvertible(From, To) =
+    is(immutable From == immutable To) && is(From* : To*);
+
+///
+@safe unittest
+{
+    // Mutable and immmutable both convert to const...
+    static assert( isQualifierConvertible!(char, const(char)));
+    static assert( isQualifierConvertible!(immutable(char), const(char)));
+    // ...but const does not convert back to mutable or immutable
+    static assert(!isQualifierConvertible!(const(char), char));
+    static assert(!isQualifierConvertible!(const(char), immutable(char)));
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    alias Ts = AliasSeq!(int, const int, shared int, inout int, const shared int,
+        const inout int, inout shared int, const inout shared int, immutable int);
+
+    // https://dlang.org/spec/const3.html#implicit_qualifier_conversions
+    enum _ = 0;
+    static immutable bool[Ts.length][Ts.length] conversions = [
+    //   m   c   s   i   cs  ci  is  cis im
+        [1,  1,  _,  _,  _,  _,  _,  _,  _],  // mutable
+        [_,  1,  _,  _,  _,  _,  _,  _,  _],  // const
+        [_,  _,  1,  _,  1,  _,  _,  _,  _],  // shared
+        [_,  1,  _,  1,  _,  1,  _,  _,  _],  // inout
+        [_,  _,  _,  _,  1,  _,  _,  _,  _],  // const shared
+        [_,  1,  _,  _,  _,  1,  _,  _,  _],  // const inout
+        [_,  _,  _,  _,  1,  _,  1,  1,  _],  // inout shared
+        [_,  _,  _,  _,  1,  _,  _,  1,  _],  // const inout shared
+        [_,  1,  _,  _,  1,  1,  _,  1,  1],  // immutable
+    ];
+
+    static foreach (i, From; Ts)
+    {
+        static foreach (j, To; Ts)
+        {
+            static assert(isQualifierConvertible!(From, To) == conversions[i][j],
+                "`isQualifierConvertible!(" ~ From.stringof ~ ", " ~ To.stringof ~ ")`"
+                ~ " should be `" ~ (conversions[i][j] ? "true" : "false") ~ "`");
+        }
+    }
+}
+
+@safe unittest
+{
+    // int* -> void* is not a qualifier conversion
+    static assert(!isQualifierConvertible!(int, void));
+}
+
+/**
 Returns `true` iff a value of type `Rhs` can be assigned to a variable of
 type `Lhs`.
 
@@ -7817,6 +7847,46 @@ else
 
     alias ImmIntArr = immutable(int[]);
     static assert(is(Unconst!ImmIntArr == immutable(int)[]));
+}
+
+/++
+    Removes `shared` qualifier, if any, from type `T`.
+
+    Note that while `immutable` is implicitly `shared`, it is unaffected by
+    Unshared. Only explict `shared` is removed.
+  +/
+template Unshared(T)
+{
+    static if (is(T == shared U, U))
+        alias Unshared = U;
+    else
+        alias Unshared = T;
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unshared!int == int));
+    static assert(is(Unshared!(const int) == const int));
+    static assert(is(Unshared!(immutable int) == immutable int));
+
+    static assert(is(Unshared!(shared int) == int));
+    static assert(is(Unshared!(shared(const int)) == const int));
+
+    static assert(is(Unshared!(shared(int[])) == shared(int)[]));
+}
+
+@safe unittest
+{
+    static assert(is(Unshared!(                   int) == int));
+    static assert(is(Unshared!(             const int) == const int));
+    static assert(is(Unshared!(       inout       int) == inout int));
+    static assert(is(Unshared!(       inout const int) == inout const int));
+    static assert(is(Unshared!(shared             int) == int));
+    static assert(is(Unshared!(shared       const int) == const int));
+    static assert(is(Unshared!(shared inout       int) == inout int));
+    static assert(is(Unshared!(shared inout const int) == inout const int));
+    static assert(is(Unshared!(         immutable int) == immutable int));
 }
 
 version (StdDdoc)
