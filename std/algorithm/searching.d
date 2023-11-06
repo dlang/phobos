@@ -2609,7 +2609,7 @@ template canFind(alias pred="a == b")
         "cardboard"
     ];
     assert(!canFind(words, "bees"));
-    assert( canFind!((elem, needle) => elem.startsWith(needle))(words, "bees"));
+    assert( canFind!((string elem, string needle) => elem.startsWith(needle))(words, "bees"));
 }
 
 /// Search for multiple items in an array of items (search for needles in an array of haystacks)
