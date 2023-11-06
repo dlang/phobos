@@ -1288,7 +1288,7 @@ if (!is(immutable T == immutable bool))
 
 @system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!string("test");
     assert(a[].equal(["test"]));
 }
