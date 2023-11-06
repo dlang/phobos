@@ -6480,8 +6480,7 @@ enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
 /**
  * Detect whether `T` is a basic type (scalar type or void).
  */
-enum bool isBasicType(T) =
-    !is(T == enum) && (isScalarType!T || is(immutable T == immutable void));
+enum bool isBasicType(T) = isScalarType!T || is(immutable T == immutable void);
 
 ///
 @safe unittest
@@ -6499,13 +6498,6 @@ enum bool isBasicType(T) =
     static assert(isBasicType!(shared(float)));
     static assert(isBasicType!(shared(const bool)));
     static assert(isBasicType!(const(dchar)));
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=24215
-@safe unittest
-{
-    enum E : int { a }
-    static assert(!isBasicType!E);
 }
 
 /**
