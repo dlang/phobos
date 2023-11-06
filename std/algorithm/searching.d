@@ -1547,27 +1547,95 @@ if (isInputRange!Range && !isInfinite!Range &&
 
 // find
 /**
+Finds an element `e` of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+where `pred(e)` is `true`.
+$(P
+$(PANEL
+$(UL
+$(LI `find` behaves similarly to `dropWhile` in other languages.)
+$(LI To _find the *last* matching element in a
+$(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) `haystack`,
+call `find!pred(retro(haystack))`. See $(REF retro, std,range).)
+)))
+
+Complexity:
+    `find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
+
+Params:
+
+    pred = The predicate to match an element.
+    haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+               searched in.
+
+Returns:
+    `haystack` advanced such that the front element satisfies `pred`.
+    If no such element exists, returns an empty `haystack`.
+*/
+InputRange find(alias pred, InputRange)(InputRange haystack)
+if (isInputRange!InputRange)
+{
+    alias R = InputRange;
+    alias predFun = unaryFun!pred;
+    static if (isNarrowString!R)
+    {
+        import std.utf : decode;
+
+        immutable len = haystack.length;
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (predFun(decode(haystack, next)))
+                return haystack[i .. $];
+            i = next;
+        }
+        return haystack[$ .. $];
+    }
+    else
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (predFun(haystack.front))
+                break;
+        }
+        return haystack;
+    }
+}
+
+///
+@safe unittest
+{
+    auto arr = [ 1, 2, 3, 4, 1 ];
+    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
+
+    // with predicate alias
+    bool pred(int e) => e + 1 > 1.5;
+    assert(find!(pred)(arr) == arr);
+}
+
+@safe pure unittest
+{
+    int[] r = [ 1, 2, 3 ];
+    assert(find!(a=>a > 2)(r) == [3]);
+    bool pred(int x) { return x + 1 > 1.5; }
+    assert(find!(pred)(r) == r);
+
+    assert(find!(a=>a > 'v')("hello world") == "world");
+    assert(find!(a=>a%4 == 0)("日本語") == "本語");
+}
+
+/**
 Finds an individual element in an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 Elements of `haystack` are compared with `needle` by using predicate
 `pred` with `pred(haystack.front, needle)`.
-`find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
-
 The predicate is passed to $(REF binaryFun, std, functional), and can either accept a
 string, or any callable that can be executed via `pred(element, element)`.
 
-To _find the last occurrence of `needle` in a
-$(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) `haystack`,
-call `find(retro(haystack), needle)`. See $(REF retro, std,range).
-
-If no `needle` is provided, `pred(haystack.front)` will be evaluated on each
-element of the input range.
-
-If `input` is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives),
+If `haystack` is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives),
 `needle` can be a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) too.
 In this case `startsWith!pred(haystack, needle)` is evaluated on each evaluation.
 
-Note:
-    `find` behaves similar to `dropWhile` in other languages.
+$(NOTE To find the first element $(I not) matching the needle, use predicate `"a != b"`.)
 
 Complexity:
     `find` performs $(BIGOH walkLength(haystack)) evaluations of `pred`.
@@ -1579,21 +1647,16 @@ Complexity:
 Params:
 
     pred = The predicate for comparing each element with the needle, defaulting to equality `"a == b"`.
-           The negated predicate `"a != b"` can be used to search instead for the first
-           element $(I not) matching the needle.
-
     haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
                searched in.
-
     needle = The element searched for.
 
 Returns:
-
     `haystack` advanced such that the front element is the one searched for;
     that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
     such position exists, returns an empty `haystack`.
 
-See_ALso: $(LREF findAdjacent), $(LREF findAmong), $(LREF findSkip), $(LREF findSplit), $(LREF startsWith)
+See_Also: $(LREF findAdjacent), $(LREF findAmong), $(LREF findSkip), $(LREF findSplit), $(LREF startsWith)
 */
 InputRange find(alias pred = "a == b", InputRange, Element)(InputRange haystack, scope Element needle)
 if (isInputRange!InputRange &&
@@ -1754,8 +1817,8 @@ if (isInputRange!InputRange &&
     assert(arr.find(4) == [4, 4, 4, 4, 5, 6, 9]);
     assert(arr.find(1) == arr);
     assert(arr.find(9) == [9]);
-    assert(arr.find!((a, b) => a > b)(4) == [5, 6, 9]);
-    assert(arr.find!((a, b) => a < b)(4) == arr);
+    assert(arr.find!((e, n) => e > n)(4) == [5, 6, 9]);
+    assert(arr.find!((e, n) => e < n)(4) == arr);
     assert(arr.find(0).empty);
     assert(arr.find(10).empty);
     assert(arr.find(8).empty);
@@ -1770,7 +1833,7 @@ if (isInputRange!InputRange &&
     import std.uni : toLower;
 
     string[] s = ["Hello", "world", "!"];
-    assert(s.find!((a, b) => toLower(a) == b)("hello") == s);
+    assert(s.find!((e, n) => toLower(e) == n)("hello") == s);
 }
 
 @safe unittest
@@ -1860,60 +1923,6 @@ if (isInputRange!InputRange &&
 
     ubyte x = 0;
     assert([x].find(x).empty == false);
-}
-
-/// ditto
-InputRange find(alias pred, InputRange)(InputRange haystack)
-if (isInputRange!InputRange)
-{
-    alias R = InputRange;
-    alias predFun = unaryFun!pred;
-    static if (isNarrowString!R)
-    {
-        import std.utf : decode;
-
-        immutable len = haystack.length;
-        size_t i = 0, next = 0;
-        while (next < len)
-        {
-            if (predFun(decode(haystack, next)))
-                return haystack[i .. $];
-            i = next;
-        }
-        return haystack[$ .. $];
-    }
-    else
-    {
-        //standard range
-        for ( ; !haystack.empty; haystack.popFront() )
-        {
-            if (predFun(haystack.front))
-                break;
-        }
-        return haystack;
-    }
-}
-
-///
-@safe unittest
-{
-    auto arr = [ 1, 2, 3, 4, 1 ];
-    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
-
-    // with predicate alias
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(arr) == arr);
-}
-
-@safe pure unittest
-{
-    int[] r = [ 1, 2, 3 ];
-    assert(find!(a=>a > 2)(r) == [3]);
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(r) == r);
-
-    assert(find!(a=>a > 'v')("hello world") == "world");
-    assert(find!(a=>a%4 == 0)("日本語") == "本語");
 }
 
 /// ditto
