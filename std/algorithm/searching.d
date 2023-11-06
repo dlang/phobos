@@ -2588,19 +2588,16 @@ template canFind(alias pred="a == b")
     assert(!canFind(arr, 4));
 
     // find one of several needles
+    assert(arr.canFind(3, 2));
+    assert(arr.canFind(3, 2) == 2); // second needle found
+    assert(arr.canFind([1, 3], 2) == 2);
+
     assert(canFind(arr, [1, 2], [2, 3]));
     assert(canFind(arr, [1, 2], [2, 3]) == 1);
     assert(canFind(arr, [1, 7], [2, 3]));
     assert(canFind(arr, [1, 7], [2, 3]) == 2);
     assert(!canFind(arr, [1, 3], [2, 4]));
     assert(canFind(arr, [1, 3], [2, 4]) == 0);
-}
-
-// More multiple needles
-@safe unittest
-{
-    assert([1, 2, 3].canFind(3, 2) == 2);
-    assert([1, 2, 3].canFind([1, 3], 2) == 2);
 }
 
 /**
