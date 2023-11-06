@@ -2178,7 +2178,8 @@ Returns:
     alias of that range's type.
  */
 auto chooseAmong(Ranges...)(size_t index, return scope Ranges rs)
-if (Ranges.length >= 2)
+if (Ranges.length >= 2 &&
+    anySatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 {
     alias URs = staticMap!(Unqual, Ranges);
     static foreach (T; URs)
