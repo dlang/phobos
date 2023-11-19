@@ -2536,13 +2536,13 @@ was successful.
 For more information about `pred` see $(LREF find).
 
 See_Also:
-$(REF among, std,algorithm,comparison) for checking a value against multiple possibilities.
+$(REF among, std,algorithm,comparison) for checking a value against multiple arguments.
  +/
 template canFind(alias pred="a == b")
 {
     /++
-    Returns `true` if and only if any value `v` found in the
-    input range `range` satisfies the predicate `pred`.
+    Returns `true` if and only if `pred(e)` is true for any value `e` in the
+    input range `range`.
     Performs (at most) $(BIGOH haystack.length) evaluations of `pred`.
      +/
     bool canFind(Range)(Range haystack)
@@ -2565,11 +2565,11 @@ template canFind(alias pred="a == b")
     Returns the 1-based index of the first needle found in `haystack`. If no
     needle is found, then `0` is returned.
 
-    So, if used directly in the condition of an if statement or loop, the result
+    So, if used directly in the condition of an `if` statement or loop, the result
     will be `true` if one of the needles is found and `false` if none are
     found, whereas if the result is used elsewhere, it can either be cast to
     `bool` for the same effect or used to get which needle was found first
-    without having to deal with the tuple that `LREF find` returns for the
+    without having to deal with the tuple that $(LREF find) returns for the
     same operation.
      +/
     size_t canFind(Range, Ranges...)(Range haystack, scope Ranges needles)
@@ -2584,15 +2584,17 @@ template canFind(alias pred="a == b")
 ///
 @safe unittest
 {
-    assert(canFind([0, 1, 2, 3], 2) == true);
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]) == 1);
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]));
-    assert(canFind([0, 1, 2, 3], [1, 7], [2, 3]) == 2);
+    const arr = [0, 1, 2, 3];
+    assert(canFind(arr, 2));
+    assert(!canFind(arr, 4));
 
-    assert(canFind([0, 1, 2, 3], 4) == false);
-    assert(!canFind([0, 1, 2, 3], [1, 3], [2, 4]));
-    assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
+    // find one of several needles
+    assert(canFind(arr, [1, 2], [2, 3]));
+    assert(canFind(arr, [1, 2], [2, 3]) == 1);
+    assert(canFind(arr, [1, 7], [2, 3]));
+    assert(canFind(arr, [1, 7], [2, 3]) == 2);
+    assert(!canFind(arr, [1, 3], [2, 4]));
+    assert(canFind(arr, [1, 3], [2, 4]) == 0);
 }
 
 /**
@@ -2607,10 +2609,10 @@ template canFind(alias pred="a == b")
         "cardboard"
     ];
     assert(!canFind(words, "bees"));
-    assert( canFind!((string a, string b) => a.startsWith(b))(words, "bees"));
+    assert( canFind!((string elem, string needle) => elem.startsWith(needle))(words, "bees"));
 }
 
-/// Search for mutliple items in an array of items (search for needles in an array of hay stacks)
+/// Search for multiple items in an array of items (search for needles in an array of haystacks)
 @safe unittest
 {
     string s1 = "aaa111aaa";
@@ -2618,7 +2620,7 @@ template canFind(alias pred="a == b")
     string s3 = "aaa333aaa";
     string s4 = "aaa444aaa";
     const hay = [s1, s2, s3, s4];
-    assert(hay.canFind!(e => (e.canFind("111", "222"))));
+    assert(hay.canFind!(e => e.canFind("111", "222")));
 }
 
 @safe unittest
@@ -2736,7 +2738,7 @@ Returns:
 `seq` advanced to the first matching element, or until empty if there are no
 matching elements.
 
-See_Also: $(LREF find), $(REF std,algorithm,comparison,among)
+See_Also: $(LREF find), $(REF among, std,algorithm,comparison)
 */
 InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
