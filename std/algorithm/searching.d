@@ -2376,9 +2376,9 @@ is considered to be 1.) The strategy used in searching several
 subranges at once maximizes cache usage by moving in `haystack` as
 few times as possible.
  */
-Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
-(Range haystack, Ranges needles)
-if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
+Tuple!(Range, size_t) find(alias pred = "a == b", Range, Needles...)
+(Range haystack, Needles needles)
+if (Needles.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 {
     for (;; haystack.popFront())
     {
@@ -2572,9 +2572,8 @@ template canFind(alias pred="a == b")
     without having to deal with the tuple that $(LREF find) returns for the
     same operation.
      +/
-    size_t canFind(Range, Ranges...)(Range haystack, scope Ranges needles)
-    if (Ranges.length > 1 &&
-        allSatisfy!(isForwardRange, Ranges) &&
+    size_t canFind(Range, Needles...)(Range haystack, scope Needles needles)
+    if (Needles.length > 1 &&
         is(typeof(find!pred(haystack, needles))))
     {
         return find!pred(haystack, needles)[1];
@@ -2589,6 +2588,10 @@ template canFind(alias pred="a == b")
     assert(!canFind(arr, 4));
 
     // find one of several needles
+    assert(arr.canFind(3, 2));
+    assert(arr.canFind(3, 2) == 2); // second needle found
+    assert(arr.canFind([1, 3], 2) == 2);
+
     assert(canFind(arr, [1, 2], [2, 3]));
     assert(canFind(arr, [1, 2], [2, 3]) == 1);
     assert(canFind(arr, [1, 7], [2, 3]));
