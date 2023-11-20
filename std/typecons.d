@@ -4530,12 +4530,6 @@ Returns:
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
-
-/**
-Implicitly converts to `T`.
-`this` must not be in the null state.
- */
-    alias get this;
 }
 
 /// ditto
