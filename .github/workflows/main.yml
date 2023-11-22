@@ -31,11 +31,13 @@ jobs:
     timeout-minutes: 40
     env:
       # for ci/run.sh:
-      OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'darwin' || '') }}
+      OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || '') }}
       MODEL: ${{ matrix.model || '64' }}
       HOST_DMD: dmd
       N: ${{ startsWith(matrix.os, 'macos') && '3' || '2' }}
       FULL_BUILD: false
+      # work around https://issues.dlang.org/show_bug.cgi?id=23517
+      MACOSX_DEPLOYMENT_TARGET: '11'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,7 +91,7 @@ jobs:
         with:
           fetch-depth: 50
       - name: Run in VM
-        uses: cross-platform-actions/action@v0.21.0
+        uses: cross-platform-actions/action@v0.21.1
         with:
           operating_system: freebsd
           hypervisor: qemu
