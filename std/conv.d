@@ -4848,8 +4848,8 @@ private S textImpl(S, U...)(U args)
         static foreach (arg; args)
         {
             static if (
-                isSomeChar!(typeof(arg)) 
-                || isSomeString!(typeof(arg)) 
+                isSomeChar!(typeof(arg))
+                || isSomeString!(typeof(arg))
                 || ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
             )
                 app.put(arg);
