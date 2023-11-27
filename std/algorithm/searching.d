@@ -2885,38 +2885,52 @@ if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
 These functions find the first occurrence of `needle` in `haystack` and then
 split `haystack` as follows.
 
-`findSplit` returns a tuple `result` containing $(I three) ranges. `result[0]`
-is the portion of `haystack` before `needle`, `result[1]` is the portion of
-`haystack` that matches `needle`, and `result[2]` is the portion of `haystack`
-after the match. If `needle` was not found, `result[0]` comprehends `haystack`
+$(PANEL
+`findSplit` returns a tuple `result` containing $(I three) ranges.
+$(UL
+$(LI `result[0]` is the portion of `haystack` before `needle`)
+$(LI `result[1]` is the portion of
+`haystack` that matches `needle`)
+$(LI `result[2]` is the portion of `haystack`
+after the match.)
+)
+If `needle` was not found, `result[0]` comprehends `haystack`
 entirely and `result[1]` and `result[2]` are empty.
 
-`findSplitBefore` returns a tuple `result` containing two ranges. `result[0]` is
-the portion of `haystack` before `needle`, and `result[1]` is the balance of
-`haystack` starting with the match. If `needle` was not found, `result[0]`
+`findSplitBefore` returns a tuple `result` containing two ranges.
+$(UL
+$(LI `result[0]` is the portion of `haystack` before `needle`)
+$(LI `result[1]` is the balance of `haystack` starting with the match.)
+)
+If `needle` was not found, `result[0]`
 comprehends `haystack` entirely and `result[1]` is empty.
 
 `findSplitAfter` returns a tuple `result` containing two ranges.
-`result[0]` is the portion of `haystack` up to and including the
-match, and `result[1]` is the balance of `haystack` starting
-after the match. If `needle` was not found, `result[0]` is empty
+$(UL
+$(LI `result[0]` is the portion of `haystack` up to and including the
+match)
+$(LI `result[1]` is the balance of `haystack` starting
+after the match.)
+)
+If `needle` was not found, `result[0]` is empty
 and `result[1]` is `haystack`.
-
+)
+$(P
 In all cases, the concatenation of the returned ranges spans the
 entire `haystack`.
 
 If `haystack` is a random-access range, all three components of the tuple have
 the same type as `haystack`. Otherwise, `haystack` must be a
 $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and
-the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
+the type of `result[0]` (and `result[1]` for `findSplit`) is the same as $(REF takeExactly,
 std,range).
 
 For more information about `pred` see $(LREF find).
-
+)
 Params:
-    pred = Predicate to use for comparing needle against haystack.
-    haystack = The range to search.
-    needle = What to look for.
+    pred = Predicate to compare elements.
+    haystack = The forward range to search.
+    needle = The forward range to look for.
 
 Returns:
 
@@ -3171,12 +3185,12 @@ if (isForwardRange!R1 && isForwardRange!R2)
     }
     else assert(0);
 
-    // works with const aswell
-    if (const split = "dlang-rocks".findSplit("-"))
+    // findSplitBefore returns 2 ranges
+    if (const split = [2, 3, 2, 3, 4, 1].findSplitBefore!"a > b"([2, 2]))
     {
-        assert(split[0] == "dlang");
-        assert(split[1] == "-");
-        assert(split[2] == "rocks");
+        assert(split[0] == [2, 3, 2]);
+        // [3, 4] each greater than [2, 2]
+        assert(split[1] == [3, 4, 1]);
     }
     else assert(0);
 }
