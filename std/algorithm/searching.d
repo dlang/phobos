@@ -2922,22 +2922,21 @@ entire `haystack`.
 If `haystack` is a random-access range, all three components of the tuple have
 the same type as `haystack`. Otherwise, `haystack` must be a
 $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and
-the type of `result[0]` (and `result[1]` for `findSplit`) is the same as $(REF takeExactly,
-std,range).
+the type of `result[0]` (and `result[1]` for `findSplit`) is the same as
+the result of $(REF takeExactly, std,range).
 
 For more information about `pred` see $(LREF find).
 )
 Params:
-    pred = Predicate to compare elements.
+    pred = Predicate to compare 2 elements.
     haystack = The forward range to search.
     needle = The forward range to look for.
 
 Returns:
 
-A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
-details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
-`opCast` returns `true` when the separating `needle` was found
-and `false` otherwise.
+A sub-type of $(REF Tuple, std, typecons) of the split portions of `haystack` (see above for
+details). This sub-type of `Tuple` defines `opCast!bool`, which
+returns `true` when the separating `needle` was found and `false` otherwise.
 
 See_Also: $(LREF find)
  */
