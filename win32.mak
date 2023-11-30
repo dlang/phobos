@@ -204,6 +204,7 @@ SRC_STD_DIGEST= \
 	std\digest\ripemd.d \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
+	std\digest\xxh.d \
 	std\digest\package.d
 
 SRC_STD_FORMAT= \
