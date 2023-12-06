@@ -2540,13 +2540,16 @@ the contents may well have changed).
 
 Windows specific Example:
 ----
-import std;
+import std.stdio;
 
-void main(){
+void main()
+{
 
-	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n")){
+	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n"))
+	{
 		writeln("|"~line~"|");
-		if (line == "HelloWorld") { writeln("^This Line is here."); }
+		if (line == "HelloWorld") 
+		    writeln("^This Line is here.");
 	}
 
 }
