@@ -2536,6 +2536,20 @@ void main()
 Notice that neither example accesses the line data returned by
 `front` after the corresponding `popFront` call is made (because
 the contents may well have changed).
+----
+
+Windows specific Example:
+----
+import std;
+
+void main(){
+
+	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n")){
+		writeln("|"~line~"|");
+		if (line == "HelloWorld") { writeln("^This Line is here."); }
+	}
+
+}
 */
     auto byLine(Terminator = char, Char = char)
             (KeepTerminator keepTerminator = No.keepTerminator,
