@@ -43,24 +43,23 @@ import std.traits : CommonType, isFloatingPoint, isIntegral, isSigned, Unqual;
  *     the return type will be the same as the input.
  *
  * Limitations:
- *     Does not work correctly for signed intergal types and value `Num`.min.
+ *     Does not work correctly for value `Num`.min.
  */
 auto abs(Num)(Num x) @nogc pure nothrow
-if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)) ||
-    (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
+if (isIntegral!Num || (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
     {
-        static if (is(immutable Num == immutable short) || is(immutable Num == immutable byte))
-            return x >= 0 ? x : cast(Num) -int(x);
+        static if (isIntegral!Num)
+            return x >= 0 ? x : cast(Num) -x;
         else
             return x >= 0 ? x : -x;
     }
 }
 
-/// ditto
+///
 @safe pure nothrow @nogc unittest
 {
     import std.math.traits : isIdentical, isNaN;
@@ -70,16 +69,21 @@ if ((is(immutable Num == immutable short) || is(immutable Num == immutable byte)
     assert(abs(-real.infinity) == real.infinity);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
+    assert(abs(23u) == 23u);
 }
 
 @safe pure nothrow @nogc unittest
 {
-    short s = -8;
-    byte b = -8;
-    assert(abs(s) == 8);
-    assert(abs(b) == 8);
-    immutable(byte) c = -8;
-    assert(abs(c) == 8);
+    asser(abs(byte(-8)) == 8 && is(typeof(abs(byte(-8))) == byte));
+    asser(abs(ubyte(-8)) == 8 && is(typeof(abs(ubyte(-8))) == ubyte));
+    asser(abs(short(-8)) == 8 && is(typeof(abs(short(-8))) == short));
+    asser(abs(ushort(-8)) == 8 && is(typeof(abs(ushort(-8))) == ushort));
+    asser(abs(int(-8)) == 8 && is(typeof(abs(int(-8))) == int));
+    asser(abs(uint(-8)) == 8 && is(typeof(abs(uint(-8))) == uint));
+    asser(abs(long(-8)) == 8 && is(typeof(abs(long(-8))) == long));
+    asser(abs(ulong(-8)) == 8 && is(typeof(abs(ulong(-8))) == ulong));
+    asser(abs(cent(-8)) == 8 && is(typeof(abs(cent(-8))) == cent));
+    asser(abs(ucent(-8)) == 8 && is(typeof(abs(ucent(-8))) == ucent));
 }
 
 @safe pure nothrow @nogc unittest
