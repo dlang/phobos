@@ -74,14 +74,22 @@ if (isIntegral!Num || (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 
 @safe pure nothrow @nogc unittest
 {
-    assert(abs(byte(-8)) == 8 && is(typeof(abs(byte(-8))) == byte));
-    assert(abs(ubyte(8u)) == 8 && is(typeof(abs(ubyte(8u))) == ubyte));
-    assert(abs(short(-8)) == 8 && is(typeof(abs(short(-8))) == short));
-    assert(abs(ushort(8u)) == 8 && is(typeof(abs(ushort(8u))) == ushort));
-    assert(abs(int(-8)) == 8 && is(typeof(abs(int(-8))) == int));
-    assert(abs(uint(8u)) == 8 && is(typeof(abs(uint(8u))) == uint));
-    assert(abs(long(-8)) == 8 && is(typeof(abs(long(-8))) == long));
-    assert(abs(ulong(8u)) == 8 && is(typeof(abs(ulong(8u))) == ulong));
+    assert(abs(byte(-8)) == 8);
+    assert(abs(ubyte(8u)) == 8);
+    assert(abs(short(-8)) == 8);
+    assert(abs(ushort(8u)) == 8);
+    assert(abs(int(-8)) == 8);
+    assert(abs(uint(8u)) == 8);
+    assert(abs(long(-8)) == 8);
+    assert(abs(ulong(8u)) == 8);
+    assert(is(typeof(abs(byte(-8))) == byte));
+    assert(is(typeof(abs(ubyte(8u))) == ubyte));
+    assert(is(typeof(abs(short(-8))) == short));
+    assert(is(typeof(abs(ushort(8u))) == ushort));
+    assert(is(typeof(abs(int(-8))) == int));
+    assert(is(typeof(abs(uint(8u))) == uint));
+    assert(is(typeof(abs(long(-8))) == long));
+    assert(is(typeof(abs(ulong(8u))) == ulong));
 }
 
 @safe pure nothrow @nogc unittest
