@@ -1,4 +1,9 @@
-# Makefile to build linux D runtime library libphobos2.a and its unit test
+# This makefile is designed to be run by gnu make.
+# - Windows: you may download a prebuilt zipped .exe from https://github.com/dlang/dmd/releases/download/nightly/gnumake-4.4-win64.zip.
+#   You also need a Git for Windows installation, for bash and common GNU tools like cp,mkdir,mv,rm,touch,which.
+# - FreeBSD: the default make program on FreeBSD is not gnu make; to install gnu make:
+#     pkg install gmake
+#   and then run as gmake rather than make.
 #
 # make => makes release build of the library
 #
@@ -25,7 +30,7 @@
 ################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd.
+# OS can be linux, windows, win32wine, osx, freebsd, netbsd or dragonflybsd.
 # The system will be determined by using uname
 
 QUIET:=@
@@ -35,6 +40,14 @@ GIT_HOME=https://github.com/dlang
 DMD_DIR=../dmd
 
 include $(DMD_DIR)/compiler/src/osmodel.mak
+
+ifeq (windows,$(OS))
+    DOTEXE:=.exe
+    DOTOBJ:=.obj
+else
+    DOTEXE:=
+    DOTOBJ:=.o
+endif
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.9
@@ -57,7 +70,7 @@ endif
 # default to PIC, use PIC=1/0 to en-/disable PIC.
 # Note that shared libraries and C files are always compiled with PIC.
 ifeq ($(PIC),)
-    PIC:=1
+    PIC:=$(if $(findstring win,$(OS)),,1)
 endif
 ifeq ($(PIC),1)
     override PIC:=-fPIC
@@ -67,7 +80,7 @@ endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
-DRUNTIME_PATH = ../dmd/druntime
+DRUNTIME_PATH = $(DMD_DIR)/druntime
 DLANG_ORG_DIR = ../dlang.org
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
@@ -85,7 +98,7 @@ ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/../generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
 	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
 else
-	DRUNTIME = $(DRUNTIME_PATH)/../lib/druntime.lib
+	DRUNTIME = $(DRUNTIME_PATH)/../generated/$(OS)/$(BUILD)/$(MODEL)/druntime.lib
 endif
 
 # Set CC and DMD
@@ -94,9 +107,11 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
-	ifeq ($(OS),win32)
+	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd$(DOTEXE)
+	ifeq ($(MODEL),32omf)
 		CC = dmc
+	else ifeq ($(OS),windows)
+		CC = cl.exe
 	else
 		CC = cc
 	endif
@@ -118,7 +133,7 @@ ifeq (,$(findstring win,$(OS)))
 		CFLAGS += -O3
 	endif
 else
-	ifeq ($(OS),win32)
+	ifeq ($(MODEL),32omf)
 		CFLAGS=-DNO_snprintf
 		ifeq ($(BUILD),debug)
 			CFLAGS += -g
@@ -127,11 +142,11 @@ else
 		endif
 	else # win64/win32coff
 		OUTFILEFLAG = /Fo
-		NODEFAULTLIB=-L/NOD:phobos$(MODEL).lib -L/OPT:NOICF
+		CFLAGS += /nologo /Zl /GS-
 		ifeq ($(BUILD),debug)
 			CFLAGS += /Z7
 		else
-			CFLAGS += /Ox
+			CFLAGS += /O2
 		endif
 	endif
 endif
@@ -165,17 +180,6 @@ endif
 
 UDFLAGS=-unittest -version=StdUnittest
 
-# Set DOTOBJ and DOTEXE
-ifeq (,$(findstring win,$(OS)))
-	DOTOBJ:=.o
-	DOTEXE:=
-	PATHSEP:=/
-else
-	DOTOBJ:=.obj
-	DOTEXE:=.exe
-	PATHSEP:=$(shell echo "\\")
-endif
-
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
 # use timelimit to avoid deadlocks if available
@@ -197,7 +201,13 @@ ifeq (,$(findstring win,$(OS)))
 	SONAME:=libphobos2.so.$(MAJOR).$(MINOR)
 	LIBSO:=$(ROOT)/$(SONAME).$(PATCH)
 else
-	LIB:=$(ROOT)/phobos.lib
+	ifeq ($(MODEL),32omf)
+		LIB:=phobos.lib
+	else ifeq ($(MODEL),32)
+		LIB:=phobos32mscoff.lib
+	else
+		LIB:=phobos$(MODEL).lib
+	endif
 endif
 
 ################################################################################
@@ -299,7 +309,7 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
-TESTS_EXTRACTOR=$(ROOT)/tests_extractor
+TESTS_EXTRACTOR=$(ROOT)/tests_extractor$(DOTEXE)
 PUBLICTESTS_DIR=$(ROOT)/publictests
 BETTERCTESTS_DIR=$(ROOT)/betterctests
 
@@ -396,7 +406,7 @@ ifneq (1,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
+$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
 	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) $(NODEFAULTLIB)
 
 else
@@ -409,7 +419,7 @@ $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(NODEFAULTLIB)
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
+$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) $(NODEFAULTLIB)
 
 endif
@@ -418,7 +428,7 @@ endif
 moduleName=$(subst /,.,$(1))
 
 # target for batch unittests (using shared phobos library and test_runner)
-unittest/%.run : $(ROOT)/unittest/test_runner
+unittest/%.run : $(ROOT)/unittest/test_runner$(DOTEXE)
 	$(QUIET)$(TIMELIMIT)$(RUN) $< $(call moduleName,$*)
 
 # Target for quickly running a single unittest (using static phobos library).
@@ -447,7 +457,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	$(DEBUGGER) ./$(basename $(notdir $<))
 
 # Target for quickly debugging a single module
-# For example: make -f posix.mak DEBUGGER=ddd std/format.debug
+# For example: make DEBUGGER=ddd std/format.debug
 # ddd in this case is a graphical frontend to gdb
 %.debug : %.d
 	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
@@ -464,7 +474,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE)
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(LIB)
 
 gitzip:
 	git archive --format=zip HEAD > $(ZIPFILE)
@@ -495,7 +505,7 @@ else
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
 $(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(abspath $(DMD)) OS=$(OS) BUILD=$(BUILD)
+	$(MAKE) -C $(DRUNTIME_PATH) MODEL=$(MODEL) DMD=$(abspath $(DMD)) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
 $(DRUNTIMESO): $(DRUNTIME)
@@ -553,7 +563,7 @@ $(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
 $(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
-CWS_TOCHECK = posix.mak win32.mak win64.mak
+CWS_TOCHECK = Makefile
 CWS_TOCHECK += $(ALL_D_FILES) index.dd
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
@@ -582,7 +592,7 @@ style: style_lint publictests
 dscanner: $(LIB)
 	@# The dscanner target is without dependencies to avoid constant rebuilds of Phobos (`make` always rebuilds order-only dependencies)
 	@# However, we still need to ensure that the DScanner binary is built once
-	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} -f posix.mak $(DSCANNER_DIR)/dsc
+	@[ -f $(DSCANNER_DIR)/dsc ] || ${MAKE} $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
 	$(DSCANNER_DIR)/dsc --config .dscanner.ini -I $(DRUNTIME_PATH)/src/ --styleCheck etc std -I.
 
@@ -641,15 +651,15 @@ style_lint: style_lint_shellcmds dscanner
 ################################################################################
 
 $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
-	DFLAGS="$(DFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
-	mv $(TOOLS_DIR)/tests_extractor $@
+	DFLAGS="$(DFLAGS) $(LIB) $(NODEFAULTLIB) $(LINKDL)" $(DUB) build --force --compiler=$(abspath $(DMD)) --single $<
+	mv $(TOOLS_DIR)/tests_extractor$(DOTEXE) $@
 
 test_extractor: $(TESTS_EXTRACTOR)
 
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
-# make -f posix.mak std/format.publictests
+# make std/format.publictests
 ################################################################################
 
 publictests: $(addsuffix .publictests,$(D_MODULES))
@@ -664,7 +674,7 @@ publictests: $(addsuffix .publictests,$(D_MODULES))
 #
 # Extract @betterC tests of a module and run them in -betterC
 #
-#   make -f posix.mak std/format.betterc
+#   make std/format.betterc
 ################################################################################
 
 betterc-phobos-tests: $(addsuffix .betterc,$(D_MODULES))
@@ -673,7 +683,7 @@ betterc: betterc-phobos-tests
 %.betterc: %.d | $(BETTERCTESTS_DIR)/.directory
 	@# Due to the FORCE rule on druntime, make will always try to rebuild Phobos (even as an order-only dependency)
 	@# However, we still need to ensure that the test_extractor is built once
-	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} -f posix.mak "$(TESTS_EXTRACTOR)"
+	@[ -f "$(TESTS_EXTRACTOR)" ] || ${MAKE} "$(TESTS_EXTRACTOR)"
 	$(TESTS_EXTRACTOR) --betterC --attributes betterC \
 		--inputdir  $< --outputdir $(BETTERCTESTS_DIR)
 	$(DMD) $(DFLAGS) $(NODEFAULTLIB) -betterC -unittest -run $(BETTERCTESTS_DIR)/$(subst /,_,$<)
@@ -686,7 +696,7 @@ betterc: betterc-phobos-tests
 # Test full modules with -betterC. Edit BETTERC_MODULES and
 # test/betterc_module_tests.d to add new modules to the list.
 #
-#   make -f posix.mak betterc-module-tests
+#   make betterc-module-tests
 ################################################################################
 
 BETTERC_MODULES=std/sumtype
