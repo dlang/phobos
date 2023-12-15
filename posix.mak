@@ -602,12 +602,6 @@ style_lint_shellcmds:
 	@echo "Check for package wide std.algorithm imports"
 	grep -nr 'import std.algorithm : ' $$(find etc std -name '*.d') ; test $$? -eq 1
 
-	@echo "Enforce Allman style"
-	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find etc std -name '*.d'); test $$? -eq 1
-
-	@echo "Enforce do { to be in Allman style"
-	grep -nr 'do *{$$' $$(find etc std -name '*.d') ; test $$? -eq 1
-
 	@echo "Enforce no space between assert and the opening brace, i.e. assert("
 	grep -nrE 'assert +\(' $$(find etc std -name '*.d') ; test $$? -eq 1
 
