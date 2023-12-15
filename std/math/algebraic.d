@@ -43,10 +43,10 @@ import std.traits : CommonType, isFloatingPoint, isIntegral, isSigned, Unqual;
  *     the return type will be the same as the input.
  *
  * Limitations:
- *     When x is a signed integral equal to `Num`.min the value of x will be returned instead.
- *     Note for 2's complement; -`Num`.min (= `Num`.max + 1) is not representable due to overflow.
+ *     When x is a signed integral equal to `Num.min` the value of x will be returned instead.
+ *     Note for 2's complement; `-Num.min` (= `Num.max + 1`) is not representable due to overflow.
  */
-auto abs(Num)(Num x) @nogc pure nothrow
+auto abs(Num)(Num x) @nogc nothrow pure
 if (isIntegral!Num || (is(typeof(Num.init >= 0)) && is(typeof(-Num.init))))
 {
     static if (isFloatingPoint!(Num))
