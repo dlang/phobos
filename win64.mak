@@ -48,10 +48,10 @@ UDFLAGS=-conf= -g -m$(MODEL) -O -w -preview=dip1000 -preview=fieldwise -I$(DRUNT
 
 ## D compiler
 
-DMD_DIR=../dmd
+DMD_DIR=../dmd/compiler
 BUILD=release
 OS=windows
-DMD=$(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
+DMD=$(DMD_DIR)/../generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 
 ## Zlib library
 
