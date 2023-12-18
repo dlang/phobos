@@ -6,7 +6,6 @@ generated
 GNUmakefile
 .DS_Store
 .*.sw*
-Makefile
 *.lst
 
 temp/
