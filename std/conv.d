@@ -5712,8 +5712,8 @@ private auto hexStrLiteral(String)(scope String hexData)
  *      radix = 2, 8, 10, 16
  *      Char = character type for output
  *      letterCase = lower for deadbeef, upper for DEADBEEF
- *      value = integer to convert. Can be uint or ulong. If radix is 10, can also be
- *              int or long.
+ *      value = integer to convert. Can be ubyte, ushort, uint or ulong. If radix
+ *              is 10, can also be byte, short, int or long.
  * Returns:
  *      Random access range with slicing and everything
  */
@@ -5721,8 +5721,10 @@ private auto hexStrLiteral(String)(scope String hexData)
 auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
     pure nothrow @nogc @safe
 if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
-    (is(immutable T == immutable uint) || is(immutable T == immutable ulong) ||
-    radix == 10 && (is(immutable T == immutable int) || is(immutable T == immutable long))))
+        (is(immutable T == immutable ubyte) || is(immutable T == immutable ushort) || is(
+        immutable T == immutable uint) || is(immutable T == immutable ulong) ||
+        radix == 10 && (is(immutable T == immutable byte) || is(immutable T == immutable short) || is(
+        immutable T == immutable int) || is(immutable T == immutable long))))
 {
     alias UT = Unqual!T;
 
