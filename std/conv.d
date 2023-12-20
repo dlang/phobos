@@ -5872,8 +5872,12 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
     assert(toChars(123) == toChars(123));
 
     {
+        assert(toChars!2(cast(ubyte) 0).array == "0");
+        assert(toChars!2(cast(ushort) 0).array == "0");
         assert(toChars!2(0u).array == "0");
         assert(toChars!2(0Lu).array == "0");
+        assert(toChars!2(cast(ubyte) 1).array == "1");
+        assert(toChars!2(cast(ushort) 1).array == "1");
         assert(toChars!2(1u).array == "1");
         assert(toChars!2(1Lu).array == "1");
 
@@ -5886,10 +5890,14 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
+        assert(toChars!8(cast(ubyte) 0).array == "0");
+        assert(toChars!8(cast(ushort) 0).array == "0");
         assert(toChars!8(0u).array == "0");
         assert(toChars!8(0Lu).array == "0");
         assert(toChars!8(1u).array == "1");
         assert(toChars!8(1234567Lu).array == "4553207");
+        assert(toChars!8(ubyte.max).array == "377");
+        assert(toChars!8(ushort.max).array == "177777");
 
         auto r = toChars!8(8u);
         assert(r.length == 2);
@@ -5900,10 +5908,14 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
+        assert(toChars!10(cast(ubyte) 0).array == "0");
+        assert(toChars!10(cast(ushort) 0).array == "0");
         assert(toChars!10(0u).array == "0");
         assert(toChars!10(0Lu).array == "0");
         assert(toChars!10(1u).array == "1");
         assert(toChars!10(1234567Lu).array == "1234567");
+        assert(toChars!10(ubyte.max).array == "255");
+        assert(toChars!10(ushort.max).array == "65535");
         assert(toChars!10(uint.max).array == "4294967295");
         assert(toChars!10(ulong.max).array == "18446744073709551615");
 
@@ -5920,10 +5932,16 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(toChars!10(0L).array == "0");
         assert(toChars!10(1).array == "1");
         assert(toChars!10(1234567L).array == "1234567");
+        assert(toChars!10(byte.max).array == "127");
+        assert(toChars!10(short.max).array == "32767");
         assert(toChars!10(int.max).array == "2147483647");
         assert(toChars!10(long.max).array == "9223372036854775807");
+        assert(toChars!10(-byte.max).array == "-127");
+        assert(toChars!10(-short.max).array == "-32767");
         assert(toChars!10(-int.max).array == "-2147483647");
         assert(toChars!10(-long.max).array == "-9223372036854775807");
+        assert(toChars!10(byte.min).array == "-128");
+        assert(toChars!10(short.min).array == "-32768");
         assert(toChars!10(int.min).array == "-2147483648");
         assert(toChars!10(long.min).array == "-9223372036854775808");
 
@@ -5940,6 +5958,10 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(toChars!(16)(0Lu).array == "0");
         assert(toChars!(16)(10u).array == "a");
         assert(toChars!(16, char, LetterCase.upper)(0x12AF34567Lu).array == "12AF34567");
+        assert(toChars!(16)(cast(ubyte) 0).array == "0");
+        assert(toChars!(16)(cast (ushort) 0).array == "0");
+        assert(toChars!(16)(ubyte.max).array == "ff");
+        assert(toChars!(16)(ushort.max).array == "ffff");
 
         auto r = toChars!(16)(16u);
         assert(r.length == 2);
