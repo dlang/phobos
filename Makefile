@@ -304,8 +304,6 @@ C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
-MAKEFILE = $(firstword $(MAKEFILE_LIST))
-
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
@@ -329,7 +327,7 @@ install:
 	echo "Darwin_64_32_disabled"
 else
 install :
-	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
+	$(MAKE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 endif
 
@@ -339,7 +337,7 @@ unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
 else
 unittest : unittest-debug unittest-release
 unittest-%:
-	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
+	$(MAKE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
 endif
 
 ################################################################################
@@ -371,8 +369,8 @@ ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
 libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
 $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
-	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
-	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
+	$(MAKE) OS=$(OS) MODEL=32 BUILD=release
+	$(MAKE) OS=$(OS) MODEL=64 BUILD=release
 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
 		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
 		-create -output $@
@@ -444,7 +442,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner$(DOTEXE)
 # Target for quickly unittesting all modules and packages within a package,
 # transitively. For example: "make std/algorithm.test"
 %.test : $(LIB)
-	$(MAKE) -f $(MAKEFILE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
+	$(MAKE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
 
 # Recursive target for %.debug
 # It has to be recursive as %.debug depends on $(LIB) and we don't want to
@@ -460,7 +458,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner$(DOTEXE)
 # For example: make DEBUGGER=ddd std/format.debug
 # ddd in this case is a graphical frontend to gdb
 %.debug : %.d
-	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
+	BUILD=debug $(MAKE) $(basename $<).debug_with_debugger
 
 ################################################################################
 # More stuff
