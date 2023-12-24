@@ -5872,12 +5872,12 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
     assert(toChars(123) == toChars(123));
 
     {
-        assert(toChars!2(cast(ubyte) 0).array == "0");
-        assert(toChars!2(cast(ushort) 0).array == "0");
+        assert(toChars!2(ubyte(0)).array == "0");
+        assert(toChars!2(ushort(0)).array == "0");
         assert(toChars!2(0u).array == "0");
         assert(toChars!2(0Lu).array == "0");
-        assert(toChars!2(cast(ubyte) 1).array == "1");
-        assert(toChars!2(cast(ushort) 1).array == "1");
+        assert(toChars!2(ubyte(1)).array == "1");
+        assert(toChars!2(ushort(1)).array == "1");
         assert(toChars!2(1u).array == "1");
         assert(toChars!2(1Lu).array == "1");
 
@@ -5890,8 +5890,8 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
-        assert(toChars!8(cast(ubyte) 0).array == "0");
-        assert(toChars!8(cast(ushort) 0).array == "0");
+        assert(toChars!8(ubyte(0)).array == "0");
+        assert(toChars!8(ushort(0)).array == "0");
         assert(toChars!8(0u).array == "0");
         assert(toChars!8(0Lu).array == "0");
         assert(toChars!8(1u).array == "1");
@@ -5908,8 +5908,8 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
-        assert(toChars!10(cast(ubyte) 0).array == "0");
-        assert(toChars!10(cast(ushort) 0).array == "0");
+        assert(toChars!10(ubyte(0)).array == "0");
+        assert(toChars!10(ushort(0)).array == "0");
         assert(toChars!10(0u).array == "0");
         assert(toChars!10(0Lu).array == "0");
         assert(toChars!10(1u).array == "1");
@@ -5958,8 +5958,8 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(toChars!(16)(0Lu).array == "0");
         assert(toChars!(16)(10u).array == "a");
         assert(toChars!(16, char, LetterCase.upper)(0x12AF34567Lu).array == "12AF34567");
-        assert(toChars!(16)(cast(ubyte) 0).array == "0");
-        assert(toChars!(16)(cast (ushort) 0).array == "0");
+        assert(toChars!(16)(ubyte(0)).array == "0");
+        assert(toChars!(16)(ushort(0)).array == "0");
         assert(toChars!(16)(ubyte.max).array == "ff");
         assert(toChars!(16)(ushort.max).array == "ffff");
 
