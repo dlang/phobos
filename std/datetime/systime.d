@@ -9685,7 +9685,7 @@ private:
 @safe unittest
 {
     import core.time : days, hours, seconds;
-    import std.datetime.date : DateTime;
+    import std.datetime.date : Date, DateTime;
     import std.datetime.timezone : SimpleTimeZone, UTC;
 
     const dt = DateTime(2018, 1, 1, 10, 30, 0);
