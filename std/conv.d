@@ -5721,10 +5721,7 @@ private auto hexStrLiteral(String)(scope String hexData)
 auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
     pure nothrow @nogc @safe
 if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
-        (is(immutable T == immutable ubyte) || is(immutable T == immutable ushort) || is(
-        immutable T == immutable uint) || is(immutable T == immutable ulong) ||
-        radix == 10 && (is(immutable T == immutable byte) || is(immutable T == immutable short) || is(
-        immutable T == immutable int) || is(immutable T == immutable long))))
+        isIntegral!T && (radix == 10 || isUnsigned!T))
 {
     alias UT = Unqual!T;
 
