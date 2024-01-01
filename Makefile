@@ -101,58 +101,27 @@ else
 	DRUNTIME = $(DRUNTIME_PATH)/../generated/$(OS)/$(BUILD)/$(MODEL)/druntime.lib
 endif
 
-# Set CC and DMD
+# Set DMD
 ifeq ($(OS),win32wine)
-	CC = wine dmc.exe
 	DMD = wine dmd.exe
 	RUN = wine
 else
 	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd$(DOTEXE)
-	ifeq ($(MODEL),32omf)
-		CC = dmc
-	else ifeq ($(OS),windows)
-		CC = cl.exe
-	else
-		CC = cc
-	endif
 	RUN =
 endif
 
-# Set CFLAGS
-OUTFILEFLAG = -o
+# Set extra CFLAGS (for DMD - the zlib .c files are compiled via importC)
 NODEFAULTLIB=-defaultlib= -debuglib=
+CFLAGS=-P=-Ietc/c/zlib
 ifeq (,$(findstring win,$(OS)))
-	CFLAGS=$(MODEL_FLAG) -fPIC -std=c11 -DHAVE_UNISTD_H
+	CFLAGS += -P=-DHAVE_UNISTD_H
 # Bundled with the system library on OSX, and doesn't work with >= MacOS 11
 	ifneq (osx,$(OS))
 		NODEFAULTLIB += -L-lpthread -L-lm
 	endif
-	ifeq ($(BUILD),debug)
-		CFLAGS += -g
-	else
-		CFLAGS += -O3
-	endif
 else
 	ifeq ($(MODEL),32omf)
-		CFLAGS=-DNO_snprintf
-		ifeq ($(BUILD),debug)
-			CFLAGS += -g
-		else
-			CFLAGS += -O
-		endif
-	else # win64/win32coff
-		OUTFILEFLAG = /Fo
-		CFLAGS += /nologo /Zl /GS-
-		ifeq ($(BUILD),debug)
-			CFLAGS += /Z7
-		else
-			CFLAGS += /O2
-		endif
-	endif
-endif
-ifeq (osx,$(OS))
-	ifeq (64,$(MODEL))
-		CFLAGS+=--target=x86_64-darwin-apple  # ARM cpu is not supported by dmd
+		CFLAGS += -P=-DNO_snprintf
 	endif
 endif
 
@@ -348,9 +317,9 @@ endif
 lib: $(LIB)
 dll: $(ROOT)/libphobos2.so
 
-$(ROOT)/%$(DOTOBJ): %.c
-	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
-	$(CC) -c $(CFLAGS) $< $(OUTFILEFLAG)$@
+# compile zlib .c files via importC; the druntime dependency makes sure DMD has been built
+$(ROOT)/%$(DOTOBJ): %.c $(DRUNTIME)
+	$(DMD) -c $(DFLAGS) $(CFLAGS) -of$@ $<
 
 $(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
