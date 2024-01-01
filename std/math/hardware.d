@@ -30,6 +30,7 @@ version (SPARC64)   version = SPARC_Any;
 version (SystemZ)   version = IBMZ_Any;
 version (RISCV32)   version = RISCV_Any;
 version (RISCV64)   version = RISCV_Any;
+version (LoongArch64)   version = LoongArch_Any;
 
 version (D_InlineAsm_X86)    version = InlineAsm_X86_Any;
 version (D_InlineAsm_X86_64) version = InlineAsm_X86_Any;
@@ -57,6 +58,7 @@ else version (X86_Any)   version = IeeeFlagsSupport;
 else version (PPC_Any)   version = IeeeFlagsSupport;
 else version (RISCV_Any) version = IeeeFlagsSupport;
 else version (MIPS_Any)  version = IeeeFlagsSupport;
+else version (LoongArch_Any) version = IeeeFlagsSupport;
 else version (ARM_Any)   version = IeeeFlagsSupport;
 
 // Struct FloatingPointControl is only available if hardware FP units are available.
@@ -87,6 +89,7 @@ private:
     // The ARM and PowerPC FPSCR is a 32-bit register.
     // The SPARC FSR is a 32bit register (64 bits for SPARC 7 & 8, but high bits are uninteresting).
     // The RISC-V (32 & 64 bit) fcsr is 32-bit register.
+    // THe LoongArch fcsr (fcsr0) is a 32-bit register.
     uint flags;
 
     version (CRuntime_Microsoft)
@@ -159,6 +162,15 @@ private:
             return result;
             `);
         }
+        else version (LoongArch_Any)
+        {
+            uint result = void;
+            asm pure nothrow @nogc
+            {
+                "movfcsr2gr %0,$r2" : "=r" (result);
+            }
+            return result & EXCEPTIONS_MASK;
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -190,6 +202,13 @@ private:
                 "fsflags %0" : : "r" (newValues);
             }
             `);
+        }
+        else version (LoongArch_Any)
+        {
+            asm nothrow @nogc
+            {
+                "movgr2fcsr $r2,$r0";
+            }
         }
         else
         {
@@ -613,6 +632,21 @@ nothrow @nogc:
                                  | inexactException,
         }
     }
+    else version (LoongArch_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x00,
+            divByZeroException    = 0x01,
+            overflowException     = 0x02,
+            underflowException    = 0x04,
+            invalidException      = 0x08,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version (MIPS_Any)
     {
         enum : ExceptionMask
@@ -700,6 +734,8 @@ nothrow @nogc:
             return true;
         else version (MIPS_Any)
             return true;
+        else version (LoongArch_Any)
+            return true;
         else version (ARM_Any)
         {
             // The hasExceptionTraps_impl function is basically pure,
@@ -770,6 +806,10 @@ private:
         alias ControlState = uint;
     }
     else version (RISCV_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version (LoongArch_Any)
     {
         alias ControlState = uint;
     }
@@ -844,6 +884,16 @@ private:
             return cont;
             `);
         }
+        else version (LoongArch_Any)
+        {
+            ControlState cont;
+            asm pure nothrow @nogc
+            {
+                "movfcsr2gr %0,$r0" : "=r" (cont);
+            }
+            cont &= (roundingMask | allExceptions);
+            return cont;
+        }
         else
             assert(0, "Not yet supported");
     }
@@ -886,6 +936,14 @@ private:
                 "fscsr %0" : : "r" (newState);
             }
             `);
+        }
+        else version (LoongArch_Any)
+        {
+            asm nothrow @nogc
+            {
+                "movgr2fcsr $r0,%0" :
+                : "r" (newState & (roundingMask | allExceptions));
+            }
         }
         else
             assert(0, "Not yet supported");
