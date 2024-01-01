@@ -465,7 +465,12 @@ int ZEXPORTVA gzprintf(gzFile file, const char *format, ...)
     va_list va;
     int ret;
 
+// needed on Win64 - MS __va_start intrinsic not supported by importC yet
+#if __IMPORTC__
+    __builtin_va_start(va, format);
+#else
     va_start(va, format);
+#endif
     ret = gzvprintf(file, format, va);
     va_end(va);
     return ret;
