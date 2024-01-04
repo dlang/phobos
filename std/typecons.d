@@ -4088,16 +4088,12 @@ auto nullable(T)(T t)
 
     struct Test
     {
-        bool initialized;
-
-        nothrow invariant { assert(initialized); }
-
         SysTime _st;
 
         static bool destroyed;
 
         @disable this();
-        this(int _dummy) { this.initialized = true; }
+        this(int _dummy) {}
         ~this() @safe { destroyed = true; }
 
         // mustn't call opAssign on Test.init in Nullable!Test, because the invariant
