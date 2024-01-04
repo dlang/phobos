@@ -3256,11 +3256,19 @@ struct Nullable(T)
      * Params:
      *     value = The value to initialize this `Nullable` with.
      */
-    this(inout T value) inout
-    {
-        _value.payload = value;
-        _isNull = false;
-    }
+    static if (isCopyable!T)
+        this(inout T value) inout
+        {
+            _value.payload = value;
+            _isNull = false;
+        }
+    else
+        this(T value) inout
+        {
+            import std.algorithm.mutation : move;
+            _value.payload = move(value);
+            _isNull = false;
+        }
 
     static if (hasElaborateDestructor!T)
     {
@@ -3273,6 +3281,9 @@ struct Nullable(T)
         }
     }
 
+    static if (!isCopyable!T)
+        @disable this(this);
+    else
     static if (__traits(hasPostblit, T))
     {
         this(this)
@@ -3511,7 +3522,7 @@ struct Nullable(T)
      * Params:
      *     value = A value of type `T` to assign to this `Nullable`.
      */
-    Nullable opAssign()(T value)
+    ref Nullable opAssign()(T value) return
     {
         import std.algorithm.mutation : moveEmplace, move;
 
@@ -3600,12 +3611,14 @@ struct Nullable(T)
     alias back = front;
 
     /// ditto
+    static if (isCopyable!T)
     @property inout(typeof(this)) save() inout
     {
         return this;
     }
 
     /// ditto
+    static if (isCopyable!T)
     inout(typeof(this)) opIndex(size_t[2] dim) inout
     in (dim[0] <= length && dim[1] <= length && dim[1] >= dim[0])
     {
@@ -10666,6 +10679,21 @@ unittest
     assert(s1.get().b == 2);
     Nullable!S s2 = s1;
     assert(s2.get().b == 3);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24318
+@system unittest
+{
+    static struct S
+    {
+        @disable this(this);
+        int i;
+    }
+
+    Nullable!S s = S(1);
+    assert(s.get().i == 1);
+    s = S(2);
+    assert(s.get().i == 2);
 }
 
 /// The old version of $(LREF SafeRefCounted), before $(LREF borrow) existed.
