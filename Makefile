@@ -229,7 +229,7 @@ STD_PACKAGES = std $(addprefix std/,\
 
 PACKAGE_std = array ascii base64 bigint bitmanip checkedint compiler complex concurrency \
   conv csv demangle encoding exception file \
-  functional getopt int128 json mathspecial meta mmfile numeric \
+  functional getopt int128 json json5 mathspecial meta mmfile numeric \
   outbuffer package parallelism path process random signals socket stdint \
   stdio string sumtype system traits typecons \
   uri utf uuid variant zip zlib
