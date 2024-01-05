@@ -1,27 +1,47 @@
-//Written in the D programming language
 /**
-    gen_uni is a tool to automatically generate source code for unicode data structures.
+This is a tool to automatically generate source code for unicode data structures.
 
-    To generate the tables use:
-    ```
-    $ rdmd -m32 unicode_table_generator.d
-    $ rdmd -m64 unicode_table_generator.d --min
-    ```
+If not present, the script will automatically try to download the files from: https://www.unicode.org/Public
 
-    See the global ``UnicodeDatabaseDirectory`` for the latest version of the Unicode database that was used to generate the tables.
+Make sure the current working directory is the /tools folder.
 
-    TODO: Support emitting of Turkic casefolding mappings
+To update `std.internal.unicode*.d` files, run:
+```
+rdmd -m32 unicode_table_generator.d
+rdmd -m64 unicode_table_generator.d --min
+```
 
-    Authors: Dmitry Olshansky
+The -m32 run will replace the files, while the -m64 run with --min will append 64-bit specific parts.
+The 32-bit compilation of the generator is needed because it depends on 32-bit data structures defined in `std.uni`.
+To make -m32 work on linux, you may need to grab a 32-bit `libphobos2.a` from `dmd2/linux/lib32` and pass it as argument:
 
-    License: Boost
+```
+rdmd -m32 -Llibphobos2.a -defaultlib= unicode_table_generator.d
+```
+
+Pull Requests to untangle this complex bootstrap process are welcome! :)
+
+TODO: Support emitting of Turkic casefolding mappings
+
+Authors: Dmitry Olshansky
+
+License: Boost
 */
 module std.unicode_table_generator;
 // this shouldn't be in std package, but stuff is package'd as that in std.uni.
 
+/// Directory in which unicode files are downloaded
+enum unicodeDir = "ucd-15-0-0/";
+
+/// Url from which unicode files are downloaded
+enum unicodeBaseUrl = "https://www.unicode.org/Public/15.0.0/ucd/";
+
+/// Where to put generated files
+enum outputDir = "../std/internal/";
+
 import std.uni, std.stdio, std.traits, std.typetuple,
-     std.exception, std.format, std.algorithm, std.typecons,
-     std.regex, std.range, std.conv, std.getopt;
+    std.exception, std.format, std.algorithm, std.typecons,
+    std.regex, std.range, std.conv, std.getopt, std.path;
 
 import std.file : exists;
 static import std.ascii, std.string;
@@ -146,20 +166,56 @@ auto fullCaseEntry(dstring value, ubyte num, ubyte batch_size)
 }
 
 enum {
-    UnicodeDatabaseDirectory = "ucd-15/",
-    caseFoldingSrc = UnicodeDatabaseDirectory ~ "CaseFolding.txt",
-    blocksSrc = UnicodeDatabaseDirectory ~ "Blocks.txt",
-    propListSrc = UnicodeDatabaseDirectory ~ "PropList.txt",
-    graphemeSrc = UnicodeDatabaseDirectory ~ "auxiliary/GraphemeBreakProperty.txt",
-    emojiDataSrc = UnicodeDatabaseDirectory ~ "emoji/emoji-data.txt",
-    propertyValueAliases = UnicodeDatabaseDirectory ~ "PropertyValueAliases.txt",
-    corePropSrc = UnicodeDatabaseDirectory ~ "DerivedCoreProperties.txt",
-    normalizationPropSrc = UnicodeDatabaseDirectory ~ "DerivedNormalizationProps.txt",
-    scriptsSrc = UnicodeDatabaseDirectory ~ "Scripts.txt",
-    hangulSyllableSrc = UnicodeDatabaseDirectory ~ "HangulSyllableType.txt",
-    unicodeDataSrc = UnicodeDatabaseDirectory ~ "UnicodeData.txt",
-    compositionExclusionsSrc = UnicodeDatabaseDirectory ~ "CompositionExclusions.txt",
-    specialCasingSrc = UnicodeDatabaseDirectory ~ "SpecialCasing.txt"
+    caseFoldingSrc = "CaseFolding.txt",
+    blocksSrc = "Blocks.txt",
+    propListSrc = "PropList.txt",
+    graphemeSrc = "auxiliary/GraphemeBreakProperty.txt",
+    emojiDataSrc = "emoji/emoji-data.txt",
+    propertyValueAliases = "PropertyValueAliases.txt",
+    corePropSrc = "DerivedCoreProperties.txt",
+    normalizationPropSrc = "DerivedNormalizationProps.txt",
+    scriptsSrc = "Scripts.txt",
+    hangulSyllableSrc = "HangulSyllableType.txt",
+    unicodeDataSrc = "UnicodeData.txt",
+    compositionExclusionsSrc = "CompositionExclusions.txt",
+    specialCasingSrc = "SpecialCasing.txt"
+}
+
+void ensureFilesAreDownloaded()
+{
+    import std.file : write, mkdirRecurse;
+    import std.net.curl : download;
+    import std.path : dirName, buildPath;
+
+    string[] files = [
+        caseFoldingSrc,
+        blocksSrc,
+        propListSrc,
+        graphemeSrc,
+        emojiDataSrc,
+        propertyValueAliases,
+        corePropSrc,
+        normalizationPropSrc,
+        scriptsSrc,
+        hangulSyllableSrc,
+        unicodeDataSrc,
+        compositionExclusionsSrc,
+        specialCasingSrc
+    ];
+
+    mkdirRecurse(unicodeDir);
+    foreach (string file; files)
+    {
+        string dest = unicodeDir.buildPath(file);
+        if (exists(dest))
+            continue;
+        if (file.canFind("/"))
+        {
+            mkdirRecurse(dest.dirName);
+        }
+        writeln("downloading ", unicodeBaseUrl ~ file);
+        download(unicodeBaseUrl ~ file, dest);
+    }
 }
 
 enum HeaderComment = `//Written in the D programming language
@@ -189,21 +245,13 @@ void main(string[] argv)
     if (minimal)
         mode = "a";
 
+    ensureFilesAreDownloaded();
 
-    if (!exists(UnicodeDatabaseDirectory))
-    {
-        writeln("Did you forget to download the Unicode database tables?");
-        writeln("Looking for them in: ", UnicodeDatabaseDirectory);
-        return;
-    }
-
-    enum UnicodeTableDirectory = "../std/internal/";
-
-    auto baseSink = File(UnicodeTableDirectory ~ "unicode_tables.d", mode);
-    auto compSink = File(UnicodeTableDirectory ~ "unicode_comp.d", mode);
-    auto decompSink = File(UnicodeTableDirectory ~ "unicode_decomp.d", mode);
-    auto normSink = File(UnicodeTableDirectory ~ "unicode_norm.d", mode);
-    auto graphSink = File(UnicodeTableDirectory ~ "unicode_grapheme.d", mode);
+    auto baseSink = File(outputDir.buildPath("unicode_tables.d"), mode);
+    auto compSink = File(outputDir.buildPath("unicode_comp.d"), mode);
+    auto decompSink = File(outputDir.buildPath("unicode_decomp.d"), mode);
+    auto normSink = File(outputDir.buildPath("unicode_norm.d"), mode);
+    auto graphSink = File(outputDir.buildPath("unicode_grapheme.d"), mode);
     if (!minimal)
     {
         baseSink.writeln(HeaderComment);
@@ -230,20 +278,20 @@ void main(string[] argv)
         graphSink.writeln("\npackage(std):\n");
     }
 
-    loadBlocks(blocksSrc, blocks);
-    loadProperties(propListSrc, general);
-    loadProperties(corePropSrc, general);
-    loadProperties(scriptsSrc, scripts);
-    loadProperties(hangulSyllableSrc, hangul);
-    loadProperties(graphemeSrc, graphemeBreaks);
-    loadProperties(emojiDataSrc, emojiData);
-    loadPropertyAliases(propertyValueAliases);
+    loadBlocks(unicodeDir.buildPath(blocksSrc), blocks);
+    loadProperties(unicodeDir.buildPath(propListSrc), general);
+    loadProperties(unicodeDir.buildPath(corePropSrc), general);
+    loadProperties(unicodeDir.buildPath(scriptsSrc), scripts);
+    loadProperties(unicodeDir.buildPath(hangulSyllableSrc), hangul);
+    loadProperties(unicodeDir.buildPath(graphemeSrc), graphemeBreaks);
+    loadProperties(unicodeDir.buildPath(emojiDataSrc), emojiData);
+    loadPropertyAliases(unicodeDir.buildPath(propertyValueAliases));
 
-    loadUnicodeData(unicodeDataSrc);
-    loadSpecialCasing(specialCasingSrc);
-    loadExclusions(compositionExclusionsSrc);
-    loadCaseFolding(caseFoldingSrc);
-    loadNormalization(normalizationPropSrc);
+    loadUnicodeData(unicodeDir.buildPath(unicodeDataSrc));
+    loadSpecialCasing(unicodeDir.buildPath(specialCasingSrc));
+    loadExclusions(unicodeDir.buildPath(compositionExclusionsSrc));
+    loadCaseFolding(unicodeDir.buildPath(caseFoldingSrc));
+    loadNormalization(unicodeDir.buildPath(normalizationPropSrc));
 
     static void writeTableOfSets(File sink, string prefix, PropertyTable tab)
     {
@@ -940,15 +988,6 @@ void writeGraphemeTries(File sink)
 
     // emoji related data
     writeBest3Level(sink, "Extended_Pictographic", emojiData.table["Extended_Pictographic"]);
-
-    sink.writeln();
-
-    writeBest3Level
-    (
-        sink,
-        "Extended_Pictographic",
-        emojiData.table["Extended_Pictographic"]
-    );
 }
 
 void writeCaseCoversion(File sink)
