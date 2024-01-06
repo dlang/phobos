@@ -24,3 +24,5 @@ obj/
 .dub/
 libphobos_*
 source/
+
+tools/ucd*
