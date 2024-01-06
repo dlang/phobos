@@ -8073,22 +8073,23 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     // fullCaseTrie is packed index table
     if (idx == EMPTY_CASE_TRIE)
         return lhs;
-    immutable start = idx - fTable[idx].n;
-    immutable end = fTable[idx].size + start;
-    assert(fTable[start].entry_len == 1);
+    immutable start = idx - fTable(idx).n;
+    immutable end = fTable(idx).size + start;
+    assert(fTable(start).entry_len == 1);
     for (idx=start; idx<end; idx++)
     {
-        auto entryLen = fTable[idx].entry_len;
+        const entryLen = fTable(idx).entry_len;
         if (entryLen == 1)
         {
-            if (fTable[idx].seq[0] == rhs)
+            if (fTable(idx).seq[0] == rhs)
             {
                 return 0;
             }
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq[0 .. entryLen];
+            dchar[3] arr = fTable(idx).seq;
+            const dchar[] seq = arr[0 .. entryLen];
             if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -8098,7 +8099,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
             }
         }
     }
-    return fTable[start].seq[0]; // new remapped character for accurate diffs
+    return fTable(start).seq[0]; // new remapped character for accurate diffs
 }
 
 /++
