@@ -117,26 +117,37 @@ struct FullCaseEntry
     }
 }
 
-enum mixedCCEntry = `
+/// 8 byte easy SimpleCaseEntry, will be compressed to SCE which bit packs values to 4 bytes
 struct SimpleCaseEntry
 {
     uint ch;
-    ubyte n, bucket;// n - number in bucket
+    ubyte n; // number in bucket
+    ubyte size;
+    bool isLower;
+    bool isUpper;
+}
 
-pure nothrow @nogc:
+enum mixedCCEntry = `
+/// Simple Case Entry, wrapper around uint to extract bit fields from simpleCaseTable()
+struct SCE
+{
+    uint x;
 
-    @property ubyte size() const
+    nothrow @nogc pure @safe:
+
+    this(uint x)
     {
-        return bucket & 0x3F;
+        this.x = x;
     }
-    @property auto isLower() const
+
+    this(uint ch, ubyte n, ubyte size)
     {
-        return bucket & 0x40;
+        this.x = ch | n << 20 | size << 24;
     }
-    @property auto isUpper() const
-    {
-        return bucket & 0x80;
-    }
+
+    int ch() const { return this.x & 0x1FFFF; }
+    int n() const { return (this.x >> 20) & 0xF; }
+    int size() const { return this.x >> 24; }
 }
 
 /// Bit backed FullCaseEntry
@@ -432,10 +443,13 @@ void loadCaseFolding(string f)
         sort(entry[0 .. size]);
         foreach (i, value; entry[0 .. size])
         {
-            auto withFlags = cast(ubyte) size | (value in lowerCaseSet ? 0x40 : 0)
-                 | (value in upperCaseSet ? 0x80 : 0);
-            simpleTable ~= SimpleCaseEntry(value, cast(ubyte) i,
-                cast(ubyte) withFlags);
+            simpleTable ~= SimpleCaseEntry(
+                value,
+                cast(ubyte) i,
+                cast(ubyte) size,
+                cast(bool) (value in lowerCaseSet),
+                cast(bool) (value in upperCaseSet)
+            );
         }
     }
 
@@ -882,17 +896,22 @@ void writeCaseFolding(File sink)
     {
         write(mixedCCEntry);
 
-        writeln("@property immutable(SimpleCaseEntry[]) simpleCaseTable()");
+        writeln("SCE simpleCaseTable(size_t i)");
         writeln("{");
-        writeln("alias SCE = SimpleCaseEntry;");
-        writeln("static immutable SCE[] t = [");
+        writef("static immutable uint[%d] t = [", simpleTable.length);
         foreach (i, v; simpleTable)
         {
-            writef("SCE(0x%04x, %s, 0x%0x),", v.ch,  v.n, v.bucket);
-            if (i % 4 == 0) writeln();
+            if (i % 8 == 0) writeln();
+            writef("0x%08X,", SCE(v.ch, v.n, v.size).x);
         }
+
+        // Inspect max integer size, so efficient bit packing can be found:
+        stderr.writefln("max n: %X", simpleTable.maxElement!(x => x.n).n); // n: 2-bit
+        stderr.writefln("max ch: %X", simpleTable.maxElement!(x => x.ch).ch); // ch: 17-bit
+        stderr.writefln("max size: %X", simpleTable.maxElement!(x => x.size).size); // size: 3-bit
+
         writeln("];");
-        writeln("return t;");
+        writeln("return SCE(t[i]);");
         writeln("}");
         writeln("@property FCE fullCaseTable(size_t index) nothrow @nogc @safe pure");
         writeln("{");
