@@ -271,7 +271,13 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
 
-OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
+OBJS = $(ROOT)/zlib$(DOTOBJ)
+
+# C files to be part of the build
+C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
+	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
+
+C_FILES = $(addsuffix .c, $(C_MODULES))
 
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
@@ -318,10 +324,10 @@ lib: $(LIB)
 dll: $(ROOT)/libphobos2.so
 
 # compile zlib .c files via importC; the druntime dependency makes sure DMD has been built
-$(ROOT)/%$(DOTOBJ): %.c $(DRUNTIME)
-	$(DMD) -c $(DFLAGS) $(CFLAGS) -of$@ $<
+$(ROOT)/zlib$(DOTOBJ): $(C_FILES) $(DRUNTIME)
+	$(DMD) -c $(DFLAGS) $(CFLAGS) -of$@ $(C_FILES)
 
-$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+$(LIB): $(ROOT)/zlib$(DOTOBJ) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
