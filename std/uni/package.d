@@ -8016,19 +8016,19 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
             if (idx2 != EMPTY_CASE_TRIE)
             {// both cased chars
                 // adjust idx --> start of bucket
-                idx = idx - sTable[idx].n;
-                idx2 = idx2 - sTable[idx2].n;
+                idx = idx - sTable(idx).n;
+                idx2 = idx2 - sTable(idx2).n;
                 if (idx == idx2)// one bucket, equivalent chars
                     continue;
                 else//  not the same bucket
-                    diff = sTable[idx].ch - sTable[idx2].ch;
+                    diff = sTable(idx).ch - sTable(idx2).ch;
             }
             else
-                diff = sTable[idx - sTable[idx].n].ch - rhs;
+                diff = sTable(idx - sTable(idx).n).ch - rhs;
         }
         else if (idx2 != EMPTY_CASE_TRIE)
         {
-            diff = lhs - sTable[idx2 - sTable[idx2].n].ch;
+            diff = lhs - sTable(idx2 - sTable(idx2).n).ch;
         }
         // one of chars is not cased at all
         return diff;
@@ -8331,7 +8331,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
             {
                 return c;
             }
-            auto ch = sTable[idx].ch;
+            auto ch = sTable(idx).ch;
             return ch;
         }
 
@@ -8367,7 +8367,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
     immutable idx = simpleCaseTrie[ch];
     if (idx == EMPTY_CASE_TRIE)
         return Range(ch);
-    auto entry = sTable[idx];
+    auto entry = sTable(idx);
     immutable start = idx - entry.n;
     return Range(start, entry.size);
 }
