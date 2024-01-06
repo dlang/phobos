@@ -31,10 +31,10 @@ module std.unicode_table_generator;
 // this shouldn't be in std package, but stuff is package'd as that in std.uni.
 
 /// Directory in which unicode files are downloaded
-enum unicodeDir = "ucd-15-0-0/";
+enum unicodeDir = "ucd-15-1-0/";
 
 /// Url from which unicode files are downloaded
-enum unicodeBaseUrl = "https://www.unicode.org/Public/15.0.0/ucd/";
+enum unicodeBaseUrl = "https://www.unicode.org/Public/15.1.0/ucd/";
 
 /// Where to put generated files
 enum outputDir = "../std/internal/";
