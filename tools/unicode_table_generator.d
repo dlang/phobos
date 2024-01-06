@@ -901,7 +901,7 @@ void writeCaseFolding(File sink)
         writeln("}");
         writeln("@property FCE fullCaseTable(size_t index) nothrow @nogc @safe pure");
         writeln("{");
-        write("static immutable ulong[] t = [");
+        writef("static immutable ulong[%d] t = [", fullTable.length);
         int[4] maxS = 0;
         foreach (i, v; fullTable)
         {
