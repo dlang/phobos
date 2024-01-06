@@ -772,7 +772,7 @@ string charsetString(CodepointSet set, string sep=";\n")
     auto app = appender!(char[])();
     ubyte[] data = compressIntervals(set.byInterval);
     assert(CodepointSet(decompressIntervals(data)) == set);
-    formattedWrite(app, "[%(0x%x, %)];", data);
+    formattedWrite(app, "x\"%(%02X%)\";", data);
     return cast(string) app.data;
 }
 
