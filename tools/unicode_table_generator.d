@@ -104,6 +104,19 @@ CodepointSet compExclusions;
 //property names to discard
 string[] blacklist = [];
 
+struct FullCaseEntry
+{
+    dchar[3] seq = 0;
+    ubyte n; /// number in batch
+    ubyte size; /// size - size of batch
+    ubyte entry_len;
+
+    auto value() const @safe pure nothrow @nogc return
+    {
+        return seq[0 .. entry_len];
+    }
+}
+
 enum mixedCCEntry = `
 struct SimpleCaseEntry
 {
@@ -126,16 +139,27 @@ pure nothrow @nogc:
     }
 }
 
-struct FullCaseEntry
+/// Bit backed FullCaseEntry
+struct FCE
 {
-    dchar[3] seq;
-    ubyte n, size;// n number in batch, size - size of batch
-    ubyte entry_len;
+    ulong x; // bit field sizes: 18, 12, 12, 4, 4, 4
 
-    @property auto value() const @trusted pure nothrow @nogc return
+nothrow @nogc pure @safe:
+
+    this(ulong x)
     {
-        return seq[0 .. entry_len];
+        this.x = x;
     }
+
+    this(dchar[3] seq, ubyte n, ubyte size, ubyte entry_len)
+    {
+        this.x = ulong(seq[0]) << 36 | ulong(seq[1]) << 24 | seq[2] << 12 | n << 8 | size << 4 | entry_len << 0;
+    }
+
+    dchar[3] seq() const { return [(x >> 36) & 0x1FFFF, (x >> 24) & 0xFFF, (x >> 12) & 0xFFF]; }
+    ubyte n() const { return (x >> 8) & 0xF; }
+    ubyte size() const { return (x >> 4) & 0xF; }
+    ubyte entry_len() const { return (x >> 0) & 0xF; }
 }
 
 struct CompEntry
@@ -160,7 +184,7 @@ struct TrieEntry(T...)
 
 auto fullCaseEntry(dstring value, ubyte num, ubyte batch_size)
 {
-    dchar[3] val;
+    dchar[3] val = 0;
     val[0 .. value.length] = value[];
     return FullCaseEntry(val, num, batch_size, cast(ubyte) value.length);
 }
@@ -875,25 +899,30 @@ void writeCaseFolding(File sink)
         writeln("];");
         writeln("return t;");
         writeln("}");
-        static uint maxLen = 0;
-        writeln("@property immutable(FullCaseEntry[]) fullCaseTable()  nothrow @nogc @safe pure");
+        writeln("@property FCE fullCaseTable(size_t index) nothrow @nogc @safe pure");
         writeln("{");
-        writeln("alias FCE = FullCaseEntry;");
-        writeln("static immutable FCE[] t = [");
+        writef("static immutable ulong[%d] t = [", fullTable.length);
+        int[4] maxS = 0;
         foreach (i, v; fullTable)
         {
-                maxLen = max(maxLen, v.entry_len);
+                foreach (j; 0 .. v.entry_len)
+                    maxS[j] = max(maxS[j], v.value[j]);
+
                 if (v.entry_len > 1)
                 {
                     assert(v.n >= 1); // meaning that start of bucket is always single char
                 }
-                writef("FCE(\"%s\", %s, %s, %s),", v.value, v.n, v.size, v.entry_len);
-                if (i % 4 == 0) writeln();
+                if (i % 6 == 0) writeln();
+                writef("0x%014X,", FCE(v.seq, v.n, v.size, v.entry_len).x);
         }
         writeln("];");
-        writeln("return t;");
+        writeln("return FCE(t[index]);");
         writeln("}");
-        stderr.writefln("MAX FCF len = %d", maxLen);
+        import core.bitop : bsr;
+        stderr.writefln("max seq bits: [%d, %d, %d]", 1 + bsr(maxS[0]), 1 + bsr(maxS[1]), 1 + bsr(maxS[2])); //[17, 11, 10]
+        stderr.writefln("max n = %d", fullTable.map!(x => x.n).maxElement); // 3
+        stderr.writefln("max size = %d", fullTable.map!(x => x.size).maxElement); // 4
+        stderr.writefln("max entry_len = %d", fullTable.map!(x => x.entry_len).maxElement); // 3
     }
 }
 
