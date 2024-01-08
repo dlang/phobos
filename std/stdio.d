@@ -1507,7 +1507,6 @@ Throws: `Exception` if the file is not opened.
     {
         import core.sys.windows.winbase : OVERLAPPED;
         import core.sys.windows.winnt : BOOL, ULARGE_INTEGER;
-        import std.windows.syserror : wenforce;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
