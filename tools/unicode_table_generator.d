@@ -162,11 +162,6 @@ nothrow @nogc pure @safe:
     ubyte entry_len() const { return (x >> 0) & 0xF; }
 }
 
-struct CompEntry
-{
-    dchar rhs, composed;
-}
-
 struct UnicodeProperty
 {
     string name;
@@ -1200,14 +1195,33 @@ void writeCompositionTable(File sink)
         write("enum compositionJumpTrieEntries = TrieEntry!(ushort, 12, 9)(");
         triT.store(sink.lockingTextWriter());
         writeln(");");
-        writeln("@property immutable(CompEntry[]) compositionTable() nothrow pure @nogc @safe");
+        writeln("dstring compositionTable() nothrow pure @nogc @safe");
         writeln("{");
-        writeln("alias CE = CompEntry;");
-        write("static immutable CE[] t = [");
-        foreach (pair; dupletes)
-            writef("CE(0x%05x, 0x%05x),", pair[0], pair[1]);
-        writeln("];");
-        writeln("return t;");
+        writef("static immutable dchar[%d] t =\n\"", dupletes.length * 2);
+        size_t lineCount = 1;
+        foreach (i, pair; dupletes)
+        {
+            static foreach(j; 0 .. 2)
+            {
+                if (pair[j] <= 0xFFFF)
+                {
+                    writef("\\u%04X", pair[j]);
+                    lineCount += 6;
+                }
+                else
+                {
+                    writef("\\U%08X", pair[j]);
+                    lineCount += 10;
+                }
+                if (lineCount >= 110)
+                {
+                    write("\"~\n\"");
+                    lineCount = 1;
+                }
+            }
+        }
+        writeln("\"d;");
+        writeln("return t[];");
         writeln("}");
     }
 }
