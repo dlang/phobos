@@ -1180,7 +1180,7 @@ void writeDstring(T:dchar)(File sink, const T[] tab)
             lineCount += 10;
         }
     }
-    sink.write("\"d;");
+    sink.write("\"d");
 }
 
 

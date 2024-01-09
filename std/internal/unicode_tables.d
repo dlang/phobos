@@ -2560,7 +2560,7 @@ static immutable dchar[1671] t =
 "\u0399"d~cast(dchar) 0x02000397~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x02001FBA~""d~
 "\u0399"d~cast(dchar) 0x02000386~"\u0399"d~cast(dchar) 0x02001FCA~"\u0399"d~cast(dchar) 0x02000389~"\u0399"d~cast(dchar) 0x02001FFA~""d~
 "\u0399"d~cast(dchar) 0x0200038F~"\u0399"d~cast(dchar) 0x03000391~"\u0342\u0399"d~cast(dchar) 0x03000397~"\u0342\u0399"d~
-""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;;
+""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;
 return t[];
 }
 dstring toLowerTable() nothrow @nogc pure @safe {
@@ -2655,7 +2655,7 @@ static immutable dchar[1537] t =
 "\u1F56\u1FB6\u1FC6\u1FD2\u1FD3\u1FD6\u1FD7\u1FE2\u1FE3\u1FE4\u1FE6\u1FE7\u1FF6\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85"d~
 "\u1F86\u1F87\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85\u1F86\u1F87\u1F90\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1F90"d~
 "\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1FA0\u1FA1\u1FA2\u1FA3\u1FA4\u1FA5\u1FA6\u1FA7\u1FA0\u1FA1\u1FA2\u1FA3"d~
-"\u1FA4\u1FA5\u1FA6\u1FA7\u1FB3\u1FB3\u1FC3\u1FC3\u1FF3\u1FF3\u1FB2\u1FB4\u1FC2\u1FC4\u1FF2\u1FF4\u1FB7\u1FC7\u1FF7"d;;
+"\u1FA4\u1FA5\u1FA6\u1FA7\u1FB3\u1FB3\u1FC3\u1FC3\u1FF3\u1FF3\u1FB2\u1FB4\u1FC2\u1FC4\u1FF2\u1FF4\u1FB7\u1FC7\u1FF7"d;
 return t[];
 }
 dstring toTitleTable() nothrow @nogc pure @safe {
@@ -2762,7 +2762,7 @@ static immutable dchar[1621] t =
 "\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC"d~
 "\u1FCC\u1FFC\u1FFC"d~cast(dchar) 0x02001FBA~"\u0345"d~cast(dchar) 0x02000386~"\u0345"d~cast(dchar) 0x02001FCA~"\u0345"d~
 ""d~cast(dchar) 0x02000389~"\u0345"d~cast(dchar) 0x02001FFA~"\u0345"d~cast(dchar) 0x0200038F~"\u0345"d~cast(dchar) 0x03000391~""d~
-"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;;
+"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;
 return t[];
 }
 
@@ -2923,7 +2923,7 @@ static immutable dchar[1671] t =
 "\u0399"d~cast(dchar) 0x02000397~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x02001FBA~""d~
 "\u0399"d~cast(dchar) 0x02000386~"\u0399"d~cast(dchar) 0x02001FCA~"\u0399"d~cast(dchar) 0x02000389~"\u0399"d~cast(dchar) 0x02001FFA~""d~
 "\u0399"d~cast(dchar) 0x0200038F~"\u0399"d~cast(dchar) 0x03000391~"\u0342\u0399"d~cast(dchar) 0x03000397~"\u0342\u0399"d~
-""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;;
+""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;
 return t[];
 }
 dstring toLowerTable() nothrow @nogc pure @safe {
@@ -3018,7 +3018,7 @@ static immutable dchar[1537] t =
 "\u1F56\u1FB6\u1FC6\u1FD2\u1FD3\u1FD6\u1FD7\u1FE2\u1FE3\u1FE4\u1FE6\u1FE7\u1FF6\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85"d~
 "\u1F86\u1F87\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85\u1F86\u1F87\u1F90\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1F90"d~
 "\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1FA0\u1FA1\u1FA2\u1FA3\u1FA4\u1FA5\u1FA6\u1FA7\u1FA0\u1FA1\u1FA2\u1FA3"d~
-"\u1FA4\u1FA5\u1FA6\u1FA7\u1FB3\u1FB3\u1FC3\u1FC3\u1FF3\u1FF3\u1FB2\u1FB4\u1FC2\u1FC4\u1FF2\u1FF4\u1FB7\u1FC7\u1FF7"d;;
+"\u1FA4\u1FA5\u1FA6\u1FA7\u1FB3\u1FB3\u1FC3\u1FC3\u1FF3\u1FF3\u1FB2\u1FB4\u1FC2\u1FC4\u1FF2\u1FF4\u1FB7\u1FC7\u1FF7"d;
 return t[];
 }
 dstring toTitleTable() nothrow @nogc pure @safe {
@@ -3125,7 +3125,7 @@ static immutable dchar[1621] t =
 "\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC"d~
 "\u1FCC\u1FFC\u1FFC"d~cast(dchar) 0x02001FBA~"\u0345"d~cast(dchar) 0x02000386~"\u0345"d~cast(dchar) 0x02001FCA~"\u0345"d~
 ""d~cast(dchar) 0x02000389~"\u0345"d~cast(dchar) 0x02001FFA~"\u0345"d~cast(dchar) 0x0200038F~"\u0345"d~cast(dchar) 0x03000391~""d~
-"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;;
+"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;
 return t[];
 }
 
