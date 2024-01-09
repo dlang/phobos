@@ -1057,13 +1057,16 @@ void writeCaseCoversion(File sink)
 
     with(sink)
     {
-        writeln("@property");
-        writeln("{");
-        writeln("private alias _IUA = immutable(uint[]);");
-        writefln("_IUA toUpperTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toUpperTab);
-        writefln("_IUA toLowerTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toLowerTab);
-        writefln("_IUA toTitleTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toTitleTab);
-        writeln("}");
+        void writeTable(string name, const uint[] table)
+        {
+            writefln("immutable(dchar[]) %s() nothrow @nogc @safe pure {\nstatic immutable dchar[%d] t =", name, table.length);
+            sink.writeDstring(cast(const dchar[]) table);
+            writeln(";\nreturn t[];\n}");
+        }
+
+        writeTable("toUppertable", toUpperTab);
+        writeTable("toLowerTable", toLowerTab);
+        writeTable("toTitleTable", toTitleTab);
     }
 }
 
@@ -1155,6 +1158,38 @@ void writeFunctions(File sink)
     }
 }
 
+/// Write a `dchar[]` as a dstring ""d
+void writeDstring(File sink, const dchar[] tab)
+{
+    size_t lineCount = 1;
+    sink.write("\"");
+    foreach (elem; tab)
+    {
+        if (lineCount >= 110)
+        {
+            sink.write("\"d~\n\"");
+            lineCount = 1;
+        }
+        if (elem >= 0x10FFFF)
+        {
+            // invalid dchar, but might have extra info bit-packed in upper bits
+            sink.writef("\"d~cast(dchar)0x%08X~\"", elem);
+            lineCount += 24;
+        }
+        else if (elem <= 0xFFFF)
+        {
+            sink.writef("\\u%04X", elem);
+            lineCount += 6;
+        }
+        else
+        {
+            sink.writef("\\U%08X", elem);
+            lineCount += 10;
+        }
+    }
+    sink.write("\"d;");
+}
+
 
 void writeCompositionTable(File sink)
 {
@@ -1216,30 +1251,9 @@ void writeCompositionTable(File sink)
         writeln(");");
         writeln("dstring compositionTable() nothrow pure @nogc @safe");
         writeln("{");
-        writef("static immutable dchar[%d] t =\n\"", dupletes.length * 2);
-        size_t lineCount = 1;
-        foreach (i, pair; dupletes)
-        {
-            static foreach(j; 0 .. 2)
-            {
-                if (pair[j] <= 0xFFFF)
-                {
-                    writef("\\u%04X", pair[j]);
-                    lineCount += 6;
-                }
-                else
-                {
-                    writef("\\U%08X", pair[j]);
-                    lineCount += 10;
-                }
-                if (lineCount >= 110)
-                {
-                    write("\"~\n\"");
-                    lineCount = 1;
-                }
-            }
-        }
-        writeln("\"d;");
+        writef("static immutable dchar[%d] t =\n", dupletes.length * 2);
+        dchar[] flat = dupletes.map!(x => only(x.expand)).joiner.array;
+        sink.writeDstring(flat);
         writeln("return t[];");
         writeln("}");
     }
