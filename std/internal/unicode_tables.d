@@ -2533,33 +2533,34 @@ static immutable dchar[1671] t =
 "\U00016E5E\U00016E5F\U0001E900\U0001E901\U0001E902\U0001E903\U0001E904\U0001E905\U0001E906\U0001E907\U0001E908"d~
 "\U0001E909\U0001E90A\U0001E90B\U0001E90C\U0001E90D\U0001E90E\U0001E90F\U0001E910\U0001E911\U0001E912\U0001E913"d~
 "\U0001E914\U0001E915\U0001E916\U0001E917\U0001E918\U0001E919\U0001E91A\U0001E91B\U0001E91C\U0001E91D\U0001E91E"d~
-"\U0001E91F\U0001E920\U0001E921"d~cast(dchar)0x02000053~"\u0053\u0130"d~cast(dchar)0x02000046~"\u0046"d~cast(dchar)0x02000046~""d~
-"\u0049"d~cast(dchar)0x02000046~"\u004C"d~cast(dchar)0x03000046~"\u0046\u0049"d~cast(dchar)0x03000046~"\u0046\u004C"d~cast(dchar)0x02000053~""d~
-"\u0054"d~cast(dchar)0x02000053~"\u0054"d~cast(dchar)0x02000535~"\u0552"d~cast(dchar)0x02000544~"\u0546"d~cast(dchar)0x02000544~""d~
-"\u0535"d~cast(dchar)0x02000544~"\u053B"d~cast(dchar)0x0200054E~"\u0546"d~cast(dchar)0x02000544~"\u053D"d~cast(dchar)0x020002BC~""d~
-"\u004E"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x0200004A~"\u030C"d~cast(dchar)0x02000048~""d~
-"\u0331"d~cast(dchar)0x02000054~"\u0308"d~cast(dchar)0x02000057~"\u030A"d~cast(dchar)0x02000059~"\u030A"d~cast(dchar)0x02000041~""d~
-"\u02BE"d~cast(dchar)0x020003A5~"\u0313"d~cast(dchar)0x030003A5~"\u0313\u0300"d~cast(dchar)0x030003A5~"\u0313\u0301"d~cast(dchar)0x030003A5~""d~
-"\u0313\u0342"d~cast(dchar)0x02000391~"\u0342"d~cast(dchar)0x02000397~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0300"d~cast(dchar)0x03000399~""d~
-"\u0308\u0301"d~cast(dchar)0x02000399~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0342"d~cast(dchar)0x030003A5~"\u0308\u0300"d~
-""d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x020003A1~"\u0313"d~cast(dchar)0x020003A5~"\u0342"d~cast(dchar)0x030003A5~""d~
-"\u0308\u0342"d~cast(dchar)0x020003A9~"\u0342"d~cast(dchar)0x02001F08~"\u0399"d~cast(dchar)0x02001F09~"\u0399"d~cast(dchar)0x02001F0A~""d~
-"\u0399"d~cast(dchar)0x02001F0B~"\u0399"d~cast(dchar)0x02001F0C~"\u0399"d~cast(dchar)0x02001F0D~"\u0399"d~cast(dchar)0x02001F0E~""d~
-"\u0399"d~cast(dchar)0x02001F0F~"\u0399"d~cast(dchar)0x02001F08~"\u0399"d~cast(dchar)0x02001F09~"\u0399"d~cast(dchar)0x02001F0A~""d~
-"\u0399"d~cast(dchar)0x02001F0B~"\u0399"d~cast(dchar)0x02001F0C~"\u0399"d~cast(dchar)0x02001F0D~"\u0399"d~cast(dchar)0x02001F0E~""d~
-"\u0399"d~cast(dchar)0x02001F0F~"\u0399"d~cast(dchar)0x02001F28~"\u0399"d~cast(dchar)0x02001F29~"\u0399"d~cast(dchar)0x02001F2A~""d~
-"\u0399"d~cast(dchar)0x02001F2B~"\u0399"d~cast(dchar)0x02001F2C~"\u0399"d~cast(dchar)0x02001F2D~"\u0399"d~cast(dchar)0x02001F2E~""d~
-"\u0399"d~cast(dchar)0x02001F2F~"\u0399"d~cast(dchar)0x02001F28~"\u0399"d~cast(dchar)0x02001F29~"\u0399"d~cast(dchar)0x02001F2A~""d~
-"\u0399"d~cast(dchar)0x02001F2B~"\u0399"d~cast(dchar)0x02001F2C~"\u0399"d~cast(dchar)0x02001F2D~"\u0399"d~cast(dchar)0x02001F2E~""d~
-"\u0399"d~cast(dchar)0x02001F2F~"\u0399"d~cast(dchar)0x02001F68~"\u0399"d~cast(dchar)0x02001F69~"\u0399"d~cast(dchar)0x02001F6A~""d~
-"\u0399"d~cast(dchar)0x02001F6B~"\u0399"d~cast(dchar)0x02001F6C~"\u0399"d~cast(dchar)0x02001F6D~"\u0399"d~cast(dchar)0x02001F6E~""d~
-"\u0399"d~cast(dchar)0x02001F6F~"\u0399"d~cast(dchar)0x02001F68~"\u0399"d~cast(dchar)0x02001F69~"\u0399"d~cast(dchar)0x02001F6A~""d~
-"\u0399"d~cast(dchar)0x02001F6B~"\u0399"d~cast(dchar)0x02001F6C~"\u0399"d~cast(dchar)0x02001F6D~"\u0399"d~cast(dchar)0x02001F6E~""d~
-"\u0399"d~cast(dchar)0x02001F6F~"\u0399"d~cast(dchar)0x02000391~"\u0399"d~cast(dchar)0x02000391~"\u0399"d~cast(dchar)0x02000397~""d~
-"\u0399"d~cast(dchar)0x02000397~"\u0399"d~cast(dchar)0x020003A9~"\u0399"d~cast(dchar)0x020003A9~"\u0399"d~cast(dchar)0x02001FBA~""d~
-"\u0399"d~cast(dchar)0x02000386~"\u0399"d~cast(dchar)0x02001FCA~"\u0399"d~cast(dchar)0x02000389~"\u0399"d~cast(dchar)0x02001FFA~""d~
-"\u0399"d~cast(dchar)0x0200038F~"\u0399"d~cast(dchar)0x03000391~"\u0342\u0399"d~cast(dchar)0x03000397~"\u0342\u0399"d~cast(dchar)0x030003A9~""d~
-"\u0342\u0399"d;;
+"\U0001E91F\U0001E920\U0001E921"d~cast(dchar) 0x02000053~"\u0053\u0130"d~cast(dchar) 0x02000046~"\u0046"d~cast(dchar) 0x02000046~""d~
+"\u0049"d~cast(dchar) 0x02000046~"\u004C"d~cast(dchar) 0x03000046~"\u0046\u0049"d~cast(dchar) 0x03000046~"\u0046\u004C"d~
+""d~cast(dchar) 0x02000053~"\u0054"d~cast(dchar) 0x02000053~"\u0054"d~cast(dchar) 0x02000535~"\u0552"d~cast(dchar) 0x02000544~""d~
+"\u0546"d~cast(dchar) 0x02000544~"\u0535"d~cast(dchar) 0x02000544~"\u053B"d~cast(dchar) 0x0200054E~"\u0546"d~cast(dchar) 0x02000544~""d~
+"\u053D"d~cast(dchar) 0x020002BC~"\u004E"d~cast(dchar) 0x03000399~"\u0308\u0301"d~cast(dchar) 0x030003A5~"\u0308\u0301"d~
+""d~cast(dchar) 0x0200004A~"\u030C"d~cast(dchar) 0x02000048~"\u0331"d~cast(dchar) 0x02000054~"\u0308"d~cast(dchar) 0x02000057~""d~
+"\u030A"d~cast(dchar) 0x02000059~"\u030A"d~cast(dchar) 0x02000041~"\u02BE"d~cast(dchar) 0x020003A5~"\u0313"d~cast(dchar) 0x030003A5~""d~
+"\u0313\u0300"d~cast(dchar) 0x030003A5~"\u0313\u0301"d~cast(dchar) 0x030003A5~"\u0313\u0342"d~cast(dchar) 0x02000391~""d~
+"\u0342"d~cast(dchar) 0x02000397~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0300"d~cast(dchar) 0x03000399~"\u0308\u0301"d~
+""d~cast(dchar) 0x02000399~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0300"d~cast(dchar) 0x030003A5~""d~
+"\u0308\u0301"d~cast(dchar) 0x020003A1~"\u0313"d~cast(dchar) 0x020003A5~"\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0342"d~
+""d~cast(dchar) 0x020003A9~"\u0342"d~cast(dchar) 0x02001F08~"\u0399"d~cast(dchar) 0x02001F09~"\u0399"d~cast(dchar) 0x02001F0A~""d~
+"\u0399"d~cast(dchar) 0x02001F0B~"\u0399"d~cast(dchar) 0x02001F0C~"\u0399"d~cast(dchar) 0x02001F0D~"\u0399"d~cast(dchar) 0x02001F0E~""d~
+"\u0399"d~cast(dchar) 0x02001F0F~"\u0399"d~cast(dchar) 0x02001F08~"\u0399"d~cast(dchar) 0x02001F09~"\u0399"d~cast(dchar) 0x02001F0A~""d~
+"\u0399"d~cast(dchar) 0x02001F0B~"\u0399"d~cast(dchar) 0x02001F0C~"\u0399"d~cast(dchar) 0x02001F0D~"\u0399"d~cast(dchar) 0x02001F0E~""d~
+"\u0399"d~cast(dchar) 0x02001F0F~"\u0399"d~cast(dchar) 0x02001F28~"\u0399"d~cast(dchar) 0x02001F29~"\u0399"d~cast(dchar) 0x02001F2A~""d~
+"\u0399"d~cast(dchar) 0x02001F2B~"\u0399"d~cast(dchar) 0x02001F2C~"\u0399"d~cast(dchar) 0x02001F2D~"\u0399"d~cast(dchar) 0x02001F2E~""d~
+"\u0399"d~cast(dchar) 0x02001F2F~"\u0399"d~cast(dchar) 0x02001F28~"\u0399"d~cast(dchar) 0x02001F29~"\u0399"d~cast(dchar) 0x02001F2A~""d~
+"\u0399"d~cast(dchar) 0x02001F2B~"\u0399"d~cast(dchar) 0x02001F2C~"\u0399"d~cast(dchar) 0x02001F2D~"\u0399"d~cast(dchar) 0x02001F2E~""d~
+"\u0399"d~cast(dchar) 0x02001F2F~"\u0399"d~cast(dchar) 0x02001F68~"\u0399"d~cast(dchar) 0x02001F69~"\u0399"d~cast(dchar) 0x02001F6A~""d~
+"\u0399"d~cast(dchar) 0x02001F6B~"\u0399"d~cast(dchar) 0x02001F6C~"\u0399"d~cast(dchar) 0x02001F6D~"\u0399"d~cast(dchar) 0x02001F6E~""d~
+"\u0399"d~cast(dchar) 0x02001F6F~"\u0399"d~cast(dchar) 0x02001F68~"\u0399"d~cast(dchar) 0x02001F69~"\u0399"d~cast(dchar) 0x02001F6A~""d~
+"\u0399"d~cast(dchar) 0x02001F6B~"\u0399"d~cast(dchar) 0x02001F6C~"\u0399"d~cast(dchar) 0x02001F6D~"\u0399"d~cast(dchar) 0x02001F6E~""d~
+"\u0399"d~cast(dchar) 0x02001F6F~"\u0399"d~cast(dchar) 0x02000391~"\u0399"d~cast(dchar) 0x02000391~"\u0399"d~cast(dchar) 0x02000397~""d~
+"\u0399"d~cast(dchar) 0x02000397~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x02001FBA~""d~
+"\u0399"d~cast(dchar) 0x02000386~"\u0399"d~cast(dchar) 0x02001FCA~"\u0399"d~cast(dchar) 0x02000389~"\u0399"d~cast(dchar) 0x02001FFA~""d~
+"\u0399"d~cast(dchar) 0x0200038F~"\u0399"d~cast(dchar) 0x03000391~"\u0342\u0399"d~cast(dchar) 0x03000397~"\u0342\u0399"d~
+""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;;
 return t[];
 }
 dstring toLowerTable() nothrow @nogc pure @safe {
@@ -2649,7 +2650,7 @@ static immutable dchar[1537] t =
 "\U00016E7D\U00016E7E\U00016E7F\U0001E922\U0001E923\U0001E924\U0001E925\U0001E926\U0001E927\U0001E928\U0001E929"d~
 "\U0001E92A\U0001E92B\U0001E92C\U0001E92D\U0001E92E\U0001E92F\U0001E930\U0001E931\U0001E932\U0001E933\U0001E934"d~
 "\U0001E935\U0001E936\U0001E937\U0001E938\U0001E939\U0001E93A\U0001E93B\U0001E93C\U0001E93D\U0001E93E\U0001E93F"d~
-"\U0001E940\U0001E941\U0001E942\U0001E943\u00DF"d~cast(dchar)0x02000069~"\u0307\uFB00\uFB01\uFB02\uFB03\uFB04\uFB05"d~
+"\U0001E940\U0001E941\U0001E942\U0001E943\u00DF"d~cast(dchar) 0x02000069~"\u0307\uFB00\uFB01\uFB02\uFB03\uFB04\uFB05"d~
 "\uFB06\u0587\uFB13\uFB14\uFB15\uFB16\uFB17\u0149\u0390\u03B0\u01F0\u1E96\u1E97\u1E98\u1E99\u1E9A\u1F50\u1F52\u1F54"d~
 "\u1F56\u1FB6\u1FC6\u1FD2\u1FD3\u1FD6\u1FD7\u1FE2\u1FE3\u1FE4\u1FE6\u1FE7\u1FF6\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85"d~
 "\u1F86\u1F87\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85\u1F86\u1F87\u1F90\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1F90"d~
@@ -2745,22 +2746,23 @@ static immutable dchar[1621] t =
 "\U00016E5C\U00016E5D\U00016E5E\U00016E5F\U0001E900\U0001E901\U0001E902\U0001E903\U0001E904\U0001E905\U0001E906"d~
 "\U0001E907\U0001E908\U0001E909\U0001E90A\U0001E90B\U0001E90C\U0001E90D\U0001E90E\U0001E90F\U0001E910\U0001E911"d~
 "\U0001E912\U0001E913\U0001E914\U0001E915\U0001E916\U0001E917\U0001E918\U0001E919\U0001E91A\U0001E91B\U0001E91C"d~
-"\U0001E91D\U0001E91E\U0001E91F\U0001E920\U0001E921"d~cast(dchar)0x02000053~"\u0073\u0130"d~cast(dchar)0x02000046~""d~
-"\u0066"d~cast(dchar)0x02000046~"\u0069"d~cast(dchar)0x02000046~"\u006C"d~cast(dchar)0x03000046~"\u0066\u0069"d~cast(dchar)0x03000046~""d~
-"\u0066\u006C"d~cast(dchar)0x02000053~"\u0074"d~cast(dchar)0x02000053~"\u0074"d~cast(dchar)0x02000535~"\u0582"d~cast(dchar)0x02000544~""d~
-"\u0576"d~cast(dchar)0x02000544~"\u0565"d~cast(dchar)0x02000544~"\u056B"d~cast(dchar)0x0200054E~"\u0576"d~cast(dchar)0x02000544~""d~
-"\u056D"d~cast(dchar)0x020002BC~"\u004E"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x0200004A~""d~
-"\u030C"d~cast(dchar)0x02000048~"\u0331"d~cast(dchar)0x02000054~"\u0308"d~cast(dchar)0x02000057~"\u030A"d~cast(dchar)0x02000059~""d~
-"\u030A"d~cast(dchar)0x02000041~"\u02BE"d~cast(dchar)0x020003A5~"\u0313"d~cast(dchar)0x030003A5~"\u0313\u0300"d~cast(dchar)0x030003A5~""d~
-"\u0313\u0301"d~cast(dchar)0x030003A5~"\u0313\u0342"d~cast(dchar)0x02000391~"\u0342"d~cast(dchar)0x02000397~"\u0342"d~cast(dchar)0x03000399~""d~
-"\u0308\u0300"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x02000399~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0342"d~
-""d~cast(dchar)0x030003A5~"\u0308\u0300"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x020003A1~"\u0313"d~cast(dchar)0x020003A5~""d~
-"\u0342"d~cast(dchar)0x030003A5~"\u0308\u0342"d~cast(dchar)0x020003A9~"\u0342\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E"d~
-"\u1F8F\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E\u1F8F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1F98\u1F99"d~
-"\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC"d~
-"\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC\u1FCC\u1FFC\u1FFC"d~cast(dchar)0x02001FBA~"\u0345"d~cast(dchar)0x02000386~"\u0345"d~
-""d~cast(dchar)0x02001FCA~"\u0345"d~cast(dchar)0x02000389~"\u0345"d~cast(dchar)0x02001FFA~"\u0345"d~cast(dchar)0x0200038F~""d~
-"\u0345"d~cast(dchar)0x03000391~"\u0342\u0345"d~cast(dchar)0x03000397~"\u0342\u0345"d~cast(dchar)0x030003A9~"\u0342\u0345"d;;
+"\U0001E91D\U0001E91E\U0001E91F\U0001E920\U0001E921"d~cast(dchar) 0x02000053~"\u0073\u0130"d~cast(dchar) 0x02000046~""d~
+"\u0066"d~cast(dchar) 0x02000046~"\u0069"d~cast(dchar) 0x02000046~"\u006C"d~cast(dchar) 0x03000046~"\u0066\u0069"d~cast(dchar) 0x03000046~""d~
+"\u0066\u006C"d~cast(dchar) 0x02000053~"\u0074"d~cast(dchar) 0x02000053~"\u0074"d~cast(dchar) 0x02000535~"\u0582"d~cast(dchar) 0x02000544~""d~
+"\u0576"d~cast(dchar) 0x02000544~"\u0565"d~cast(dchar) 0x02000544~"\u056B"d~cast(dchar) 0x0200054E~"\u0576"d~cast(dchar) 0x02000544~""d~
+"\u056D"d~cast(dchar) 0x020002BC~"\u004E"d~cast(dchar) 0x03000399~"\u0308\u0301"d~cast(dchar) 0x030003A5~"\u0308\u0301"d~
+""d~cast(dchar) 0x0200004A~"\u030C"d~cast(dchar) 0x02000048~"\u0331"d~cast(dchar) 0x02000054~"\u0308"d~cast(dchar) 0x02000057~""d~
+"\u030A"d~cast(dchar) 0x02000059~"\u030A"d~cast(dchar) 0x02000041~"\u02BE"d~cast(dchar) 0x020003A5~"\u0313"d~cast(dchar) 0x030003A5~""d~
+"\u0313\u0300"d~cast(dchar) 0x030003A5~"\u0313\u0301"d~cast(dchar) 0x030003A5~"\u0313\u0342"d~cast(dchar) 0x02000391~""d~
+"\u0342"d~cast(dchar) 0x02000397~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0300"d~cast(dchar) 0x03000399~"\u0308\u0301"d~
+""d~cast(dchar) 0x02000399~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0300"d~cast(dchar) 0x030003A5~""d~
+"\u0308\u0301"d~cast(dchar) 0x020003A1~"\u0313"d~cast(dchar) 0x020003A5~"\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0342"d~
+""d~cast(dchar) 0x020003A9~"\u0342\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E\u1F8F\u1F88\u1F89\u1F8A\u1F8B\u1F8C"d~
+"\u1F8D\u1F8E\u1F8F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F"d~
+"\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC"d~
+"\u1FCC\u1FFC\u1FFC"d~cast(dchar) 0x02001FBA~"\u0345"d~cast(dchar) 0x02000386~"\u0345"d~cast(dchar) 0x02001FCA~"\u0345"d~
+""d~cast(dchar) 0x02000389~"\u0345"d~cast(dchar) 0x02001FFA~"\u0345"d~cast(dchar) 0x0200038F~"\u0345"d~cast(dchar) 0x03000391~""d~
+"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;;
 return t[];
 }
 
@@ -2894,33 +2896,34 @@ static immutable dchar[1671] t =
 "\U00016E5E\U00016E5F\U0001E900\U0001E901\U0001E902\U0001E903\U0001E904\U0001E905\U0001E906\U0001E907\U0001E908"d~
 "\U0001E909\U0001E90A\U0001E90B\U0001E90C\U0001E90D\U0001E90E\U0001E90F\U0001E910\U0001E911\U0001E912\U0001E913"d~
 "\U0001E914\U0001E915\U0001E916\U0001E917\U0001E918\U0001E919\U0001E91A\U0001E91B\U0001E91C\U0001E91D\U0001E91E"d~
-"\U0001E91F\U0001E920\U0001E921"d~cast(dchar)0x02000053~"\u0053\u0130"d~cast(dchar)0x02000046~"\u0046"d~cast(dchar)0x02000046~""d~
-"\u0049"d~cast(dchar)0x02000046~"\u004C"d~cast(dchar)0x03000046~"\u0046\u0049"d~cast(dchar)0x03000046~"\u0046\u004C"d~cast(dchar)0x02000053~""d~
-"\u0054"d~cast(dchar)0x02000053~"\u0054"d~cast(dchar)0x02000535~"\u0552"d~cast(dchar)0x02000544~"\u0546"d~cast(dchar)0x02000544~""d~
-"\u0535"d~cast(dchar)0x02000544~"\u053B"d~cast(dchar)0x0200054E~"\u0546"d~cast(dchar)0x02000544~"\u053D"d~cast(dchar)0x020002BC~""d~
-"\u004E"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x0200004A~"\u030C"d~cast(dchar)0x02000048~""d~
-"\u0331"d~cast(dchar)0x02000054~"\u0308"d~cast(dchar)0x02000057~"\u030A"d~cast(dchar)0x02000059~"\u030A"d~cast(dchar)0x02000041~""d~
-"\u02BE"d~cast(dchar)0x020003A5~"\u0313"d~cast(dchar)0x030003A5~"\u0313\u0300"d~cast(dchar)0x030003A5~"\u0313\u0301"d~cast(dchar)0x030003A5~""d~
-"\u0313\u0342"d~cast(dchar)0x02000391~"\u0342"d~cast(dchar)0x02000397~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0300"d~cast(dchar)0x03000399~""d~
-"\u0308\u0301"d~cast(dchar)0x02000399~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0342"d~cast(dchar)0x030003A5~"\u0308\u0300"d~
-""d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x020003A1~"\u0313"d~cast(dchar)0x020003A5~"\u0342"d~cast(dchar)0x030003A5~""d~
-"\u0308\u0342"d~cast(dchar)0x020003A9~"\u0342"d~cast(dchar)0x02001F08~"\u0399"d~cast(dchar)0x02001F09~"\u0399"d~cast(dchar)0x02001F0A~""d~
-"\u0399"d~cast(dchar)0x02001F0B~"\u0399"d~cast(dchar)0x02001F0C~"\u0399"d~cast(dchar)0x02001F0D~"\u0399"d~cast(dchar)0x02001F0E~""d~
-"\u0399"d~cast(dchar)0x02001F0F~"\u0399"d~cast(dchar)0x02001F08~"\u0399"d~cast(dchar)0x02001F09~"\u0399"d~cast(dchar)0x02001F0A~""d~
-"\u0399"d~cast(dchar)0x02001F0B~"\u0399"d~cast(dchar)0x02001F0C~"\u0399"d~cast(dchar)0x02001F0D~"\u0399"d~cast(dchar)0x02001F0E~""d~
-"\u0399"d~cast(dchar)0x02001F0F~"\u0399"d~cast(dchar)0x02001F28~"\u0399"d~cast(dchar)0x02001F29~"\u0399"d~cast(dchar)0x02001F2A~""d~
-"\u0399"d~cast(dchar)0x02001F2B~"\u0399"d~cast(dchar)0x02001F2C~"\u0399"d~cast(dchar)0x02001F2D~"\u0399"d~cast(dchar)0x02001F2E~""d~
-"\u0399"d~cast(dchar)0x02001F2F~"\u0399"d~cast(dchar)0x02001F28~"\u0399"d~cast(dchar)0x02001F29~"\u0399"d~cast(dchar)0x02001F2A~""d~
-"\u0399"d~cast(dchar)0x02001F2B~"\u0399"d~cast(dchar)0x02001F2C~"\u0399"d~cast(dchar)0x02001F2D~"\u0399"d~cast(dchar)0x02001F2E~""d~
-"\u0399"d~cast(dchar)0x02001F2F~"\u0399"d~cast(dchar)0x02001F68~"\u0399"d~cast(dchar)0x02001F69~"\u0399"d~cast(dchar)0x02001F6A~""d~
-"\u0399"d~cast(dchar)0x02001F6B~"\u0399"d~cast(dchar)0x02001F6C~"\u0399"d~cast(dchar)0x02001F6D~"\u0399"d~cast(dchar)0x02001F6E~""d~
-"\u0399"d~cast(dchar)0x02001F6F~"\u0399"d~cast(dchar)0x02001F68~"\u0399"d~cast(dchar)0x02001F69~"\u0399"d~cast(dchar)0x02001F6A~""d~
-"\u0399"d~cast(dchar)0x02001F6B~"\u0399"d~cast(dchar)0x02001F6C~"\u0399"d~cast(dchar)0x02001F6D~"\u0399"d~cast(dchar)0x02001F6E~""d~
-"\u0399"d~cast(dchar)0x02001F6F~"\u0399"d~cast(dchar)0x02000391~"\u0399"d~cast(dchar)0x02000391~"\u0399"d~cast(dchar)0x02000397~""d~
-"\u0399"d~cast(dchar)0x02000397~"\u0399"d~cast(dchar)0x020003A9~"\u0399"d~cast(dchar)0x020003A9~"\u0399"d~cast(dchar)0x02001FBA~""d~
-"\u0399"d~cast(dchar)0x02000386~"\u0399"d~cast(dchar)0x02001FCA~"\u0399"d~cast(dchar)0x02000389~"\u0399"d~cast(dchar)0x02001FFA~""d~
-"\u0399"d~cast(dchar)0x0200038F~"\u0399"d~cast(dchar)0x03000391~"\u0342\u0399"d~cast(dchar)0x03000397~"\u0342\u0399"d~cast(dchar)0x030003A9~""d~
-"\u0342\u0399"d;;
+"\U0001E91F\U0001E920\U0001E921"d~cast(dchar) 0x02000053~"\u0053\u0130"d~cast(dchar) 0x02000046~"\u0046"d~cast(dchar) 0x02000046~""d~
+"\u0049"d~cast(dchar) 0x02000046~"\u004C"d~cast(dchar) 0x03000046~"\u0046\u0049"d~cast(dchar) 0x03000046~"\u0046\u004C"d~
+""d~cast(dchar) 0x02000053~"\u0054"d~cast(dchar) 0x02000053~"\u0054"d~cast(dchar) 0x02000535~"\u0552"d~cast(dchar) 0x02000544~""d~
+"\u0546"d~cast(dchar) 0x02000544~"\u0535"d~cast(dchar) 0x02000544~"\u053B"d~cast(dchar) 0x0200054E~"\u0546"d~cast(dchar) 0x02000544~""d~
+"\u053D"d~cast(dchar) 0x020002BC~"\u004E"d~cast(dchar) 0x03000399~"\u0308\u0301"d~cast(dchar) 0x030003A5~"\u0308\u0301"d~
+""d~cast(dchar) 0x0200004A~"\u030C"d~cast(dchar) 0x02000048~"\u0331"d~cast(dchar) 0x02000054~"\u0308"d~cast(dchar) 0x02000057~""d~
+"\u030A"d~cast(dchar) 0x02000059~"\u030A"d~cast(dchar) 0x02000041~"\u02BE"d~cast(dchar) 0x020003A5~"\u0313"d~cast(dchar) 0x030003A5~""d~
+"\u0313\u0300"d~cast(dchar) 0x030003A5~"\u0313\u0301"d~cast(dchar) 0x030003A5~"\u0313\u0342"d~cast(dchar) 0x02000391~""d~
+"\u0342"d~cast(dchar) 0x02000397~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0300"d~cast(dchar) 0x03000399~"\u0308\u0301"d~
+""d~cast(dchar) 0x02000399~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0300"d~cast(dchar) 0x030003A5~""d~
+"\u0308\u0301"d~cast(dchar) 0x020003A1~"\u0313"d~cast(dchar) 0x020003A5~"\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0342"d~
+""d~cast(dchar) 0x020003A9~"\u0342"d~cast(dchar) 0x02001F08~"\u0399"d~cast(dchar) 0x02001F09~"\u0399"d~cast(dchar) 0x02001F0A~""d~
+"\u0399"d~cast(dchar) 0x02001F0B~"\u0399"d~cast(dchar) 0x02001F0C~"\u0399"d~cast(dchar) 0x02001F0D~"\u0399"d~cast(dchar) 0x02001F0E~""d~
+"\u0399"d~cast(dchar) 0x02001F0F~"\u0399"d~cast(dchar) 0x02001F08~"\u0399"d~cast(dchar) 0x02001F09~"\u0399"d~cast(dchar) 0x02001F0A~""d~
+"\u0399"d~cast(dchar) 0x02001F0B~"\u0399"d~cast(dchar) 0x02001F0C~"\u0399"d~cast(dchar) 0x02001F0D~"\u0399"d~cast(dchar) 0x02001F0E~""d~
+"\u0399"d~cast(dchar) 0x02001F0F~"\u0399"d~cast(dchar) 0x02001F28~"\u0399"d~cast(dchar) 0x02001F29~"\u0399"d~cast(dchar) 0x02001F2A~""d~
+"\u0399"d~cast(dchar) 0x02001F2B~"\u0399"d~cast(dchar) 0x02001F2C~"\u0399"d~cast(dchar) 0x02001F2D~"\u0399"d~cast(dchar) 0x02001F2E~""d~
+"\u0399"d~cast(dchar) 0x02001F2F~"\u0399"d~cast(dchar) 0x02001F28~"\u0399"d~cast(dchar) 0x02001F29~"\u0399"d~cast(dchar) 0x02001F2A~""d~
+"\u0399"d~cast(dchar) 0x02001F2B~"\u0399"d~cast(dchar) 0x02001F2C~"\u0399"d~cast(dchar) 0x02001F2D~"\u0399"d~cast(dchar) 0x02001F2E~""d~
+"\u0399"d~cast(dchar) 0x02001F2F~"\u0399"d~cast(dchar) 0x02001F68~"\u0399"d~cast(dchar) 0x02001F69~"\u0399"d~cast(dchar) 0x02001F6A~""d~
+"\u0399"d~cast(dchar) 0x02001F6B~"\u0399"d~cast(dchar) 0x02001F6C~"\u0399"d~cast(dchar) 0x02001F6D~"\u0399"d~cast(dchar) 0x02001F6E~""d~
+"\u0399"d~cast(dchar) 0x02001F6F~"\u0399"d~cast(dchar) 0x02001F68~"\u0399"d~cast(dchar) 0x02001F69~"\u0399"d~cast(dchar) 0x02001F6A~""d~
+"\u0399"d~cast(dchar) 0x02001F6B~"\u0399"d~cast(dchar) 0x02001F6C~"\u0399"d~cast(dchar) 0x02001F6D~"\u0399"d~cast(dchar) 0x02001F6E~""d~
+"\u0399"d~cast(dchar) 0x02001F6F~"\u0399"d~cast(dchar) 0x02000391~"\u0399"d~cast(dchar) 0x02000391~"\u0399"d~cast(dchar) 0x02000397~""d~
+"\u0399"d~cast(dchar) 0x02000397~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x020003A9~"\u0399"d~cast(dchar) 0x02001FBA~""d~
+"\u0399"d~cast(dchar) 0x02000386~"\u0399"d~cast(dchar) 0x02001FCA~"\u0399"d~cast(dchar) 0x02000389~"\u0399"d~cast(dchar) 0x02001FFA~""d~
+"\u0399"d~cast(dchar) 0x0200038F~"\u0399"d~cast(dchar) 0x03000391~"\u0342\u0399"d~cast(dchar) 0x03000397~"\u0342\u0399"d~
+""d~cast(dchar) 0x030003A9~"\u0342\u0399"d;;
 return t[];
 }
 dstring toLowerTable() nothrow @nogc pure @safe {
@@ -3010,7 +3013,7 @@ static immutable dchar[1537] t =
 "\U00016E7D\U00016E7E\U00016E7F\U0001E922\U0001E923\U0001E924\U0001E925\U0001E926\U0001E927\U0001E928\U0001E929"d~
 "\U0001E92A\U0001E92B\U0001E92C\U0001E92D\U0001E92E\U0001E92F\U0001E930\U0001E931\U0001E932\U0001E933\U0001E934"d~
 "\U0001E935\U0001E936\U0001E937\U0001E938\U0001E939\U0001E93A\U0001E93B\U0001E93C\U0001E93D\U0001E93E\U0001E93F"d~
-"\U0001E940\U0001E941\U0001E942\U0001E943\u00DF"d~cast(dchar)0x02000069~"\u0307\uFB00\uFB01\uFB02\uFB03\uFB04\uFB05"d~
+"\U0001E940\U0001E941\U0001E942\U0001E943\u00DF"d~cast(dchar) 0x02000069~"\u0307\uFB00\uFB01\uFB02\uFB03\uFB04\uFB05"d~
 "\uFB06\u0587\uFB13\uFB14\uFB15\uFB16\uFB17\u0149\u0390\u03B0\u01F0\u1E96\u1E97\u1E98\u1E99\u1E9A\u1F50\u1F52\u1F54"d~
 "\u1F56\u1FB6\u1FC6\u1FD2\u1FD3\u1FD6\u1FD7\u1FE2\u1FE3\u1FE4\u1FE6\u1FE7\u1FF6\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85"d~
 "\u1F86\u1F87\u1F80\u1F81\u1F82\u1F83\u1F84\u1F85\u1F86\u1F87\u1F90\u1F91\u1F92\u1F93\u1F94\u1F95\u1F96\u1F97\u1F90"d~
@@ -3106,22 +3109,23 @@ static immutable dchar[1621] t =
 "\U00016E5C\U00016E5D\U00016E5E\U00016E5F\U0001E900\U0001E901\U0001E902\U0001E903\U0001E904\U0001E905\U0001E906"d~
 "\U0001E907\U0001E908\U0001E909\U0001E90A\U0001E90B\U0001E90C\U0001E90D\U0001E90E\U0001E90F\U0001E910\U0001E911"d~
 "\U0001E912\U0001E913\U0001E914\U0001E915\U0001E916\U0001E917\U0001E918\U0001E919\U0001E91A\U0001E91B\U0001E91C"d~
-"\U0001E91D\U0001E91E\U0001E91F\U0001E920\U0001E921"d~cast(dchar)0x02000053~"\u0073\u0130"d~cast(dchar)0x02000046~""d~
-"\u0066"d~cast(dchar)0x02000046~"\u0069"d~cast(dchar)0x02000046~"\u006C"d~cast(dchar)0x03000046~"\u0066\u0069"d~cast(dchar)0x03000046~""d~
-"\u0066\u006C"d~cast(dchar)0x02000053~"\u0074"d~cast(dchar)0x02000053~"\u0074"d~cast(dchar)0x02000535~"\u0582"d~cast(dchar)0x02000544~""d~
-"\u0576"d~cast(dchar)0x02000544~"\u0565"d~cast(dchar)0x02000544~"\u056B"d~cast(dchar)0x0200054E~"\u0576"d~cast(dchar)0x02000544~""d~
-"\u056D"d~cast(dchar)0x020002BC~"\u004E"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x0200004A~""d~
-"\u030C"d~cast(dchar)0x02000048~"\u0331"d~cast(dchar)0x02000054~"\u0308"d~cast(dchar)0x02000057~"\u030A"d~cast(dchar)0x02000059~""d~
-"\u030A"d~cast(dchar)0x02000041~"\u02BE"d~cast(dchar)0x020003A5~"\u0313"d~cast(dchar)0x030003A5~"\u0313\u0300"d~cast(dchar)0x030003A5~""d~
-"\u0313\u0301"d~cast(dchar)0x030003A5~"\u0313\u0342"d~cast(dchar)0x02000391~"\u0342"d~cast(dchar)0x02000397~"\u0342"d~cast(dchar)0x03000399~""d~
-"\u0308\u0300"d~cast(dchar)0x03000399~"\u0308\u0301"d~cast(dchar)0x02000399~"\u0342"d~cast(dchar)0x03000399~"\u0308\u0342"d~
-""d~cast(dchar)0x030003A5~"\u0308\u0300"d~cast(dchar)0x030003A5~"\u0308\u0301"d~cast(dchar)0x020003A1~"\u0313"d~cast(dchar)0x020003A5~""d~
-"\u0342"d~cast(dchar)0x030003A5~"\u0308\u0342"d~cast(dchar)0x020003A9~"\u0342\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E"d~
-"\u1F8F\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E\u1F8F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1F98\u1F99"d~
-"\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC"d~
-"\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC\u1FCC\u1FFC\u1FFC"d~cast(dchar)0x02001FBA~"\u0345"d~cast(dchar)0x02000386~"\u0345"d~
-""d~cast(dchar)0x02001FCA~"\u0345"d~cast(dchar)0x02000389~"\u0345"d~cast(dchar)0x02001FFA~"\u0345"d~cast(dchar)0x0200038F~""d~
-"\u0345"d~cast(dchar)0x03000391~"\u0342\u0345"d~cast(dchar)0x03000397~"\u0342\u0345"d~cast(dchar)0x030003A9~"\u0342\u0345"d;;
+"\U0001E91D\U0001E91E\U0001E91F\U0001E920\U0001E921"d~cast(dchar) 0x02000053~"\u0073\u0130"d~cast(dchar) 0x02000046~""d~
+"\u0066"d~cast(dchar) 0x02000046~"\u0069"d~cast(dchar) 0x02000046~"\u006C"d~cast(dchar) 0x03000046~"\u0066\u0069"d~cast(dchar) 0x03000046~""d~
+"\u0066\u006C"d~cast(dchar) 0x02000053~"\u0074"d~cast(dchar) 0x02000053~"\u0074"d~cast(dchar) 0x02000535~"\u0582"d~cast(dchar) 0x02000544~""d~
+"\u0576"d~cast(dchar) 0x02000544~"\u0565"d~cast(dchar) 0x02000544~"\u056B"d~cast(dchar) 0x0200054E~"\u0576"d~cast(dchar) 0x02000544~""d~
+"\u056D"d~cast(dchar) 0x020002BC~"\u004E"d~cast(dchar) 0x03000399~"\u0308\u0301"d~cast(dchar) 0x030003A5~"\u0308\u0301"d~
+""d~cast(dchar) 0x0200004A~"\u030C"d~cast(dchar) 0x02000048~"\u0331"d~cast(dchar) 0x02000054~"\u0308"d~cast(dchar) 0x02000057~""d~
+"\u030A"d~cast(dchar) 0x02000059~"\u030A"d~cast(dchar) 0x02000041~"\u02BE"d~cast(dchar) 0x020003A5~"\u0313"d~cast(dchar) 0x030003A5~""d~
+"\u0313\u0300"d~cast(dchar) 0x030003A5~"\u0313\u0301"d~cast(dchar) 0x030003A5~"\u0313\u0342"d~cast(dchar) 0x02000391~""d~
+"\u0342"d~cast(dchar) 0x02000397~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0300"d~cast(dchar) 0x03000399~"\u0308\u0301"d~
+""d~cast(dchar) 0x02000399~"\u0342"d~cast(dchar) 0x03000399~"\u0308\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0300"d~cast(dchar) 0x030003A5~""d~
+"\u0308\u0301"d~cast(dchar) 0x020003A1~"\u0313"d~cast(dchar) 0x020003A5~"\u0342"d~cast(dchar) 0x030003A5~"\u0308\u0342"d~
+""d~cast(dchar) 0x020003A9~"\u0342\u1F88\u1F89\u1F8A\u1F8B\u1F8C\u1F8D\u1F8E\u1F8F\u1F88\u1F89\u1F8A\u1F8B\u1F8C"d~
+"\u1F8D\u1F8E\u1F8F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F\u1F98\u1F99\u1F9A\u1F9B\u1F9C\u1F9D\u1F9E\u1F9F"d~
+"\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FA8\u1FA9\u1FAA\u1FAB\u1FAC\u1FAD\u1FAE\u1FAF\u1FBC\u1FBC\u1FCC"d~
+"\u1FCC\u1FFC\u1FFC"d~cast(dchar) 0x02001FBA~"\u0345"d~cast(dchar) 0x02000386~"\u0345"d~cast(dchar) 0x02001FCA~"\u0345"d~
+""d~cast(dchar) 0x02000389~"\u0345"d~cast(dchar) 0x02001FFA~"\u0345"d~cast(dchar) 0x0200038F~"\u0345"d~cast(dchar) 0x03000391~""d~
+"\u0342\u0345"d~cast(dchar) 0x03000397~"\u0342\u0345"d~cast(dchar) 0x030003A9~"\u0342\u0345"d;;
 return t[];
 }
 

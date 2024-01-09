@@ -1166,8 +1166,8 @@ void writeDstring(T:dchar)(File sink, const T[] tab)
         if (elem >= 0x10FFFF)
         {
             // invalid dchar, but might have extra info bit-packed in upper bits
-            sink.writef("\"d~cast(dchar)0x%08X~\"", elem);
-            lineCount += 24;
+            sink.writef("\"d~cast(dchar) 0x%08X~\"", elem);
+            lineCount += 25;
         }
         else if (elem <= 0xFFFF)
         {
