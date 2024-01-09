@@ -8458,21 +8458,21 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
-    import std.range : assumeSorted;
+    import std.range : assumeSorted, stride;
     immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
     immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
-    auto r = compositionTable[idx .. idx+cnt].map!"a.rhs"().assumeSorted();
+    auto r = compositionTable.stride(2)[idx .. idx+cnt].assumeSorted();
     immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
-    immutable entry = compositionTable[idx+target];
-    if (entry.rhs != second)
+    immutable entry = compositionTable[(idx+target)*2];
+    if (entry != second)
         return dchar.init;
-    return entry.composed;
+    return compositionTable[(idx+target)*2 + 1];
 }
 
 ///

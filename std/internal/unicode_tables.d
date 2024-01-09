@@ -59,11 +59,6 @@ nothrow @nogc pure @safe:
     ubyte entry_len() const { return (x >> 0) & 0xF; }
 }
 
-struct CompEntry
-{
-    dchar rhs, composed;
-}
-
 struct UnicodeProperty
 {
     string name;
