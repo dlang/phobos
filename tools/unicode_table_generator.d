@@ -1033,6 +1033,14 @@ void writeGraphemeTries(File sink)
     writeBest3Level(sink, "Extended_Pictographic", emojiData.table["Extended_Pictographic"]);
 }
 
+/// Write a function that returns a dchar[] with data stored in `table`
+void writeDstringTable(T:dchar)(File sink, string name, const T[] table)
+{
+    sink.writefln("dstring %s() nothrow @nogc pure @safe {\nstatic immutable dchar[%d] t =", name, table.length);
+    sink.writeDstring(table);
+    sink.writeln(";\nreturn t[];\n}");
+}
+
 void writeCaseCoversion(File sink)
 {
     {
@@ -1055,16 +1063,10 @@ void writeCaseCoversion(File sink)
         writeBest3Level(sink, "toTitleSimpleIndex", toTitleSimpleIndex, ushort.max);
     }
 
-    with(sink)
-    {
-        writeln("@property");
-        writeln("{");
-        writeln("private alias _IUA = immutable(uint[]);");
-        writefln("_IUA toUpperTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toUpperTab);
-        writefln("_IUA toLowerTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toLowerTab);
-        writefln("_IUA toTitleTable() nothrow @nogc @safe pure { static _IUA t = [%( 0x%x, %)]; return t; }", toTitleTab);
-        writeln("}");
-    }
+
+    writeDstringTable(sink, "toUpperTable", toUpperTab);
+    writeDstringTable(sink, "toLowerTable", toLowerTab);
+    writeDstringTable(sink, "toTitleTable", toTitleTab);
 }
 
 void writeDecomposition(File sink)
@@ -1121,15 +1123,9 @@ void writeDecomposition(File sink)
 
     writeBest3Level(sink, "compatMapping", mappingCompat, cast(ushort) 0);
     writeBest3Level(sink, "canonMapping", mappingCanon, cast(ushort) 0);
-    with(sink)
-    {
-        writeln("@property");
-        writeln("{");
-        writeln("private alias _IDCA = immutable(dchar[]);");
-        writefln("_IDCA decompCanonTable() @safe pure nothrow { static _IDCA t = [%( 0x%x, %)]; return t; }", decompCanonFlat);
-        writefln("_IDCA decompCompatTable() @safe pure nothrow { static _IDCA t = [%( 0x%x, %)]; return t; }", decompCompatFlat);
-        writeln("}");
-    }
+
+    writeDstringTable(sink, "decompCanonTable", cast(const(uint)[]) decompCanonFlat);
+    writeDstringTable(sink, "decompCompatTable", cast(const(uint)[]) decompCompatFlat);
 }
 
 void writeFunctions(File sink)
@@ -1153,6 +1149,38 @@ void writeFunctions(File sink)
         writeln(hangV.toSourceCode("isHangV"));
         writeln(hangT.toSourceCode("isHangT"));
     }
+}
+
+/// Write a `dchar[]` as a dstring ""d
+void writeDstring(T:dchar)(File sink, const T[] tab)
+{
+    size_t lineCount = 1;
+    sink.write("\"");
+    foreach (elem; tab)
+    {
+        if (lineCount >= 110)
+        {
+            sink.write("\"d~\n\"");
+            lineCount = 1;
+        }
+        if (elem >= 0x10FFFF)
+        {
+            // invalid dchar, but might have extra info bit-packed in upper bits
+            sink.writef("\"d~cast(dchar) 0x%08X~\"", elem);
+            lineCount += 25;
+        }
+        else if (elem <= 0xFFFF)
+        {
+            sink.writef("\\u%04X", elem);
+            lineCount += 6;
+        }
+        else
+        {
+            sink.writef("\\U%08X", elem);
+            lineCount += 10;
+        }
+    }
+    sink.write("\"d");
 }
 
 
@@ -1214,34 +1242,7 @@ void writeCompositionTable(File sink)
         write("enum compositionJumpTrieEntries = TrieEntry!(ushort, 12, 9)(");
         triT.store(sink.lockingTextWriter());
         writeln(");");
-        writeln("dstring compositionTable() nothrow pure @nogc @safe");
-        writeln("{");
-        writef("static immutable dchar[%d] t =\n\"", dupletes.length * 2);
-        size_t lineCount = 1;
-        foreach (i, pair; dupletes)
-        {
-            static foreach(j; 0 .. 2)
-            {
-                if (pair[j] <= 0xFFFF)
-                {
-                    writef("\\u%04X", pair[j]);
-                    lineCount += 6;
-                }
-                else
-                {
-                    writef("\\U%08X", pair[j]);
-                    lineCount += 10;
-                }
-                if (lineCount >= 110)
-                {
-                    write("\"~\n\"");
-                    lineCount = 1;
-                }
-            }
-        }
-        writeln("\"d;");
-        writeln("return t[];");
-        writeln("}");
+        writeDstringTable(sink, "compositionTable", dupletes.map!(x => only(x.expand)).joiner.array);
     }
 }
 
