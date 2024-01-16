@@ -642,8 +642,9 @@ private:
     // This is typed as `void[]`, so cast to `char[]` or `ubyte[]` to use it
     const data = cast(const(char)[]) mmfile[];
 
-    // At this point, the file content hasn't been read yet.
-    // The OS will
+    // At this point, the file content may not have been read yet.
+    // In that case, the following memory access will intentionally
+    // trigger a page fault, causing the kernel to load the file contents
     assert(data[0 .. 5] == "hello");
 }
 
@@ -656,8 +657,9 @@ private:
     scope mmfile = new MmFile(deleteme, MmFile.Mode.readWriteNew, 5, null);
     assert(mmfile.length == 5);
 
-    // Assign through operator overload of `MmFile`
     auto data = cast(ubyte[]) mmfile[];
+
+    // This write to memory will be reflected in the file contents
     data[] = '\n';
 
     mmfile.flush();
