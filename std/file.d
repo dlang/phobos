@@ -4881,11 +4881,8 @@ private struct DirIteratorImpl
 // Must be a template, because the destructor is unsafe or safe depending on
 // whether `-preview=dip1000` is in use. Otherwise, linking errors would
 // result.
-struct _DirIterator(bool useDIP1000)
+struct _DirIterator()
 {
-    static assert(useDIP1000 == dip1000Enabled,
-        "Please don't override useDIP1000 to disagree with compiler switch.");
-
 private:
     SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
@@ -4901,7 +4898,7 @@ public:
 
 // This has the client code to automatically use and link to the correct
 // template instance
-alias DirIterator = _DirIterator!dip1000Enabled;
+alias DirIterator = _DirIterator!();
 
 /++
     Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -4916,11 +4913,6 @@ alias DirIterator = _DirIterator!dip1000Enabled;
     operating system / filesystem, and may not follow any particular sorting.
 
     Params:
-        useDIP1000 = used to instantiate this function separately for code with
-                     and without -preview=dip1000 compiler switch, because it
-                     affects the ABI of this function. Set automatically -
-                     don't touch.
-
         path = The directory to iterate over.
                If empty, the current directory will be iterated.
 
@@ -5010,10 +5002,10 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
+auto dirEntries()
     (string path, SpanMode mode, bool followSymlink = true)
 {
-    return _DirIterator!useDIP1000(path, mode, followSymlink);
+    return DirIterator(path, mode, followSymlink);
 }
 
 /// Duplicate functionality of D1's `std.file.listdir()`:
@@ -5113,7 +5105,7 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 }
 
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
+auto dirEntries()
     (string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
@@ -5121,7 +5113,7 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
     import std.path : globMatch, baseName;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+    return filter!f(DirIterator(path, mode, followSymlink));
 }
 
 @safe unittest
