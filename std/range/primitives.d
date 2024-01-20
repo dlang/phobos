@@ -1011,6 +1011,15 @@ have a `save` function.
 
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
+
+Params:
+    R = type to be tested
+    E = if present, the elements of the range must be
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
+        to this type
+
+Returns:
+    `true` if R is a forward range (possibly with element type `E`), `false` if not
  */
 enum bool isForwardRange(R) = isInputRange!R
     && is(typeof((R r) { return r.save; } (R.init)) == R);
