@@ -1167,6 +1167,15 @@ are bidirectional ranges only.
 
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
+
+Params:
+    R = type to be tested
+    E = if present, the elements of the range must be
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
+        to this type
+
+Returns:
+    `true` if R is a random-access range (possibly with element type `E`), `false` if not
  */
 enum bool isRandomAccessRange(R) =
     is(typeof(lvalueOf!R[1]) == ElementType!R)
@@ -1176,6 +1185,10 @@ enum bool isRandomAccessRange(R) =
     && (hasLength!R || isInfinite!R)
     && (isInfinite!R || !is(typeof(lvalueOf!R[$ - 1]))
         || is(typeof(lvalueOf!R[$ - 1]) == ElementType!R));
+
+/// ditto
+enum bool isRandomAccessRange(R, E) =
+    .isRandomAccessRange!R && isQualifierConvertible!(ElementType!R, E);
 
 ///
 @safe unittest
@@ -1205,6 +1218,18 @@ enum bool isRandomAccessRange(R) =
         static if (!isInfinite!R)
             static assert(is(typeof(f) == typeof(r[$ - 1])));
     }
+
+    // Checking the element type
+    static assert( isRandomAccessRange!(int[], const int));
+    static assert(!isRandomAccessRange!(int[], immutable int));
+
+    static assert(!isRandomAccessRange!(const(int)[], int));
+    static assert( isRandomAccessRange!(const(int)[], const int));
+    static assert(!isRandomAccessRange!(const(int)[], immutable int));
+
+    static assert(!isRandomAccessRange!(immutable(int)[], int));
+    static assert( isRandomAccessRange!(immutable(int)[], const int));
+    static assert( isRandomAccessRange!(immutable(int)[], immutable int));
 }
 
 @safe unittest
