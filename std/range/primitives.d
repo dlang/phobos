@@ -1695,11 +1695,9 @@ For finite ranges, the result of `opSlice` must be of the same type as the
 original range type. If the range defines `opDollar`, then it must support
 subtraction.
 
-For infinite ranges, when $(I not) using `opDollar`, the result of
-`opSlice` must be the result of $(LREF take) or $(LREF takeExactly) on the
-original range (they both return the same type for infinite ranges). However,
-when using `opDollar`, the result of `opSlice` must be that of the
-original range type.
+For infinite ranges, when $(I not) using `opDollar`, the result of `opSlice`
+may be a forward range of any type. However, when using `opDollar`, the result
+of `opSlice` must be of the same type as the original range type.
 
 The following expression must be true for `hasSlicing` to be `true`:
 
@@ -1772,6 +1770,38 @@ enum bool hasSlicing(R) = isForwardRange!R
     }
 
     static assert(hasSlicing!InfOnes);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24348
+@safe unittest
+{
+    static struct Slice
+    {
+        size_t length;
+        bool empty() => length == 0;
+        int front() => 0;
+        void popFront() { --length; }
+        Slice save() => this;
+    }
+
+    static struct InfZeros
+    {
+        enum empty = false;
+        int front() => 0;
+        void popFront() {}
+        InfZeros save() => this;
+
+        Slice opIndex(size_t[2] bounds)
+        {
+            size_t i = bounds[0], j = bounds[1];
+            size_t length = i <= j ? j - i : 0;
+            return Slice(length);
+        }
+
+        size_t[2] opSlice(size_t dim : 0)(size_t i, size_t j) => [i, j];
+    }
+
+    static assert(hasSlicing!InfZeros);
 }
 
 /**
