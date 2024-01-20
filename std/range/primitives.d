@@ -1077,11 +1077,24 @@ element in the range. Calling `r.back` is allowed only if calling
 
 See_Also:
     The header of $(MREF std,range) for tutorials on ranges.
+
+Params:
+    R = type to be tested
+    E = if present, the elements of the range must be
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
+        to this type
+
+Returns:
+    `true` if R is a bidirectional range (possibly with element type `E`), `false` if not
  */
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
     && (is(typeof((return ref R r) => r.back)) || is(typeof(ref (return ref R r) => r.back)))
     && is(typeof(R.init.back.init) == ElementType!R);
+
+/// ditto
+enum bool isBidirectionalRange(R, E) =
+    .isBidirectionalRange!R && isQualifierConvertible!(ElementType!R, E);
 
 ///
 @safe unittest
@@ -1093,6 +1106,18 @@ enum bool isBidirectionalRange(R) = isForwardRange!R
     auto t = r.back;                           // can get the back of the range
     auto w = r.front;
     static assert(is(typeof(t) == typeof(w))); // same type for front and back
+
+    // Checking the element type
+    static assert( isBidirectionalRange!(int[], const int));
+    static assert(!isBidirectionalRange!(int[], immutable int));
+
+    static assert(!isBidirectionalRange!(const(int)[], int));
+    static assert( isBidirectionalRange!(const(int)[], const int));
+    static assert(!isBidirectionalRange!(const(int)[], immutable int));
+
+    static assert(!isBidirectionalRange!(immutable(int)[], int));
+    static assert( isBidirectionalRange!(immutable(int)[], const int));
+    static assert( isBidirectionalRange!(immutable(int)[], immutable int));
 }
 
 @safe unittest
