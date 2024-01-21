@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  posix:
+  main:
     strategy:
       fail-fast: false
       matrix:
@@ -26,18 +26,27 @@ jobs:
             os: macos-13
           - job_name: macOS 12 x64
             os: macos-12
+          # Windows
+          - job_name: Windows x64
+            os: windows-2022
+          - job_name: Windows x86
+            os: windows-2022
+            model: 32
     name: ${{ matrix.job_name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     env:
       # for ci/run.sh:
-      OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || '') }}
+      OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || (startsWith(matrix.os, 'windows') && 'windows' || '')) }}
       MODEL: ${{ matrix.model || '64' }}
       HOST_DMD: dmd
       N: ${{ startsWith(matrix.os, 'macos') && '3' || '4' }}
       FULL_BUILD: false
       # work around https://issues.dlang.org/show_bug.cgi?id=23517
       MACOSX_DEPLOYMENT_TARGET: '11'
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,16 +70,40 @@ jobs:
           fi
 
           git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
-      - name: Install prerequisites
+
+      - name: 'Posix: Install prerequisites'
+        if: runner.os != 'Windows'
         run: cd ../dmd && ${{ runner.os == 'macOS' && 'ci/cirrusci.sh' || 'sudo -E ci/cirrusci.sh' }}
-      - name: Install host compiler
+      - name: 'Windows: Set up MSVC environment'
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-vsdevenv@v4
+        with:
+          arch: ${{ env.MODEL == '64' && 'x64' || 'x86' }}
+
+      - name: 'Posix: Install host compiler'
+        if: runner.os != 'Windows'
         run: cd ../dmd && ci/run.sh install_host_compiler
+      - name: 'Windows: Install host compiler'
+        if: runner.os == 'Windows'
+        uses: dlang-community/setup-dlang@v1.3.0
+        with:
+          compiler: ldc-latest
+
       - name: Build
         run: cd ../dmd && ci/run.sh build
+        env:
+          # on Windows, `ci/run.sh build` expects the DMD env var to be set to the DMD-CLI-compatible host compiler
+          DMD: ${{ runner.os == 'Windows' && 'ldmd2' || '' }}
+          # work around the LDC host compiler on Windows assuming the first link.exe in PATH is the MSVC one
+          # (VSINSTALLDIR is set, but GHA uses Git's bin\bash.exe for `shell: bash`, which prepends Git's usr\bin to PATH, with GNU link.exe)
+          LDC_VSDIR_FORCE: ${{ runner.os == 'Windows' && startsWith(matrix.host_dmd, 'ldc') && '1' || '' }}
       - name: Test dmd
         run: cd ../dmd && ci/run.sh test_dmd
       - name: Test druntime
         run: cd ../dmd && ci/run.sh test_druntime
+      - name: 'Windows x86: Add 32-bit libcurl.dll to PATH (required for Phobos unittests)'
+        if: runner.os == 'Windows' && env.MODEL == '32'
+        run: echo "$(dirname "$(which $DC)")/../lib32" >> $GITHUB_PATH
       - name: Test phobos
         run: cd ../dmd && ci/run.sh test_phobos
 
@@ -89,7 +122,7 @@ jobs:
         with:
           fetch-depth: 50
       - name: Run in VM
-        uses: cross-platform-actions/action@v0.21.1
+        uses: cross-platform-actions/action@v0.22.0
         with:
           operating_system: freebsd
           hypervisor: qemu
