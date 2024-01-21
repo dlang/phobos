@@ -96,7 +96,7 @@ jobs:
           DMD: ${{ runner.os == 'Windows' && 'ldmd2' || '' }}
           # work around the LDC host compiler on Windows assuming the first link.exe in PATH is the MSVC one
           # (VSINSTALLDIR is set, but GHA uses Git's bin\bash.exe for `shell: bash`, which prepends Git's usr\bin to PATH, with GNU link.exe)
-          LDC_VSDIR_FORCE: ${{ runner.os == 'Windows' && startsWith(matrix.host_dmd, 'ldc') && '1' || '' }}
+          LDC_VSDIR_FORCE: ${{ runner.os == 'Windows' && '1' || '' }}
       - name: Test dmd
         run: cd ../dmd && ci/run.sh test_dmd
       - name: Test druntime
