@@ -34,7 +34,7 @@ jobs:
       OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || '') }}
       MODEL: ${{ matrix.model || '64' }}
       HOST_DMD: dmd
-      N: ${{ startsWith(matrix.os, 'macos') && '3' || '2' }}
+      N: ${{ startsWith(matrix.os, 'macos') && '3' || '4' }}
       FULL_BUILD: false
       # work around https://issues.dlang.org/show_bug.cgi?id=23517
       MACOSX_DEPLOYMENT_TARGET: '11'
