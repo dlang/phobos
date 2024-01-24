@@ -181,9 +181,9 @@ struct UnicodeProperty
 
 struct TrieEntry(T...)
 {
-    size_t[] offsets;
-    size_t[] sizes;
-    size_t[] data;
+    immutable(size_t)[] offsets;
+    immutable(size_t)[] sizes;
+    immutable(size_t)[] data;
 }
 
 `;
@@ -1240,7 +1240,7 @@ void writeCompositionTable(File sink)
     {
         writeln("enum composeIdxMask = (1 << 11) - 1, composeCntShift = 11;");
         write("enum compositionJumpTrieEntries = TrieEntry!(ushort, 12, 9)(");
-        triT.store(sink.lockingTextWriter());
+        triT.storeTrie(sink.lockingTextWriter());
         writeln(");");
         writeDstringTable(sink, "compositionTable", dupletes.map!(x => only(x.expand)).joiner.array);
     }
@@ -1428,8 +1428,36 @@ template createPrinter(Params...)
             foreach (lvl; Params[0..$])
                 sink.writef(", %d", lvl);
             sink.write(")(");
-            trie.store(sink.lockingTextWriter());
+            trie.storeTrie(sink.lockingTextWriter());
             sink.writeln(");");
         };
     }
+}
+
+void storeTrie(T, O)(T trie, O sink)
+{
+    import std.format.write : formattedWrite;
+    void store(size_t[] arr)
+    {
+        formattedWrite(sink, "cast(immutable size_t[]) x\"");
+        foreach (i; 0 .. arr.length)
+        {
+            static if (size_t.sizeof == 8)
+            {
+                formattedWrite(sink, (i % 6) == 0 ? "\n" : "");
+                formattedWrite(sink, "%016X", arr[i]);
+            }
+            else
+            {
+                formattedWrite(sink, (i % 12) == 0 ? "\n" : "");
+                formattedWrite(sink, "%08X", arr[i]);
+            }
+        }
+        formattedWrite(sink, "\",\n");
+    }
+    // Access private members
+    auto table = __traits(getMember, trie, "_table");
+    store(__traits(getMember, table, "offsets"));
+    store(__traits(getMember, table, "sz"));
+    store(__traits(getMember, table, "storage"));
 }
