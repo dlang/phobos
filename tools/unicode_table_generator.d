@@ -1034,11 +1034,19 @@ void writeGraphemeTries(File sink)
 }
 
 /// Write a function that returns a dchar[] with data stored in `table`
-void writeDstringTable(T:dchar)(File sink, string name, const T[] table)
+void writeDstringTable(File sink, string name, const dchar[] table)
 {
     sink.writefln("dstring %s() nothrow @nogc pure @safe {\nstatic immutable dchar[%d] t =", name, table.length);
     sink.writeDstring(table);
     sink.writeln(";\nreturn t[];\n}");
+}
+
+/// Write a function that returns a uint[] with data stored in `table`
+void writeUintTable(File sink, string name, const uint[] table)
+{
+    sink.writefln("immutable(uint)[] %s() nothrow @nogc pure @safe {\nstatic immutable uint[] t =", name, );
+    sink.writeUintArray(table);
+    sink.writeln(";\nreturn t;\n}");
 }
 
 void writeCaseCoversion(File sink)
@@ -1063,10 +1071,9 @@ void writeCaseCoversion(File sink)
         writeBest3Level(sink, "toTitleSimpleIndex", toTitleSimpleIndex, ushort.max);
     }
 
-
-    writeDstringTable(sink, "toUpperTable", toUpperTab);
-    writeDstringTable(sink, "toLowerTable", toLowerTab);
-    writeDstringTable(sink, "toTitleTable", toTitleTab);
+    writeUintTable(sink, "toUpperTable", toUpperTab);
+    writeUintTable(sink, "toLowerTable", toLowerTab);
+    writeUintTable(sink, "toTitleTable", toTitleTab);
 }
 
 void writeDecomposition(File sink)
@@ -1124,8 +1131,8 @@ void writeDecomposition(File sink)
     writeBest3Level(sink, "compatMapping", mappingCompat, cast(ushort) 0);
     writeBest3Level(sink, "canonMapping", mappingCanon, cast(ushort) 0);
 
-    writeDstringTable(sink, "decompCanonTable", cast(const(uint)[]) decompCanonFlat);
-    writeDstringTable(sink, "decompCompatTable", cast(const(uint)[]) decompCompatFlat);
+    writeDstringTable(sink, "decompCanonTable", decompCanonFlat);
+    writeDstringTable(sink, "decompCompatTable", decompCompatFlat);
 }
 
 void writeFunctions(File sink)
@@ -1149,6 +1156,21 @@ void writeFunctions(File sink)
         writeln(hangV.toSourceCode("isHangV"));
         writeln(hangT.toSourceCode("isHangT"));
     }
+}
+
+/// Write a `dchar[]` as hex string
+void writeUintArray(T:dchar)(File sink, const T[] tab)
+{
+    size_t lineCount = 1;
+    sink.write("cast(immutable uint[]) x\"");
+    foreach (i, elem; tab)
+    {
+        if ((i % 12) == 0)
+            sink.write("\n");
+
+        sink.writef("%08X", elem);
+    }
+    sink.write("\"");
 }
 
 /// Write a `dchar[]` as a dstring ""d
