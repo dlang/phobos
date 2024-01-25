@@ -898,11 +898,11 @@ void writeCaseFolding(File sink)
 
         writeln("SCE simpleCaseTable(size_t i)");
         writeln("{");
-        writef("static immutable uint[%d] t = [", simpleTable.length);
+        writef("static immutable uint[] t = cast(immutable uint[]) x\"");
         foreach (i, v; simpleTable)
         {
-            if (i % 8 == 0) writeln();
-            writef("0x%08X,", SCE(v.ch, v.n, v.size).x);
+            if (i % 12 == 0) writeln();
+            writef("%08X", SCE(v.ch, v.n, v.size).x);
         }
 
         // Inspect max integer size, so efficient bit packing can be found:
@@ -910,12 +910,12 @@ void writeCaseFolding(File sink)
         stderr.writefln("max ch: %X", simpleTable.maxElement!(x => x.ch).ch); // ch: 17-bit
         stderr.writefln("max size: %X", simpleTable.maxElement!(x => x.size).size); // size: 3-bit
 
-        writeln("];");
+        writeln("\";");
         writeln("return SCE(t[i]);");
         writeln("}");
         writeln("@property FCE fullCaseTable(size_t index) nothrow @nogc @safe pure");
         writeln("{");
-        writef("static immutable ulong[%d] t = [", fullTable.length);
+        writef("static immutable ulong[] t = cast(immutable ulong[]) x\"");
         int[4] maxS = 0;
         foreach (i, v; fullTable)
         {
@@ -927,9 +927,9 @@ void writeCaseFolding(File sink)
                     assert(v.n >= 1); // meaning that start of bucket is always single char
                 }
                 if (i % 6 == 0) writeln();
-                writef("0x%014X,", FCE(v.seq, v.n, v.size, v.entry_len).x);
+                writef("%016X", FCE(v.seq, v.n, v.size, v.entry_len).x);
         }
-        writeln("];");
+        writeln("\";");
         writeln("return FCE(t[index]);");
         writeln("}");
         import core.bitop : bsr;
