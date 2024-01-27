@@ -1232,7 +1232,7 @@ auto fromHexString(T)(T hex) @safe pure nothrow @nogc
 ///
 @safe unittest
 {
-    import std.array: array, staticArray;
+    import std.array : array, staticArray;
     import std;
 
     void testToDigest(T)(const ubyte[] b, const T s) @safe
@@ -1241,8 +1241,8 @@ auto fromHexString(T)(T hex) @safe pure nothrow @nogc
 
         assert(b == s.fromHexString.array,
                 text(s ~ ".fromHexString returned ",
-                    s.fromHexString.array,
-                    ", instead of ", b));
+                s.fromHexString.array,
+                ", instead of ", b));
     }
 
     testToDigest([255], "0xff");
@@ -1265,12 +1265,10 @@ auto fromHexString(T)(T hex) @safe pure nothrow @nogc
     void testToStaticDigest(size_t n, T)(const ubyte[n]b, const T s ) @safe
     {
         import std.conv : text;
-        assert(
-                b == s.fromHexString.staticArray!n,
-                text(
-                    s ~ ".fromHexString returned ",
-                    s.fromHexString.staticArray!n,
-                    ", instead of ", b));
+        assert(b == s.fromHexString.staticArray!n,
+                text(s ~ ".fromHexString returned ",
+                s.fromHexString.staticArray!n,
+                ", instead of ", b));
     }
 
     testToStaticDigest!3([0, 0, 255], "0x0000ff");
@@ -1307,11 +1305,13 @@ private struct ByteRange(T)
 
     this(T hex)
     {
-        if(hex.length > 0){
+        if (hex.length > 0)
+        {
             if (hex[0 .. 2] == "0x")
                 hex= hex[2 .. $];
             length = hex.length / 2 + hex.length % 2;
-            if(length == 0) empty = true;
+            if (length == 0) empty = true;
+
             else if (hex.length % 2 == 1)
             {
                 front = cast(ubyte)(toByte(hex[0]));
@@ -1331,7 +1331,11 @@ private struct ByteRange(T)
 
     void popFront()
     {
-       if(hex.length == 0) {empty = true; return;}
+       if (hex.length == 0)
+       {
+           empty = true;
+           return;
+       }
        front = cast(ubyte)(toByte(hex[0]) << 4 | toByte(hex[1]));
        hex= hex[2 .. $];
     }
