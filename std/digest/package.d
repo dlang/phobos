@@ -1214,100 +1214,75 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
 }
 
 /**
- * Used to convert hex string to byte array
+ * Used to convert hex text to byte range
  * Params:
- *  hex = hex string
- *  num = count of bytes
- * Returns: byte array
+ *  hex = hexdecimal encoded byte array
+ * Returns: byte range
  * Example:
  * ---
- * ubyte[2] sba = "0xAA".fromHexString!2; // returns static array, no allocating
- * ubyte[] dby  = "0xBA".fromHexString;   // returns dynamic array, gc allocating
+ * ubyte[2] sba = "0xAA".fromHexString.staticArray!2;
+ * ubyte[] dby  = "0xBA".fromHexString.array;
  * ---
  */
-auto fromHexString(const string hex) pure nothrow @safe
+auto fromHexString(T)(T hex) @safe pure nothrow @nogc
 {
-    auto digest = new ubyte[hex.length / 2 + hex.length % 2];
-    return fromHexStringImpl(hex, digest);
-}
-
-/// ditto
-auto fromHexString(size_t num)(const string hex) pure nothrow @safe @nogc
-{
-    ubyte[num] digest;
-    fromHexStringImpl(hex, digest);
-    return digest;
+    return ByteRange!T(hex);
 }
 
 ///
 @safe unittest
 {
-    void testToDigest(const ubyte[] b, const string s) @safe
+    import std.array: array, staticArray;
+    import std;
+
+    void testToDigest(T)(const ubyte[] b, const T s) @safe
     {
         import std.conv : text;
 
-        assert(b == s.fromHexString, text(s ~ ".fromHexString returned ", s.fromHexString, ", instead of ", b));
+        assert(b == s.fromHexString.array,
+                text(s ~ ".fromHexString returned ",
+                    s.fromHexString.array,
+                    ", instead of ", b));
     }
 
     testToDigest([255], "0xff");
+    testToDigest([255], "0xff"w);
+    testToDigest([255], "0xff"d);
     testToDigest([], "");
+    testToDigest([], ""w);
+    testToDigest([], ""d);
     testToDigest([], "0x");
+    testToDigest([], "0x"w);
+    testToDigest([], "0x"d);
     testToDigest([0x01], "0x1");
-    testToDigest([255], "0xFf");
-    testToDigest([255], "ff");
+    testToDigest([0x01], "0x1"w);
+    testToDigest([0x01], "0x1"d);
+    testToDigest([0xaf], "0xAf");
+    testToDigest([0xaf], "0xaF");
     testToDigest([0x0f, 0xff], "0xfff");
     testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaAa");
-    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123_AaAa");
-    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123 AaAa");
-    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123            AaAa");
-    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123Aa______AA");
-    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
 
-    void testToStaticDigest(size_t n)(const ubyte[n]b, const string s ) @safe
+    void testToStaticDigest(size_t n, T)(const ubyte[n]b, const T s ) @safe
     {
         import std.conv : text;
-        assert(b == s.fromHexString!n, text(s ~ ".fromHexString returned ", s.fromHexString, ", instead of ", b));
+        assert(
+                b == s.fromHexString.staticArray!n,
+                text(
+                    s ~ ".fromHexString returned ",
+                    s.fromHexString.staticArray!n,
+                    ", instead of ", b));
     }
 
-    testToStaticDigest!3([0, 0, 255], "0xff");
-    testToStaticDigest!3([0, 0, 255], "0x00ff");
-    testToStaticDigest!1([255], "0x12ff");
+    testToStaticDigest!3([0, 0, 255], "0x0000ff");
+    testToStaticDigest!3([0, 0, 255], "0x0000ff"w);
+    testToStaticDigest!3([0, 0, 255], "0x0000ff"d);
+    testToStaticDigest!1([255], "0xff12ff");
     testToStaticDigest!2([0x12, 255], "0x12ff");
-    testToStaticDigest!2([0x12, 255], "0x12__ff");
-    testToStaticDigest!4([0x1, 0x23, 0xaa, 0xaa], "0x123AaGGAA");
+    testToStaticDigest!4([0x3, 0xaa, 0xaa,0x00], "0x3AaAA");
 }
 
-/*
- * Fill in a preallocated byte buffer by values from ASCII hex buffer
- */
-private auto fromHexStringImpl(BB, HB)(
-    scope const ref HB hexBuffer, return scope ref BB byteBuffer) @safe pure nothrow @nogc
-{
-    size_t bi = byteBuffer.length - 1, hi;
-    import std.ascii : isHexDigit;
 
-    size_t start;
-    if (hexBuffer.length >= 2 && hexBuffer[0 .. 2] == "0x")
-        start = 2;
-
-    foreach_reverse (c; hexBuffer[start .. $])
-    {
-        if (!c.isHexDigit)
-            continue;
-        byteBuffer[bi] |= cast(ubyte)(c.toByte << (hi % 2 ? 4 : 0));
-        if (hi % 2)
-        {
-            if (bi == 0)
-                break;
-            bi--;
-        }
-        hi++;
-    }
-    return byteBuffer[bi + !(hi % 2) .. $];
-
-}
-
-private int toByte(char hexDigit) @safe pure nothrow @nogc
+private int toByte(dchar hexDigit) @safe pure nothrow @nogc
 {
     import std.ascii : isDigit, isAlpha, toLower;
 
@@ -1320,4 +1295,44 @@ private int toByte(char hexDigit) @safe pure nothrow @nogc
         return hexDigit.toLower - 'a' + 10;
     }
     assert(0, "Invalid hex digit");
+}
+
+private struct ByteRange(T)
+{
+    T hex;
+
+    size_t length;
+    ubyte front;
+    bool empty;
+
+    this(T hex)
+    {
+        if(hex.length > 0){
+            if (hex[0 .. 2] == "0x")
+                hex= hex[2 .. $];
+            length = hex.length / 2 + hex.length % 2;
+            if(length == 0) empty = true;
+            else if (hex.length % 2 == 1)
+            {
+                front = cast(ubyte)(toByte(hex[0]));
+                hex= hex[1 .. $];
+            }
+            else{
+                front = cast(ubyte)(toByte(hex[0]) << 4 | toByte(hex[1]));
+                hex= hex[2 .. $];
+            }
+            this.hex = hex;
+        }
+        else{
+            empty = true;
+            length = 0;
+        }
+    }
+
+    void popFront()
+    {
+       if(hex.length == 0) {empty = true; return;}
+       front = cast(ubyte)(toByte(hex[0]) << 4 | toByte(hex[1]));
+       hex= hex[2 .. $];
+    }
 }
