@@ -1879,11 +1879,11 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
         offset += n;
         t = t[n..$];
     }
-    return cast(immutable(E)[])array[0 .. offset];
+    return () @trusted { return cast(immutable(E)[])array[0 .. offset]; } ();
 }
 
 ///
-@system pure unittest
+@safe pure unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
 }
