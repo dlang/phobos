@@ -2750,6 +2750,14 @@ public:
         return sock;
     }
 
+    /// Return and relinquish ownership of the underlying socket handle.
+    socket_t release() pure nothrow @nogc
+    {
+        auto sock = this.sock;
+        this.sock = socket_t.init;
+        return sock;
+    }
+
     /**
      * Releases the underlying socket handle from the Socket object. Once it
      * is released, you cannot use the Socket object's methods anymore. This
