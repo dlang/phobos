@@ -10182,9 +10182,17 @@ public:
 private struct OnlyResult(Values...)
 if (Values.length > 1)
 {
+    import std.meta : ApplyRight;
+    import std.traits : isAssignable;
+
     private enum arity = Values.length;
 
     private alias UnqualValues = staticMap!(Unqual, Values);
+
+    private enum canAssignElements = allSatisfy!(
+        ApplyRight!(isAssignable, CommonType!Values),
+        Values
+    );
 
     private this(return scope ref Values values)
     {
@@ -10210,6 +10218,15 @@ if (Values.length > 1)
         return this[0];
     }
 
+    static if (canAssignElements)
+    {
+        void front(CommonType!Values value) @property
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            this[0] = value;
+        }
+    }
+
     void popFront()
     {
         assert(!empty, "Attempting to popFront an empty Only range");
@@ -10220,6 +10237,15 @@ if (Values.length > 1)
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
         return this[$ - 1];
+    }
+
+    static if (canAssignElements)
+    {
+        void back(CommonType!Values value) @property
+        {
+            assert(!empty, "Attempting to assign the back of an empty Only range");
+            this[$ - 1] = value;
+        }
     }
 
     void popBack()
@@ -10249,6 +10275,18 @@ if (Values.length > 1)
             static foreach (i, T; Values)
             case i:
                 return cast(T) values[i];
+    }
+
+    static if (canAssignElements)
+    {
+        void opIndexAssign(CommonType!Values value, size_t idx)
+        {
+            assert(idx < length, "Attempting to assign to an out of bounds index of an Only range");
+            final switch (frontIndex + idx)
+                static foreach (i; 0 .. Values.length)
+                case i:
+                    values[i] = value;
+        }
     }
 
     OnlyResult opSlice()
@@ -10294,15 +10332,33 @@ if (Values.length > 1)
 // Specialize for single-element results
 private struct OnlyResult(T)
 {
+    import std.traits : isAssignable;
+
     @property T front()
     {
         assert(!empty, "Attempting to fetch the front of an empty Only range");
         return fetchFront();
     }
+    static if (isAssignable!T)
+    {
+        @property void front(T value)
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            assignFront(value);
+        }
+    }
     @property T back()
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
         return fetchFront();
+    }
+    static if (isAssignable!T)
+    {
+        @property void back(T value)
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            assignFront(value);
+        }
     }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
@@ -10334,6 +10390,15 @@ private struct OnlyResult(T)
         return fetchFront();
     }
 
+    static if (isAssignable!T)
+    {
+        void opIndexAssign(T value, size_t i)
+        {
+            assert(!_empty && i == 0, "Attempting to assign an out of bounds index of an Only range");
+            assignFront(value);
+        }
+    }
+
     OnlyResult opSlice()
     {
         return this;
@@ -10362,6 +10427,13 @@ private struct OnlyResult(T)
     private @trusted T fetchFront()
     {
         return *cast(T*)&_value;
+    }
+    static if (isAssignable!T)
+    {
+        private @trusted void assignFront(T newValue)
+        {
+            *cast(T*) &_value = newValue;
+        }
     }
 }
 
@@ -10642,6 +10714,32 @@ auto only()()
     immutable S x;
     immutable(S)[] arr;
     auto r1 = arr.chain(x.only, only(x, x));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24382
+@safe unittest
+{
+    auto r1 = only(123);
+    r1.front = 456;
+    r1.back = 456;
+    r1[0] = 456;
+
+    auto r2 = only(123, 456);
+    r2.front = 789;
+    r2.back = 789;
+    r2[0] = 789;
+
+    auto r3 = only(1.23, 456);
+    // Can't assign double to int
+    static assert(!__traits(compiles, r3.front = 7.89));
+    static assert(!__traits(compiles, r3.back = 7.89));
+    // Workaround https://issues.dlang.org/show_bug.cgi?id=24383
+    static assert(!__traits(compiles, () { r3[0] = 7.89; }));
+    // Can't assign type other than element type (even if compatible)
+    static assert(!__traits(compiles, r3.front = 789));
+    static assert(!__traits(compiles, r3.back = 789));
+    // Workaround https://issues.dlang.org/show_bug.cgi?id=24383
+    static assert(!__traits(compiles, () { r3[0] = 789; }));
 }
 
 /**
