@@ -7585,7 +7585,7 @@ enum bool isSomeFunction(alias T) =
 
 /**
 Detect whether `T` is a callable object, which can be called with the
-function call operator `$(LPAREN)...$(RPAREN)`.
+function call operator $(PRE $(LPAREN)...$(RPAREN)).
  */
 template isCallable(alias callable)
 {
