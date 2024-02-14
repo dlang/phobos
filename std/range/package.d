@@ -2427,7 +2427,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         }
     }
 
-    return Result(rs, 0);
+    size_t firstNonEmpty = size_t.max;
+    static foreach (i; 0 .. Rs.length)
+    {
+        if (firstNonEmpty == size_t.max && !rs[i].empty)
+            firstNonEmpty = i;
+    }
+
+    return Result(rs, firstNonEmpty);
 }
 
 ///
@@ -2487,6 +2494,14 @@ pure @safe nothrow unittest
     S[] b = [ S(10), S(20) ];
     auto r = roundRobin(a, b);
     assert(equal(r, [ S(1), S(10), S(2), S(20) ]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24384
+@safe unittest
+{
+    auto r = roundRobin("", "a");
+    assert(!r.empty);
+    auto e = r.front;
 }
 
 /**
