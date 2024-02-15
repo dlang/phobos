@@ -10455,6 +10455,9 @@ Params:
 Returns:
     A `RandomAccessRange` of the assembled values.
 
+    The returned range can be sliced. Its elements can be assigned to if every
+    type in `Values` supports assignment from the range's element type.
+
 See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(return scope Values values)
