@@ -81,6 +81,12 @@ endif
 # default to compiling the C parts (zlib) with DMD via importC; override with USE_IMPORTC=1/0
 USE_IMPORTC:=1
 
+# FreeBSD 14 can't use importC for zlib thanks to asm in stdlib.h, which dmd can't handle.
+# https://issues.dlang.org/show_bug.cgi?id=24389
+ifeq (freebsd,$(OS))
+	USE_IMPORTC=0
+endif
+
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
 DRUNTIME_PATH = $(DMD_DIR)/druntime
