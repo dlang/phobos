@@ -3595,53 +3595,69 @@ struct Nullable(T)
     }
 
     /// $(MREF_ALTTEXT Range interface, std, range, primitives) functions.
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     alias empty = isNull;
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     alias popFront = nullify;
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     alias popBack = nullify;
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     @property ref inout(T) front() inout @safe pure nothrow
     {
         return get();
     }
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     alias back = front;
 
     /// ditto
     static if (isCopyable!T)
-    @property inout(typeof(this)) save() inout
     {
-        return this;
+        deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
+        @property inout(typeof(this)) save() inout
+        {
+            return this;
+        }
     }
 
     /// ditto
     static if (isCopyable!T)
-    inout(typeof(this)) opIndex(size_t[2] dim) inout
-    in (dim[0] <= length && dim[1] <= length && dim[1] >= dim[0])
     {
-        return (dim[0] == 0 && dim[1] == 1) ? this : this.init;
+        deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
+        inout(typeof(this)) opIndex(size_t[2] dim) inout
+        in (dim[0] <= length && dim[1] <= length && dim[1] >= dim[0])
+        {
+            return (dim[0] == 0 && dim[1] == 1) ? this : this.init;
+        }
     }
+
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     size_t[2] opSlice(size_t dim : 0)(size_t from, size_t to) const
     {
         return [from, to];
     }
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     @property size_t length() const @safe pure nothrow
     {
         return !empty;
     }
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     alias opDollar(size_t dim : 0) = length;
 
     /// ditto
+    deprecated("If you want to use Nullable as a range, then use [] on it to get a range.")
     ref inout(T) opIndex(size_t index) inout @safe pure nothrow
     in (index < length)
     {
