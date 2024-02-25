@@ -3787,7 +3787,7 @@ auto nullable(T)(T t)
 ///
 @safe unittest
 {
-    import std.algorithm.iteration : each, joiner;
+    import std.algorithm.iteration : each, joiner, map;
     Nullable!int a = 42;
     Nullable!int b;
     // Add each value to an array
@@ -3799,7 +3799,7 @@ auto nullable(T)(T t)
     // Take first value from an array of Nullables
     Nullable!int[] c = new Nullable!int[](10);
     c[7] = Nullable!int(42);
-    assert(c.joiner.front == 42);
+    assert(c.map!(a => a[]).joiner.front == 42);
 }
 @safe unittest
 {
@@ -4271,42 +4271,6 @@ auto nullable(T)(T t)
     Nullable!int a, b, c;
     a = b = c = 5;
     a = b = c = nullable(5);
-}
-
-// https://issues.dlang.org/show_bug.cgi?id=18374
-@safe pure nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.range : only, takeNone;
-    import std.range.primitives : hasAssignableElements, hasLength,
-        hasLvalueElements, hasSlicing, hasSwappableElements,
-        isRandomAccessRange;
-    Nullable!int a = 42;
-    assert(!a.empty);
-    assert(a.front == 42);
-    assert(a.back == 42);
-    assert(a[0] == 42);
-    assert(a.equal(only(42)));
-    assert(a[0 .. $].equal(only(42)));
-    a[0] = 43;
-    assert(a.equal(only(43)));
-    --a[0];
-    assert(a.equal(only(42)));
-    Nullable!int b;
-    assert(b.empty);
-    assert(b.equal(takeNone(b)));
-    Nullable!int c = a.save();
-    assert(!c.empty);
-    c.popFront();
-    assert(!a.empty);
-    assert(c.empty);
-
-    assert(isRandomAccessRange!(Nullable!int));
-    assert(hasLength!(Nullable!int));
-    assert(hasSlicing!(Nullable!int));
-    assert(hasAssignableElements!(Nullable!int));
-    assert(hasSwappableElements!(Nullable!int));
-    assert(hasLvalueElements!(Nullable!int));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=23640

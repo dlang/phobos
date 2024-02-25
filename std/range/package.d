@@ -1691,7 +1691,7 @@ pure @safe nothrow unittest
 
     immutable Nullable!string foo = "b";
     string[] bar = ["a"];
-    assert(chain(bar, foo).equal(["a", "b"]));
+    assert(chain(bar, foo[]).equal(["a", "b"]));
 }
 
 pure @safe nothrow @nogc unittest
