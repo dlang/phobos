@@ -10375,6 +10375,14 @@ private struct OnlyResult(T)
     }
     alias opDollar = length;
 
+    // FIXME Workaround for https://issues.dlang.org/show_bug.cgi?id=24415
+    import std.traits : hasElaborateCopyConstructor;
+    static if (hasElaborateCopyConstructor!T)
+    {
+        private static struct WorkaroundBugzilla24415 {}
+        public this()(WorkaroundBugzilla24415) {}
+    }
+
     private this()(return scope auto ref T value)
     {
         ref @trusted unqual(ref T x){return cast() x;}
