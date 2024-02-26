@@ -10304,6 +10304,17 @@ private struct OnlyResult(T)
     }
     alias opDollar = length;
 
+    // FIXME Workaround for https://issues.dlang.org/show_bug.cgi?id=24415
+    import std.traits : hasElaborateCopyConstructor;
+    static if (hasElaborateCopyConstructor!T)
+    {
+        public this()(ref return scope inout(OnlyResult) src) inout
+        {
+            foreach (i, ref inout field; src.tupleof)
+                this.tupleof[i] = field;
+        }
+    }
+
     private this()(return scope auto ref T value)
     {
         ref @trusted unqual(ref T x){return cast() x;}
