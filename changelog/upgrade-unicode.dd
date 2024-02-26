@@ -15,3 +15,6 @@ void main()
     // 622 new dchars return true for `isAlpha`
 }
 ```
+
+The internal unicode tables (std/internal/unicode_tables.d) have also been changed to use hex strings instead of array literals, which makes them faster to import.
+The exact speed up depends on your computer and D compiler, but it likely cuts between 30 and 100 milliseconds if you compile something which imports `std.string` or `std.uni`.
