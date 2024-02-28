@@ -2,8 +2,19 @@ name "phobos"
 license "BSL-1.0"
 description "D Standard Library"
 authors "DLang Community"
-copyright "Copyright © 1999-2018, The D Language Foundation"
+copyright "Copyright © 1999-2024, The D Language Foundation"
 
-targetType "library"
-sourcePaths "std" "etc"
-targetPath "generated"
+configuration "library" {
+    targetType "staticLibrary"
+    sourcePaths "lib"
+    targetPath "generated-lib"
+    #excludedSourceFiles "unittest.d" "test/**" "std/**" "tools/**" "etc/**"
+}
+
+configuration "unittest" {
+    dflags "-main"
+    targetType "executable"
+    sourcePaths "lib"
+    targetPath "generated-lib"
+    #excludedSourceFiles "unittest.d" "test/**" "std/**" "tools/**" "etc/**"
+}
