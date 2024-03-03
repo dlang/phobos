@@ -1882,7 +1882,7 @@ private struct ChooseResult(Ranges...)
     this(this)
     {
         actOnChosen!((ref r) {
-                static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
+                static if (hasElaborateCopyConstructor!(typeof(r))) r.__xpostblit();
             })(this);
     }
 
@@ -2175,6 +2175,29 @@ pure @safe nothrow unittest
 
     auto chosen2 = choose(false, a, b);
     assert(chosen2.front.v == 4);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15708
+@safe unittest
+{
+    static struct HasPostblit
+    {
+        this(this) {}
+    }
+
+    static struct Range
+    {
+        bool empty;
+        int front;
+        void popFront() {}
+        HasPostblit member;
+    }
+
+    Range range;
+    int[] arr;
+
+    auto chosen = choose(true, range, arr);
+    auto copy = chosen;
 }
 
 /**
