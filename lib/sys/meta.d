@@ -20,6 +20,9 @@
              $(LREF Alias)
              $(LREF AliasSeq)
     ))
+    $(TR $(TD Alias sequence transformation) $(TD
+              $(LREF Map)
+    ))
     )
 
    References:
@@ -146,4 +149,65 @@ alias Alias(T) = T;
         ++a;
         assert(i == 7);
     }
+}
+
+/++
+    Map takes a template predicate and applies it to every element in the given
+    $(D AliasSeq), resulting in an $(D AliasSeq) with the transformed elements.
+
+    So, it's equivalent to
+    `AliasSeq!(fun!(args[0]), fun!(args[1]), ..., fun!(args[$ - 1]))`.
+ +/
+template Map(alias fun, args...)
+{
+    alias Map = AliasSeq!();
+    static foreach (arg; args)
+        Map = AliasSeq!(Map, fun!arg);
+}
+
+///
+@safe unittest
+{
+    import lib.sys.traits : Unqual;
+
+    // empty
+    alias Empty = Map!Unqual;
+    static assert(Empty.length == 0);
+
+    // single
+    alias Single = Map!(Unqual, const int);
+    static assert(is(Single == AliasSeq!int));
+
+    // several
+    alias Several = Map!(Unqual, int, const int, immutable int, uint,
+                         ubyte, byte, short, ushort, const long);
+    static assert(is(Several == AliasSeq!(int, int, int, uint,
+                                          ubyte, byte, short, ushort, long)));
+
+    alias ToDynamicArray(T) = T[];
+
+    alias Arrays = Map!(ToDynamicArray, int, const ubyte, string);
+    static assert(is(Arrays == AliasSeq!(int[], const(ubyte)[], string[])));
+}
+
+// @@@ BUG @@@ The test below exposes failure of the straightforward use.
+// See @adamdruppe's comment to https://github.com/dlang/phobos/pull/8039
+@safe unittest
+{
+    template id(alias what)
+    {
+        enum id = __traits(identifier, what);
+    }
+
+    enum A { a }
+    static assert(Map!(id, A.a) == AliasSeq!"a");
+}
+
+// regression test for https://issues.dlang.org/show_bug.cgi?id=21088
+@system unittest // typeid opEquals is @system
+{
+    enum getTypeId(T) = typeid(T);
+    alias A = Map!(getTypeId, int);
+
+    assert(A == typeid(int));
 }
