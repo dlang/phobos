@@ -2,19 +2,19 @@
 /++
     Templates which extract information about types and symbols at compile time.
 
-    In the context of lib.sys.traits, a "trait" is a template which evaluates to
+    In the context of lib.sys.traits, a "trait" is a template which provides
+    information about a type or symbol. Most traits evaluate to
     $(D true) or $(D false), telling the code using it whether the given
     arguments match / have that specific trait (e.g. whether the given type is
-    a dynamic array or whether the given function is $(D @safe)). These traits
-    are then used primarily in template constraints so that they can test that
-    the template arguments meet the criteria required by those templates, though
-    they can be useful in a variety of compile-time contexts
-    (e.g. the condition of a $(D static if)).
+    a dynamic array or whether the given function is $(D @safe)). However, some
+    traits may provide other kinds of information about a type (e.g. the trait
+    could evaluate to the base type for an enum type, or it could strip
+    $(D const) from the type to provide the mutable version of that type).
 
-    So, the symbols provided in this module are largely either traits or
-    templates designed to be used with traits (e.g. $(LREF Unconst) can be used
-    in a template constraint to get the mutable version of that type so that
-    the traits used then test the type without worrying about constness).
+    These traits are then used primarily in template constraints so that they
+    can test that the template arguments meet the criteria required by those
+    templates, though they can be useful in a variety of compile-time contexts
+    (e.g. the condition of a $(D static if)).
 
     $(SCRIPT inhibitQuickIndex = 1;)
 

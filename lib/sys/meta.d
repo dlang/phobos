@@ -12,6 +12,39 @@
     For more information, see
     $(DDLINK ctarguments, Compile-time Sequences, Compile-time Sequences).
 
+    One thing that should be noted is that while the templates provided in this
+    module can be extremely useful, they generally should not be used with lists
+    of values. The language uses alias sequences for a variety of things
+    (including both parameter lists and argument lists), so they can contain
+    types, symbols, values, or a mixture of them all. The ability to manipulate
+    types and symbols within alias sequences is vital, because that's really
+    the only way to do it. However, because D has CTFE (Compile-Time Function
+    Evaluation), making it possible to call many functions at compile time, if
+    code needs to be able to manipulate values at compile-time, CTFE is
+    typically much more efficient and easier to do. Instantiating a bunch of
+    templates to manipulate values is incredibly inefficient in comparison.
+
+    So, while many of the templates in this module will work with values simply
+    because alias sequences can contain values, most code should restrict
+    itself to using them for operating on types or symbols - i.e. the stuff
+    where CTFE can't be used. That being said, there will be times when one can
+    be used to feed into the other. E.G.
+    ---
+    alias Types = AliasSeq!(int, byte, ulong, int[10]);
+
+    enum Sizeof(T) = T.sizeof;
+
+    alias sizesAsAliasSeq = Map!(Sizeof, Types);
+    static assert(sizesAsAliasSeq == AliasSeq!(4, 1, 8, 40));
+
+    enum size_t[] sizes = [sizesAsAliasSeq];
+    static assert(sizes == [4, 1, 8, 40]);
+    ---
+
+    Just be aware that if CTFE can be used for a particular task, it's better to
+    use CTFE than to manipulate alias sequences with the kind of templates
+    provided by this module.
+
     $(SCRIPT inhibitQuickIndex = 1;)
     $(DIVC quickindex,
     $(BOOKTABLE ,
@@ -39,6 +72,20 @@
     Source:    $(PHOBOSSRC lib/sys/meta)
 +/
 module lib.sys.meta;
+
+// Example for converting types to values from module documentation.
+@safe unittest
+{
+    alias Types = AliasSeq!(int, byte, ulong, int[10]);
+
+    enum Sizeof(T) = T.sizeof;
+
+    alias sizesAsAliasSeq = Map!(Sizeof, Types);
+    static assert(sizesAsAliasSeq == AliasSeq!(4, 1, 8, 40));
+
+    enum size_t[] sizes = [sizesAsAliasSeq];
+    static assert(sizes == [4, 1, 8, 40]);
+}
 
 /++
    Creates a sequence of zero or more aliases. This is most commonly
@@ -103,7 +150,7 @@ alias Alias(T) = T;
 @safe unittest
 {
     // Without Alias this would fail if Args[0] were e.g. a value and
-    // some logic would be needed to detect when to use enum instead
+    // some logic would be needed to detect when to use enum instead.
     alias Head(Args...) = Alias!(Args[0]);
     alias Tail(Args...) = Args[1 .. $];
 
@@ -140,7 +187,7 @@ alias Alias(T) = T;
     }
     {
         alias A = Alias!(AliasSeq!int);
-        static assert(!is(typeof(A[0]))); //not an AliasSeq
+        static assert(!is(typeof(A[0]))); // An Alias is not an AliasSeq.
         static assert(is(A == int));
     }
     {
