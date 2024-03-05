@@ -25,6 +25,12 @@
               $(LREF Unshared)
               $(LREF Unqual)
     ))
+    $(TR $(TD Type Constructors) $(TD
+             $(LREF ConstOf)
+             $(LREF ImmutableOf)
+             $(LREF InoutOf)
+             $(LREF SharedOf)
+    ))
     )
 
     Copyright: Copyright The D Language Foundation 2005 - 2024.
@@ -327,4 +333,165 @@ else
     static assert(is(Unqual!(const(Foo!(const int))) == Foo!(const int)));
     static assert(is(Unqual!(Foo!(const int)) == Foo!(const int)));
     static assert(is(Unqual!(const(Foo!int)) == Foo!int));
+}
+
+/++
+    Applies $(D const) to the given type.
+
+    This is primarily useful in conjunction with templates that take a template
+    predicate (such as many of the templates in lib.sys.meta), since while in
+    most cases, you can simply do $(D const T) or $(D const(T)) to make $(D T)
+    $(D const), with something like $(REF Map, lib, sys, meta), you need to
+    pass a template to be applied.
+
+    See_Also:
+        $(LREF ImmutableOf)
+        $(LREF InoutOf)
+        $(LREF SharedOf)
+  +/
+alias ConstOf(T) = const T;
+
+///
+@safe unittest
+{
+    static assert(is(ConstOf!int == const int));
+    static assert(is(ConstOf!(const int) == const int));
+    static assert(is(ConstOf!(inout int) == inout const int));
+    static assert(is(ConstOf!(shared int) == const shared int));
+
+    // Note that const has no effect on immutable.
+    static assert(is(ConstOf!(immutable int) == immutable int));
+
+    import lib.sys.meta : AliasSeq, Map;
+
+    alias Types = AliasSeq!(int, long,
+                            bool*, ubyte[],
+                            string, immutable(string));
+    alias WithConst = Map!(ConstOf, Types);
+    static assert(is(WithConst ==
+                     AliasSeq!(const int, const long,
+                               const(bool*), const(ubyte[]),
+                               const(string), immutable(string))));
+}
+
+/++
+    Applies $(D immutable) to the given type.
+
+    This is primarily useful in conjunction with templates that take a template
+    predicate (such as many of the templates in lib.sys.meta), since while in
+    most cases, you can simply do $(D immutable T) or $(D immutable(T)) to make
+    $(D T) $(D immutable), with something like $(REF Map, lib, sys, meta), you
+    need to pass a template to be applied.
+
+    See_Also:
+        $(LREF ConstOf)
+        $(LREF InoutOf)
+        $(LREF SharedOf)
+  +/
+alias ImmutableOf(T) = immutable T;
+
+///
+@safe unittest
+{
+    static assert(is(ImmutableOf!int == immutable int));
+
+    // Note that immutable overrides const and inout.
+    static assert(is(ImmutableOf!(const int) == immutable int));
+    static assert(is(ImmutableOf!(inout int) == immutable int));
+
+    // Note that immutable overrides shared, since immutable is implicitly
+    // shared.
+    static assert(is(ImmutableOf!(shared int) == immutable int));
+
+    static assert(is(ImmutableOf!(immutable int) == immutable int));
+
+    import lib.sys.meta : AliasSeq, Map;
+
+    alias Types = AliasSeq!(int, long,
+                            bool*, ubyte[],
+                            string, immutable(string));
+    alias WithImmutable = Map!(ImmutableOf, Types);
+    static assert(is(WithImmutable ==
+                     AliasSeq!(immutable int, immutable long,
+                               immutable(bool*), immutable(ubyte[]),
+                               immutable(string), immutable(string))));
+}
+
+/++
+    Applies $(D inout) to the given type.
+
+    This is primarily useful in conjunction with templates that take a template
+    predicate (such as many of the templates in lib.sys.meta), since while in
+    most cases, you can simply do $(D inout T) or $(D inout(T)) to make $(D T)
+    $(D inout), with something like $(REF Map, lib, sys, meta), you need to
+    pass a template to be applied.
+
+    See_Also:
+        $(LREF ConstOf)
+        $(LREF ImmutableOf)
+        $(LREF SharedOf)
+  +/
+alias InoutOf(T) = inout T;
+
+///
+@safe unittest
+{
+    static assert(is(InoutOf!int == inout int));
+    static assert(is(InoutOf!(const int) == inout const int));
+    static assert(is(InoutOf!(inout int) == inout int));
+    static assert(is(InoutOf!(shared int) == inout shared int));
+
+    // Note that inout has no effect on immutable.
+    static assert(is(InoutOf!(immutable int) == immutable int));
+
+    import lib.sys.meta : AliasSeq, Map;
+
+    alias Types = AliasSeq!(int, long,
+                            bool*, ubyte[],
+                            string, immutable(string));
+    alias WithInout = Map!(InoutOf, Types);
+    static assert(is(WithInout ==
+                     AliasSeq!(inout int, inout long,
+                               inout(bool*), inout(ubyte[]),
+                               inout(string), immutable(string))));
+}
+
+/++
+    Applies $(D shared) to the given type.
+
+    This is primarily useful in conjunction with templates that take a template
+    predicate (such as many of the templates in lib.sys.meta), since while in
+    most cases, you can simply do $(D shared T) or $(D shared(T)) to make $(D T)
+    $(D shared), with something like $(REF Map, lib, sys, meta), you need to
+    pass a template to be applied.
+
+    See_Also:
+        $(LREF ConstOf)
+        $(LREF ImmutableOf)
+        $(LREF InoutOf)
+  +/
+alias SharedOf(T) = shared T;
+
+///
+@safe unittest
+{
+    static assert(is(SharedOf!int == shared int));
+    static assert(is(SharedOf!(const int) == const shared int));
+    static assert(is(SharedOf!(inout int) == inout shared int));
+    static assert(is(SharedOf!(shared int) == shared int));
+
+    // Note that shared has no effect on immutable, since immutable is
+    // implicitly shared.
+    static assert(is(SharedOf!(immutable int) == immutable int));
+
+    import lib.sys.meta : AliasSeq, Map;
+
+    alias Types = AliasSeq!(int, long,
+                            bool*, ubyte[],
+                            string, immutable(string));
+    alias WithShared = Map!(SharedOf, Types);
+    static assert(is(WithShared ==
+                     AliasSeq!(shared int, shared long,
+                               shared(bool*), shared(ubyte[]),
+                               shared(string), immutable(string))));
 }
