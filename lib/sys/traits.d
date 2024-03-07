@@ -16,6 +16,36 @@
     templates, though they can be useful in a variety of compile-time contexts
     (e.g. the condition of a $(D static if)).
 
+    Note that unless otherwise specified, the isXXXX and hasXXX traits in this
+    module are checking for exact matches, so base types (e.g. with enums) and
+    other implicit conversions do not factor into whether such traits are true
+    or false. The type itself is being checked, not what it can be converted
+    to.
+
+    This is because these traits are often used in templated constraints, and
+    having a type pass a template constraint based on an implicit conversion
+    but then not have the implicit conversion actually take place (which it
+    won't unless the template does something to force it internally) can lead
+    to either compilation errors or subtle behavioral differences - and even
+    when the conversion is done explicitly within a templated function, since
+    it's not done at the call site, it can still lead to subtle bugs in some
+    cases (e.g. if slicing a static array is involved).
+
+    So, it's typically best to be explicit and clear about a template constraint
+    accepting any kind of implicit conversion rather than having it buried in a
+    trait where programmers stand a good chance of using the trait without
+    realizing that enums might pass based on their base type - or that a type
+    might pass based on some other implicit conversion.
+
+    Regardless of what a trait is testing for, the documentation strives to be
+    $(I very) clear about what the trait does, and of course, the names do try
+    to make it clear as well - though obviously, only so much information can
+    be put into a name, and some folks will misintrepret some symbols no matter
+    how well they're named. So, please be sure that you clearly understand what
+    these traits do when using them, since messing up template constraints can
+    unfortunately be a great way to introduce subtle bugs into your program.
+    Either way, of course, unit tests are your friends.
+
     $(SCRIPT inhibitQuickIndex = 1;)
 
     $(BOOKTABLE ,
@@ -47,6 +77,219 @@
     Source:    $(PHOBOSSRC lib/sys/traits)
 +/
 module lib.sys.traits;
+
+/++
+    Whether type $(D T) is a dynamic array.
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a dynamic array.
+  +/
+enum isDynamicArray(T) = is(T == U[], U);
+
+///
+@safe unittest
+{
+    static assert( isDynamicArray!(int[]));
+    static assert( isDynamicArray!(const int[]));
+    static assert( isDynamicArray!(inout int[]));
+    static assert( isDynamicArray!(shared(int)[]));
+    static assert( isDynamicArray!string);
+
+    static struct S
+    {
+        int[] arr;
+    }
+
+    static assert(!isDynamicArray!int);
+    static assert(!isDynamicArray!(int*));
+    static assert(!isDynamicArray!real);
+    static assert(!isDynamicArray!S);
+
+    // Static arrays.
+    static assert(!isDynamicArray!(int[5]));
+    static assert(!isDynamicArray!(const(int)[5]));
+
+    // Dynamic array of static arrays.
+    static assert( isDynamicArray!(long[3][]));
+
+    // Static array of dynamic arrays.
+    static assert(!isDynamicArray!(long[][3]));
+
+    // Associative array.
+    static assert(!isDynamicArray!(int[string]));
+
+    // While typeof(null) gets treated as void[] in some contexts, it is
+    // distinct from void[] and is not considered to be a dynamic array.
+    static assert(!isDynamicArray!(typeof(null)));
+
+    // However, naturally, if null is cast to a dynamic array, it's a
+    // dynamic array, since the cast forces the type.
+    static assert( isDynamicArray!(typeof(cast(int[]) null)));
+
+    enum E : int[]
+    {
+        a = [1, 2, 3],
+    }
+
+    // Enums do not count.
+    static assert(!isDynamicArray!E);
+
+    static struct AliasThis
+    {
+        int[] arr;
+        alias this = arr;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isDynamicArray!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isDynamicArray!(Q!T));
+            static assert(!isDynamicArray!E);
+            static assert(!isDynamicArray!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(int[51], int[][2],
+                              char[][int][11], immutable char[13u],
+                              const(real)[1], const(real)[1][1], void[0]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isDynamicArray!(Q!T));
+            static assert(!isDynamicArray!E);
+            static assert(!isDynamicArray!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether type $(D T) is a static array.
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a static array. This is in contrast to
+    $(D __traits(isStaticArray, T)) which is true for enums (but not for other
+    implict conversions to static arrays).
+
+    As explained in the module documentation, traits like this one are not true
+    for enums (unlike most of the $(D __traits) traits) in order to avoid
+    testing for implicit conversions by default with template constraints,
+    since that tends to lead to subtle bugs when the code isn't carefully
+    written to take implicit conversions into account.
+
+    See also:
+        $(DDSUBLINK spec/traits, isStaticArray, $(D __traits(isStaticArray, T)))
+  +/
+enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
+
+///
+@safe unittest
+{
+    static assert( isStaticArray!(int[12]));
+    static assert( isStaticArray!(const int[42]));
+    static assert( isStaticArray!(inout int[0]));
+    static assert( isStaticArray!(shared(int)[907]));
+    static assert( isStaticArray!(immutable(char)[5]));
+
+    static struct S
+    {
+        int[4] arr;
+    }
+
+    static assert(!isStaticArray!int);
+    static assert(!isStaticArray!(int*));
+    static assert(!isStaticArray!real);
+    static assert(!isStaticArray!S);
+
+    // Dynamic arrays.
+    static assert(!isStaticArray!(int[]));
+    static assert(!isStaticArray!(const(int)[]));
+    static assert(!isStaticArray!string);
+
+    // Static array of dynamic arrays.
+    static assert( isStaticArray!(long[][3]));
+
+    // Dynamic array of static arrays.
+    static assert(!isStaticArray!(long[3][]));
+
+    // Associative array.
+    static assert(!isStaticArray!(int[string]));
+
+    // Of course, null is not considered to be a static array.
+    static assert(!isStaticArray!(typeof(null)));
+
+    enum E : int[3]
+    {
+        a = [1, 2, 3],
+    }
+
+    // Enums do not count.
+    static assert(!isStaticArray!E);
+
+    // This is the one place where isStaticArray differs from
+    // __traits(isStaticArray, ...)
+    static assert( __traits(isStaticArray, E));
+
+    static struct AliasThis
+    {
+        int[] arr;
+        alias this = arr;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isStaticArray!AliasThis);
+
+    static assert(!__traits(isStaticArray, AliasThis));
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(int[51], int[][2],
+                              char[][int][11], immutable char[13u],
+                              const(real)[1], const(real)[1][1], void[0]))
+        {
+            enum E : Q!T { a = Q!T.init, }
+
+            static assert( isStaticArray!(Q!T));
+            static assert(!isStaticArray!E);
+            static assert(!isStaticArray!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
+        {
+            enum E : Q!T { a = Q!T.init, }
+
+            static assert(!isStaticArray!(Q!T));
+            static assert(!isStaticArray!E);
+            static assert(!isStaticArray!(AliasThis!(Q!T)));
+        }
+    }
+}
 
 /++
     Removes the outer layer of $(D const), $(D inout), or $(D immutable)
