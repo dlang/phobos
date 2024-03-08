@@ -50,6 +50,13 @@
 
     $(BOOKTABLE ,
     $(TR $(TH Category) $(TH Templates))
+    $(TR $(TD Categories of types) $(TD
+    $(TR $(TD Traits for removing type qualfiers) $(TD
+              $(LREF isDynamicArray)
+              $(LREF isSomeChar)
+              $(LREF isSomeString)
+              $(LREF isStaticArray)
+    ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
               $(LREF Unshared)
@@ -89,25 +96,40 @@ enum isDynamicArray(T) = is(T == U[], U);
 ///
 @safe unittest
 {
+    // Some types which are dynamic arrays.
     static assert( isDynamicArray!(int[]));
     static assert( isDynamicArray!(const int[]));
     static assert( isDynamicArray!(inout int[]));
     static assert( isDynamicArray!(shared(int)[]));
     static assert( isDynamicArray!string);
 
+    static assert( isDynamicArray!(typeof([1, 2, 3])));
+    static assert( isDynamicArray!(typeof("dlang")));
+
+    int[] arr;
+    static assert( isDynamicArray!(typeof(arr)));
+
+    // Some types which aren't dynamic arrays.
+    static assert(!isDynamicArray!int);
+    static assert(!isDynamicArray!(int*));
+    static assert(!isDynamicArray!real);
+
     static struct S
     {
         int[] arr;
     }
-
-    static assert(!isDynamicArray!int);
-    static assert(!isDynamicArray!(int*));
-    static assert(!isDynamicArray!real);
     static assert(!isDynamicArray!S);
+
+    // The struct itself isn't considered a dynamic array,
+    // but its member variable is when checked directly.
+    static assert( isDynamicArray!(typeof(S.arr)));
 
     // Static arrays.
     static assert(!isDynamicArray!(int[5]));
     static assert(!isDynamicArray!(const(int)[5]));
+
+    int[2] sArr = [42, 97];
+    static assert(!isDynamicArray!(typeof(sArr)));
 
     // Dynamic array of static arrays.
     static assert( isDynamicArray!(long[3][]));
@@ -165,7 +187,7 @@ enum isDynamicArray(T) = is(T == U[], U);
             static assert(!isDynamicArray!(AliasThis!(Q!T)));
         }
 
-        foreach (T; AliasSeq!(int[51], int[][2],
+        foreach (T; AliasSeq!(int, int[51], int[][2],
                               char[][int][11], immutable char[13u],
                               const(real)[1], const(real)[1][1], void[0]))
         {
@@ -200,26 +222,43 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
 ///
 @safe unittest
 {
+    // Some types which are static arrays.
     static assert( isStaticArray!(int[12]));
     static assert( isStaticArray!(const int[42]));
     static assert( isStaticArray!(inout int[0]));
     static assert( isStaticArray!(shared(int)[907]));
     static assert( isStaticArray!(immutable(char)[5]));
 
+    // D doesn't have static array literals, but you get the same effect
+    // by casting a dynamic array literal to a static array, and of course,
+    // the result is typed as a static array.
+    static assert( isStaticArray!(typeof(cast(int[3]) [1, 2, 3])));
+
+    int[2] sArr = [1, 2];
+    static assert( isStaticArray!(typeof(sArr)));
+
+    // Some types which are not static arrays.
+    static assert(!isStaticArray!int);
+    static assert(!isStaticArray!(int*));
+    static assert(!isStaticArray!real);
+
     static struct S
     {
         int[4] arr;
     }
-
-    static assert(!isStaticArray!int);
-    static assert(!isStaticArray!(int*));
-    static assert(!isStaticArray!real);
     static assert(!isStaticArray!S);
+
+    // The struct itself isn't considered a static array,
+    // but its member variable is when checked directly.
+    static assert( isStaticArray!(typeof(S.arr)));
 
     // Dynamic arrays.
     static assert(!isStaticArray!(int[]));
     static assert(!isStaticArray!(const(int)[]));
     static assert(!isStaticArray!string);
+
+    int[] arr;
+    static assert(!isStaticArray!(typeof(arr)));
 
     // Static array of dynamic arrays.
     static assert( isStaticArray!(long[][3]));
@@ -241,8 +280,7 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
     // Enums do not count.
     static assert(!isStaticArray!E);
 
-    // This is the one place where isStaticArray differs from
-    // __traits(isStaticArray, ...)
+    // This is where isStaticArray differs from __traits(isStaticArray, ...)
     static assert( __traits(isStaticArray, E));
 
     static struct AliasThis
@@ -280,13 +318,223 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
             static assert(!isStaticArray!(AliasThis!(Q!T)));
         }
 
-        foreach (T; AliasSeq!(int[], char[], string, long[3][], double[string][]))
+        foreach (T; AliasSeq!(int, int[], char[], string, long[3][], double[string][]))
         {
             enum E : Q!T { a = Q!T.init, }
 
             static assert(!isStaticArray!(Q!T));
             static assert(!isStaticArray!E);
             static assert(!isStaticArray!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is a built-in string type - i.e whether it's a
+    dynamic array of $(D char), $(D wchar), or $(D dchar), ignoring all
+    qualifiers.
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a dynamic array whose element type is one of the three
+    built-in character types.
+  +/
+enum bool isSomeString(T) = is(immutable T == immutable C[], C) && (is(C == char) || is(C == wchar) || is(C == dchar));
+
+///
+@safe unittest
+{
+    // Some types which are string types.
+    static assert( isSomeString!string);
+    static assert( isSomeString!wstring);
+    static assert( isSomeString!dstring);
+    static assert( isSomeString!(char[]));
+    static assert( isSomeString!(wchar[]));
+    static assert( isSomeString!(dchar[]));
+    static assert( isSomeString!(const char[]));
+    static assert( isSomeString!(immutable char[]));
+    static assert( isSomeString!(inout wchar[]));
+    static assert( isSomeString!(shared wchar[]));
+    static assert( isSomeString!(const shared dchar[]));
+
+    static assert( isSomeString!(typeof("aaa")));
+    static assert( isSomeString!(typeof("aaa"w)));
+    static assert( isSomeString!(typeof("aaa"d)));
+
+    string s;
+    static assert( isSomeString!(typeof(s)));
+
+    // Some types which are not strings.
+    static assert(!isSomeString!int);
+    static assert(!isSomeString!(int[]));
+    static assert(!isSomeString!(byte[]));
+
+    // Static arrays of characters are not considered strings.
+    static assert(!isSomeString!(char[4]));
+
+    static struct S
+    {
+        string str;
+    }
+    static assert(!isSomeString!S);
+
+    // The struct itself isn't considered a string,
+    // but its member variable is when checked directly.
+    static assert( isSomeString!(typeof(S.str)));
+
+    // While strings can be null, typeof(null) is not typed as a string.
+    static assert(!isSomeString!(typeof(null)));
+
+    // However, naturally, if null is cast to a string type,
+    // it's a string type, since the cast forces the type.
+    static assert( isSomeString!(typeof(cast(char[]) null)));
+
+    enum E : string
+    {
+        a = "dlang"
+    }
+
+    // Enums do not count.
+    static assert(!isSomeString!E);
+
+    static struct AliasThis
+    {
+        string str;
+        alias this = str;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isSomeString!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(char[], wchar[], dchar[]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isSomeString!(Q!T));
+            static assert(!isSomeString!E);
+            static assert(!isSomeString!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(char, wchar, dchar, int, byte[], ubyte[], int[], char[12], wchar[17], dchar[2], void[]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isSomeString!(Q!T));
+            static assert(!isSomeString!E);
+            static assert(!isSomeString!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is $(D char), $(D wchar), or $(D dchar), ignoring all
+    qualifiers.
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the three built-in character type.
+  +/
+enum isSomeChar(T) = is(immutable T == immutable char) ||
+                     is(immutable T == immutable wchar) ||
+                     is(immutable T == immutable dchar);
+
+///
+@safe unittest
+{
+    // Some types which are character types.
+    static assert( isSomeChar!char);
+    static assert( isSomeChar!wchar);
+    static assert( isSomeChar!dchar);
+    static assert( isSomeChar!(const char));
+    static assert( isSomeChar!(immutable char));
+    static assert( isSomeChar!(inout wchar));
+    static assert( isSomeChar!(shared wchar));
+    static assert( isSomeChar!(const shared dchar));
+
+    static assert( isSomeChar!(typeof('c')));
+    static assert( isSomeChar!(typeof("hello world"[3])));
+
+    dchar c;
+    static assert( isSomeChar!(typeof(c)));
+
+    // Some types which aren't character types.
+    static assert(!isSomeChar!int);
+    static assert(!isSomeChar!byte);
+    static assert(!isSomeChar!string);
+    static assert(!isSomeChar!wstring);
+    static assert(!isSomeChar!dstring);
+    static assert(!isSomeChar!(char[4]));
+
+    static struct S
+    {
+        dchar c;
+    }
+    static assert(!isSomeChar!S);
+
+    // The struct itself isn't considered a character,
+    // but its member variable is when checked directly.
+    static assert( isSomeChar!(typeof(S.c)));
+
+    enum E : dchar
+    {
+        a = 'a'
+    }
+
+    // Enums do not count.
+    static assert(!isSomeChar!E);
+
+    static struct AliasThis
+    {
+        dchar c;
+        alias this = c;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isSomeChar!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(char, wchar, dchar))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isSomeChar!(Q!T));
+            static assert(!isSomeChar!E);
+            static assert(!isSomeChar!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint,
+                              long, ulong, float, double, real,
+                              char[], wchar[], dchar[], int[], void[],
+                              char[12], wchar[17], dchar[2]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isSomeChar!(Q!T));
+            static assert(!isSomeChar!E);
+            static assert(!isSomeChar!(AliasThis!(Q!T)));
         }
     }
 }
