@@ -53,6 +53,8 @@
     $(TR $(TD Categories of types) $(TD
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF isDynamicArray)
+              $(LREF isInteger)
+              $(LREF isFloatingPoint)
               $(LREF isStaticArray)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
@@ -498,6 +500,304 @@ template Unshared(T)
     static assert(is(Unshared!(shared(Foo!(shared int))) == Foo!(shared int)));
     static assert(is(Unshared!(Foo!(shared int)) == Foo!(shared int)));
     static assert(is(Unshared!(shared(Foo!int)) == Foo!int));
+}
+
+/++
+    Whether the given type is one of the built-in integer types, ignoring all
+    qualifiers.
+
+    $(TABLE
+        $(TR $(TH Integer Types))
+        $(TR $(TD byte))
+        $(TR $(TD ubyte))
+        $(TR $(TD short))
+        $(TR $(TD ushort))
+        $(TR $(TD int))
+        $(TR $(TD uint))
+        $(TR $(TD long))
+        $(TR $(TD ulong))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in integer types.
+
+    This trait does have some similarities to $(D __traits(isIntegral, T)), but
+    $(D isIntegral) accepts a $(D lot) more types than isInteger does.
+    isInteger is specifically for testing for the built-in integer types,
+    whereas $(D isIntegral) tests for a whole set of types that are vaguely
+    integer-like (including $(D bool), the three built-in character types, and
+    some of the vector types from core.simd). So, for most code, isInteger is
+    going to be more appropriate, but obviously, it depends on what the code is
+    trying to do.
+
+    See also:
+        $(DDSUBLINK spec/traits, isIntegral, $(D __traits(isIntegral, T)))
+  +/
+enum isInteger(T) = is(immutable T == immutable byte) ||
+                    is(immutable T == immutable ubyte) ||
+                    is(immutable T == immutable short) ||
+                    is(immutable T == immutable ushort) ||
+                    is(immutable T == immutable int) ||
+                    is(immutable T == immutable uint) ||
+                    is(immutable T == immutable long) ||
+                    is(immutable T == immutable ulong);
+
+///
+@safe unittest
+{
+    // Some types which are integer types.
+    static assert( isInteger!byte);
+    static assert( isInteger!ubyte);
+    static assert( isInteger!short);
+    static assert( isInteger!ushort);
+    static assert( isInteger!int);
+    static assert( isInteger!uint);
+    static assert( isInteger!long);
+    static assert( isInteger!ulong);
+
+    static assert( isInteger!(const ubyte));
+    static assert( isInteger!(immutable short));
+    static assert( isInteger!(inout int));
+    static assert( isInteger!(shared uint));
+    static assert( isInteger!(const shared ulong));
+
+    static assert( isInteger!(typeof(42)));
+    static assert( isInteger!(typeof(1234567890L)));
+
+    int i;
+    static assert( isInteger!(typeof(i)));
+
+    // Some types which aren't integer types.
+    static assert(!isInteger!bool);
+    static assert(!isInteger!char);
+    static assert(!isInteger!wchar);
+    static assert(!isInteger!dchar);
+    static assert(!isInteger!(int[]));
+    static assert(!isInteger!(ubyte[4]));
+    static assert(!isInteger!(int*));
+    static assert(!isInteger!double);
+    static assert(!isInteger!string);
+
+    static struct S
+    {
+        int i;
+    }
+    static assert(!isInteger!S);
+
+    // The struct itself isn't considered an integer,
+    // but its member variable is when checked directly.
+    static assert( isInteger!(typeof(S.i)));
+
+    enum E : int
+    {
+        a = 42
+    }
+
+    // Enums do not count.
+    static assert(!isInteger!E);
+
+    static struct AliasThis
+    {
+        int i;
+        alias this = i;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isInteger!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // The actual core.simd types available vary from system to system, so we
+    // have to be a bit creative here. The reason that we're testing these types
+    // is because __traits(isIntegral, T) accepts them, but isInteger is not
+    // supposed to.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(ubyte16))
+            SIMDTypes = AliasSeq!(SIMDTypes, ubyte16);
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isInteger!(Q!T));
+            static assert(!isInteger!E);
+            static assert(!isInteger!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, char, wchar, dchar, float, double, real, SIMDTypes!(),
+                              int[], ubyte[8], dchar[], void[], long*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isInteger!(Q!T));
+            static assert(!isInteger!E);
+            static assert(!isInteger!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is one of the built-in floating-point types, ignoring
+    all qualifiers.
+
+    $(TABLE
+        $(TR $(TH Floating-Point Types))
+        $(TR $(TD float))
+        $(TR $(TD double))
+        $(TR $(TD real))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in floating-point types.
+
+    This trait does have some similarities to $(D __traits(isFloating, T)), but
+    $(D isFloating) accepts more types than isFloatingPoint does.
+    isFloatingPoint is specifically for testing for the built-in floating-point
+    types, whereas $(D isFloating) tests for a whole set of types that are
+    vaguely float-like (including enums with a base type which is a
+    floating-point type and some of the vector types from core.simd). So, for
+    most code, isFloatingPoint is going to be more appropriate, but obviously,
+    it depends on what the code is trying to do.
+
+    See also:
+        $(DDSUBLINK spec/traits, isFloating, $(D __traits(isFloating, T)))
+  +/
+enum isFloatingPoint(T) = is(immutable T == immutable float) ||
+                          is(immutable T == immutable double) ||
+                          is(immutable T == immutable real);
+
+///
+@safe unittest
+{
+    // Some types which are floating-point types.
+    static assert( isFloatingPoint!float);
+    static assert( isFloatingPoint!double);
+    static assert( isFloatingPoint!real);
+
+    static assert( isFloatingPoint!(const float));
+    static assert( isFloatingPoint!(immutable float));
+    static assert( isFloatingPoint!(inout double));
+    static assert( isFloatingPoint!(shared double));
+    static assert( isFloatingPoint!(const shared real));
+
+    static assert( isFloatingPoint!(typeof(42.0)));
+    static assert( isFloatingPoint!(typeof(42f)));
+    static assert( isFloatingPoint!(typeof(1e5)));
+    static assert( isFloatingPoint!(typeof(97.4L)));
+
+    double d;
+    static assert( isFloatingPoint!(typeof(d)));
+
+    // Some types which aren't floating-point types.
+    static assert(!isFloatingPoint!bool);
+    static assert(!isFloatingPoint!char);
+    static assert(!isFloatingPoint!dchar);
+    static assert(!isFloatingPoint!int);
+    static assert(!isFloatingPoint!long);
+    static assert(!isFloatingPoint!(float[]));
+    static assert(!isFloatingPoint!(double[4]));
+    static assert(!isFloatingPoint!(real*));
+    static assert(!isFloatingPoint!string);
+
+    static struct S
+    {
+        double d;
+    }
+    static assert(!isFloatingPoint!S);
+
+    // The struct itself isn't considered a floating-point type,
+    // but its member variable is when checked directly.
+    static assert( isFloatingPoint!(typeof(S.d)));
+
+    enum E : double
+    {
+        a = 12.34
+    }
+
+    // Enums do not count.
+    static assert(!isFloatingPoint!E);
+
+    static struct AliasThis
+    {
+        double d;
+        alias this = d;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isFloatingPoint!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // The actual core.simd types available vary from system to system, so we
+    // have to be a bit creative here. The reason that we're testing these types
+    // is because __traits(isFloating, T) accepts them, but isFloatingPoint is
+    // not supposed to.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(float, double, real))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isFloatingPoint!(Q!T));
+            static assert(!isFloatingPoint!E);
+            static assert(!isFloatingPoint!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, char, wchar, dchar, byte, ubyte, short, ushort,
+                              int, uint, long, ulong, SIMDTypes!(),
+                              int[], float[8], real[], void[], double*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isFloatingPoint!(Q!T));
+            static assert(!isFloatingPoint!E);
+            static assert(!isFloatingPoint!(AliasThis!(Q!T)));
+        }
+    }
 }
 
 /++
