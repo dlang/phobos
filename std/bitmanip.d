@@ -2959,10 +2959,10 @@ if (__traits(isIntegral, T))
     Unqual!T result;
     version (LittleEndian)
         foreach_reverse (b; array)
-            result = cast(Unqual!T) ((result << 8) | b);
+            result = cast() cast(T) ((result << 8) | b);
     else
         foreach (b; array)
-            result = cast(Unqual!T) ((result << 8) | b);
+            result = cast() cast(T) ((result << 8) | b);
     return cast(T) result;
 }
 
@@ -2977,7 +2977,7 @@ if (__traits(isIntegral, T))
         foreach (i; 0 .. T.sizeof)
         {
             result[i] = cast(ubyte) tmp;
-            tmp = cast(Unqual!T) (tmp >>> 8);
+            tmp = cast() cast(T) (tmp >>> 8);
         }
     }
     else
@@ -2985,7 +2985,7 @@ if (__traits(isIntegral, T))
         foreach_reverse (i; 0 .. T.sizeof)
         {
             result[i] = cast(ubyte) tmp;
-            tmp = cast(Unqual!T) (tmp >>> 8);
+            tmp = cast()(T) (tmp >>> 8);
         }
     }
     return result;
