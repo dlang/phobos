@@ -53,8 +53,10 @@
     $(TR $(TD Categories of types) $(TD
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF isDynamicArray)
-              $(LREF isInteger)
               $(LREF isFloatingPoint)
+              $(LREF isInteger)
+              $(LREF isNumeric)
+              $(LREF isPointer)
               $(LREF isStaticArray)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
@@ -86,10 +88,78 @@
 module lib.sys.traits;
 
 /++
-    Whether type $(D T) is a dynamic array.
+    Whether the given type is a dynamic array (or what is sometimes referred to
+    as a slice, since a dynamic array in D is a slice of memory).
 
     Note that this does not include implicit conversions or enum types. The
     type itself must be a dynamic array.
+
+    Remember that D's dynamic arrays are essentially:
+    ---
+    struct DynamicArray(T)
+    {
+        size_t length;
+        T* ptr;
+    }
+    ---
+    where $(D ptr) points to the first element in the array, and $(D length) is
+    the number of elements in the array.
+
+    A dynamic array is not a pointer (unlike arrays in C/C++), and its elements
+    do not live inside the dynamic array itself. The dynamic array is simply a
+    slice of memory and does not own or manage its own memory. It can be a
+    slice of any piece of memory, including GC-allocated memory, the stack,
+    malloc-ed memory, etc. (with what kind of memory it is of course being
+    determined by how the dynamic array was created in the first place)
+    - though if you do any operations on it which end up requiring allocation
+    (e.g. appending to it if it doesn't have the capacity to expand in-place,
+     which it won't if it isn't a slice of GC-allocated memory), then that
+    reallocation will result in the dynamic array being a slice of newly
+    allocated, GC-backed memory (regardless of what it was a slice of before),
+    since it's the GC that deals with those allocations.
+
+    As long as code just accesses the elements or members of the dynamic array
+    - or reduces its length so that it's a smaller slice - it will continue to
+    point to whatever block of memory it pointed to originally. And because the
+    GC makes sure that appending to a dynamic array does not stomp on the
+    memory of any other dynamic arrays, appending to a dynamic array will not
+    affect any other dynamic array which is a slice of that same block of
+    memory whether a reallocation occurs or not.
+
+    Regardless, since what allocated the memory that the dynamic array is a
+    slice of is irrevelant to the type of the dynamic array, whether a given
+    type is a dynamic array has nothing to do with the kind of memory that's
+    backing it. A dynamic array which is a slice of a static array of $(D int)
+    is the the same type as a dynamic array of $(D int) allocated with $(D new)
+    - i.e. both are $(D int[]). So, this trait will not tell you anything about
+    what kind of memory a dynamic array is a slice of. It just tells you
+    whether the type is a dynamic array or not.
+
+    If for some reason, it matters for a function what kind of memory backs one
+    of its parameters which is a dynamic array, or it needs to be made clear
+    whether the function will possibly cause that dynamic array to be
+    reallocated, then that needs to be indicated by the documentation and
+    cannot be enforced with a template constraint. A template constraint can
+    enforce that a type used with a template meets certain criteria (e.g. that
+    it's a dynamic array), but it cannot enforce anything about how the
+    template actually uses the type.
+
+    However, it $(D is) possible to enforce that a function doesn't use any
+    operations on a dynamic array which might cause it to be reallocated by
+    marking that function as $(D @nogc).
+
+    In most cases though, code can be written to not care what kind of memory
+    backs a dynamic array, because none of the operations on a dynamic array
+    actually care what kind of memory it's a slice of. It mostly just matters
+    when you need to track the lifetime of the memory, because it wasn't
+    allocated by the GC, or when it matters whether a dynamic array could be
+    reallocated or not (e.g. because the code needs to have that dynamic array
+    continue to point to the same block of memory).
+
+    See_Also:
+        $(LREF isPointer)
+        $(LREF isStaticArray)
+        $(DDSUBLINK spec/arrays, , The language spec for arrays)
   +/
 enum isDynamicArray(T) = is(T == U[], U);
 
@@ -130,6 +200,10 @@ enum isDynamicArray(T) = is(T == U[], U);
 
     int[2] sArr = [42, 97];
     static assert(!isDynamicArray!(typeof(sArr)));
+
+    // While a static array is not a dynamic array,
+    // a slice of a static array is a dynamic array.
+    static assert( isDynamicArray!(typeof(sArr[])));
 
     // Dynamic array of static arrays.
     static assert( isDynamicArray!(long[3][]));
@@ -216,6 +290,7 @@ enum isDynamicArray(T) = is(T == U[], U);
 
     See also:
         $(DDSUBLINK spec/traits, isStaticArray, $(D __traits(isStaticArray, T)))
+        $(DDSUBLINK spec/arrays, , The language spec for arrays)
   +/
 enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
 
@@ -259,6 +334,10 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
 
     int[] arr;
     static assert(!isStaticArray!(typeof(arr)));
+
+    // A slice of a static array is of course not a static array,
+    // because it's a dynamic array.
+    static assert(!isStaticArray!(typeof(sArr[])));
 
     // Static array of dynamic arrays.
     static assert( isStaticArray!(long[][3]));
@@ -532,6 +611,8 @@ template Unshared(T)
 
     See also:
         $(DDSUBLINK spec/traits, isIntegral, $(D __traits(isIntegral, T)))
+        $(LREF isFloatingPoint)
+        $(LREF isNumeric)
   +/
 enum isInteger(T) = is(immutable T == immutable byte) ||
                     is(immutable T == immutable ubyte) ||
@@ -683,6 +764,8 @@ enum isInteger(T) = is(immutable T == immutable byte) ||
 
     See also:
         $(DDSUBLINK spec/traits, isFloating, $(D __traits(isFloating, T)))
+        $(LREF isInteger)
+        $(LREF isNumeric)
   +/
 enum isFloatingPoint(T) = is(immutable T == immutable float) ||
                           is(immutable T == immutable double) ||
@@ -796,6 +879,279 @@ enum isFloatingPoint(T) = is(immutable T == immutable float) ||
             static assert(!isFloatingPoint!(Q!T));
             static assert(!isFloatingPoint!E);
             static assert(!isFloatingPoint!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is one of the built-in numeric types, ignoring all
+    qualifiers. It's equivalent to $(D isInteger!T || isFloatingPoint!T), but
+    it only involves a single template instantation instead of two.
+
+    $(TABLE
+        $(TR $(TH Numeric Types))
+        $(TR $(TD byte))
+        $(TR $(TD ubyte))
+        $(TR $(TD short))
+        $(TR $(TD ushort))
+        $(TR $(TD int))
+        $(TR $(TD uint))
+        $(TR $(TD long))
+        $(TR $(TD ulong))
+        $(TR $(TD float))
+        $(TR $(TD double))
+        $(TR $(TD real))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in numeric types.
+
+    See_Also:
+        $(LREF isFloatingPoint)
+        $(LREF isInteger)
+  +/
+enum isNumeric(T) = is(immutable T == immutable byte) ||
+                    is(immutable T == immutable ubyte) ||
+                    is(immutable T == immutable short) ||
+                    is(immutable T == immutable ushort) ||
+                    is(immutable T == immutable int) ||
+                    is(immutable T == immutable uint) ||
+                    is(immutable T == immutable long) ||
+                    is(immutable T == immutable ulong) ||
+                    is(immutable T == immutable float) ||
+                    is(immutable T == immutable double) ||
+                    is(immutable T == immutable real);
+
+///
+@safe unittest
+{
+    // Some types which are numeric types.
+    static assert( isNumeric!byte);
+    static assert( isNumeric!ubyte);
+    static assert( isNumeric!short);
+    static assert( isNumeric!ushort);
+    static assert( isNumeric!int);
+    static assert( isNumeric!uint);
+    static assert( isNumeric!long);
+    static assert( isNumeric!ulong);
+    static assert( isNumeric!float);
+    static assert( isNumeric!double);
+    static assert( isNumeric!real);
+
+    static assert( isNumeric!(const short));
+    static assert( isNumeric!(immutable int));
+    static assert( isNumeric!(inout uint));
+    static assert( isNumeric!(shared long));
+    static assert( isNumeric!(const shared real));
+
+    static assert( isNumeric!(typeof(42)));
+    static assert( isNumeric!(typeof(1234657890L)));
+    static assert( isNumeric!(typeof(42.0)));
+    static assert( isNumeric!(typeof(42f)));
+    static assert( isNumeric!(typeof(1e5)));
+    static assert( isNumeric!(typeof(97.4L)));
+
+    int i;
+    static assert( isNumeric!(typeof(i)));
+
+    // Some types which aren't numeric types.
+    static assert(!isNumeric!bool);
+    static assert(!isNumeric!char);
+    static assert(!isNumeric!dchar);
+    static assert(!isNumeric!(int[]));
+    static assert(!isNumeric!(double[4]));
+    static assert(!isNumeric!(real*));
+    static assert(!isNumeric!string);
+
+    static struct S
+    {
+        int i;
+    }
+    static assert(!isNumeric!S);
+
+    // The struct itself isn't considered a numeric type,
+    // but its member variable is when checked directly.
+    static assert( isNumeric!(typeof(S.i)));
+
+    enum E : int
+    {
+        a = 42
+    }
+
+    // Enums do not count.
+    static assert(!isNumeric!E);
+
+    static struct AliasThis
+    {
+        int i;
+        alias this = i;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isNumeric!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // The actual core.simd types available vary from system to system, so we
+    // have to be a bit creative here. The reason that we're testing these types
+    // is because __traits(isInteger, T) and __traits(isFloating, T) accept
+    // them, but isNumeric is not supposed to.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong, float, double, real))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isNumeric!(Q!T));
+            static assert(!isNumeric!E);
+            static assert(!isNumeric!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, char, wchar, dchar, SIMDTypes!(),
+                              int[], float[8], real[], void[], double*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isNumeric!(Q!T));
+            static assert(!isNumeric!E);
+            static assert(!isNumeric!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is a pointer.
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a pointer.
+
+    Also, remember that unlike C/C++, D's arrays are not pointers. Rather, a
+    dynamic array in D is a slice of memory which has a member which is a
+    pointer to its first element and another member which is the length of the
+    array as $(D size_t). So, a dynamic array / slice has a $(D ptr) member
+    which is a pointer, but the dynamic array itself is not a pointer.
+
+    See_Also:
+        $(LREF isDynamicArray)
+  +/
+enum isPointer(T) = is(T == U*, U);
+
+///
+@system unittest
+{
+    // Some types which are pointers.
+    static assert( isPointer!(bool*));
+    static assert( isPointer!(int*));
+    static assert( isPointer!(int**));
+    static assert( isPointer!(real*));
+    static assert( isPointer!(string*));
+
+    static assert( isPointer!(const int*));
+    static assert( isPointer!(immutable int*));
+    static assert( isPointer!(inout int*));
+    static assert( isPointer!(shared int*));
+    static assert( isPointer!(const shared int*));
+
+    static assert( isPointer!(typeof("foobar".ptr)));
+
+    int* ptr;
+    static assert( isPointer!(typeof(ptr)));
+
+    int i;
+    static assert( isPointer!(typeof(&i)));
+
+    // Some types which aren't pointers.
+    static assert(!isPointer!bool);
+    static assert(!isPointer!int);
+    static assert(!isPointer!dchar);
+    static assert(!isPointer!(int[]));
+    static assert(!isPointer!(double[4]));
+    static assert(!isPointer!string);
+
+    static struct S
+    {
+        int* ptr;
+    }
+    static assert(!isPointer!S);
+
+    // The struct itself isn't considered a numeric type,
+    // but its member variable is when checked directly.
+    static assert( isPointer!(typeof(S.ptr)));
+
+    enum E : immutable(char*)
+    {
+        a = "foobar".ptr
+    }
+
+    // Enums do not count.
+    static assert(!isPointer!E);
+
+    static struct AliasThis
+    {
+        int* ptr;
+        alias this = ptr;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isPointer!AliasThis);
+}
+
+@safe unittest
+{
+    import lib.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    static struct S
+    {
+        int i;
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(long*, S*, S**, S***, double[]*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isPointer!(Q!T));
+            static assert(!isPointer!E);
+            static assert(!isPointer!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, char, wchar, dchar, byte, int, uint, long,
+                              int[], float[8], real[], void[]))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isPointer!(Q!T));
+            static assert(!isPointer!E);
+            static assert(!isPointer!(AliasThis!(Q!T)));
         }
     }
 }
