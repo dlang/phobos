@@ -409,179 +409,6 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
 }
 
 /++
-    Removes the outer layer of $(D const), $(D inout), or $(D immutable)
-    from type $(D T).
-
-    If none of those qualifiers have been applied to the outer layer of
-    type $(D T), then the result is $(D T).
-
-    Due to limitations with D's type system, user-defined types have the type
-    qualifier removed entirely if present. The types of the member variables
-    themselves are unaffected beyond how removing the type qualifier from the
-    type containing them affects them (e.g. an $(D int*) member that is
-    $(D const(int*)) because the type containing it is $(D const) becomes
-    $(D int*) when Unconst is used on the containing type, because $(D const)
-    is removed from the containing type. The member does not become
-    $(D const(int)*) as would occur if Unconst were used directly on a
-    $(D const(int*))).
-
-    Also, Unconst has no effect on what a templated type is instantiated with,
-    so if a templated type is instantiated with a template argument which is a
-    const type, the template instantiation will not change.
-  +/
-version (StdDdoc) template Unconst(T)
-{
-    import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst!T;
-}
-else
-{
-    import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst;
-}
-
-///
-@safe unittest
-{
-    static assert(is(Unconst!(                   int) == int));
-    static assert(is(Unconst!(             const int) == int));
-    static assert(is(Unconst!(       inout       int) == int));
-    static assert(is(Unconst!(       inout const int) == int));
-    static assert(is(Unconst!(shared             int) == shared int));
-    static assert(is(Unconst!(shared       const int) == shared int));
-    static assert(is(Unconst!(shared inout       int) == shared int));
-    static assert(is(Unconst!(shared inout const int) == shared int));
-    static assert(is(Unconst!(         immutable int) == int));
-
-    // Only the outer layer of immutable is removed.
-    // immutable(int[]) -> immutable(int)[]
-    alias ImmIntArr = immutable(int[]);
-    static assert(is(Unconst!ImmIntArr == immutable(int)[]));
-
-    // Only the outer layer of const is removed.
-    // immutable(int*) -> immutable(int)*
-    alias ConstIntPtr = const(int*);
-    static assert(is(Unconst!ConstIntPtr == const(int)*));
-
-    // const(int)* -> const(int)*
-    alias PtrToConstInt = const(int)*;
-    static assert(is(Unconst!PtrToConstInt == const(int)*));
-
-    static struct S
-    {
-        int* ptr;
-    }
-
-    const S s;
-    static assert(is(typeof(s) == const S));
-    static assert(is(typeof(typeof(s).ptr) == const int*));
-
-    // For user-defined types, the const qualifier is removed entirely.
-    // const S -> S
-    static assert(is(Unconst!(typeof(s)) == S));
-    static assert(is(typeof(Unconst!(typeof(s)).ptr) == int*));
-
-    static struct Foo(T)
-    {
-        T* ptr;
-    }
-
-    // The qualifer on the type is removed, but the qualifier on the template
-    // argument is not.
-    static assert(is(Unconst!(const(Foo!(const int))) == Foo!(const int)));
-    static assert(is(Unconst!(Foo!(const int)) == Foo!(const int)));
-    static assert(is(Unconst!(const(Foo!int)) == Foo!int));
-}
-
-/++
-    Removes the outer layer of $(D shared) from type $(D T).
-
-    If $(D shared) has not been applied to the outer layer of type $(D T), then
-    the result is $(D T).
-
-    Note that while $(D immutable) is implicitly $(D shared), it is unaffected
-    by Unshared. Only explict $(D shared) is removed.
-
-    Due to limitations with D's type system, user-defined types have the type
-    qualifier removed entirely if present. The types of the member variables
-    themselves are unaffected beyond how removing the type qualifier from the
-    type containing them affects them (e.g. an $(D int*) member that is
-    $(D shared(int*)) because the type containing it is $(D shared) becomes
-    $(D int*) when Unshared is used on the containing type, because $(D shared)
-    is removed from the containing type. The member does not become
-    $(D shared(int)*) as would occur if Unshared were used directly on a
-    $(D shared(int*))).
-
-    Also, Unshared has no effect on what a templated type is instantiated with,
-    so if a templated type is instantiated with a template argument which is a
-    shared type, the template instantiation will not change.
-  +/
-template Unshared(T)
-{
-    static if (is(T == shared U, U))
-        alias Unshared = U;
-    else
-        alias Unshared = T;
-}
-
-///
-@safe unittest
-{
-    static assert(is(Unshared!(                   int) == int));
-    static assert(is(Unshared!(             const int) == const int));
-    static assert(is(Unshared!(       inout       int) == inout int));
-    static assert(is(Unshared!(       inout const int) == inout const int));
-    static assert(is(Unshared!(shared             int) == int));
-    static assert(is(Unshared!(shared       const int) == const int));
-    static assert(is(Unshared!(shared inout       int) == inout int));
-    static assert(is(Unshared!(shared inout const int) == inout const int));
-    static assert(is(Unshared!(         immutable int) == immutable int));
-
-    // Only the outer layer of shared is removed.
-    // shared(int[]) -> shared(int)[]
-    alias SharedIntArr = shared(int[]);
-    static assert(is(Unshared!SharedIntArr == shared(int)[]));
-
-    // Only the outer layer of shared is removed.
-    // shared(int*) -> shared(int)*
-    alias SharedIntPtr = shared(int*);
-    static assert(is(Unshared!SharedIntPtr == shared(int)*));
-
-    // shared(int)* -> shared(int)*
-    alias PtrToSharedInt = shared(int)*;
-    static assert(is(Unshared!PtrToSharedInt == shared(int)*));
-
-    // immutable is unaffected
-    alias ImmutableArr = immutable(int[]);
-    static assert(is(Unshared!ImmutableArr == immutable(int[])));
-
-    static struct S
-    {
-        int* ptr;
-    }
-
-    shared S s;
-    static assert(is(typeof(s) == shared S));
-    static assert(is(typeof(typeof(s).ptr) == shared int*));
-
-    // For user-defined types, the shared qualifier is removed entirely.
-    // shared S -> S
-    static assert(is(Unshared!(typeof(s)) == S));
-    static assert(is(typeof(Unshared!(typeof(s)).ptr) == int*));
-
-    static struct Foo(T)
-    {
-        T* ptr;
-    }
-
-    // The qualifer on the type is affected, but the qualifier on the template
-    // argument is not.
-    static assert(is(Unshared!(shared(Foo!(shared int))) == Foo!(shared int)));
-    static assert(is(Unshared!(Foo!(shared int)) == Foo!(shared int)));
-    static assert(is(Unshared!(shared(Foo!int)) == Foo!int));
-}
-
-/++
     Whether the given type is one of the built-in integer types, ignoring all
     qualifiers.
 
@@ -1154,6 +981,179 @@ enum isPointer(T) = is(T == U*, U);
             static assert(!isPointer!(AliasThis!(Q!T)));
         }
     }
+}
+
+/++
+    Removes the outer layer of $(D const), $(D inout), or $(D immutable)
+    from type $(D T).
+
+    If none of those qualifiers have been applied to the outer layer of
+    type $(D T), then the result is $(D T).
+
+    Due to limitations with D's type system, user-defined types have the type
+    qualifier removed entirely if present. The types of the member variables
+    themselves are unaffected beyond how removing the type qualifier from the
+    type containing them affects them (e.g. an $(D int*) member that is
+    $(D const(int*)) because the type containing it is $(D const) becomes
+    $(D int*) when Unconst is used on the containing type, because $(D const)
+    is removed from the containing type. The member does not become
+    $(D const(int)*) as would occur if Unconst were used directly on a
+    $(D const(int*))).
+
+    Also, Unconst has no effect on what a templated type is instantiated with,
+    so if a templated type is instantiated with a template argument which is a
+    const type, the template instantiation will not change.
+  +/
+version (StdDdoc) template Unconst(T)
+{
+    import core.internal.traits : CoreUnconst = Unconst;
+    alias Unconst = CoreUnconst!T;
+}
+else
+{
+    import core.internal.traits : CoreUnconst = Unconst;
+    alias Unconst = CoreUnconst;
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unconst!(                   int) == int));
+    static assert(is(Unconst!(             const int) == int));
+    static assert(is(Unconst!(       inout       int) == int));
+    static assert(is(Unconst!(       inout const int) == int));
+    static assert(is(Unconst!(shared             int) == shared int));
+    static assert(is(Unconst!(shared       const int) == shared int));
+    static assert(is(Unconst!(shared inout       int) == shared int));
+    static assert(is(Unconst!(shared inout const int) == shared int));
+    static assert(is(Unconst!(         immutable int) == int));
+
+    // Only the outer layer of immutable is removed.
+    // immutable(int[]) -> immutable(int)[]
+    alias ImmIntArr = immutable(int[]);
+    static assert(is(Unconst!ImmIntArr == immutable(int)[]));
+
+    // Only the outer layer of const is removed.
+    // immutable(int*) -> immutable(int)*
+    alias ConstIntPtr = const(int*);
+    static assert(is(Unconst!ConstIntPtr == const(int)*));
+
+    // const(int)* -> const(int)*
+    alias PtrToConstInt = const(int)*;
+    static assert(is(Unconst!PtrToConstInt == const(int)*));
+
+    static struct S
+    {
+        int* ptr;
+    }
+
+    const S s;
+    static assert(is(typeof(s) == const S));
+    static assert(is(typeof(typeof(s).ptr) == const int*));
+
+    // For user-defined types, the const qualifier is removed entirely.
+    // const S -> S
+    static assert(is(Unconst!(typeof(s)) == S));
+    static assert(is(typeof(Unconst!(typeof(s)).ptr) == int*));
+
+    static struct Foo(T)
+    {
+        T* ptr;
+    }
+
+    // The qualifer on the type is removed, but the qualifier on the template
+    // argument is not.
+    static assert(is(Unconst!(const(Foo!(const int))) == Foo!(const int)));
+    static assert(is(Unconst!(Foo!(const int)) == Foo!(const int)));
+    static assert(is(Unconst!(const(Foo!int)) == Foo!int));
+}
+
+/++
+    Removes the outer layer of $(D shared) from type $(D T).
+
+    If $(D shared) has not been applied to the outer layer of type $(D T), then
+    the result is $(D T).
+
+    Note that while $(D immutable) is implicitly $(D shared), it is unaffected
+    by Unshared. Only explict $(D shared) is removed.
+
+    Due to limitations with D's type system, user-defined types have the type
+    qualifier removed entirely if present. The types of the member variables
+    themselves are unaffected beyond how removing the type qualifier from the
+    type containing them affects them (e.g. an $(D int*) member that is
+    $(D shared(int*)) because the type containing it is $(D shared) becomes
+    $(D int*) when Unshared is used on the containing type, because $(D shared)
+    is removed from the containing type. The member does not become
+    $(D shared(int)*) as would occur if Unshared were used directly on a
+    $(D shared(int*))).
+
+    Also, Unshared has no effect on what a templated type is instantiated with,
+    so if a templated type is instantiated with a template argument which is a
+    shared type, the template instantiation will not change.
+  +/
+template Unshared(T)
+{
+    static if (is(T == shared U, U))
+        alias Unshared = U;
+    else
+        alias Unshared = T;
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unshared!(                   int) == int));
+    static assert(is(Unshared!(             const int) == const int));
+    static assert(is(Unshared!(       inout       int) == inout int));
+    static assert(is(Unshared!(       inout const int) == inout const int));
+    static assert(is(Unshared!(shared             int) == int));
+    static assert(is(Unshared!(shared       const int) == const int));
+    static assert(is(Unshared!(shared inout       int) == inout int));
+    static assert(is(Unshared!(shared inout const int) == inout const int));
+    static assert(is(Unshared!(         immutable int) == immutable int));
+
+    // Only the outer layer of shared is removed.
+    // shared(int[]) -> shared(int)[]
+    alias SharedIntArr = shared(int[]);
+    static assert(is(Unshared!SharedIntArr == shared(int)[]));
+
+    // Only the outer layer of shared is removed.
+    // shared(int*) -> shared(int)*
+    alias SharedIntPtr = shared(int*);
+    static assert(is(Unshared!SharedIntPtr == shared(int)*));
+
+    // shared(int)* -> shared(int)*
+    alias PtrToSharedInt = shared(int)*;
+    static assert(is(Unshared!PtrToSharedInt == shared(int)*));
+
+    // immutable is unaffected
+    alias ImmutableArr = immutable(int[]);
+    static assert(is(Unshared!ImmutableArr == immutable(int[])));
+
+    static struct S
+    {
+        int* ptr;
+    }
+
+    shared S s;
+    static assert(is(typeof(s) == shared S));
+    static assert(is(typeof(typeof(s).ptr) == shared int*));
+
+    // For user-defined types, the shared qualifier is removed entirely.
+    // shared S -> S
+    static assert(is(Unshared!(typeof(s)) == S));
+    static assert(is(typeof(Unshared!(typeof(s)).ptr) == int*));
+
+    static struct Foo(T)
+    {
+        T* ptr;
+    }
+
+    // The qualifer on the type is affected, but the qualifier on the template
+    // argument is not.
+    static assert(is(Unshared!(shared(Foo!(shared int))) == Foo!(shared int)));
+    static assert(is(Unshared!(Foo!(shared int)) == Foo!(shared int)));
+    static assert(is(Unshared!(shared(Foo!int)) == Foo!int));
 }
 
 /++
