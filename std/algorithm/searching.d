@@ -22,8 +22,9 @@ $(T2 boyerMooreFinder,
 $(T2 canFind,
         `canFind("hello world", "or")` returns `true`.)
 $(T2 count,
-        Counts elements that are equal to a specified value or satisfy a
-        predicate.  `count([1, 2, 1], 1)` returns `2` and
+        Counts all elements or elements matching a predicate, specific element or sub-range.$(BR)
+        `count([1, 2, 1])` returns `3`,
+        `count([1, 2, 1], 1)` returns `2` and
         `count!"a < 0"([1, -3, 0])` returns `1`.)
 $(T2 countUntil,
         `countUntil(a, b)` returns the number of steps taken in `a` to
