@@ -606,15 +606,17 @@ if (isNarrowString!R1 && isNarrowString!R2)
 
 // count
 /**
-The first version counts each element `e` in `haystack` for
+Counts matches of `needle` in `haystack`.
+
+The first overload counts each element `e` in `haystack` for
 which `pred(e, needle)` is `true`. `pred` defaults to
 equality. Performs $(BIGOH haystack.length) evaluations of `pred`.
 
-The second version counts the number of times `needle` was matched in
+The second overload counts the number of times `needle` was matched in
 `haystack`. `pred` compares elements in each range.
-Throws an exception if `needle.empty`, as the _count
+Throws an exception if `needle.empty` is `true`, as the _count
 of the empty range in any range would be infinite. Overlapped counts
-are not considered, for example `count("aaa", "aa")` is `1`, not
+are *not* considered, for example `count("aaa", "aa")` is `1`, not
 `2`.
 
 Note: Regardless of the overload, `count` will not accept
@@ -707,10 +709,12 @@ if (isForwardRange!R1 && !isInfinite!R1 &&
 }
 
 /**
-The first version counts each element `e` in `haystack` for which `pred(e)` is $(D
+Counts all elements or elements satisfying a predicate in `haystack`.
+
+The first overload counts each element `e` in `haystack` for which `pred(e)` is $(D
 true). Performs $(BIGOH haystack.length) evaluations of `pred`.
 
-The second version counts the number of elements in a range.
+The second overload counts the number of elements in a range.
 If the given range has the `length` property,
 that is returned right away, otherwise
 performs $(BIGOH haystack.length) to walk the range.
