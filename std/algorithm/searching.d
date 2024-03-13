@@ -720,7 +720,7 @@ that is returned right away, otherwise
 performs $(BIGOH haystack.length) to walk the range.
 
 Params:
-    pred = Optional predicate to compare elements.
+    pred = Optional predicate to find elements.
     haystack = The range to _count.
 
 Returns:
