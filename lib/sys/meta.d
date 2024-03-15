@@ -215,18 +215,18 @@ template Map(alias fun, args...)
 ///
 @safe unittest
 {
-    import lib.sys.traits : Unqual;
+    import lib.sys.traits : Unqualified;
 
     // empty
-    alias Empty = Map!Unqual;
+    alias Empty = Map!Unqualified;
     static assert(Empty.length == 0);
 
     // single
-    alias Single = Map!(Unqual, const int);
+    alias Single = Map!(Unqualified, const int);
     static assert(is(Single == AliasSeq!int));
 
     // several
-    alias Several = Map!(Unqual, int, const int, immutable int, uint,
+    alias Several = Map!(Unqualified, int, const int, immutable int, uint,
                          ubyte, byte, short, ushort, const long);
     static assert(is(Several == AliasSeq!(int, int, int, uint,
                                           ubyte, byte, short, ushort, long)));
