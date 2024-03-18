@@ -2837,6 +2837,12 @@ Params:
     lhs = Data to be swapped with `rhs`.
     rhs = Data to be swapped with `lhs`.
 */
+void swap(T)(ref T lhs, ref T rhs)
+    if (is(typeof(lhs.proxySwap(rhs))))
+{
+    lhs.proxySwap(rhs);
+}
+
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
@@ -3096,13 +3102,6 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 
     A[1] a3, a4;
     swap(a3, a4);
-}
-
-/// ditto
-void swap(T)(ref T lhs, ref T rhs)
-if (is(typeof(lhs.proxySwap(rhs))))
-{
-    lhs.proxySwap(rhs);
 }
 
 /**
