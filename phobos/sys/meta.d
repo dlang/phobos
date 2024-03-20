@@ -69,9 +69,9 @@
     Authors: $(HTTP digitalmars.com, Walter Bright),
              $(HTTP klickverbot.at, David Nadlinger)
              $(HTTP jmdavisprog.com, Jonathan M Davis)
-    Source:    $(PHOBOSSRC lib/sys/meta)
+    Source:    $(PHOBOSSRC phobos/sys/meta)
 +/
-module lib.sys.meta;
+module phobos.sys.meta;
 
 // Example for converting types to values from module documentation.
 @safe unittest
@@ -215,7 +215,7 @@ template Map(alias fun, args...)
 ///
 @safe unittest
 {
-    import lib.sys.traits : Unqualified;
+    import phobos.sys.traits : Unqualified;
 
     // empty
     alias Empty = Map!Unqualified;

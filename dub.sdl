@@ -6,7 +6,7 @@ copyright "Copyright © 1999-2024, The D Language Foundation"
 
 configuration "library" {
     targetType "staticLibrary"
-    sourcePaths "lib"
+    sourcePaths "phobos"
     targetPath "generated-lib"
     #excludedSourceFiles "unittest.d" "test/**" "std/**" "tools/**" "etc/**"
 }
@@ -14,7 +14,7 @@ configuration "library" {
 configuration "unittest" {
     dflags "-main"
     targetType "executable"
-    sourcePaths "lib"
+    sourcePaths "phobos"
     targetPath "generated-lib"
     #excludedSourceFiles "unittest.d" "test/**" "std/**" "tools/**" "etc/**"
 }

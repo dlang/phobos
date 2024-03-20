@@ -2,7 +2,7 @@
 /++
     Templates which extract information about types and symbols at compile time.
 
-    In the context of lib.sys.traits, a "trait" is a template which provides
+    In the context of phobos.sys.traits, a "trait" is a template which provides
     information about a type or symbol. Most traits evaluate to
     $(D true) or $(D false), telling the code using it whether the given
     arguments match / have that specific trait (e.g. whether the given type is
@@ -83,9 +83,9 @@
                $(HTTP klickverbot.at, David Nadlinger),
                Kenji Hara,
                Shoichi Kato
-    Source:    $(PHOBOSSRC lib/sys/traits)
+    Source:    $(PHOBOSSRC phobos/sys/traits)
 +/
-module lib.sys.traits;
+module phobos.sys.traits;
 
 /++
     Whether the given type is a dynamic array (or what is sometimes referred to
@@ -242,7 +242,7 @@ enum isDynamicArray(T) = is(T == U[], U);
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -376,7 +376,7 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -516,7 +516,7 @@ enum isInteger(T) = is(immutable T == immutable byte) ||
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -661,7 +661,7 @@ enum isFloatingPoint(T) = is(immutable T == immutable float) ||
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -820,7 +820,7 @@ enum isNumeric(T) = is(immutable T == immutable byte) ||
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -947,7 +947,7 @@ enum isPointer(T) = is(T == U*, U);
 
 @safe unittest
 {
-    import lib.sys.meta : Alias, AliasSeq;
+    import phobos.sys.meta : Alias, AliasSeq;
 
     static struct AliasThis(T)
     {
@@ -1240,7 +1240,7 @@ template Unshared(T)
     data and violating the type system.
 
     In particular, historically, a lot of D code has used
-    $(REF Unqual, std, traits) (which is equivalent to lib.sys.traits'
+    $(REF Unqual, std, traits) (which is equivalent to phobos.sys.traits'
     Unqualified) when the programmer's intent was to remove $(D const), and
     $(D shared) wasn't actually considered at all. And in such cases, the code
     really should use $(LREF Unconst) instead.
@@ -1342,9 +1342,9 @@ else
     Applies $(D const) to the given type.
 
     This is primarily useful in conjunction with templates that take a template
-    predicate (such as many of the templates in lib.sys.meta), since while in
+    predicate (such as many of the templates in phobos.sys.meta), since while in
     most cases, you can simply do $(D const T) or $(D const(T)) to make $(D T)
-    $(D const), with something like $(REF Map, lib, sys, meta), you need to
+    $(D const), with something like $(REF Map, phobos, sys, meta), you need to
     pass a template to be applied.
 
     See_Also:
@@ -1365,7 +1365,7 @@ alias ConstOf(T) = const T;
     // Note that const has no effect on immutable.
     static assert(is(ConstOf!(immutable int) == immutable int));
 
-    import lib.sys.meta : AliasSeq, Map;
+    import phobos.sys.meta : AliasSeq, Map;
 
     alias Types = AliasSeq!(int, long,
                             bool*, ubyte[],
@@ -1381,10 +1381,10 @@ alias ConstOf(T) = const T;
     Applies $(D immutable) to the given type.
 
     This is primarily useful in conjunction with templates that take a template
-    predicate (such as many of the templates in lib.sys.meta), since while in
+    predicate (such as many of the templates in phobos.sys.meta), since while in
     most cases, you can simply do $(D immutable T) or $(D immutable(T)) to make
-    $(D T) $(D immutable), with something like $(REF Map, lib, sys, meta), you
-    need to pass a template to be applied.
+    $(D T) $(D immutable), with something like $(REF Map, phobos, sys, meta),
+    you need to pass a template to be applied.
 
     See_Also:
         $(LREF ConstOf)
@@ -1408,7 +1408,7 @@ alias ImmutableOf(T) = immutable T;
 
     static assert(is(ImmutableOf!(immutable int) == immutable int));
 
-    import lib.sys.meta : AliasSeq, Map;
+    import phobos.sys.meta : AliasSeq, Map;
 
     alias Types = AliasSeq!(int, long,
                             bool*, ubyte[],
@@ -1424,9 +1424,9 @@ alias ImmutableOf(T) = immutable T;
     Applies $(D inout) to the given type.
 
     This is primarily useful in conjunction with templates that take a template
-    predicate (such as many of the templates in lib.sys.meta), since while in
+    predicate (such as many of the templates in phobos.sys.meta), since while in
     most cases, you can simply do $(D inout T) or $(D inout(T)) to make $(D T)
-    $(D inout), with something like $(REF Map, lib, sys, meta), you need to
+    $(D inout), with something like $(REF Map, phobos, sys, meta), you need to
     pass a template to be applied.
 
     See_Also:
@@ -1447,7 +1447,7 @@ alias InoutOf(T) = inout T;
     // Note that inout has no effect on immutable.
     static assert(is(InoutOf!(immutable int) == immutable int));
 
-    import lib.sys.meta : AliasSeq, Map;
+    import phobos.sys.meta : AliasSeq, Map;
 
     alias Types = AliasSeq!(int, long,
                             bool*, ubyte[],
@@ -1463,9 +1463,9 @@ alias InoutOf(T) = inout T;
     Applies $(D shared) to the given type.
 
     This is primarily useful in conjunction with templates that take a template
-    predicate (such as many of the templates in lib.sys.meta), since while in
+    predicate (such as many of the templates in phobos.sys.meta), since while in
     most cases, you can simply do $(D shared T) or $(D shared(T)) to make $(D T)
-    $(D shared), with something like $(REF Map, lib, sys, meta), you need to
+    $(D shared), with something like $(REF Map, phobos, sys, meta), you need to
     pass a template to be applied.
 
     See_Also:
@@ -1487,7 +1487,7 @@ alias SharedOf(T) = shared T;
     // implicitly shared.
     static assert(is(SharedOf!(immutable int) == immutable int));
 
-    import lib.sys.meta : AliasSeq, Map;
+    import phobos.sys.meta : AliasSeq, Map;
 
     alias Types = AliasSeq!(int, long,
                             bool*, ubyte[],
