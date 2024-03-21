@@ -57,7 +57,9 @@
               $(LREF isInteger)
               $(LREF isNumeric)
               $(LREF isPointer)
+              $(LREF isSignedInteger)
               $(LREF isStaticArray)
+              $(LREF isUnsignedInteger)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
@@ -113,7 +115,7 @@ module phobos.sys.traits;
     determined by how the dynamic array was created in the first place)
     - though if you do any operations on it which end up requiring allocation
     (e.g. appending to it if it doesn't have the capacity to expand in-place,
-     which it won't if it isn't a slice of GC-allocated memory), then that
+    which it won't if it isn't a slice of GC-allocated memory), then that
     reallocation will result in the dynamic array being a slice of newly
     allocated, GC-backed memory (regardless of what it was a slice of before),
     since it's the GC that deals with those allocations.
@@ -427,8 +429,8 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
     Note that this does not include implicit conversions or enum types. The
     type itself must be one of the built-in integer types.
 
-    This trait does have some similarities to $(D __traits(isIntegral, T)), but
-    $(D isIntegral) accepts a $(D lot) more types than isInteger does.
+    This trait does have some similarities with $(D __traits(isIntegral, T)),
+    but $(D isIntegral) accepts a $(D lot) more types than isInteger does.
     isInteger is specifically for testing for the built-in integer types,
     whereas $(D isIntegral) tests for a whole set of types that are vaguely
     integer-like (including $(D bool), the three built-in character types, and
@@ -439,7 +441,9 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
     See also:
         $(DDSUBLINK spec/traits, isIntegral, $(D __traits(isIntegral, T)))
         $(LREF isFloatingPoint)
+        $(LREF isSignedInteger)
         $(LREF isNumeric)
+        $(LREF isUnsignedInteger)
   +/
 enum isInteger(T) = is(immutable T == immutable byte) ||
                     is(immutable T == immutable ubyte) ||
@@ -567,6 +571,304 @@ enum isInteger(T) = is(immutable T == immutable byte) ||
 }
 
 /++
+    Whether the given type is one of the built-in signed integer types, ignoring
+    all qualifiers.
+
+    $(TABLE
+        $(TR $(TH Signed Integer Types))
+        $(TR $(TD byte))
+        $(TR $(TD short))
+        $(TR $(TD int))
+        $(TR $(TD long))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in signed integer types.
+
+    See also:
+        $(LREF isFloatingPoint)
+        $(LREF isInteger)
+        $(LREF isNumeric)
+        $(LREF isUnsignedInteger)
+  +/
+enum isSignedInteger(T) = is(immutable T == immutable byte) ||
+                          is(immutable T == immutable short) ||
+                          is(immutable T == immutable int) ||
+                          is(immutable T == immutable long);
+
+///
+@safe unittest
+{
+    // Some types which are signed integer types.
+    static assert( isSignedInteger!byte);
+    static assert( isSignedInteger!short);
+    static assert( isSignedInteger!int);
+    static assert( isSignedInteger!long);
+
+    static assert( isSignedInteger!(const byte));
+    static assert( isSignedInteger!(immutable short));
+    static assert( isSignedInteger!(inout int));
+    static assert( isSignedInteger!(shared int));
+    static assert( isSignedInteger!(const shared long));
+
+    static assert( isSignedInteger!(typeof(42)));
+    static assert( isSignedInteger!(typeof(1234567890L)));
+
+    int i;
+    static assert( isSignedInteger!(typeof(i)));
+
+    // Some types which aren't signed integer types.
+    static assert(!isSignedInteger!ubyte);
+    static assert(!isSignedInteger!ushort);
+    static assert(!isSignedInteger!uint);
+    static assert(!isSignedInteger!ulong);
+
+    static assert(!isSignedInteger!bool);
+    static assert(!isSignedInteger!char);
+    static assert(!isSignedInteger!wchar);
+    static assert(!isSignedInteger!dchar);
+    static assert(!isSignedInteger!(int[]));
+    static assert(!isSignedInteger!(ubyte[4]));
+    static assert(!isSignedInteger!(int*));
+    static assert(!isSignedInteger!double);
+    static assert(!isSignedInteger!string);
+
+    static struct S
+    {
+        int i;
+    }
+    static assert(!isSignedInteger!S);
+
+    // The struct itself isn't considered a signed integer,
+    // but its member variable is when checked directly.
+    static assert( isSignedInteger!(typeof(S.i)));
+
+    enum E : int
+    {
+        a = 42
+    }
+
+    // Enums do not count.
+    static assert(!isSignedInteger!E);
+
+    static struct AliasThis
+    {
+        int i;
+        alias this = i;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isSignedInteger!AliasThis);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // The actual core.simd types available vary from system to system, so we
+    // have to be a bit creative here. The reason that we're testing these types
+    // is because __traits(isIntegral, T) accepts them, but isSignedInteger is
+    // not supposed to.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(ubyte16))
+            SIMDTypes = AliasSeq!(SIMDTypes, ubyte16);
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(byte, short, int, long))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isSignedInteger!(Q!T));
+            static assert(!isSignedInteger!E);
+            static assert(!isSignedInteger!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(ubyte, ushort, uint, ulong,
+                              bool, char, wchar, dchar, float, double, real, SIMDTypes!(),
+                              int[], ubyte[8], dchar[], void[], long*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isSignedInteger!(Q!T));
+            static assert(!isSignedInteger!E);
+            static assert(!isSignedInteger!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is one of the built-in unsigned integer types,
+    ignoring all qualifiers.
+
+    $(TABLE
+        $(TR $(TH Integer Types))
+        $(TR $(TD ubyte))
+        $(TR $(TD ushort))
+        $(TR $(TD uint))
+        $(TR $(TD ulong))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in unsigned integer types.
+
+    This trait does have some similarities with $(D __traits(isUnsigned, T)),
+    but $(D isUnsigned) accepts a $(D lot) more types than isUnsignedInteger
+    does. isUnsignedInteger is specifically for testing for the built-in
+    unsigned integer types, whereas $(D isUnsigned) tests for a whole set of
+    types that are unsigned and vaguely integer-like (including $(D bool), the
+    three built-in character types, and some of the vector types from
+    core.simd). So, for most code, isUnsignedInteger is going to be more
+    appropriate, but obviously, it depends on what the code is trying to do.
+
+    See also:
+        $(DDSUBLINK spec/traits, isUnsigned, $(D __traits(isUnsigned, T)))
+        $(LREF isFloatingPoint)
+        $(LREF isInteger)
+        $(LREF isSignedInteger)
+        $(LREF isNumeric)
+  +/
+enum isUnsignedInteger(T) = is(immutable T == immutable ubyte) ||
+                            is(immutable T == immutable ushort) ||
+                            is(immutable T == immutable uint) ||
+                            is(immutable T == immutable ulong);
+
+///
+@safe unittest
+{
+    // Some types which are unsigned integer types.
+    static assert( isUnsignedInteger!ubyte);
+    static assert( isUnsignedInteger!ushort);
+    static assert( isUnsignedInteger!uint);
+    static assert( isUnsignedInteger!ulong);
+
+    static assert( isUnsignedInteger!(const ubyte));
+    static assert( isUnsignedInteger!(immutable ushort));
+    static assert( isUnsignedInteger!(inout uint));
+    static assert( isUnsignedInteger!(shared uint));
+    static assert( isUnsignedInteger!(const shared ulong));
+
+    static assert( isUnsignedInteger!(typeof(42u)));
+    static assert( isUnsignedInteger!(typeof(1234567890UL)));
+
+    uint u;
+    static assert( isUnsignedInteger!(typeof(u)));
+
+    // Some types which aren't unsigned integer types.
+    static assert(!isUnsignedInteger!byte);
+    static assert(!isUnsignedInteger!short);
+    static assert(!isUnsignedInteger!int);
+    static assert(!isUnsignedInteger!long);
+
+    static assert(!isUnsignedInteger!bool);
+    static assert(!isUnsignedInteger!char);
+    static assert(!isUnsignedInteger!wchar);
+    static assert(!isUnsignedInteger!dchar);
+    static assert(!isUnsignedInteger!(int[]));
+    static assert(!isUnsignedInteger!(ubyte[4]));
+    static assert(!isUnsignedInteger!(int*));
+    static assert(!isUnsignedInteger!double);
+    static assert(!isUnsignedInteger!string);
+
+    static struct S
+    {
+        uint u;
+    }
+    static assert(!isUnsignedInteger!S);
+
+    // The struct itself isn't considered an unsigned integer,
+    // but its member variable is when checked directly.
+    static assert( isUnsignedInteger!(typeof(S.u)));
+
+    enum E : uint
+    {
+        a = 42
+    }
+
+    // Enums do not count.
+    static assert(!isUnsignedInteger!E);
+
+    static struct AliasThis
+    {
+        uint u;
+        alias this = u;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isUnsignedInteger!AliasThis);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // The actual core.simd types available vary from system to system, so we
+    // have to be a bit creative here. The reason that we're testing these types
+    // is because __traits(isIntegral, T) and __traits(isUnsigned, T) accept
+    // them, but isUnsignedInteger is not supposed to.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(ubyte16))
+            SIMDTypes = AliasSeq!(SIMDTypes, ubyte16);
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isUnsignedInteger!(Q!T));
+            static assert(!isUnsignedInteger!E);
+            static assert(!isUnsignedInteger!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(byte, short, int, long,
+                              bool, char, wchar, dchar, float, double, real, SIMDTypes!(),
+                              int[], ubyte[8], dchar[], void[], long*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isUnsignedInteger!(Q!T));
+            static assert(!isUnsignedInteger!E);
+            static assert(!isUnsignedInteger!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
     Whether the given type is one of the built-in floating-point types, ignoring
     all qualifiers.
 
@@ -580,8 +882,8 @@ enum isInteger(T) = is(immutable T == immutable byte) ||
     Note that this does not include implicit conversions or enum types. The
     type itself must be one of the built-in floating-point types.
 
-    This trait does have some similarities to $(D __traits(isFloating, T)), but
-    $(D isFloating) accepts more types than isFloatingPoint does.
+    This trait does have some similarities with $(D __traits(isFloating, T)),
+    but $(D isFloating) accepts more types than isFloatingPoint does.
     isFloatingPoint is specifically for testing for the built-in floating-point
     types, whereas $(D isFloating) tests for a whole set of types that are
     vaguely float-like (including enums with a base type which is a
@@ -592,7 +894,9 @@ enum isInteger(T) = is(immutable T == immutable byte) ||
     See also:
         $(DDSUBLINK spec/traits, isFloating, $(D __traits(isFloating, T)))
         $(LREF isInteger)
+        $(LREF isSignedInteger)
         $(LREF isNumeric)
+        $(LREF isUnsignedInteger)
   +/
 enum isFloatingPoint(T) = is(immutable T == immutable float) ||
                           is(immutable T == immutable double) ||
@@ -736,6 +1040,8 @@ enum isFloatingPoint(T) = is(immutable T == immutable float) ||
     See_Also:
         $(LREF isFloatingPoint)
         $(LREF isInteger)
+        $(LREF isSignedInteger)
+        $(LREF isUnsignedInteger)
   +/
 enum isNumeric(T) = is(immutable T == immutable byte) ||
                     is(immutable T == immutable ubyte) ||
@@ -990,7 +1296,7 @@ enum isPointer(T) = is(T == U*, U);
     If none of those qualifiers have been applied to the outer layer of
     type $(D T), then the result is $(D T).
 
-    For the built-in, scalar types (that is $(D bool), the character types, and
+    For the built-in scalar types (that is $(D bool), the character types, and
     the numeric types), they only have one layer, so $(D const U) simply becomes
     $(D U).
 
@@ -1098,7 +1404,7 @@ else
     Note that while $(D immutable) is implicitly $(D shared), it is unaffected
     by Unshared. Only explicit $(D shared) is removed.
 
-    For the built-in, scalar types (that is $(D bool), the character types, and
+    For the built-in scalar types (that is $(D bool), the character types, and
     the numeric types), they only have one layer, so $(D shared U) simply
     becomes $(D U).
 
@@ -1205,7 +1511,7 @@ template Unshared(T)
     If no type qualifiers have been applied to the outer layer of type $(D T),
     then the result is $(D T).
 
-    For the built-in, scalar types (that is $(D bool), the character types, and
+    For the built-in scalar types (that is $(D bool), the character types, and
     the numeric types), they only have one layer, so $(D const U) simply becomes
     $(D U).
 
