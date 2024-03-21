@@ -2843,6 +2843,7 @@ void swap(T)(ref T lhs, ref T rhs)
     lhs.proxySwap(rhs);
 }
 
+/// ditto
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
