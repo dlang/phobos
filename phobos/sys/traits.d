@@ -61,6 +61,10 @@
               $(LREF isStaticArray)
               $(LREF isUnsignedInteger)
     ))
+    $(TR $(TD Traits testing for type conversions) $(TD
+              $(LREF isImplicitlyConvertible)
+              $(LREF isQualifierConvertible)
+    ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
               $(LREF Unshared)
@@ -294,7 +298,7 @@ enum isDynamicArray(T) = is(T == U[], U);
         $(DDSUBLINK spec/traits, isStaticArray, $(D __traits(isStaticArray, T)))
         $(DDSUBLINK spec/arrays, , The language spec for arrays)
   +/
-enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
+enum isStaticArray(T) = is(T == U[n], U, size_t n);
 
 ///
 @safe unittest
@@ -430,7 +434,7 @@ enum bool isStaticArray(T) = is(T == U[n], U, size_t n);
     type itself must be one of the built-in integer types.
 
     This trait does have some similarities with $(D __traits(isIntegral, T)),
-    but $(D isIntegral) accepts a $(D lot) more types than isInteger does.
+    but $(D isIntegral) accepts a $(I lot) more types than isInteger does.
     isInteger is specifically for testing for the built-in integer types,
     whereas $(D isIntegral) tests for a whole set of types that are vaguely
     integer-like (including $(D bool), the three built-in character types, and
@@ -730,7 +734,7 @@ enum isSignedInteger(T) = is(immutable T == immutable byte) ||
     type itself must be one of the built-in unsigned integer types.
 
     This trait does have some similarities with $(D __traits(isUnsigned, T)),
-    but $(D isUnsigned) accepts a $(D lot) more types than isUnsignedInteger
+    but $(D isUnsigned) accepts a $(I lot) more types than isUnsignedInteger
     does. isUnsignedInteger is specifically for testing for the built-in
     unsigned integer types, whereas $(D isUnsigned) tests for a whole set of
     types that are unsigned and vaguely integer-like (including $(D bool), the
@@ -1290,6 +1294,415 @@ enum isPointer(T) = is(T == U*, U);
 }
 
 /++
+    Whether the type $(D From) is implicitly convertible to the type $(D To).
+
+    Note that template constraints should be very careful about when they test
+    for implicit conversions and in general should prefer to either test for an
+    exact set of types or for types which compile with a particular piece of
+    code rather than being designed to accept any type which implicitly converts
+    to a particular type.
+
+    This is because having a type pass a template constraint based on an
+    implicit conversion but then not have the implicit conversion actually take
+    place (which it won't unless the template does something to force it
+    internally) can lead to either compilation errors or subtle behavioral
+    differences - and even when the conversion is done explicitly within a
+    templated function, since it's not done at the call site, it can still lead
+    to subtle bugs in some cases (e.g. if slicing a static array is involved).
+
+    For situations where code needs to verify that a type is implicitly
+    convertible based solely on its qualifiers, $(LREF isQualifierConvertible)
+    would be a more appropriate choice than isImplicitlyConvertible.
+
+    Given how trivial the $(D is) expression for isImplicitlyConvertible is -
+    $(D is(To : From)) - this trait is provided primarily so that it can be
+    used in conjunction with templates that use a template predicate (such as
+    many of the templates in phobos.sys.meta).
+
+    See_Also:
+        $(DDSUBLINK dlang.org/spec/type, implicit-conversions, Spec on implicit conversions)
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, Spec for implicit qualifier conversions)
+        $(LREF isQualifierConvertible)
+  +/
+enum isImplicitlyConvertible(From, To) = is(From : To);
+
+///
+@safe unittest
+{
+    static assert( isImplicitlyConvertible!(byte, long));
+    static assert( isImplicitlyConvertible!(ushort, long));
+    static assert( isImplicitlyConvertible!(int, long));
+    static assert( isImplicitlyConvertible!(long, long));
+    static assert( isImplicitlyConvertible!(ulong, long));
+
+    static assert( isImplicitlyConvertible!(ubyte, int));
+    static assert( isImplicitlyConvertible!(short, int));
+    static assert( isImplicitlyConvertible!(int, int));
+    static assert( isImplicitlyConvertible!(uint, int));
+    static assert(!isImplicitlyConvertible!(long, int));
+    static assert(!isImplicitlyConvertible!(ulong, int));
+
+    static assert(!isImplicitlyConvertible!(int, string));
+    static assert(!isImplicitlyConvertible!(int, int[]));
+    static assert(!isImplicitlyConvertible!(int, int*));
+
+    static assert(!isImplicitlyConvertible!(string, int));
+    static assert(!isImplicitlyConvertible!(int[], int));
+    static assert(!isImplicitlyConvertible!(int*, int));
+
+    // For better or worse, bool and the built-in character types will
+    // implicitly convert to integer or floating-point types if the target type
+    // is large enough. Sometimes, this is desirable, whereas at other times,
+    // it can have very surprising results, so it's one reason why code should
+    // be very careful when testing for implicit conversions.
+    static assert( isImplicitlyConvertible!(bool, int));
+    static assert( isImplicitlyConvertible!(char, int));
+    static assert( isImplicitlyConvertible!(wchar, int));
+    static assert( isImplicitlyConvertible!(dchar, int));
+
+    static assert( isImplicitlyConvertible!(bool, ubyte));
+    static assert( isImplicitlyConvertible!(char, ubyte));
+    static assert(!isImplicitlyConvertible!(wchar, ubyte));
+    static assert(!isImplicitlyConvertible!(dchar, ubyte));
+
+    static assert( isImplicitlyConvertible!(bool, double));
+    static assert( isImplicitlyConvertible!(char, double));
+    static assert( isImplicitlyConvertible!(wchar, double));
+    static assert( isImplicitlyConvertible!(dchar, double));
+
+    // Value types can be implicitly converted regardless of their qualifiers
+    // thanks to the fact that they're copied.
+    static assert( isImplicitlyConvertible!(int, int));
+    static assert( isImplicitlyConvertible!(const int, int));
+    static assert( isImplicitlyConvertible!(immutable int, int));
+    static assert( isImplicitlyConvertible!(inout int, int));
+
+    static assert( isImplicitlyConvertible!(int, const int));
+    static assert( isImplicitlyConvertible!(int, immutable int));
+    static assert( isImplicitlyConvertible!(int, inout int));
+
+    // Reference types are far more restrictive about which implicit conversions
+    // they allow, because qualifiers in D are transitive.
+    static assert( isImplicitlyConvertible!(int*, int*));
+    static assert(!isImplicitlyConvertible!(const int*, int*));
+    static assert(!isImplicitlyConvertible!(immutable int*, int*));
+
+    static assert( isImplicitlyConvertible!(int*, const int*));
+    static assert( isImplicitlyConvertible!(const int*, const int*));
+    static assert( isImplicitlyConvertible!(immutable int*, const int*));
+
+    static assert(!isImplicitlyConvertible!(int*, immutable int*));
+    static assert(!isImplicitlyConvertible!(const int*, immutable int*));
+    static assert( isImplicitlyConvertible!(immutable int*, immutable int*));
+
+    // Note that inout gets a bit weird, since it's only used with function
+    // parameters, and it's a stand-in for whatever mutability qualifiers the
+    // type actually has. So, a function parameter that's inout accepts any
+    // mutability, but you can't actually implicitly convert to inout, because
+    // it's unknown within the function what the actual mutability of the type
+    // is. It will differ depending on the function arguments of a specific
+    // call to that function, so the same code has to work with all combinations
+    // of mutability qualifiers.
+    static assert(!isImplicitlyConvertible!(int*, inout int*));
+    static assert(!isImplicitlyConvertible!(const int*, inout int*));
+    static assert(!isImplicitlyConvertible!(immutable int*, inout int*));
+    static assert( isImplicitlyConvertible!(inout int*, inout int*));
+
+    static assert(!isImplicitlyConvertible!(inout int*, int*));
+    static assert( isImplicitlyConvertible!(inout int*, const int*));
+    static assert(!isImplicitlyConvertible!(inout int*, immutable int*));
+
+    // Enums implicitly convert to their base type.
+    enum E : int
+    {
+        a = 42
+    }
+    static assert( isImplicitlyConvertible!(E, int));
+    static assert( isImplicitlyConvertible!(E, long));
+    static assert(!isImplicitlyConvertible!(E, int[]));
+
+    // Structs only implicit convert to another type via declaring an
+    // alias this.
+    static struct S
+    {
+        int i;
+    }
+    static assert(!isImplicitlyConvertible!(S, int));
+    static assert(!isImplicitlyConvertible!(S, long));
+    static assert(!isImplicitlyConvertible!(S, string));
+
+    static struct AliasThis
+    {
+        int i;
+        alias this = i;
+    }
+    static assert( isImplicitlyConvertible!(AliasThis, int));
+    static assert( isImplicitlyConvertible!(AliasThis, long));
+    static assert(!isImplicitlyConvertible!(AliasThis, string));
+
+    static struct AliasThis2
+    {
+        AliasThis at;
+        alias this = at;
+    }
+    static assert( isImplicitlyConvertible!(AliasThis2, AliasThis));
+    static assert( isImplicitlyConvertible!(AliasThis2, int));
+    static assert( isImplicitlyConvertible!(AliasThis2, long));
+    static assert(!isImplicitlyConvertible!(AliasThis2, string));
+
+    static struct AliasThis3
+    {
+        AliasThis2 at;
+        alias this = at;
+    }
+    static assert( isImplicitlyConvertible!(AliasThis3, AliasThis2));
+    static assert( isImplicitlyConvertible!(AliasThis3, AliasThis));
+    static assert( isImplicitlyConvertible!(AliasThis3, int));
+    static assert( isImplicitlyConvertible!(AliasThis3, long));
+    static assert(!isImplicitlyConvertible!(AliasThis3, string));
+
+    // D does not support implicit conversions via construction.
+    static struct Cons
+    {
+        this(int i)
+        {
+            this.i = i;
+        }
+
+        int i;
+    }
+    static assert(!isImplicitlyConvertible!(int, Cons));
+
+    // Classes support implicit conversion based on their class and
+    // interface hierarchies.
+    static interface I1 {}
+    static class Base : I1 {}
+
+    static interface I2 {}
+    static class Foo : Base, I2 {}
+
+    static class Bar : Base {}
+
+    static assert( isImplicitlyConvertible!(Base, Base));
+    static assert(!isImplicitlyConvertible!(Base, Foo));
+    static assert(!isImplicitlyConvertible!(Base, Bar));
+    static assert( isImplicitlyConvertible!(Base, I1));
+    static assert(!isImplicitlyConvertible!(Base, I2));
+
+    static assert( isImplicitlyConvertible!(Foo, Base));
+    static assert( isImplicitlyConvertible!(Foo, Foo));
+    static assert(!isImplicitlyConvertible!(Foo, Bar));
+    static assert( isImplicitlyConvertible!(Foo, I1));
+    static assert( isImplicitlyConvertible!(Foo, I2));
+
+    static assert( isImplicitlyConvertible!(Bar, Base));
+    static assert(!isImplicitlyConvertible!(Bar, Foo));
+    static assert( isImplicitlyConvertible!(Bar, Bar));
+    static assert( isImplicitlyConvertible!(Bar, I1));
+    static assert(!isImplicitlyConvertible!(Bar, I2));
+
+    static assert(!isImplicitlyConvertible!(I1, Base));
+    static assert(!isImplicitlyConvertible!(I1, Foo));
+    static assert(!isImplicitlyConvertible!(I1, Bar));
+    static assert( isImplicitlyConvertible!(I1, I1));
+    static assert(!isImplicitlyConvertible!(I1, I2));
+
+    static assert(!isImplicitlyConvertible!(I2, Base));
+    static assert(!isImplicitlyConvertible!(I2, Foo));
+    static assert(!isImplicitlyConvertible!(I2, Bar));
+    static assert(!isImplicitlyConvertible!(I2, I1));
+    static assert( isImplicitlyConvertible!(I2, I2));
+
+    // Note that arrays are not implicitly convertible even when their elements
+    // are implicitly convertible.
+    static assert(!isImplicitlyConvertible!(ubyte[], uint[]));
+    static assert(!isImplicitlyConvertible!(Foo[], Base[]));
+    static assert(!isImplicitlyConvertible!(Bar[], Base[]));
+
+    // However, like with pointers, dynamic arrays are convertible based on
+    // constness.
+    static assert( isImplicitlyConvertible!(Base[], const Base[]));
+    static assert( isImplicitlyConvertible!(Base[], const(Base)[]));
+    static assert(!isImplicitlyConvertible!(Base[], immutable(Base)[]));
+    static assert(!isImplicitlyConvertible!(const Base[], immutable Base[]));
+    static assert( isImplicitlyConvertible!(const Base[], const Base[]));
+    static assert(!isImplicitlyConvertible!(const Base[], immutable Base[]));
+}
+
+/++
+    Whether $(D From) is
+    $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
+    to $(D To).
+
+    This is testing whether $(D From) and $(D To) are the same type - minus the
+    qualifiers - and whether the qualifiers on $(D From) can be implicitly
+    converted to the qualifiers on $(D To). No other implicit conversions are
+    taken into account.
+
+    For instance, $(D const int*) is not implicitly convertible to $(D int*),
+    because that would violate $(D const). That means that $(D const) is not
+    qualifier convertible to mutable. And as such, $(I any) $(D const) type
+    is not qualifier convertible to a mutable type even if it's implicitly
+    convertible. E.G. $(D const int) is implicitly convertible to $(D int),
+    because it can be copied to avoid violating $(D const), but it's still not
+    qualifier convertible, because $(D const) types in general cannot be
+    implicitly converted to mutable.
+
+    The exact types being tested matter, because they need to be the same
+    (minus the qualifiers) in order to be considered convertible, but beyond
+    that, all that matters for the conversion is whether those qualifers would
+    be convertible regardless of which types they were on. So, if you're having
+    trouble picturing whether $(D From) would be qualifier convertible to
+    $(D To), then consider which conversions would be allowed from $(D From[])
+    to $(D To[]) (and remember that dynamic arrays are only implicitly
+    convertible based on their qualifers).
+
+    The $(DDSUBLINK spec/const3, implicit_qualifier_conversions, spec) provides
+    a table of which qualifiers can be implcitly converted to which other
+    qualifers (and of course, there a bunch of examples below).
+
+    So, isQualifierConvertible can be used in a case like
+    $(D isQualifierConvertible!(ReturnType!(typeof(foo(bar))), const char),
+    which would be testing that the return type of $(D foo(bar)) was $(D char),
+    $(D const char), or $(D immutable char) (since those are the only types
+    which are qualifier convertible to $(D const char)).
+
+    This is in contrast to
+    $(D isImplicitlyConvertible!(ReturnType!(typeof(foo(bar))), const char),
+    which would be $(D true) for $(I any) type which was implicitly convertible
+    to $(D const char) rather than just $(D char), $(D const char), and
+    $(D immutable char).
+
+    See_Also:
+        $(DDSUBLINK spec/const3, implicit_qualifier_conversions, Spec for implicit qualifier conversions)
+        $(LREF isImplicitlyConvertible)
+  +/
+enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is(From* : To*);
+
+///
+@safe unittest
+{
+    // i.e. char* -> const char*
+    static assert( isQualifierConvertible!(char, const char));
+
+    // i.e. const char* -> char*
+    static assert(!isQualifierConvertible!(const char, char));
+
+    static assert( isQualifierConvertible!(int, int));
+    static assert( isQualifierConvertible!(int, const int));
+    static assert(!isQualifierConvertible!(int, immutable int));
+
+    static assert(!isQualifierConvertible!(const int, int));
+    static assert( isQualifierConvertible!(const int, const int));
+    static assert(!isQualifierConvertible!(const int, immutable int));
+
+    static assert(!isQualifierConvertible!(immutable int, int));
+    static assert( isQualifierConvertible!(immutable int, const int));
+    static assert( isQualifierConvertible!(immutable int, immutable int));
+
+    // Note that inout gets a bit weird, since it's only used with function
+    // parameters, and it's a stand-in for whatever mutability qualifiers the
+    // type actually has. So, a function parameter that's inout accepts any
+    // mutability, but you can't actually implicitly convert to inout, because
+    // it's unknown within the function what the actual mutability of the type
+    // is. It will differ depending on the function arguments of a specific
+    // call to that function, so the same code has to work with all combinations
+    // of mutability qualifiers.
+    static assert(!isQualifierConvertible!(int, inout int));
+    static assert(!isQualifierConvertible!(const int, inout int));
+    static assert(!isQualifierConvertible!(immutable int, inout int));
+    static assert( isQualifierConvertible!(inout int, inout int));
+
+    static assert(!isQualifierConvertible!(inout int, int));
+    static assert( isQualifierConvertible!(inout int, const int));
+    static assert(!isQualifierConvertible!(inout int, immutable int));
+
+    // shared is of course also a qualifer.
+    static assert(!isQualifierConvertible!(int, shared int));
+    static assert(!isQualifierConvertible!(int, const shared int));
+    static assert(!isQualifierConvertible!(const int, shared int));
+    static assert(!isQualifierConvertible!(const int, const shared int));
+    static assert(!isQualifierConvertible!(immutable int, shared int));
+    static assert( isQualifierConvertible!(immutable int, const shared int));
+
+    static assert(!isQualifierConvertible!(shared int, int));
+    static assert(!isQualifierConvertible!(shared int, const int));
+    static assert(!isQualifierConvertible!(shared int, immutable int));
+    static assert( isQualifierConvertible!(shared int, shared int));
+    static assert( isQualifierConvertible!(shared int, const shared int));
+
+    static assert(!isQualifierConvertible!(const shared int, int));
+    static assert(!isQualifierConvertible!(const shared int, const int));
+    static assert(!isQualifierConvertible!(const shared int, immutable int));
+    static assert(!isQualifierConvertible!(const shared int, shared int));
+    static assert( isQualifierConvertible!(const shared int, const shared int));
+
+    // Implicit conversions don't count unless they're based purely on
+    // qualifiers.
+    enum E : int
+    {
+        a = 1
+    }
+
+    static assert(!isQualifierConvertible!(E, int));
+    static assert(!isQualifierConvertible!(E, const int));
+    static assert( isQualifierConvertible!(E, E));
+    static assert( isQualifierConvertible!(E, const E));
+    static assert(!isQualifierConvertible!(E, immutable E));
+
+    static struct AliasThis
+    {
+        int i;
+        alias this = i;
+    }
+
+    static assert(!isQualifierConvertible!(AliasThis, int));
+    static assert(!isQualifierConvertible!(AliasThis, const int));
+    static assert( isQualifierConvertible!(AliasThis, AliasThis));
+    static assert( isQualifierConvertible!(AliasThis, const AliasThis));
+    static assert(!isQualifierConvertible!(AliasThis, immutable AliasThis));
+
+    // The qualifiers are irrelevant if the types aren't the same when
+    // stripped of all qualifers.
+    static assert(!isQualifierConvertible!(int, long));
+    static assert(!isQualifierConvertible!(int, const long));
+    static assert(!isQualifierConvertible!(string, const(ubyte)[]));
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias Types = AliasSeq!(int, const int, shared int, inout int, const shared int,
+                            const inout int, inout shared int, const inout shared int, immutable int);
+
+    // https://dlang.org/spec/const3.html#implicit_qualifier_conversions
+    enum _ = 0;
+    static immutable bool[Types.length][Types.length] conversions = [
+    //   m   c   s   i   cs  ci  is  cis im
+        [1,  1,  _,  _,  _,  _,  _,  _,  _],  // mutable
+        [_,  1,  _,  _,  _,  _,  _,  _,  _],  // const
+        [_,  _,  1,  _,  1,  _,  _,  _,  _],  // shared
+        [_,  1,  _,  1,  _,  1,  _,  _,  _],  // inout
+        [_,  _,  _,  _,  1,  _,  _,  _,  _],  // const shared
+        [_,  1,  _,  _,  _,  1,  _,  _,  _],  // const inout
+        [_,  _,  _,  _,  1,  _,  1,  1,  _],  // inout shared
+        [_,  _,  _,  _,  1,  _,  _,  1,  _],  // const inout shared
+        [_,  1,  _,  _,  1,  1,  _,  1,  1],  // immutable
+    ];
+
+    foreach (i, From; Types)
+    {
+        foreach (j, To; Types)
+        {
+            static assert(isQualifierConvertible!(From, To) == conversions[i][j],
+                          "`isQualifierConvertible!(" ~ From.stringof ~ ", " ~ To.stringof ~ ")`" ~
+                          " should be `" ~ (conversions[i][j] ? "true`" : "false`"));
+        }
+    }
+}
+
+/++
     Removes the outer layer of $(D const), $(D inout), or $(D immutable)
     from type $(D T).
 
@@ -1388,7 +1801,7 @@ else
         T* ptr;
     }
 
-    // The qualifer on the type is removed, but the qualifier on the template
+    // The qualifier on the type is removed, but the qualifier on the template
     // argument is not.
     static assert(is(Unconst!(const(Foo!(const int))) == Foo!(const int)));
     static assert(is(Unconst!(Foo!(const int)) == Foo!(const int)));
@@ -1497,7 +1910,7 @@ template Unshared(T)
         T* ptr;
     }
 
-    // The qualifer on the type is removed, but the qualifier on the template
+    // The qualifier on the type is removed, but the qualifier on the template
     // argument is not.
     static assert(is(Unshared!(shared(Foo!(shared int))) == Foo!(shared int)));
     static assert(is(Unshared!(Foo!(shared int)) == Foo!(shared int)));
@@ -1552,7 +1965,7 @@ template Unshared(T)
     really should use $(LREF Unconst) instead.
 
     But of course, if a template constraint or $(D static if) really needs to
-    strip off both the mutability qualifers and $(D shared) for what it's
+    strip off both the mutability qualifiers and $(D shared) for what it's
     testing for, then that's what Unqualified is for. It's just that it's best
     practice to use $(LREF Unconst) when it's not clear that $(D shared) should
     be removed as well.
@@ -1637,7 +2050,7 @@ else
         T* ptr;
     }
 
-    // The qualifers on the type are removed, but the qualifiers on the
+    // The qualifiers on the type are removed, but the qualifiers on the
     // template argument are not.
     static assert(is(Unqualified!(const(Foo!(const int))) == Foo!(const int)));
     static assert(is(Unqualified!(Foo!(const int)) == Foo!(const int)));
