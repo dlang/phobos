@@ -53,8 +53,12 @@
              $(LREF Alias)
              $(LREF AliasSeq)
     ))
+    $(TR $(TD Alias sequence filtering) $(TD
+              $(LREF Filter)
+    ))
     $(TR $(TD Alias sequence transformation) $(TD
               $(LREF Map)
+              $(LREF Reverse)
     ))
     )
 
@@ -199,17 +203,49 @@ alias Alias(T) = T;
 }
 
 /++
-    Map takes a template predicate and applies it to every element in the given
+    Filters an $(D AliasSeq) using the given template predicate.
+
+    The result is an $(D AliasSeq) that contains only the elements which satisfy
+    the predicate.
+  +/
+template Filter(alias Pred, Args...)
+{
+    alias Filter = AliasSeq!();
+    static foreach (Arg; Args)
+    {
+        static if (Pred!Arg)
+            Filter = AliasSeq!(Filter, Arg);
+    }
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isDynamicArray, isPointer, isUnsignedInteger;
+
+    alias Types = AliasSeq!(string, int, int[], bool[], ulong, double, ubyte);
+
+    static assert(is(Filter!(isDynamicArray, Types) ==
+                     AliasSeq!(string, int[], bool[])));
+
+    static assert(is(Filter!(isUnsignedInteger, Types) ==
+                     AliasSeq!(ulong, ubyte)));
+
+    static assert(is(Filter!(isPointer, Types) == AliasSeq!()));
+}
+
+/++
+    Map takes a template and applies it to every element in the given
     $(D AliasSeq), resulting in an $(D AliasSeq) with the transformed elements.
 
     So, it's equivalent to
-    `AliasSeq!(fun!(args[0]), fun!(args[1]), ..., fun!(args[$ - 1]))`.
+    `AliasSeq!(Fun!(Args[0]), Fun!(Args[1]), ..., Fun!(Args[$ - 1]))`.
  +/
-template Map(alias fun, args...)
+template Map(alias Fun, Args...)
 {
     alias Map = AliasSeq!();
-    static foreach (arg; args)
-        Map = AliasSeq!(Map, fun!arg);
+    static foreach (Arg; Args)
+        Map = AliasSeq!(Map, Fun!Arg);
 }
 
 ///
@@ -257,4 +293,29 @@ template Map(alias fun, args...)
     alias A = Map!(getTypeId, int);
 
     assert(A == typeid(int));
+}
+
+/++
+    Takes an $(D AliasSeq) and result in an $(D AliasSeq) where the order of
+    the elements has been reversed.
+  +/
+template Reverse(Args...)
+{
+    alias Reverse = AliasSeq!();
+    static foreach_reverse (Arg; Args)
+        Reverse = AliasSeq!(Reverse, Arg);
+}
+
+///
+@safe unittest
+{
+    static assert(is(Reverse!(int, byte, long, string) ==
+                     AliasSeq!(string, long, byte, int)));
+
+    alias Types = AliasSeq!(int, long, long, int, float,
+                            ubyte, short, ushort, uint);
+    static assert(is(Reverse!Types == AliasSeq!(uint, ushort, short, ubyte,
+                                                float, int, long, long, int)));
+
+    static assert(is(Reverse!() == AliasSeq!()));
 }
