@@ -1004,15 +1004,17 @@ if (Ranges.length > 0 &&
                 // backIndex is already set in the first loop to
                 // as frontIndex+1, so we'll use that if we don't find a
                 // non-empty range here.
+                bool done=false;  //work around for compiler detecting that lines marked A and B below are unreachable
                 static if (bidirectional)
                     static foreach_reverse (i; 1 .. R.length + 1)
                 {
-                    if (i <= frontIndex + 1) return;
-                    if (!input[i-1].empty)
+                    if (i <= frontIndex + 1) done = true;
+                    if (!done && !input[i-1].empty)
                     {
                         backIndex = i;
-                        return;
+                        done = true;
                     }
+                    if (done) return;
                 }
             }
 
@@ -1546,6 +1548,44 @@ pure @safe nothrow unittest
     // use byChar on character ranges to correctly convert them to UTF-8
     auto r3 = s1.byChar.chain(s3);
     static assert(is(typeof(r3.front) == immutable char));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24143
+pure @safe unittest
+{
+    static struct RepeatOne
+    {
+        enum empty = false;
+        const front = 1;
+        const back = 1;
+        void popFront() {}
+        void popBack() {}
+        auto save()
+        {
+            return RepeatOne.init;
+        }
+    }
+
+    static struct OnlyOne
+    {
+        bool empty = true;
+        auto front = 1;
+        auto back = 1;
+        void popFront()
+        {
+            empty=false;
+        }
+        void popBack()
+        {
+            empty=false;
+        }
+        auto save()
+        {
+            return typeof(this)(this.tupleof);
+        }
+
+    }
+    assert(OnlyOne.init.chain(RepeatOne.init).front == 1);
 }
 
 pure @safe nothrow unittest
