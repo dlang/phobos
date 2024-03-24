@@ -60,6 +60,10 @@
               $(LREF Map)
               $(LREF Reverse)
     ))
+    $(TR $(TD Alias sequence searching) $(TD
+              $(LREF all)
+              $(LREF any)
+    ))
     )
 
    References:
@@ -318,4 +322,74 @@ template Reverse(Args...)
                                                 float, int, long, long, int)));
 
     static assert(is(Reverse!() == AliasSeq!()));
+}
+
+/++
+    Whether the given template predicate is $(D true) for all of the elements in
+    the given $(D AliasSeq).
+
+    Evaluation is $(I not) short-circuited if a $(D false) result is
+    encountered; the template predicate must be instantiable with all the
+    elements.
+  +/
+version (StdDdoc) template all(alias Pred, Args...)
+{
+    import core.internal.traits : allSatisfy;
+    alias all = allSatisfy!(Pred, Args);
+}
+else
+{
+    import core.internal.traits : allSatisfy;
+    alias all = allSatisfy;
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isDynamicArray, isInteger;
+
+    static assert(!all!(isInteger, int, double));
+    static assert( all!(isInteger, int, long));
+
+    alias Types = AliasSeq!(string, int[], bool[]);
+
+    static assert( all!(isDynamicArray, Types));
+    static assert(!all!(isInteger, Types));
+
+    static assert( all!isInteger);
+}
+
+/++
+    Whether the given template predicate is $(D true) for any of the elements in
+    the given $(D AliasSeq).
+
+    Evaluation is $(I not) short-circuited if a $(D true) result is
+    encountered; the template predicate must be instantiable with all the
+    elements.
+  +/
+version (StdDdoc) template any(alias Pred, Args...)
+{
+    import core.internal.traits : anySatisfy;
+    alias any = anySatisfy!(Pred, Args);
+}
+else
+{
+    import core.internal.traits : anySatisfy;
+    alias any = anySatisfy;
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isDynamicArray, isInteger;
+
+    static assert(!any!(isInteger, string, double));
+    static assert( any!(isInteger, int, double));
+
+    alias Types = AliasSeq!(string, int[], bool[], real, bool);
+
+    static assert( any!(isDynamicArray, Types));
+    static assert(!any!(isInteger, Types));
+
+    static assert(!any!isInteger);
 }
