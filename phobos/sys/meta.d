@@ -63,6 +63,7 @@
     $(TR $(TD Alias sequence searching) $(TD
               $(LREF all)
               $(LREF any)
+              $(LREF indexOf)
     ))
     )
 
@@ -392,4 +393,82 @@ else
     static assert(!any!(isInteger, Types));
 
     static assert(!any!isInteger);
+}
+
+/++
+    Returns the index of the first element where $(D Pred!(Args[i])) is
+    $(D true).
+
+    If $(D Pred!(Args[i])) is not $(D true) for any elements, then the result
+    is $(D -1).
+
+    Evaluation is $(I not) short-circuited if a $(D true) result is
+    encountered; the template predicate must be instantiable with all the
+    elements.
+  +/
+template indexOf(alias Pred, Args...)
+{
+    enum ptrdiff_t indexOf =
+    {
+        static foreach (i; 0 .. Args.length)
+        {
+            static if (Pred!(Args[i]))
+                return i;
+        }
+        return -1;
+    }();
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isInteger, isSameSymbol, isSameType;
+
+    alias Types1 = AliasSeq!(string, int, long, char[], ubyte, int);
+    alias Types2 = AliasSeq!(float, double, int[], char[], void);
+
+    static assert(indexOf!(isInteger, Types1) == 1);
+    static assert(indexOf!(isInteger, Types2) == -1);
+
+    static assert(indexOf!(isSameType!ubyte, Types1) == 4);
+    static assert(indexOf!(isSameType!ubyte, Types2) == -1);
+
+    int i;
+    int j;
+    string s;
+    int foo() { return 0; }
+    alias Symbols = AliasSeq!(i, j, foo);
+    static assert(indexOf!(isSameSymbol!j, Symbols) == 1);
+    static assert(indexOf!(isSameSymbol!s, Symbols) == -1);
+
+    // Empty AliasSeq.
+    static assert(indexOf!isInteger == -1);
+
+    // The predicate does not compile with all of the arguments,
+    // so indexOf does not compile.
+    static assert(!__traits(compiles, indexOf!(isSameType!int, long, int, 42)));
+}
+
+unittest
+{
+    import phobos.sys.traits : isSameType;
+
+    static assert(indexOf!(isSameType!int, short, int, long) >= 0);
+    static assert(indexOf!(isSameType!string, short, int, long) < 0);
+
+    // This is to verify that we don't accidentally end up with the type of
+    // the result differing based on whether it's -1 or not. Not specifying the
+    // type at all in indexOf results in -1 being int on all systems and the
+    // other results being whatever size_t is (ulong on most systems at this
+    // point), which does generally work, but being explicit with the type
+    // avoids any subtle issues that might come from the type of the result
+    // varying based on whether the item is found or not.
+    static assert(is(typeof(indexOf!(isSameType!int, short, int, long)) ==
+                     typeof(indexOf!(isSameType!string, short, int, long))));
+
+    static assert(indexOf!(isSameType!string, string, string, string, string) == 0);
+    static assert(indexOf!(isSameType!string,    int, string, string, string) == 1);
+    static assert(indexOf!(isSameType!string,    int,    int, string, string) == 2);
+    static assert(indexOf!(isSameType!string,    int,    int,    int, string) == 3);
+    static assert(indexOf!(isSameType!string,    int,    int,    int,    int) == -1);
 }

@@ -51,7 +51,6 @@
     $(BOOKTABLE ,
     $(TR $(TH Category) $(TH Templates))
     $(TR $(TD Categories of types) $(TD
-    $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF isDynamicArray)
               $(LREF isFloatingPoint)
               $(LREF isInteger)
@@ -64,6 +63,10 @@
     $(TR $(TD Traits testing for type conversions) $(TD
               $(LREF isImplicitlyConvertible)
               $(LREF isQualifierConvertible)
+    ))
+    $(TR $(TD Traits for comparisons) $(TD
+             $(LREF isSameSymbol)
+             $(LREF isSameType)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
@@ -1700,6 +1703,132 @@ enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is
                           " should be `" ~ (conversions[i][j] ? "true`" : "false`"));
         }
     }
+}
+
+/++
+    Whether the given symbols are the same symbol.
+
+    All this does is $(D __traits(isSame, lhs, rhs)), so most code shouldn't
+    use it. It's intended to be used in conjunction with templates that take a
+    template predicate - such as those in phobos.sys.meta.
+
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+
+    See_Also:
+        $(DDSUBLINK spec/traits, isSame, $(D __traits(isSame, lhs, rhs)))
+        $(LREF isSameType)
+  +/
+enum isSameSymbol(alias lhs, alias rhs) = __traits(isSame, lhs, rhs);
+
+/++ Ditto +/
+template isSameSymbol(alias lhs)
+{
+    enum isSameSymbol(alias rhs) = __traits(isSame, lhs, rhs);
+}
+
+///
+@safe unittest
+{
+    int i;
+    int j;
+    real r;
+
+    static assert( isSameSymbol!(i, i));
+    static assert(!isSameSymbol!(i, j));
+    static assert(!isSameSymbol!(i, r));
+
+    static assert(!isSameSymbol!(j, i));
+    static assert( isSameSymbol!(j, j));
+    static assert(!isSameSymbol!(j, r));
+
+    static assert(!isSameSymbol!(r, i));
+    static assert(!isSameSymbol!(r, j));
+    static assert( isSameSymbol!(r, r));
+
+    auto foo() { return 0; }
+    auto bar() { return 0; }
+
+    static assert( isSameSymbol!(foo, foo));
+    static assert(!isSameSymbol!(foo, bar));
+    static assert(!isSameSymbol!(foo, i));
+
+    static assert(!isSameSymbol!(bar, foo));
+    static assert( isSameSymbol!(bar, bar));
+    static assert(!isSameSymbol!(bar, i));
+
+    // Types are symbols too. However, in most cases, they should be compared
+    // as types, not symbols (be it with is expressions or with isSameType),
+    // because the results aren't consistent between scalar types and
+    // user-defined types with regards to type qualifiers when they're compared
+    // as symbols.
+    static assert( isSameSymbol!(double, double));
+    static assert(!isSameSymbol!(double, const double));
+    static assert(!isSameSymbol!(double, int));
+    static assert( isSameSymbol!(Object, Object));
+    static assert( isSameSymbol!(Object, const Object));
+
+    static assert(!isSameSymbol!(i, int));
+    static assert( isSameSymbol!(typeof(i), int));
+
+    // Lambdas can be compared with __traits(isSame, ...),
+    // so they can be compared with isSameSymbol.
+    static assert( isSameSymbol!(a => a + 42, a => a + 42));
+    static assert(!isSameSymbol!(a => a + 42, a => a + 99));
+
+    // Partial instantiation allows it to be used with templates that expect
+    // a predicate that takes only a single argument.
+    import phobos.sys.meta : AliasSeq, indexOf;
+    alias Types = AliasSeq!(i, j, r, int, long, foo);
+    static assert(indexOf!(isSameSymbol!j, Types) == 1);
+    static assert(indexOf!(isSameSymbol!int, Types) == 3);
+    static assert(indexOf!(isSameSymbol!bar, Types) == -1);
+}
+
+/++
+    Whether the given types are the same type.
+
+    All this does is $(D is(T == U)), so most code shouldn't use it. It's
+    intended to be used in conjunction with templates that take a template
+    predicate - such as those in phobos.sys.meta.
+
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+
+    See_Also:
+        $(LREF isSameSymbol)
+  +/
+enum isSameType(T, U) = is(T == U);
+
+/++ Ditto +/
+template isSameType(T)
+{
+    enum isSameType(U) = is(T == U);
+}
+
+///
+@safe unittest
+{
+    static assert( isSameType!(long, long));
+    static assert(!isSameType!(long, const long));
+    static assert(!isSameType!(long, string));
+    static assert( isSameType!(string, string));
+
+    int i;
+    real r;
+    static assert( isSameType!(int, typeof(i)));
+    static assert(!isSameType!(int, typeof(r)));
+
+    static assert(!isSameType!(real, typeof(i)));
+    static assert( isSameType!(real, typeof(r)));
+
+    // Partial instantiation allows it to be used with templates that expect
+    // a predicate that takes only a single argument.
+    import phobos.sys.meta : AliasSeq, indexOf;
+    alias Types = AliasSeq!(float, string, int, double);
+    static assert(indexOf!(isSameType!int, Types) == 2);
 }
 
 /++
