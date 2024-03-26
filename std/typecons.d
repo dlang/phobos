@@ -6401,6 +6401,779 @@ private
     extern(C) pure nothrow Object typecons_d_toObject(void* p);
 }
 
+
+// Implement{Ordered, Equals, Hash} helper function
+template ContravariantRhsT(Rhs)
+{
+    static if (is (Rhs == class))
+    {
+        alias ContravariantRhsT = const Object;
+    }
+    else static if (is (Rhs == struct))
+    {
+        alias ContravariantRhsT = const Unqual!Rhs;
+    }
+    else
+    {
+        static assert(0, "Unsupported type " ~ Rhs.stringof ~ ". Rhs must be a `class` or `struct`");
+    }
+}
+
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `opCmp`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `opCmp`.
+ *         If omitted, all the fields will be taken into account. If a custom `function`
+ *         is desired to be applied for a given field, it can be passed next to the
+ *         field name in the list.
+ */
+mixin template ImplementOrdered(M...)
+{
+    static assert(is(typeof(this) == struct) || is(typeof(this) == class));
+
+    int opCmp(ContravariantRhsT!(typeof(this)) rhso)
+    {
+        int compare(U1, U2)(U1 u1, U2 u2)
+        {
+            int r = 0;
+            static if (__traits(compiles, __cmp(u1, u2)))
+            {
+                r = __cmp(u1, u2);
+            }
+            else static if (__traits(compiles, u1.opCmp(u2)))
+            {
+                r = u1.opCmp(u2);
+            }
+            else static if (__traits(compiles, u1 < u2))
+            {
+                if (u1 != u2)
+                    r = u1 < u2 ? -1 : 1;
+            }
+            else
+            {
+                // TODO: fix this legacy bad behavior, see
+                // https://issues.dlang.org/show_bug.cgi?id=17244
+                static assert(is(U1 == U2), "Internal error.");
+                import core.stdc.string : memcmp;
+                r = (() @trusted => memcmp(&u1, &u2, U1.sizeof))();
+            }
+            return r;
+        }
+
+        alias T = typeof(this);
+        static if (is(T == class))
+        {
+            auto rhs = (() @trusted => cast(T) rhso)();
+            if (rhs is null) return 1;
+        }
+        else
+        {
+            alias rhs = rhso;
+        }
+
+        static if (M.length == 0)
+        {
+            alias U = GetAllFields!T;
+        }
+        else
+        {
+            alias U = M;
+        }
+        enum len = U.length;
+
+        int r = 0;
+        static foreach (i, unused; U)
+        {{
+            static if (is(typeof(U[i]) == string))
+            {
+                enum fieldName = U[i];
+                // If assert fails, propagate compiler error
+                static assert(is(typeof(__traits(getMember, this, fieldName))),
+                              typeof(__traits(getMember, this, fieldName)));
+
+                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
+                {
+                    // If the next element is not a string, then it must be the comparator
+                    alias compareFun = U[i + 1];
+                }
+                else
+                {
+                    alias compareFun = compare;
+                }
+
+                alias thisMember = __traits(getMember, this, fieldName);
+                alias rhsMember = __traits(getMember, rhs, fieldName);
+
+                // If we can't call the function with the args, throw the compiler error
+                static assert(is(typeof({compareFun(thisMember, rhsMember);})),
+                        typeof({compareFun(thisMember, rhsMember);}));
+
+                r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
+                if (r != 0)
+                {
+                    return r;
+                }
+            }
+        }}
+        return r;
+    }
+}
+
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+        }
+
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert((w1 < w2) == 0);
+
+    auto w3 = new Widget(11, 20);
+    assert(w1 < w3);
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x", "z", (int a, int b) => a - b, "t", compFn);
+        }
+
+        static @nogc nothrow pure @safe
+        int compFn(int a, int b)
+        {
+            return a - b;
+        }
+
+        int x;
+        int y;
+        int z;
+        int t;
+
+        this(int x, int y, int z, int t)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.t = t;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30, 42);
+    auto cw2 = new ComplexWidget(10, 20, 30, 42);
+    assert((cw1 < cw2) == 0);
+}
+
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+            mixin ImplementEquals;
+            mixin ImplementHash;
+        }
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    class TextWidget : Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+            mixin ImplementEquals;
+            mixin ImplementHash;
+        }
+        this(int x, int y) { super(x, y); }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert(w1.opCmp(w2) == 0);
+
+    auto w3 = new TextWidget(10, 21);
+    assert(w1.opCmp(w3) != w3.opCmp(w1));
+    assert((w1 < w3) != (w3 < w1));
+
+    Widget w4;
+    assert(w4 is null);
+    assert(w1.opCmp(w4) != 0);
+
+    assert(w1.opEquals(w2));
+    assert(w1.toHash() == w2.toHash());
+    assert(!w1.opEquals(w3) && !w3.opEquals(w1));
+    assert(w1.toHash() != w3.toHash());
+}
+
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x");
+            mixin ImplementEquals!("x");
+            mixin ImplementHash!("x");
+        }
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    class TextWidget : Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x");
+            mixin ImplementEquals!("x");
+            mixin ImplementHash!("x");
+        }
+        this(int x, int y) { super(x, y); }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new TextWidget(10, 21);
+    assert(w1.opCmp(w2) == 0);
+    assert(w1.opCmp(w2) != w2.opCmp(w1)); // TextWidget is not impl conv to Widget
+    assert(w1.opEquals(w2));
+    assert(!w2.opEquals(w1)); // TextWidget is not impl conv to Widget
+    assert(w1.toHash() == w2.toHash());
+}
+
+@safe unittest
+{
+    class Widget
+    {
+        static int cmp(int a, int b) { return a - b + 1; }
+        static bool eq(int a, int b) { return (a - b + 1) == 0; }
+        static size_t hashfn(int a, size_t seed) { return hashOf(a, seed); }
+
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!("x", "y", cmp);
+            mixin ImplementEquals!("x", "y", eq);
+            mixin ImplementHash!("x", hashfn);
+        }
+        int x;
+        int y;
+        int z;
+
+        this(int x, int y, int z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
+    auto w1 = new Widget(10, 20, 30);
+    auto w2 = new Widget(10, 21, 31);
+    assert(w1.opCmp(w2) == 0);
+    assert(w1.opEquals(w2));
+    assert(w1.toHash() == w2.toHash());
+}
+
+@safe unittest
+{
+    // Use properties instead of fields
+    class Test
+    {
+
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered!"length";
+            mixin ImplementEquals!"length";
+            mixin ImplementHash!"length";
+        }
+
+        int x;
+
+        const pure nothrow @safe @nogc scope
+        int length() { return 42; }
+
+        this(int x) { this.x = x; }
+    }
+
+    auto t1 = new Test(1);
+    auto t2 = new Test(2);
+    assert((t1 < t2) == 0);
+    assert((() @trusted => t1 == t2)());
+    assert(t1.toHash() == t2.toHash());
+}
+
+template GetAllFields(T)
+{
+    import std.meta : Filter;
+    static bool FilterPred(string member)()
+    {
+        static if (__traits(compiles, { T t; }))
+        {
+            T t;
+        }
+        else
+        {
+            enum t = T.init;
+        }
+        static if (__traits(compiles, __traits(getMember, t, member)))
+        {
+            return !isFunction!(__traits(getMember, t, member)) &&
+                   is(typeof(__traits(getMember, t, member)));
+        }
+        else
+        {
+            return false;
+        }
+    }
+    enum GetAllFields = Filter!(FilterPred, __traits(allMembers, T));
+}
+
+@safe unittest
+{
+    struct S
+    {
+        int x, y;
+        float z;
+        void foo();
+    }
+    static assert(GetAllFields!S == AliasSeq!("x", "y", "z"));
+    static assert(GetAllFieldsExcept!(S, "y") == AliasSeq!("x", "z"));
+}
+
+template GetAllFieldsExcept(T, M...)
+{
+    import std.meta : Filter;
+    static bool ExceptPred(string except)()
+    {
+        bool r = true;
+        static foreach (mem; M)
+        {
+            static if (mem == except)
+            {
+                r = false;
+                goto break_label;
+            }
+        }
+break_label:
+        return r;
+    }
+    enum GetAllFieldsExcept = Filter!(ExceptPred, GetAllFields!T);
+}
+
+mixin template ImplementOrderedExcept(M...)
+{
+    mixin ImplementOrdered!(GetAllFieldsExcept!(typeof(this), M));
+}
+
+mixin template ImplementEqualsExcept(M...)
+{
+    mixin ImplementEquals!(GetAllFieldsExcept!(typeof(this), M));
+}
+
+mixin template ImplementHashExcept(M...)
+{
+    mixin ImplementHash!(GetAllFieldsExcept!(typeof(this), M));
+}
+
+@safe unittest
+{
+    class Book
+    {
+        enum BookFormat
+        {
+            pdf,
+            epub,
+            paperback,
+            hardcover
+        }
+
+        int isbn;
+        BookFormat format;
+
+        this (int isbn, BookFormat format)
+        {
+            this.isbn = isbn;
+            this.format = format;
+        }
+
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrderedExcept!("format");
+            mixin ImplementEqualsExcept!("format");
+            mixin ImplementHashExcept!("format");
+        }
+    }
+
+    auto b1 = new Book(12345, Book.BookFormat.pdf);
+    auto b2 = new Book(12345, Book.BookFormat.paperback);
+
+    assert(b1.opCmp(b2) == 0);
+    assert(b1.format != b2.format);
+    assert((b1 < b2) == 0);
+    assert(b1.opEquals(b2));
+    assert((() @trusted => b1 == b2)());
+    assert(b1.toHash() == b2.toHash());
+}
+
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+            mixin ImplementEquals;
+        }
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    class Composer
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementOrdered;
+            mixin ImplementEquals;
+        }
+        Widget w;
+
+        this(Widget w) { this.w = w; }
+    }
+
+    auto co1 = new Composer(new Widget(10, 20));
+    auto co2 = new Composer(new Widget(10, 20));
+    //assert(__cmp(c1, c2) == 0);
+    assert((co1 < co2) == 0);
+    assert((() @trusted => co1 == co2)());
+
+    struct SComposer
+    {
+        @safe
+        {
+            mixin ImplementOrdered;
+        }
+        Widget w;
+
+        this(Widget w) { this.w = w; }
+    }
+
+    auto sco1 = SComposer(new Widget(10, 20));
+    auto sco2 = SComposer(new Widget(10, 20));
+    assert((sco1 < sco2) == 0);
+    assert((() @trusted => sco1 == sco2)());
+}
+
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `opEquals`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `opEquals`.
+ *         If omitted, all the fields will be taken into account. If a custom `function`
+ *         is desired to be applied for a given field, it can be passed next to the
+ *         field name in the list.
+ */
+mixin template ImplementEquals(M...)
+{
+    static assert(is(typeof(this) == struct) || is(typeof(this) == class));
+
+    bool opEquals(ContravariantRhsT!(typeof(this)) rhso)
+    {
+        static bool compareEqual(U1, U2)(U1 u1, U2 u2)
+        {
+            static if (__traits(compiles, __equals(u1, u2)))
+            {
+                bool r = __equals(u1, u2);
+            }
+            else static if (__traits(compiles, u1.opEquals(u2)))
+            {
+                bool r = u1.opEquals(u2);
+            }
+            else static if (__traits(compiles, u1 == u2))
+            {
+                bool r = u1 == u2;
+            }
+            else
+            {
+                // TODO: fix this legacy bad behavior, see
+                // https://issues.dlang.org/show_bug.cgi?id=17244
+                static assert(is(U1 == U2), "Internal error.");
+                import core.stdc.string : memcmp;
+                bool r = (() @trusted => cast(bool) memcmp(&u1, &u2, U1.sizeof))();
+            }
+            return (() @trusted => cast(bool) r)();
+        }
+
+        alias T = typeof(this);
+        static if (is(T == class))
+        {
+            if (this is rhso) return 1;
+            auto rhs = (() @trusted => cast(T) rhso)();
+            if (rhs is null) return 0;
+        }
+        else
+        {
+            alias rhs = rhso;
+        }
+
+        static if (M.length == 0)
+        {
+            alias U = GetAllFields!T;
+        }
+        else
+        {
+            alias U = M;
+        }
+        enum len = U.length;
+
+        size_t r = 0;
+        static foreach (i, unused; U)
+        {{
+
+            static if (is(typeof(U[i]) == string))
+            {
+                enum fieldName = U[i];
+                // If assert fails, propagate compiler error
+                static assert(is(typeof(__traits(getMember, this, fieldName))),
+                              typeof(__traits(getMember, this, fieldName)));
+
+                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
+                {
+                    // If the next element is not a string, then it must be the comparator
+                    alias compareFun = U[i + 1];
+                }
+                else
+                {
+                    alias compareFun = compareEqual;
+                }
+
+                alias thisMember = __traits(getMember, this, fieldName);
+                alias rhsMember = __traits(getMember, rhs, fieldName);
+
+                // If we can't call the function with the args, throw the compiler error
+                static assert(is(typeof({compareFun(thisMember, rhsMember);})),
+                        typeof({compareFun(thisMember, rhsMember);}));
+
+                r = compareFun(__traits(getMember, this, fieldName), __traits(getMember, rhs, fieldName));
+                if (!r)
+                {
+                    return cast(bool) r;
+                }
+            }
+        }}
+        return cast(bool) r;
+    }
+}
+
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementEquals;
+        }
+
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert(w1.opEquals(w2));
+
+    auto w3 = new Widget(11, 20);
+    assert(!w1.opEquals(w3));
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementEquals!("x", "z", (int a, int b) => a == b, "t", compFn);
+        }
+
+        static @nogc nothrow pure @safe
+        bool compFn(int a, int b)
+        {
+            return (a - b) == 0;
+        }
+
+        int x;
+        int y;
+        int z;
+        int t;
+
+        this(int x, int y, int z, int t)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.t = t;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30, 42);
+    auto cw2 = new ComplexWidget(10, 20, 30, 42);
+    assert(cw1.opEquals(cw2));
+}
+
+/**
+ * Utility $(B template mixin) that can be used inside both `struct`s and `class`es
+ * to automatically implement `toHash`.
+ *
+ * Params:
+ *     M = an optional list of the names of the fields to be compared by the `toHash`.
+ *         If omitted, all the fields will be taken into account. If a custom hash
+ *         `function` is desired to be applied for a given field, it can be passed next
+ *         to the field name in the list.
+ */
+mixin template ImplementHash(M...)
+{
+    static assert(is(typeof(this) == struct) || is(typeof(this) == class));
+
+    size_t toHash()
+    {
+        alias T = typeof(this);
+
+        static if (M.length == 0)
+        {
+            alias U = GetAllFields!T;
+        }
+        else
+        {
+            alias U = M;
+        }
+        enum len = U.length;
+
+        size_t r = 0;
+        static foreach (i, unused; U)
+        {{
+
+            static if (is(typeof(U[i]) == string))
+            {
+                enum fieldName = U[i];
+                // If assert fails, propagate compiler error
+                static assert(is(typeof(__traits(getMember, this, fieldName))),
+                              typeof(__traits(getMember, this, fieldName)));
+
+                static if (((i + 1) < len) && !is(typeof(U[i + 1]) == string))
+                {
+                    // If the next element is not a string, then it must be the comparator
+                    alias hashFun = U[i + 1];
+                }
+                else
+                {
+                    //import core.internal.hash : hashOf;
+                    //return core.internal.hash.hashOf(arg, seed);
+                    alias hashFun = hashOf;
+                }
+
+                alias thisMember = __traits(getMember, this, fieldName);
+
+                // If we can't call the function with the args, throw the compiler error
+                static assert(is(typeof({r = hashFun(thisMember, r);})),
+                        typeof({r = hashFun(thisMember, r);}));
+
+                r = hashFun(__traits(getMember, this, fieldName), r);
+            }
+        }}
+        return r;
+    }
+}
+
+///
+@safe unittest
+{
+    class Widget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementHash;
+        }
+
+        int x;
+        int y;
+
+        this(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    auto w1 = new Widget(10, 20);
+    auto w2 = new Widget(10, 20);
+    assert(w1.toHash() == w2.toHash());
+
+    auto w3 = new Widget(11, 20);
+    assert(w1.toHash() != w3.toHash());
+
+    class ComplexWidget
+    {
+        override const @nogc nothrow pure @safe scope
+        {
+            mixin ImplementHash!("x", "z");
+        }
+
+        int x;
+        int y;
+        int z;
+
+        this(int x, int y, int z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
+    auto cw1 = new ComplexWidget(10, 20, 30);
+    auto cw2 = new ComplexWidget(10, 21, 30);
+    assert(cw1.toHash() == cw2.toHash());
+}
+
+
 /*
  * Avoids opCast operator overloading.
  */
