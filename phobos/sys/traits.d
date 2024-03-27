@@ -60,11 +60,15 @@
               $(LREF isStaticArray)
               $(LREF isUnsignedInteger)
     ))
+    $(TR $(TD Aggregate Type traits) $(TD
+              $(LREF EnumMembers)
+    ))
     $(TR $(TD Traits testing for type conversions) $(TD
               $(LREF isImplicitlyConvertible)
               $(LREF isQualifierConvertible)
     ))
     $(TR $(TD Traits for comparisons) $(TD
+             $(LREF isEqual)
              $(LREF isSameSymbol)
              $(LREF isSameType)
     ))
@@ -1297,6 +1301,172 @@ enum isPointer(T) = is(T == U*, U);
 }
 
 /++
+    Evaluates to an $(D AliasSeq) containing the members of an enum type.
+
+    The elements of the $(D AliasSeq) are in the same order as they are in the
+    enum declaration.
+
+    An enum can have multiple members with the same value, so if code needs the
+    enum values to be unique (e.g. if it's generating a switch statement from
+    them), then $(REF Unique, phobos, sys, meta) can be used to filter out the
+    duplicate values - e.g. $(D Unique!(isEqual, EnumMembers!E)).
+  +/
+template EnumMembers(E)
+if (is(E == enum))
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias EnumMembers = AliasSeq!();
+    static foreach (member; __traits(allMembers, E))
+        EnumMembers = AliasSeq!(EnumMembers, __traits(getMember, E, member));
+}
+
+/// Create an array of enum values.
+@safe unittest
+{
+    enum Sqrts : real
+    {
+        one = 1,
+        two = 1.41421,
+        three = 1.73205
+    }
+    auto sqrts = [EnumMembers!Sqrts];
+    assert(sqrts == [Sqrts.one, Sqrts.two, Sqrts.three]);
+}
+
+/++
+    A generic function $(D rank(v)) in the following example uses this template
+    for finding a member $(D e) in an enum type $(D E).
+ +/
+@safe unittest
+{
+    // Returns i if e is the i-th member of E.
+    static size_t rank(E)(E e)
+    if (is(E == enum))
+    {
+        static foreach (i, member; EnumMembers!E)
+        {
+            if (e == member)
+                return i;
+        }
+        assert(0, "Not an enum member");
+    }
+
+    enum Mode
+    {
+        read = 1,
+        write = 2,
+        map = 4
+    }
+    assert(rank(Mode.read) == 0);
+    assert(rank(Mode.write) == 1);
+    assert(rank(Mode.map) == 2);
+}
+
+/// Use EnumMembers to generate a switch statement using static foreach.
+@safe unittest
+{
+    static class Foo
+    {
+        string calledMethod;
+        void foo() @safe { calledMethod = "foo"; }
+        void bar() @safe { calledMethod = "bar"; }
+        void baz() @safe { calledMethod = "baz"; }
+    }
+
+    enum FuncName : string { foo = "foo", bar = "bar", baz = "baz" }
+
+    auto foo = new Foo;
+
+    s: final switch (FuncName.bar)
+    {
+        static foreach (member; EnumMembers!FuncName)
+        {
+            // Generate a case for each enum value.
+            case member:
+            {
+                // Call foo.{enum value}().
+                __traits(getMember, foo, member)();
+                break s;
+            }
+        }
+    }
+
+    // Since we passed FuncName.bar to the switch statement, the bar member
+    // function was called.
+    assert(foo.calledMethod == "bar");
+}
+
+@safe unittest
+{
+    {
+        enum A { a }
+        static assert([EnumMembers!A] == [A.a]);
+        enum B { a, b, c, d, e }
+        static assert([EnumMembers!B] == [B.a, B.b, B.c, B.d, B.e]);
+    }
+    {
+        enum A : string { a = "alpha", b = "beta" }
+        static assert([EnumMembers!A] == [A.a, A.b]);
+
+        static struct S
+        {
+            int value;
+            int opCmp(S rhs) const nothrow { return value - rhs.value; }
+        }
+        enum B : S { a = S(1), b = S(2), c = S(3) }
+        static assert([EnumMembers!B] == [B.a, B.b, B.c]);
+    }
+    {
+        enum A { a = 0, b = 0, c = 1, d = 1, e }
+        static assert([EnumMembers!A] == [A.a, A.b, A.c, A.d, A.e]);
+    }
+    {
+        enum E { member, a = 0, b = 0 }
+
+        static assert(__traits(isSame, EnumMembers!E[0], E.member));
+        static assert(__traits(isSame, EnumMembers!E[1], E.a));
+        static assert(__traits(isSame, EnumMembers!E[2], E.b));
+
+        static assert(__traits(identifier, EnumMembers!E[0]) == "member");
+        static assert(__traits(identifier, EnumMembers!E[1]) == "a");
+        static assert(__traits(identifier, EnumMembers!E[2]) == "b");
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=14561: huge enums
+@safe unittest
+{
+    static string genEnum()
+    {
+        string result = "enum TLAs {";
+        foreach (c0; '0' .. '2' + 1)
+        {
+            foreach (c1; '0' .. '9' + 1)
+            {
+                foreach (c2; '0' .. '9' + 1)
+                {
+                    foreach (c3; '0' .. '9' + 1)
+                    {
+                        result ~= '_';
+                        result ~= c0;
+                        result ~= c1;
+                        result ~= c2;
+                        result ~= c3;
+                        result ~= ',';
+                    }
+                }
+            }
+        }
+        result ~= '}';
+        return result;
+    }
+    mixin(genEnum);
+    static assert(EnumMembers!TLAs[0] == TLAs._0000);
+    static assert(EnumMembers!TLAs[$ - 1] == TLAs._2999);
+}
+
+/++
     Whether the type $(D From) is implicitly convertible to the type $(D To).
 
     Note that template constraints should be very careful about when they test
@@ -1706,6 +1876,146 @@ enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is
 }
 
 /++
+    Whether the given values are equal per $(D ==).
+
+    All this does is $(D lhs == rhs) but in an eponymous template, so most code
+    shouldn't use it. It's intended to be used in conjunction with templates
+    that take a template predicate - such as those in phobos.sys.meta.
+
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+
+    Note that in most cases, even when comparing values at compile time, using
+    isEqual makes no sense, because you can use CTFE to just compare two values
+    (or expressions which evaluate to values), but in rare cases where you need
+    to compare symbols in an $(D AliasSeq) by value with a template predicate
+    while still leaving them as symbols in an $(D AliasSeq), then isEqual would
+    be needed.
+
+    A prime example of this would be $(D Unique!(isEqual, EnumMembers!MyEnum)),
+    which results in an $(D AliasSeq) containing the list of members of
+    $(D MyEnum) but without any duplicate values (e.g. to use when doing code
+    generation to create a final switch).
+
+    Alternatively, code such as $(D [EnumMembers!MyEnum].sort().unique()) could
+    be used to get a dynamic array of the enum members with no duplicate values
+    via CTFE, thus avoiding the need for template predicates or anything from
+    phobos.sys.meta. However, you then have a dynamic array of enum values
+    rather than an $(D AliasSeq) of symbols for those enum members, which
+    affects what you can do with type introspection. So, which approach is
+    better depends on what the code needs to do with the enum members.
+
+    In general, however, if code doesn't need an $(D AliasSeq), and an array of
+    values will do the trick, then it's more efficient to operate on an array of
+    values with CTFE and avoid using isEqual or other templates to operate on
+    the values as an $(D AliasSeq).
+
+    See_Also:
+        $(LREF isSameSymbol)
+        $(LREF isSameType)
+  +/
+enum isEqual(alias lhs, alias rhs) = lhs == rhs;
+
+/++ Ditto +/
+template isEqual(alias lhs)
+{
+    enum isEqual(alias rhs) = lhs == rhs;
+}
+
+/// It acts just like ==, but it's a template.
+@safe unittest
+{
+    enum a = 42;
+
+    static assert( isEqual!(a, 42));
+    static assert( isEqual!(20, 10 + 10));
+
+    static assert(!isEqual!(a, 120));
+    static assert(!isEqual!(77, 19 * 7 + 2));
+
+    // b cannot be read at compile time, so it won't work with isEqual.
+    int b = 99;
+    static assert(!__traits(compiles, isEqual!(b, 99)));
+}
+
+/++
+    Comparing some of the differences between an $(D AliasSeq) of enum members
+    and an array of enum values created from an $(D AliasSeq) of enum members.
+  +/
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq, Unique;
+
+    enum E
+    {
+        a = 0,
+        b = 22,
+        c = 33,
+        d = 0,
+        e = 256,
+        f = 33,
+        g = 7
+    }
+
+    alias uniqueMembers = Unique!(isEqual, EnumMembers!E);
+    static assert(uniqueMembers.length == 5);
+
+    static assert(__traits(isSame, uniqueMembers[0], E.a));
+    static assert(__traits(isSame, uniqueMembers[1], E.b));
+    static assert(__traits(isSame, uniqueMembers[2], E.c));
+    static assert(__traits(isSame, uniqueMembers[3], E.e));
+    static assert(__traits(isSame, uniqueMembers[4], E.g));
+
+    static assert(__traits(identifier, uniqueMembers[0]) == "a");
+    static assert(__traits(identifier, uniqueMembers[1]) == "b");
+    static assert(__traits(identifier, uniqueMembers[2]) == "c");
+    static assert(__traits(identifier, uniqueMembers[3]) == "e");
+    static assert(__traits(identifier, uniqueMembers[4]) == "g");
+
+    // Same value but different symbol.
+    static assert(uniqueMembers[0] == E.d);
+    static assert(!__traits(isSame, uniqueMembers[0], E.d));
+
+    // is expressions compare types, not symbols or values, and these AliasSeqs
+    // contain the list of symbols for the enum members, not types, so the is
+    // expression evaluates to false even though the symbols are the same.
+    static assert(!is(uniqueMembers == AliasSeq!(E.a, E.b, E.c, E.e, E.g)));
+
+    // Once the members are converted to an array, the types are the same, and
+    // the values are the same, but the symbols are not the same. Instead of
+    // being the symbols E.a, E.b, etc., they're just values with the type E
+    // which match the values of E.a, E.b, etc.
+    enum arr = [uniqueMembers];
+    static assert(is(typeof(arr) == E[]));
+
+    static assert(arr == [E.a, E.b, E.c, E.e, E.g]);
+    static assert(arr == [E.d, E.b, E.f, E.e, E.g]);
+
+    static assert(!__traits(isSame, arr[0], E.a));
+    static assert(!__traits(isSame, arr[1], E.b));
+    static assert(!__traits(isSame, arr[2], E.c));
+    static assert(!__traits(isSame, arr[3], E.e));
+    static assert(!__traits(isSame, arr[4], E.g));
+
+    // Since arr[0] is just a value of type E, it's no longer the symbol, E.a,
+    // even though its type is E, and its value is the same as that of E.a. And
+    // unlike the actual members of an enum, an element of an array does not
+    // have an identifier, so __traits(identifier, ...) doesn't work with it.
+    static assert(!__traits(compiles, __traits(identifier, arr[0])));
+
+    // Similarly, once an enum member from the AliasSeq is assigned to a
+    // variable, __traits(identifer, ...) operates on the variable, not the
+    // symbol from the AliasSeq or the value of the variable.
+    auto var = uniqueMembers[0];
+    static assert(__traits(identifier, var) == "var");
+
+    // The same with a manifest constant.
+    enum constant = uniqueMembers[0];
+    static assert(__traits(identifier, constant) == "constant");
+}
+
+/++
     Whether the given symbols are the same symbol.
 
     All this does is $(D __traits(isSame, lhs, rhs)), so most code shouldn't
@@ -1718,6 +2028,7 @@ enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is
 
     See_Also:
         $(DDSUBLINK spec/traits, isSame, $(D __traits(isSame, lhs, rhs)))
+        $(LREF isEqual)
         $(LREF isSameType)
   +/
 enum isSameSymbol(alias lhs, alias rhs) = __traits(isSame, lhs, rhs);
@@ -1798,6 +2109,7 @@ template isSameSymbol(alias lhs)
     template predicates.
 
     See_Also:
+        $(LREF isEqual)
         $(LREF isSameSymbol)
   +/
 enum isSameType(T, U) = is(T == U);
