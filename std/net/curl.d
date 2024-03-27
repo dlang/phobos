@@ -2449,6 +2449,9 @@ struct HTTP
 
                     auto m = header.findSplit(": ");
                     auto fieldName = m[0].toLower();
+                    ///Fixes https://issues.dlang.org/show_bug.cgi?id=24458
+                    if (fieldName is m[0])
+                        fieldName = fieldName.idup;
                     auto fieldContent = m[2].chomp;
                     if (fieldName == "content-type")
                     {
