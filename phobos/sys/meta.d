@@ -55,6 +55,8 @@
     ))
     $(TR $(TD Alias sequence filtering) $(TD
               $(LREF Filter)
+              $(LREF Stride)
+              $(LREF Unique)
     ))
     $(TR $(TD Alias sequence transformation) $(TD
               $(LREF Map)
@@ -240,6 +242,204 @@ template Filter(alias Pred, Args...)
 }
 
 /++
+    Evaluates to an $(LREF AliasSeq) which only contains every nth element from
+    the $(LREF AliasSeq) that was passed in, where $(D n) is stepSize.
+
+    So, if stepSize is $(D 2), then the result contains every other element from
+    the original. If stepSize is $(D 3), then the result contains every third
+    element from the original. Etc.
+
+    If stepSize is negative, then the result is equivalent to using
+    $(LREF Reverse) on the given $(LREF AliasSeq) and then using Stride on it
+    with the absolute value of that stepSize.
+
+    If stepSize is positive, then the first element in the original
+    $(LREF AliasSeq) is the first element in the result, whereas if stepSize is
+    negative, then the last element in the original is the first element in the
+    result. Each subsequent element is then the element at the index of the
+    previous element plus stepSize.
+  +/
+template Stride(int stepSize, Args...)
+if (stepSize != 0)
+{
+    alias Stride = AliasSeq!();
+    static if (stepSize > 0)
+    {
+        static foreach (i; 0 .. (Args.length + stepSize - 1) / stepSize)
+            Stride = AliasSeq!(Stride, Args[i * stepSize]);
+    }
+    else
+    {
+        static foreach (i; 0 .. (Args.length - stepSize - 1) / -stepSize)
+            Stride = AliasSeq!(Stride, Args[$ - 1 + i * stepSize]);
+    }
+}
+
+///
+@safe unittest
+{
+    static assert(is(Stride!(1, short, int, long) == AliasSeq!(short, int, long)));
+    static assert(is(Stride!(2, short, int, long) == AliasSeq!(short, long)));
+    static assert(is(Stride!(3, short, int, long) == AliasSeq!short));
+    static assert(is(Stride!(100, short, int, long) == AliasSeq!short));
+
+    static assert(is(Stride!(-1, short, int, long) == AliasSeq!(long, int, short)));
+    static assert(is(Stride!(-2, short, int, long) == AliasSeq!(long, short)));
+    static assert(is(Stride!(-3, short, int, long) == AliasSeq!long));
+    static assert(is(Stride!(-100, short, int, long) == AliasSeq!long));
+
+    alias Types = AliasSeq!(short, int, long, ushort, uint, ulong);
+    static assert(is(Stride!(3, Types) == AliasSeq!(short, ushort)));
+    static assert(is(Stride!(3, Types[1 .. $]) == AliasSeq!(int, uint)));
+    static assert(is(Stride!(-3, Types) == AliasSeq!(ulong, long)));
+
+    static assert(is(Stride!(-2, Types) == Stride!(2, Reverse!Types)));
+
+    static assert(is(Stride!1 == AliasSeq!()));
+    static assert(is(Stride!100 == AliasSeq!()));
+}
+
+@safe unittest
+{
+    static assert(!__traits(compiles, Stride!(0, int)));
+
+    alias Types = AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                            char, wchar, dchar, float, double, real, Object);
+    alias Types2 = AliasSeq!(bool, ubyte, ushort, uint, ulong, wchar, float, real);
+    alias Types3 = AliasSeq!(bool, short, uint, char, float, Object);
+    alias Types4 = AliasSeq!(bool, ushort, ulong, float);
+    alias Types5 = AliasSeq!(bool, int, wchar, Object);
+    alias Types6 = AliasSeq!(bool, uint, float);
+    alias Types7 = AliasSeq!(bool, long, real);
+    alias Types8 = AliasSeq!(bool, ulong);
+    alias Types9 = AliasSeq!(bool, char);
+    alias Types10 = AliasSeq!(bool, wchar);
+
+    static assert(is(Stride!(1, Types) == Types));
+    static assert(is(Stride!(2, Types) == Types2));
+    static assert(is(Stride!(3, Types) == Types3));
+    static assert(is(Stride!(4, Types) == Types4));
+    static assert(is(Stride!(5, Types) == Types5));
+    static assert(is(Stride!(6, Types) == Types6));
+    static assert(is(Stride!(7, Types) == Types7));
+    static assert(is(Stride!(8, Types) == Types8));
+    static assert(is(Stride!(9, Types) == Types9));
+    static assert(is(Stride!(10, Types) == Types10));
+
+    static assert(is(Stride!(-1, Types) == Reverse!Types));
+    static assert(is(Stride!(-2, Types) == Stride!(2, Reverse!Types)));
+    static assert(is(Stride!(-3, Types) == Stride!(3, Reverse!Types)));
+    static assert(is(Stride!(-4, Types) == Stride!(4, Reverse!Types)));
+    static assert(is(Stride!(-5, Types) == Stride!(5, Reverse!Types)));
+    static assert(is(Stride!(-6, Types) == Stride!(6, Reverse!Types)));
+    static assert(is(Stride!(-7, Types) == Stride!(7, Reverse!Types)));
+    static assert(is(Stride!(-8, Types) == Stride!(8, Reverse!Types)));
+    static assert(is(Stride!(-9, Types) == Stride!(9, Reverse!Types)));
+    static assert(is(Stride!(-10, Types) == Stride!(10, Reverse!Types)));
+}
+
+/++
+    Evaluates to an $(LREF AliasSeq) which contains no duplicate elements.
+
+    Unique takes a binary template predicate that it uses to compare elements
+    for equality. If the predicate is $(D true) when an element in the given
+    $(LREF AliasSeq) is compared with an element with a lower index, then that
+    element is not included in the result (so if any elements in the
+    $(LREF AliasSeq) are considered equal per the predicate, then only the
+    first one is included in the result).
+
+    Note that the binary predicate must be partially instantiable, e.g.
+    ---
+    alias PartialCmp = Cmp!(Args[0]);
+    enum same = PartialCmp!(Args[1]);
+    ---
+    Otherwise, it won't work.
+
+    See_Also:
+        $(REF isSameSymbol, phobos, sys, traits)
+        $(REF isSameType, phobos, sys, traits)
+  +/
+template Unique(alias Cmp, Args...)
+{
+    alias Unique = AliasSeq!();
+    static foreach (i, Arg; Args)
+    {
+        static if (i == 0)
+            Unique = AliasSeq!Arg;
+        else
+            Unique = AppendIfUnique!(Cmp, Unique, Arg);
+    }
+}
+
+// Unfortunately, this can't be done in-place in Unique, because then we get
+// errors about reassigning Unique after reading it.
+private template AppendIfUnique(alias Cmp, Args...)
+{
+    static if (indexOf!(Cmp!(Args[$ - 1]), Args[0 .. $ - 1]) == -1)
+        alias AppendIfUnique = Args;
+    else
+        alias AppendIfUnique = Args[0 .. $ - 1];
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isSameType;
+
+    alias Types1 = AliasSeq!(int, long, long, int, int, float, int);
+
+    static assert(is(Unique!(isSameType, Types1) ==
+                     AliasSeq!(int, long, float)));
+
+    alias Types2 = AliasSeq!(byte, ubyte, short, ushort, int, uint);
+    static assert(is(Unique!(isSameType, Types2) == Types2));
+
+    // Empty AliasSeq.
+    static assert(Unique!isSameType.length == 0);
+
+    // An AliasSeq with a single element works as well.
+    static assert(Unique!(isSameType, int).length == 1);
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isSameSymbol;
+
+    int i;
+    string s;
+    real r;
+    alias Symbols = AliasSeq!(i, s, i, i, s, r, r, i);
+
+    alias Result = Unique!(isSameSymbol, Symbols);
+    static assert(Result.length == 3);
+    static assert(__traits(isSame, Result[0], i));
+    static assert(__traits(isSame, Result[1], s));
+    static assert(__traits(isSame, Result[2], r));
+
+    // Comparing AliasSeqs for equality with is expressions only works
+    // if they only contain types.
+    static assert(!is(Symbols == Result));
+}
+
+///
+@safe unittest
+{
+    alias Types = AliasSeq!(int, uint, long, string, short, int*, ushort);
+
+    template sameSize(T)
+    {
+        enum sameSize(U) = T.sizeof == U.sizeof;
+    }
+    static assert(is(Unique!(sameSize, Types) ==
+                     AliasSeq!(int, long, string, short)));
+
+    // The predicate must be partially instantiable.
+    enum sameSize_fails(T, U) = T.sizeof == U.sizeof;
+    static assert(!__traits(compiles, Unique!(sameSize_fails, Types)));
+}
+
+/++
     Map takes a template and applies it to every element in the given
     $(D AliasSeq), resulting in an $(D AliasSeq) with the transformed elements.
 
@@ -396,7 +596,7 @@ else
 }
 
 /++
-    Returns the index of the first element where $(D Pred!(Args[i])) is
+    Evaluates to the index of the first element where $(D Pred!(Args[i])) is
     $(D true).
 
     If $(D Pred!(Args[i])) is not $(D true) for any elements, then the result
