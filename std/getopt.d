@@ -460,7 +460,8 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
    You can pass them to `getopt` in any position, except in between an option
    string and its bound pointer.
 */
-enum config {
+enum config
+{
     /// Turn case sensitivity on
     caseSensitive,
     /// Turn case sensitivity off (default)
@@ -485,14 +486,16 @@ enum config {
 
 `helpWanted` is set if the option `--help` or `-h` was passed to the option parser.
 */
-struct GetoptResult {
+struct GetoptResult
+{
     bool helpWanted; /// Flag indicating if help was requested
     Option[] options; /// All possible options
 }
 
 /** Information about an option.
 */
-struct Option {
+struct Option
+{
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
@@ -1485,7 +1488,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 {
     import std.exception;
 
-    enum Foo {
+    enum Foo
+    {
         bar,
         baz
     }

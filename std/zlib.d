@@ -330,7 +330,8 @@ void arrayPrint(ubyte[] array)
 +/
 
 /// the header format the compressed stream is wrapped in
-enum HeaderFormat {
+enum HeaderFormat
+{
     deflate, /// a standard zlib header
     gzip, /// a gzip file format header
     determineFromData /// used when decompressing. Try to automatically detect the stream format by looking at the data

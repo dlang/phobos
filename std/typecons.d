@@ -2633,10 +2633,12 @@ private:
         }
     }
 
-    static assert(!__traits(compiles, () @safe {
+    static assert(!__traits(compiles, () @safe
+    {
         auto r = Rebindable!(immutable Foo)(new Foo);
     }));
-    static assert(__traits(compiles, () @system {
+    static assert(__traits(compiles, () @system
+    {
         auto r = Rebindable!(immutable Foo)(new Foo);
     }));
 }
@@ -2871,7 +2873,8 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 @system unittest
 {
     interface CI { int foo() const; }
-    class C : CI {
+    class C : CI
+    {
       int foo() const { return 42; }
       @property int bar() const { return 23; }
     }
@@ -3126,7 +3129,8 @@ if (is(T == class) || is(T == interface))
 
     import core.thread;
 
-    auto thread = new core.thread.Thread({
+    auto thread = new core.thread.Thread(
+    {
         a = new shared Data();
         b = new shared Data();
     });
@@ -3794,7 +3798,8 @@ auto nullable(T)(T t)
 }
 @safe unittest
 {
-    static int f(scope const Nullable!int x) {
+    static int f(scope const Nullable!int x)
+    {
         return x.isNull ? 42 : x.get;
     }
     Nullable!int a;
@@ -4659,7 +4664,8 @@ if (is (typeof(nullValue) == T))
 
 @safe unittest
 {
-    static int f(scope const Nullable!(int, int.min) x) {
+    static int f(scope const Nullable!(int, int.min) x)
+    {
         return x.isNull ? 42 : x.get;
     }
     Nullable!(int, int.min) a;
@@ -5123,7 +5129,8 @@ auto nullableRef(T)(T* t)
 }
 @system unittest
 {
-    static int f(scope const NullableRef!int x) {
+    static int f(scope const NullableRef!int x)
+    {
         return x.isNull ? 42 : x.get;
     }
     int x = 5;
@@ -5844,7 +5851,8 @@ private static:
         {
             private string foo_;
 
-            this(string s) {
+            this(string s)
+            {
                 foo_ = s;
             }
 
@@ -5935,7 +5943,8 @@ private static:
     {
         private string n_;
 
-        public {
+        public
+        {
             Issue17177 overloaded(string n)
             {
                 this.n_ = n;
@@ -6001,7 +6010,8 @@ version (StdUnittest)
     }
 
     // A class to be overridden
-    private class issue10647_Foo{
+    private class issue10647_Foo
+    {
         void bar(int a) { }
     }
 }
@@ -7638,7 +7648,8 @@ pure @system unittest
 // https://issues.dlang.org/show_bug.cgi?id=6606
 @betterC @safe pure nothrow @nogc unittest
 {
-    union U {
+    union U
+    {
        size_t i;
        void* p;
     }
@@ -7653,12 +7664,14 @@ pure @system unittest
 // Same as above but for old RefCounted and not @safe
 @betterC @system pure nothrow @nogc unittest
 {
-    union U {
+    union U
+    {
        size_t i;
        void* p;
     }
 
-    struct S {
+    struct S
+    {
        U u;
     }
 
@@ -8663,7 +8676,8 @@ mixin template Proxy(alias a)
 }
 
 // workaround for https://issues.dlang.org/show_bug.cgi?id=19669
-private enum isDIP1000 = __traits(compiles, () @safe {
+private enum isDIP1000 = __traits(compiles, () @safe
+{
      int x;
      int* p;
      p = &x;
@@ -9292,11 +9306,13 @@ if (is(T == class))
         import std.algorithm.mutation : move;
         auto invalid = a1.move; // illegal, scoped objects can't be moved
     }
-    static assert(!is(typeof({
+    static assert(!is(typeof(
+    {
         auto e1 = a1; // illegal, scoped objects can't be copied
         assert([a1][0].x == 42); // ditto
     })));
-    static assert(!is(typeof({
+    static assert(!is(typeof(
+    {
         alias ScopedObject = typeof(a1);
         auto e2 = ScopedObject();  // illegal, must be built via scoped!A
         auto e3 = ScopedObject(1); // ditto
@@ -9647,7 +9663,8 @@ kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. `Flag` offers a
 simple structuring method for passing yes/no flags to APIs.
  */
-template Flag(string name) {
+template Flag(string name)
+{
     ///
     enum Flag : bool
     {
@@ -10222,7 +10239,8 @@ template ReplaceTypeUnless(alias pred, From, To, T...)
         {
             template replaceTemplateArgs(T...)
             {
-                static if (is(typeof(T[0]))) {   // template argument is value or symbol
+                static if (is(typeof(T[0]))) // template argument is value or symbol
+                {
                     static if (__traits(compiles, { alias _ = T[0]; }))
                         // it's a symbol
                         alias replaceTemplateArgs = T[0];
