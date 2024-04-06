@@ -525,25 +525,6 @@ template Reverse(Args...)
     static assert(is(Reverse!() == AliasSeq!()));
 }
 
-/++
-    Whether the given template predicate is $(D true) for all of the elements in
-    the given $(D AliasSeq).
-
-    Evaluation is $(I not) short-circuited if a $(D false) result is
-    encountered; the template predicate must be instantiable with all the
-    elements.
-  +/
-version (StdDdoc) template all(alias Pred, Args...)
-{
-    import core.internal.traits : allSatisfy;
-    alias all = allSatisfy!(Pred, Args);
-}
-else
-{
-    import core.internal.traits : allSatisfy;
-    alias all = allSatisfy;
-}
-
 ///
 @safe unittest
 {
@@ -560,24 +541,6 @@ else
     static assert( all!isInteger);
 }
 
-/++
-    Whether the given template predicate is $(D true) for any of the elements in
-    the given $(D AliasSeq).
-
-    Evaluation is $(I not) short-circuited if a $(D true) result is
-    encountered; the template predicate must be instantiable with all the
-    elements.
-  +/
-version (StdDdoc) template any(alias Pred, Args...)
-{
-    import core.internal.traits : anySatisfy;
-    alias any = anySatisfy!(Pred, Args);
-}
-else
-{
-    import core.internal.traits : anySatisfy;
-    alias any = anySatisfy;
-}
 
 ///
 @safe unittest
