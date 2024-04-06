@@ -67,6 +67,11 @@
               $(LREF any)
               $(LREF indexOf)
     ))
+    $(TR $(TD Template instantiation) $(TD
+              $(LREF ApplyLeft)
+              $(LREF ApplyRight)
+              $(LREF Instantiate)
+    ))
     )
 
    References:
@@ -671,4 +676,328 @@ unittest
     static assert(indexOf!(isSameType!string,    int,    int, string, string) == 2);
     static assert(indexOf!(isSameType!string,    int,    int,    int, string) == 3);
     static assert(indexOf!(isSameType!string,    int,    int,    int,    int) == -1);
+}
+
+/++
+    Instantiates the given template with the given arguments and evaluates to
+    the result of that template.
+
+    This is used to work around some syntactic limitations that D has with
+    regards to instantiating templates. Essentially, D requires a name for a
+    template when instantiating it (be it the name of the template itself or an
+    alias to the template), which causes problems when you don't have that.
+
+    Specifically, if the template is within an $(LREF AliasSeq) - e.g.
+    $(D Templates[0]!Args) - or it's the result of another template - e.g
+    $(D Foo!Bar!Baz) - the instantiation is illegal. This leaves two ways to
+    solve the problem. The first is to create an alias, e.g.
+    ---
+    alias Template = Templates[0];
+    enum result = Template!Args;
+
+    alias Partial = Foo!Bar;
+    alias T = Partial!Baz;
+    ---
+    The second is to use Instantiate, e.g.
+    ---
+    enum result = Instantiate!(Templates[0], Args);
+
+    alias T = Instiantiate!(Foo!Bar, Baz);
+    ---
+
+    Of course, the downside to this is that it adds an additional template
+    instantiation, but it avoids creating an alias just to be able to
+    instantiate a template. So, whether it makes sense to use Instantiate
+    instead of an alias naturally depends on the situation, but without it,
+    we'd be forced to create aliases even in situations where that's
+    problematic.
+
+    See_Also:
+        $(LREF ApplyLeft)
+        $(LREF ApplyRight)
+  +/
+alias Instantiate(alias Template, Args...) = Template!Args;
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : ConstOf, isImplicitlyConvertible, isSameType, isInteger;
+
+    alias Templates = AliasSeq!(isImplicitlyConvertible!int,
+                                isSameType!string,
+                                isInteger,
+                                ConstOf);
+
+    // Templates[0]!long does not compile, because the compiler can't parse it.
+
+    static assert( Instantiate!(Templates[0], long));
+    static assert(!Instantiate!(Templates[0], string));
+
+    static assert(!Instantiate!(Templates[1], long));
+    static assert( Instantiate!(Templates[1], string));
+
+    static assert( Instantiate!(Templates[2], long));
+    static assert(!Instantiate!(Templates[2], string));
+
+    static assert(is(Instantiate!(Templates[3], int) == const int));
+    static assert(is(Instantiate!(Templates[3], double) == const double));
+}
+
+///
+@safe unittest
+{
+    template hasMember(string member)
+    {
+        enum hasMember(T) = __traits(hasMember, T, member);
+    }
+
+    struct S
+    {
+        int foo;
+    }
+
+    // hasMember!"foo"!S does not compile,
+    // because having multiple ! arguments is not allowed.
+
+    static assert( Instantiate!(hasMember!"foo", S));
+    static assert(!Instantiate!(hasMember!"bar", S));
+}
+
+/++
+    Instantiate also allows us to do template instantations via templates that
+    take other templates as arguments.
+  +/
+@safe unittest
+{
+    import phobos.sys.traits : isInteger, isNumeric, isUnsignedInteger;
+
+    alias Results = Map!(ApplyRight!(Instantiate, int),
+                         isInteger, isNumeric, isUnsignedInteger);
+
+    static assert([Results] == [true, true, false]);
+}
+
+/++
+    ApplyLeft does a
+    $(LINK2 http://en.wikipedia.org/wiki/Partial_application, partial application)
+    of its arguments, providing a way to bind a set of arguments to the given
+    template while delaying actually instantiating that template until the full
+    set of arguments is provided. The "Left" in the name indicates that the
+    initial arguments are one the left-hand side of the argument list
+    when the given template is instantiated.
+
+    Essentially, ApplyLeft results in a template that stores Template and Args,
+    and when that intermediate template is instantiated in turn, it instantiates
+    Template with Args on the left-hand side of the arguments to Template and
+    with the arguments to the intermediate template on the right-hand side -
+    i.e. Args is applied to the left when instantiating Template.
+
+    So, if you have
+    ---
+    alias Intermediate = ApplyLeft!(MyTemplate, Arg1, Arg2);
+    alias Result = Intermediate!(ArgA, ArgB);
+    ---
+    then that is equivalent to
+    ---
+    alias Result = MyTemplate!(Arg1, Arg2, ArgA, ArgB);
+    ---
+    with the difference being that you have an intermediate template which can
+    be stored or passed to other templates (e.g. as a template predicate).
+
+    The only difference between ApplyLeft and $(LREF ApplyRight) is whether
+    Args is on the left-hand or the right-hand side of the arguments given to
+    Template when it's instantiated.
+
+    Note that in many cases, the need for ApplyLeft can be eliminated by making
+    it so that Template can be partially instantiated. E.G.
+    ---
+    enum isSameType(T, U) = is(T == U);
+
+    template isSameType(T)
+    {
+        enum isSameType(U) = is(T == U);
+    }
+    ---
+    makes it so that both of these work
+    ---
+    enum result1 = isSameType!(int, long);
+
+    alias Intermediate = isSameType!int;
+    enum result2 = Intermediate!long;
+    ---
+    whereas if only the two argument version is provided, then ApplyLeft would
+    be required for the second use case.
+    ---
+    enum result1 = isSameType!(int, long);
+
+    alias Intermediate = ApplyLeft!(isSameType, int);
+    enum result2 = Intermediate!long;
+    ---
+
+    See_Also:
+        $(LREF ApplyRight)
+        $(LREF Instantiate)
+   +/
+template ApplyLeft(alias Template, Args...)
+{
+    alias ApplyLeft(Right...) = Template!(Args, Right);
+}
+
+///
+@safe unittest
+{
+    {
+        alias Intermediate = ApplyLeft!(AliasSeq, ubyte, ushort, uint);
+        alias Result = Intermediate!(char, wchar, dchar);
+        static assert(is(Result == AliasSeq!(ubyte, ushort, uint, char, wchar, dchar)));
+    }
+    {
+        enum isImplicitlyConvertible(T, U) = is(T : U);
+
+        // i.e. isImplicitlyConvertible!(ubyte, T) is what all is checking for
+        // with each element in the AliasSeq.
+        static assert(all!(ApplyLeft!(isImplicitlyConvertible, ubyte),
+                           short, ushort, int, uint, long, ulong));
+    }
+    {
+        enum hasMember(T, string member) = __traits(hasMember, T, member);
+
+        struct S
+        {
+            bool foo;
+            int bar;
+            string baz;
+        }
+
+        static assert(all!(ApplyLeft!(hasMember, S), "foo", "bar", "baz"));
+    }
+    {
+        // Either set of arguments can be empty, since the first set is just
+        // stored to be applied later, and then when the intermediate template
+        // is instantiated, they're all applied to the given template in the
+        // requested order. However, whether the code compiles when
+        // instantiating the intermediate template depends on what kinds of
+        // arguments the given template requires.
+
+        alias Intermediate1 = ApplyLeft!AliasSeq;
+        static assert(Intermediate1!().length == 0);
+
+        enum isSameSize(T, U) = T.sizeof == U.sizeof;
+
+        alias Intermediate2 = ApplyLeft!(isSameSize, int);
+        static assert(Intermediate2!uint);
+
+        alias Intermediate3 = ApplyLeft!(isSameSize, int, uint);
+        static assert(Intermediate3!());
+
+        alias Intermediate4 = ApplyLeft!(isSameSize);
+        static assert(Intermediate4!(int, uint));
+
+        // isSameSize requires two arguments
+        alias Intermediate5 = ApplyLeft!isSameSize;
+        static assert(!__traits(compiles, Intermediate5!()));
+        static assert(!__traits(compiles, Intermediate5!int));
+        static assert(!__traits(compiles, Intermediate5!(int, long, string)));
+    }
+}
+
+/++
+    ApplyRight does a
+    $(LINK2 http://en.wikipedia.org/wiki/Partial_application, partial application)
+    of its arguments, providing a way to bind a set of arguments to the given
+    template while delaying actually instantiating that template until the full
+    set of arguments is provided. The "Right" in the name indicates that the
+    initial arguments are one the right-hand side of the argument list
+    when the given template is instantiated.
+
+    Essentially, ApplyRight results in a template that stores Template and
+    Args, and when that intermediate template is instantiated in turn, it
+    instantiates Template with the arguments to the intermediate template on
+    the left-hand side and with Args on the right-hand side - i.e. Args is
+    applied to the right when instantiating Template.
+
+    So, if you have
+    ---
+    alias Intermediate = ApplyRight!(MyTemplate, Arg1, Arg2);
+    alias Result = Intermediate!(ArgA, ArgB);
+    ---
+    then that is equivalent to
+    ---
+    alias Result = MyTemplate!(ArgA, ArgB, Arg1, Arg2);
+    ---
+    with the difference being that you have an intermediate template which can
+    be stored or passed to other templates (e.g. as a template predicate).
+
+    The only difference between $(LREF ApplyLeft) and ApplyRight is whether
+    Args is on the left-hand or the right-hand side of the arguments given to
+    Template when it's instantiated.
+
+    See_Also:
+        $(LREF ApplyLeft)
+        $(LREF Instantiate)
+   +/
+template ApplyRight(alias Template, Args...)
+{
+    alias ApplyRight(Left...) = Template!(Left, Args);
+}
+
+///
+@safe unittest
+{
+    {
+        alias Intermediate = ApplyRight!(AliasSeq, ubyte, ushort, uint);
+        alias Result = Intermediate!(char, wchar, dchar);
+        static assert(is(Result == AliasSeq!(char, wchar, dchar, ubyte, ushort, uint)));
+    }
+    {
+        enum isImplicitlyConvertible(T, U) = is(T : U);
+
+        // i.e. isImplicitlyConvertible!(T, short) is what Filter is checking
+        // for with each element in the AliasSeq.
+        static assert(is(Filter!(ApplyRight!(isImplicitlyConvertible, short),
+                                 ubyte, string, short, float, int) ==
+                         AliasSeq!(ubyte, short)));
+    }
+    {
+        enum hasMember(T, string member) = __traits(hasMember, T, member);
+
+        struct S1
+        {
+            bool foo;
+        }
+
+        struct S2
+        {
+            int foo() { return 42; }
+        }
+
+        static assert(all!(ApplyRight!(hasMember, "foo"), S1, S2));
+    }
+    {
+        // Either set of arguments can be empty, since the first set is just
+        // stored to be applied later, and then when the intermediate template
+        // is instantiated, they're all applied to the given template in the
+        // requested order. However, whether the code compiles when
+        // instantiating the intermediate template depends on what kinds of
+        // arguments the given template requires.
+
+        alias Intermediate1 = ApplyRight!AliasSeq;
+        static assert(Intermediate1!().length == 0);
+
+        enum isSameSize(T, U) = T.sizeof == U.sizeof;
+
+        alias Intermediate2 = ApplyRight!(isSameSize, int);
+        static assert(Intermediate2!uint);
+
+        alias Intermediate3 = ApplyRight!(isSameSize, int, uint);
+        static assert(Intermediate3!());
+
+        alias Intermediate4 = ApplyRight!(isSameSize);
+        static assert(Intermediate4!(int, uint));
+
+        // isSameSize requires two arguments
+        alias Intermediate5 = ApplyRight!isSameSize;
+        static assert(!__traits(compiles, Intermediate5!()));
+        static assert(!__traits(compiles, Intermediate5!int));
+    }
 }

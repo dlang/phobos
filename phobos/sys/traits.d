@@ -1492,12 +1492,22 @@ if (is(E == enum))
     used in conjunction with templates that use a template predicate (such as
     many of the templates in phobos.sys.meta).
 
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+
     See_Also:
         $(DDSUBLINK dlang.org/spec/type, implicit-conversions, Spec on implicit conversions)
         $(DDSUBLINK spec/const3, implicit_qualifier_conversions, Spec for implicit qualifier conversions)
         $(LREF isQualifierConvertible)
   +/
 enum isImplicitlyConvertible(From, To) = is(From : To);
+
+/++ Ditto +/
+template isImplicitlyConvertible(From)
+{
+    enum isImplicitlyConvertible(To) = is(From : To);
+}
 
 ///
 @safe unittest
@@ -1703,6 +1713,23 @@ enum isImplicitlyConvertible(From, To) = is(From : To);
 }
 
 /++
+    isImplicitlyConvertible can be used with partial instantiation so that it
+    can be passed to a template which takes a unary predicate.
+  +/
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq, all, indexOf;
+
+    // byte is implicitly convertible to byte, short, int, and long.
+    static assert(all!(isImplicitlyConvertible!byte, short, int, long));
+
+    // const(char)[] at index 2 is the first type in the AliasSeq which string
+    // can be implicitly converted to.
+    alias Types = AliasSeq!(int, char[], const(char)[], string, int*);
+    static assert(indexOf!(isImplicitlyConvertible!string, Types) == 2);
+}
+
+/++
     Whether $(D From) is
     $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible)
     to $(D To).
@@ -1746,11 +1773,21 @@ enum isImplicitlyConvertible(From, To) = is(From : To);
     to $(D const char) rather than just $(D char), $(D const char), and
     $(D immutable char).
 
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+
     See_Also:
         $(DDSUBLINK spec/const3, implicit_qualifier_conversions, Spec for implicit qualifier conversions)
         $(LREF isImplicitlyConvertible)
   +/
 enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is(From* : To*);
+
+/++ Ditto +/
+template isQualifierConvertible(From)
+{
+    enum isQualifierConvertible(To) =  is(immutable From == immutable To) && is(From* : To*);
+}
 
 ///
 @safe unittest
@@ -1790,7 +1827,7 @@ enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is
     static assert( isQualifierConvertible!(inout int, const int));
     static assert(!isQualifierConvertible!(inout int, immutable int));
 
-    // shared is of course also a qualifer.
+    // shared is of course also a qualifier.
     static assert(!isQualifierConvertible!(int, shared int));
     static assert(!isQualifierConvertible!(int, const shared int));
     static assert(!isQualifierConvertible!(const int, shared int));
@@ -1840,6 +1877,23 @@ enum isQualifierConvertible(From, To) = is(immutable From == immutable To) && is
     static assert(!isQualifierConvertible!(int, long));
     static assert(!isQualifierConvertible!(int, const long));
     static assert(!isQualifierConvertible!(string, const(ubyte)[]));
+}
+
+/++
+    isQualifierConvertible can be used with partial instantiation so that it
+    can be passed to a template which takes a unary predicate.
+  +/
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq, all, indexOf;
+
+    // byte is qualifier convertible to byte and const byte.
+    static assert(all!(isQualifierConvertible!byte, byte, const byte));
+
+    // const(char[]) at index 2 is the first type in the AliasSeq which string
+    // is qualifier convertible to.
+    alias Types = AliasSeq!(int, char[], const(char[]), string, int*);
+    static assert(indexOf!(isQualifierConvertible!string, Types) == 2);
 }
 
 @safe unittest
