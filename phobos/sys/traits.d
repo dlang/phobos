@@ -2143,49 +2143,6 @@ template isSameType(T)
     static assert(indexOf!(isSameType!int, Types) == 2);
 }
 
-/++
-    Removes the outer layer of $(D const), $(D inout), or $(D immutable)
-    from type $(D T).
-
-    If none of those qualifiers have been applied to the outer layer of
-    type $(D T), then the result is $(D T).
-
-    For the built-in scalar types (that is $(D bool), the character types, and
-    the numeric types), they only have one layer, so $(D const U) simply becomes
-    $(D U).
-
-    Where the layers come in is pointers and arrays. $(D const(U*)) becomes
-    $(D const(U)*), and $(D const(U[])), becomes $(D const(U)[]). So, a pointer
-    goes from being fully $(D const) to being a mutable pointer to $(D const),
-    and a dynamic array goes from being fully $(D const) to being a mutable
-    dynamic array of $(D const) elements. And if there are multiple layers of
-    pointers or arrays, it's just that outer layer which is affected - e.g.
-    $(D const(U**)) would become $(D const(U*)*).
-
-    For user-defined types, the effect is that $(D const U) becomes $(D U), and
-    how that affects member variables depends on the type of the member
-    variable. If a member variable is explicitly marked with any mutability
-    qualifiers, then it will continue to have those qualifiers even after
-    Unconst has stripped all mutability qualifiers from the containing type.
-    However, if a mutability qualifier was on the member variable only because
-    the containing type had that qualifier, then when Unconst removes the
-    qualifier from the containing type, it is removed from the member variable
-    as well.
-
-    Also, Unconst has no effect on what a templated type is instantiated
-    with, so if a templated type is instantiated with a template argument which
-    has a mutability qualifier, the template instantiation will not change.
-  +/
-version (StdDdoc) template Unconst(T)
-{
-    import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst!T;
-}
-else
-{
-    import core.internal.traits : CoreUnconst = Unconst;
-    alias Unconst = CoreUnconst;
-}
 
 ///
 @safe unittest
@@ -2358,69 +2315,6 @@ template Unshared(T)
     static assert(is(Unshared!(shared(Foo!int)) == Foo!int));
 }
 
-/++
-    Removes the outer layer of all type qualifiers from type $(D T) - this
-    includes $(D shared).
-
-    If no type qualifiers have been applied to the outer layer of type $(D T),
-    then the result is $(D T).
-
-    For the built-in scalar types (that is $(D bool), the character types, and
-    the numeric types), they only have one layer, so $(D const U) simply becomes
-    $(D U).
-
-    Where the layers come in is pointers and arrays. $(D const(U*)) becomes
-    $(D const(U)*), and $(D const(U[])), becomes $(D const(U)[]). So, a pointer
-    goes from being fully $(D const) to being a mutable pointer to $(D const),
-    and a dynamic array goes from being fully $(D const) to being a mutable
-    dynamic array of $(D const) elements. And if there are multiple layers of
-    pointers or arrays, it's just that outer layer which is affected - e.g.
-    $(D shared(U**)) would become $(D shared(U*)*).
-
-    For user-defined types, the effect is that $(D const U) becomes $(D U), and
-    how that affects member variables depends on the type of the member
-    variable. If a member variable is explicitly marked with any qualifiers,
-    then it will continue to have those qualifiers even after Unqualified has
-    stripped all qualifiers from the containing type. However, if a qualifier
-    was on the member variable only because the containing type had that
-    qualifier, then when Unqualified removes the qualifier from the containing
-    type, it is removed from the member variable as well.
-
-    Also, Unqualified has no effect on what a templated type is instantiated
-    with, so if a templated type is instantiated with a template argument which
-    has a type qualifier, the template instantiation will not change.
-
-    Note that in most cases, $(LREF Unconst) or $(LREF Unshared) should be used
-    rather than Unqualified, because in most cases, code is not designed to
-    work with $(D shared) and thus doing type checks which remove $(D shared)
-    will allow $(D shared) types to pass template constraints when they won't
-    actually work with the code. And when code is designed to work with
-    $(D shared), it's often the case that the type checks need to take
-    $(D const) into account in order to avoid accidentally mutating $(D const)
-    data and violating the type system.
-
-    In particular, historically, a lot of D code has used
-    $(REF Unqual, std, traits) (which is equivalent to phobos.sys.traits'
-    Unqualified) when the programmer's intent was to remove $(D const), and
-    $(D shared) wasn't actually considered at all. And in such cases, the code
-    really should use $(LREF Unconst) instead.
-
-    But of course, if a template constraint or $(D static if) really needs to
-    strip off both the mutability qualifiers and $(D shared) for what it's
-    testing for, then that's what Unqualified is for. It's just that it's best
-    practice to use $(LREF Unconst) when it's not clear that $(D shared) should
-    be removed as well.
-  +/
-version (StdDdoc) template Unqualified(T)
-{
-    import core.internal.traits : CoreUnqualified = Unqual;
-    alias Unqualified = CoreUnqualified!(T);
-}
-else
-{
-    import core.internal.traits : CoreUnqualified = Unqual;
-    alias Unqualified = CoreUnqualified;
-}
 
 ///
 @safe unittest
