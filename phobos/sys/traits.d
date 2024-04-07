@@ -68,9 +68,9 @@
               $(LREF isQualifierConvertible)
     ))
     $(TR $(TD Traits for comparisons) $(TD
-             $(LREF isEqual)
-             $(LREF isSameSymbol)
-             $(LREF isSameType)
+              $(LREF isEqual)
+              $(LREF isSameSymbol)
+              $(LREF isSameType)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
@@ -78,10 +78,14 @@
               $(LREF Unqualified)
     ))
     $(TR $(TD Type Constructors) $(TD
-             $(LREF ConstOf)
-             $(LREF ImmutableOf)
-             $(LREF InoutOf)
-             $(LREF SharedOf)
+              $(LREF ConstOf)
+              $(LREF ImmutableOf)
+              $(LREF InoutOf)
+              $(LREF SharedOf)
+    ))
+    $(TR $(TD Misc) $(TD
+              $(LREF lvalueOf)
+              $(LREF rvalueOf)
     ))
     )
 
@@ -2657,4 +2661,85 @@ alias SharedOf(T) = shared T;
                      AliasSeq!(shared int, shared long,
                                shared(bool*), shared(ubyte[]),
                                shared(string), immutable(string))));
+}
+
+// Needed for rvalueOf/lvalueOf because
+// "inout on return means inout must be on a parameter as well"
+private struct __InoutWorkaroundStruct {}
+
+/++
+    Creates an lvalue or rvalue of type T to be used in conjunction with
+    $(D is(typeof(...))) or
+    $(DDSUBLINK spec/traits, compiles, $(D __traits(compiles, ...))).
+
+    The idea is that some traits or other forms of conditional compilation need
+    to verify that a particular piece of code compiles with an rvalue or an
+    lvalue of a specific type, and these $(D @property) functions allow you to
+    get an rvalue or lvalue of a specific type to use within an expression that
+    is then tested to see whether it compiles.
+
+    They're $(D @property) functions so that using $(D typeof) on them gives
+    the return type rather than the type of the function.
+
+    Note that these functions are $(I not) defined, so if they're actually used
+    outside of type introspection, they'll result in linker errors. They're
+    entirely for testing that a particular piece of code compiles with an rvalue
+    or lvalue of the given type.
+
+    The $(D __InoutWorkaroundStruct) parameter is entirely to make it so that
+    these work when the given type has the $(D inout) qualifier, since the
+    language requires that a function that returns an $(D inout) type also have
+    an $(D inout) type as a parameter. It should just be ignored.
+  +/
+@property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+
+/++ Ditto +/
+@property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+
+///
+@safe unittest
+{
+    static int foo(int);
+    static assert(is(typeof(foo(lvalueOf!int)) == int));
+    static assert(is(typeof(foo(rvalueOf!int)) == int));
+
+    static bool bar(ref int);
+    static assert(is(typeof(bar(lvalueOf!int)) == bool));
+    static assert(!is(typeof(bar(rvalueOf!int))));
+
+    static assert( is(typeof({ lvalueOf!int = 42; })));
+    static assert(!is(typeof({ rvalueOf!int = 42; })));
+
+    static struct S {}
+    static assert( is(typeof({ lvalueOf!S = S.init; })));
+    static assert(!is(typeof({ rvalueOf!S = S.init; })));
+
+    static struct NoAssign
+    {
+        @disable void opAssign(ref NoAssign);
+    }
+    static assert(!is(typeof({ lvalueOf!NoAssign = NoAssign.init; })));
+    static assert(!is(typeof({ rvalueOf!NoAssign = NoAssign.init; })));
+}
+
+@system unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    void needLvalue(T)(ref T);
+    static struct S {}
+    int i;
+    struct Nested { void f() { ++i; } }
+
+    static foreach (T; AliasSeq!(int, const int, immutable int, inout int, string, S, Nested, Object))
+    {
+        static assert(!__traits(compiles, needLvalue(rvalueOf!T)));
+        static assert( __traits(compiles, needLvalue(lvalueOf!T)));
+        static assert(is(typeof(rvalueOf!T) == T));
+        static assert(is(typeof(lvalueOf!T) == T));
+    }
+
+    static assert(!__traits(compiles, rvalueOf!int = 1));
+    static assert( __traits(compiles, lvalueOf!byte = 127));
+    static assert(!__traits(compiles, lvalueOf!byte = 128));
 }
