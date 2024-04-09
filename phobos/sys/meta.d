@@ -50,8 +50,8 @@
     $(BOOKTABLE ,
     $(TR $(TH Category) $(TH Templates))
     $(TR $(TD Building blocks) $(TD
-             $(LREF Alias)
-             $(LREF AliasSeq)
+              $(LREF Alias)
+              $(LREF AliasSeq)
     ))
     $(TR $(TD Alias sequence filtering) $(TD
               $(LREF Filter)
@@ -66,6 +66,11 @@
               $(LREF all)
               $(LREF any)
               $(LREF indexOf)
+    ))
+    $(TR $(TD Template predicates) $(TD
+              $(LREF And)
+              $(LREF Not)
+              $(LREF Or)
     ))
     $(TR $(TD Template instantiation) $(TD
               $(LREF ApplyLeft)
@@ -676,6 +681,253 @@ unittest
     static assert(indexOf!(isSameType!string,    int,    int, string, string) == 2);
     static assert(indexOf!(isSameType!string,    int,    int,    int, string) == 3);
     static assert(indexOf!(isSameType!string,    int,    int,    int,    int) == -1);
+}
+
+/++
+    Combines multiple template predicates into a single template predicate using
+    logical AND - i.e. for the resulting predicate to be $(D true) with a
+    particular argument, all of the predicates must be $(D true) with that
+    argument.
+
+    Evaluation is $(I not) short-circuited if a $(D false) result is
+    encountered; the template predicate must be instantiable with all the
+    elements.
+
+    See_Also:
+        $(LREF Not)
+        $(LREF Or)
+  +/
+template And(Preds...)
+{
+    enum And(Args...) =
+    {
+        static foreach (Pred; Preds)
+        {
+            static if (!Pred!Args)
+                return false;
+        }
+        return true;
+    }();
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isNumeric;
+
+    template isSameSize(size_t size)
+    {
+        enum isSameSize(T) = T.sizeof == size;
+    }
+
+    alias is32BitNumeric = And!(isNumeric, isSameSize!4);
+
+    static assert(!is32BitNumeric!short);
+    static assert( is32BitNumeric!int);
+    static assert(!is32BitNumeric!long);
+    static assert( is32BitNumeric!float);
+    static assert(!is32BitNumeric!double);
+    static assert(!is32BitNumeric!(int*));
+
+    // An empty sequence of predicates always yields true.
+    alias alwaysTrue = And!();
+    static assert(alwaysTrue!int);
+}
+
+/++
+    Predicates with multiple parameters are also supported. However, the number
+    of parameters must match.
+  +/
+@safe unittest
+{
+    import phobos.sys.traits : isImplicitlyConvertible, isInteger, isSameType;
+
+    alias isOnlyImplicitlyConvertible
+        = And!(Not!isSameType, isImplicitlyConvertible);
+
+    static assert( isOnlyImplicitlyConvertible!(int, long));
+    static assert(!isOnlyImplicitlyConvertible!(int, int));
+    static assert(!isOnlyImplicitlyConvertible!(long, int));
+
+    static assert( isOnlyImplicitlyConvertible!(string, const(char)[]));
+    static assert(!isOnlyImplicitlyConvertible!(string, string));
+    static assert(!isOnlyImplicitlyConvertible!(const(char)[], string));
+
+    // Mismatched numbers of parameters.
+    alias doesNotWork = And!(isInteger, isImplicitlyConvertible);
+    static assert(!__traits(compiles, doesNotWork!int));
+    static assert(!__traits(compiles, doesNotWork!(int, long)));
+}
+
+@safe unittest
+{
+    enum testAlways(Args...) = true;
+    enum testNever(Args...) = false;
+
+    static assert( Instantiate!(And!(testAlways, testAlways, testAlways), int));
+    static assert(!Instantiate!(And!(testAlways, testAlways, testNever), int));
+    static assert(!Instantiate!(And!(testAlways, testNever, testNever), int));
+    static assert(!Instantiate!(And!(testNever, testNever, testNever), int));
+    static assert(!Instantiate!(And!(testNever, testNever, testAlways), int));
+    static assert(!Instantiate!(And!(testNever, testAlways, testAlways), int));
+
+    static assert( Instantiate!(And!(testAlways, testAlways), int));
+    static assert(!Instantiate!(And!(testAlways, testNever), int));
+    static assert(!Instantiate!(And!(testNever, testAlways), int));
+    static assert(!Instantiate!(And!(testNever, testNever), int));
+
+    static assert( Instantiate!(And!testAlways, int));
+    static assert(!Instantiate!(And!testNever, int));
+
+    // No short-circuiting.
+    import phobos.sys.traits : isEqual, isFloatingPoint;
+    static assert(!Instantiate!(And!isFloatingPoint, int));
+    static assert(!__traits(compiles, Instantiate!(And!(isFloatingPoint, isEqual), int)));
+}
+
+/++
+    Evaluates to a template predicate which negates the given predicate.
+
+    See_Also:
+        $(LREF And)
+        $(LREF Or)
+  +/
+template Not(alias Pred)
+{
+    enum Not(Args...) = !Pred!Args;
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isDynamicArray, isPointer;
+
+    alias isNotPointer = Not!isPointer;
+    static assert( isNotPointer!int);
+    static assert(!isNotPointer!(int*));
+    static assert( all!(isNotPointer, string, char, float));
+
+    static assert(!all!(Not!isDynamicArray, string, char[], int[], long));
+    static assert( any!(Not!isDynamicArray, string, char[], int[], long));
+}
+
+/++
+    Predicates with multiple parameters are also supported.
+  +/
+@safe unittest
+{
+    import phobos.sys.traits : isImplicitlyConvertible, isInteger;
+
+    alias notImplicitlyConvertible = Not!isImplicitlyConvertible;
+
+    static assert( notImplicitlyConvertible!(long, int));
+    static assert(!notImplicitlyConvertible!(int, long));
+
+    static assert( notImplicitlyConvertible!(const(char)[], string));
+    static assert(!notImplicitlyConvertible!(string, const(char)[]));
+}
+
+/++
+    Combines multiple template predicates into a single template predicate using
+    logical OR - i.e. for the resulting predicate to be $(D true) with a
+    particular argument, at least one of the predicates must be $(D true) with
+    that argument.
+
+    Evaluation is $(I not) short-circuited if a $(D true) result is
+    encountered; the template predicate must be instantiable with all the
+    elements.
+
+    See_Also:
+        $(LREF And)
+        $(LREF Not)
+  +/
+template Or(Preds...)
+{
+    enum Or(Args...) =
+    {
+        static foreach (Pred; Preds)
+        {
+            static if (Pred!Args)
+                return true;
+        }
+        return false;
+    }();
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.traits : isFloatingPoint, isSignedInteger;
+
+    alias isSignedNumeric = Or!(isFloatingPoint, isSignedInteger);
+
+    static assert( isSignedNumeric!short);
+    static assert( isSignedNumeric!long);
+    static assert( isSignedNumeric!double);
+    static assert(!isSignedNumeric!uint);
+    static assert(!isSignedNumeric!ulong);
+    static assert(!isSignedNumeric!string);
+    static assert(!isSignedNumeric!(int*));
+
+    // An empty sequence of predicates always yields false.
+    alias alwaysFalse = Or!();
+    static assert(!alwaysFalse!int);
+}
+
+/++
+    Predicates with multiple parameters are also supported. However, the number
+    of parameters must match.
+  +/
+@safe unittest
+{
+    import phobos.sys.traits : isImplicitlyConvertible, isInteger;
+
+    enum isSameSize(T, U) = T.sizeof == U.sizeof;
+    alias convertibleOrSameSize = Or!(isImplicitlyConvertible, isSameSize);
+
+    static assert( convertibleOrSameSize!(int, int));
+    static assert( convertibleOrSameSize!(int, long));
+    static assert(!convertibleOrSameSize!(long, int));
+
+    static assert( convertibleOrSameSize!(int, float));
+    static assert( convertibleOrSameSize!(float, int));
+    static assert(!convertibleOrSameSize!(double, int));
+    static assert(!convertibleOrSameSize!(float, long));
+
+    static assert( convertibleOrSameSize!(int*, string*));
+
+    // Mismatched numbers of parameters.
+    alias doesNotWork = Or!(isInteger, isImplicitlyConvertible);
+    static assert(!__traits(compiles, doesNotWork!int));
+    static assert(!__traits(compiles, doesNotWork!(int, long)));
+}
+
+@safe unittest
+{
+    enum testAlways(Args...) = true;
+    enum testNever(Args...) = false;
+
+    static assert( Instantiate!(Or!(testAlways, testAlways, testAlways), int));
+    static assert( Instantiate!(Or!(testAlways, testAlways, testNever), int));
+    static assert( Instantiate!(Or!(testAlways, testNever, testNever), int));
+    static assert(!Instantiate!(Or!(testNever, testNever, testNever), int));
+
+    static assert( Instantiate!(Or!(testAlways, testAlways), int));
+    static assert( Instantiate!(Or!(testAlways, testNever), int));
+    static assert( Instantiate!(Or!(testNever, testAlways), int));
+    static assert(!Instantiate!(Or!(testNever, testNever), int));
+
+    static assert( Instantiate!(Or!testAlways, int));
+    static assert(!Instantiate!(Or!testNever, int));
+
+    static assert(Instantiate!(Or!testAlways, int));
+    static assert(Instantiate!(Or!testAlways, Map));
+    static assert(Instantiate!(Or!testAlways, int, Map));
+
+    // No short-circuiting.
+    import phobos.sys.traits : isEqual, isInteger;
+    static assert( Instantiate!(Or!isInteger, int));
+    static assert(!__traits(compiles, Instantiate!(Or!(isInteger, isEqual), int)));
 }
 
 /++
