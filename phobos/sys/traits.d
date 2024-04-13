@@ -72,6 +72,11 @@
               $(LREF isSameSymbol)
               $(LREF isSameType)
     ))
+    $(TR $(TD General Types) $(TD
+              $(LREF KeyType)
+              $(LREF OriginalType)
+              $(LREF ValueType)
+    ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
               $(LREF Unconst)
               $(LREF Unshared)
@@ -2199,6 +2204,145 @@ template isSameType(T)
     import phobos.sys.meta : AliasSeq, indexOf;
     alias Types = AliasSeq!(float, string, int, double);
     static assert(indexOf!(isSameType!int, Types) == 2);
+}
+
+/++
+    Takes a type which is an associative array and evaluates to the type of the
+    keys in that associative array.
+
+    See_Also:
+        $(LREF ValueType)
+  +/
+alias KeyType(V : V[K], K) = K;
+
+///
+@safe unittest
+{
+    static assert(is(KeyType!(int[string]) == string));
+    static assert(is(KeyType!(string[int]) == int));
+
+    static assert(is(KeyType!(string[const int]) == const int));
+    static assert(is(KeyType!(const int[string]) == string));
+
+    struct S
+    {
+        int i;
+    }
+
+    string[S] aa1;
+    static assert(is(KeyType!(typeof(aa1)) == S));
+
+    S[string] aa2;
+    static assert(is(KeyType!(typeof(aa2)) == string));
+
+    KeyType!(typeof(aa1)) key1 = S(42);
+    KeyType!(typeof(aa2)) key2 = "foo";
+
+    // Key types with indirections have their inner layers treated as const
+    // by the compiler, because the values of keys can't change, or the hash
+    // value could change, putting the associative array in an invalid state.
+    static assert(is(KeyType!(bool[string[]]) == const(string)[]));
+    static assert(is(KeyType!(bool[int*]) == const(int)*));
+
+    // If the given type is not an AA, then KeyType won't compile.
+    static assert(!__traits(compiles, KeyType!int));
+    static assert(!__traits(compiles, KeyType!(int[])));
+}
+
+/++
+    Takes a type which is an associative array and evaluates to the type of the
+    values in that associative array.
+
+    See_Also:
+        $(LREF KeyType)
+  +/
+alias ValueType(V : V[K], K) = V;
+
+///
+@safe unittest
+{
+    static assert(is(ValueType!(int[string]) == int));
+    static assert(is(ValueType!(string[int]) == string));
+
+    static assert(is(ValueType!(string[const int]) == string));
+    static assert(is(ValueType!(const int[string]) == const int));
+
+    struct S
+    {
+        int i;
+    }
+
+    string[S] aa1;
+    static assert(is(ValueType!(typeof(aa1)) == string));
+
+    S[string] aa2;
+    static assert(is(ValueType!(typeof(aa2)) == S));
+
+    ValueType!(typeof(aa1)) value1 = "foo";
+    ValueType!(typeof(aa2)) value2 = S(42);
+
+    // If the given type is not an AA, then ValueType won't compile.
+    static assert(!__traits(compiles, ValueType!int));
+    static assert(!__traits(compiles, ValueType!(int[])));
+}
+
+/++
+    Evaluates to the original / ultimate base type of an enum type - or for
+    non-enum types, it evaluates to the type that it's given.
+
+    If the base type of the given enum type is not an enum, then the result of
+    OriginalType is its direct base type. However, if the base type of the
+    given enum is also an enum, then OriginalType gives the ultimate base type
+    - that is, it keeps getting the base type for each succesive enum in the
+    chain until it gets to a base type that isn't an enum, and that's the
+    result. So, the result will never be an enum type.
+
+    If the given type has any qualifiers, the result will have those same
+    qualifiers.
+  +/
+version (StdDdoc) template OriginalType(T)
+{
+    import core.internal.traits : CoreOriginalType = OriginalType;
+    alias OriginalType = CoreOriginalType!T;
+}
+else
+{
+    import core.internal.traits : CoreOriginalType = OriginalType;
+    alias OriginalType = CoreOriginalType;
+}
+
+///
+@safe unittest
+{
+    enum E { a, b, c }
+    static assert(is(OriginalType!E == int));
+
+    enum F : E { x = E.a }
+    static assert(is(OriginalType!F == int));
+
+    enum G : F { y = F.x }
+    static assert(is(OriginalType!G == int));
+    static assert(is(OriginalType!(const G) == const int));
+    static assert(is(OriginalType!(immutable G) == immutable int));
+    static assert(is(OriginalType!(shared G) == shared int));
+
+    enum C : char { a = 'a', b = 'b' }
+    static assert(is(OriginalType!C == char));
+
+    enum D : string { d = "dlang" }
+    static assert(is(OriginalType!D == string));
+
+    static assert(is(OriginalType!int == int));
+    static assert(is(OriginalType!(const long) == const long));
+    static assert(is(OriginalType!string == string));
+
+    // OriginalType gets the base type of enums and for all other types gives
+    // the same type back. It does nothing special for other types - like
+    // classes - where one could talk about the type having a base type.
+    class Base {}
+    class Derived : Base {}
+    static assert(is(OriginalType!Base == Base));
+    static assert(is(OriginalType!Derived == Derived));
 }
 
 /++
