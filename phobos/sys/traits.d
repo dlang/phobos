@@ -51,8 +51,10 @@
     $(BOOKTABLE ,
     $(TR $(TH Category) $(TH Templates))
     $(TR $(TD Categories of types) $(TD
+              $(LREF isAggregateType)
               $(LREF isDynamicArray)
               $(LREF isFloatingPoint)
+              $(LREF isInstantiationOf)
               $(LREF isInteger)
               $(LREF isNumeric)
               $(LREF isPointer)
@@ -108,6 +110,33 @@
     Source:    $(PHOBOSSRC phobos/sys/traits)
 +/
 module phobos.sys.traits;
+
+/++
+    Whether the given type is an "aggregate type" - i.e. a struct, class,
+    interface, or union.
+  +/
+enum isAggregateType(T) = is(T == struct) || is(T == class) || is(T == interface) || is(T == union);
+
+@safe unittest
+{
+    struct S {}
+    class C {}
+    interface I {}
+    union U {}
+
+    static assert( isAggregateType!S);
+    static assert( isAggregateType!C);
+    static assert( isAggregateType!I);
+    static assert( isAggregateType!U);
+    static assert( isAggregateType!(const S));
+    static assert( isAggregateType!(shared C));
+
+    static assert(!isAggregateType!int);
+    static assert(!isAggregateType!string);
+    static assert(!isAggregateType!(S*));
+    static assert(!isAggregateType!(C[]));
+    static assert(!isAggregateType!(I[string]));
+}
 
 /++
     Whether the given type is a dynamic array (or what is sometimes referred to
@@ -1307,6 +1336,239 @@ enum isPointer(T) = is(T == U*, U);
             static assert(!isPointer!(AliasThis!(Q!T)));
         }
     }
+}
+
+/++
+    Evaluates to $(D true) if the given type or symbol is an instantiation of
+    the given template.
+
+    The overload which takes $(D T) operates on types and indicates whether an
+    aggregate type (i.e. struct, class, interface, or union) is an
+    instantiation of the given template.
+
+    The overload which takes $(D Symbol) operates on function templates,
+    because unlike with aggregate types, the type of a function does not retain
+    the fact that it was instantiated from a template. So, for functions, it's
+    necessary to pass the function itself as a symbol rather than pass the type
+    of the function.
+
+    The overload which takes $(D Symbol) also works with templates which are
+    not types or functions.
+
+    The single-argument overload makes it so that it can be partially
+    instantiated with the first argument, which will often be necessary with
+    template predicates.
+  +/
+template isInstantiationOf(alias Template, T)
+if (__traits(isTemplate, Template))
+{
+    enum isInstantiationOf = is(T == Template!Args, Args...);
+}
+
+/++ Ditto +/
+template isInstantiationOf(alias Template, alias Symbol)
+if (__traits(isTemplate, Template))
+{
+    enum impl(alias T : Template!Args, Args...) = true;
+    enum impl(alias T) = false;
+    enum isInstantiationOf = impl!Symbol;
+}
+
+/++ Ditto +/
+template isInstantiationOf(alias Template)
+if (__traits(isTemplate, Template))
+{
+    enum isInstantiationOf(T) = is(T == Template!Args, Args...);
+
+    template isInstantiationOf(alias Symbol)
+    {
+        enum impl(alias T : Template!Args, Args...) = true;
+        enum impl(alias T) = false;
+        enum isInstantiationOf = impl!Symbol;
+    }
+}
+
+/// Examples of templated types.
+@safe unittest
+{
+    static struct S(T) {}
+    static class C(T) {}
+
+    static assert( isInstantiationOf!(S, S!int));
+    static assert( isInstantiationOf!(S, S!int));
+    static assert( isInstantiationOf!(S, S!string));
+    static assert( isInstantiationOf!(S, const S!string));
+    static assert( isInstantiationOf!(S, shared S!string));
+    static assert(!isInstantiationOf!(S, int));
+    static assert(!isInstantiationOf!(S, C!int));
+    static assert(!isInstantiationOf!(S, C!string));
+    static assert(!isInstantiationOf!(S, C!(S!int)));
+
+    static assert( isInstantiationOf!(C, C!int));
+    static assert( isInstantiationOf!(C, C!string));
+    static assert( isInstantiationOf!(C, const C!string));
+    static assert( isInstantiationOf!(C, shared C!string));
+    static assert(!isInstantiationOf!(C, int));
+    static assert(!isInstantiationOf!(C, S!int));
+    static assert(!isInstantiationOf!(C, S!string));
+    static assert(!isInstantiationOf!(C, S!(C!int)));
+
+    static struct Variadic(T...) {}
+
+    static assert( isInstantiationOf!(Variadic, Variadic!()));
+    static assert( isInstantiationOf!(Variadic, Variadic!int));
+    static assert( isInstantiationOf!(Variadic, Variadic!(int, string)));
+    static assert( isInstantiationOf!(Variadic, Variadic!(int, string, int)));
+    static assert( isInstantiationOf!(Variadic, const Variadic!(int, short)));
+    static assert( isInstantiationOf!(Variadic, shared Variadic!(int, short)));
+    static assert(!isInstantiationOf!(Variadic, int));
+    static assert(!isInstantiationOf!(Variadic, S!int));
+    static assert(!isInstantiationOf!(Variadic, C!int));
+
+    static struct ValueArg(int i) {}
+    static assert( isInstantiationOf!(ValueArg, ValueArg!42));
+    static assert( isInstantiationOf!(ValueArg, ValueArg!256));
+    static assert( isInstantiationOf!(ValueArg, const ValueArg!1024));
+    static assert( isInstantiationOf!(ValueArg, shared ValueArg!1024));
+    static assert(!isInstantiationOf!(ValueArg, int));
+    static assert(!isInstantiationOf!(ValueArg, S!int));
+
+    int i;
+
+    static struct AliasArg(alias Symbol) {}
+    static assert( isInstantiationOf!(AliasArg, AliasArg!42));
+    static assert( isInstantiationOf!(AliasArg, AliasArg!int));
+    static assert( isInstantiationOf!(AliasArg, AliasArg!i));
+    static assert( isInstantiationOf!(AliasArg, const AliasArg!i));
+    static assert( isInstantiationOf!(AliasArg, shared AliasArg!i));
+    static assert(!isInstantiationOf!(AliasArg, int));
+    static assert(!isInstantiationOf!(AliasArg, S!int));
+
+    // An uninstantiated template is not an instance of any template,
+    // not even itself.
+    static assert(!isInstantiationOf!(S, S));
+    static assert(!isInstantiationOf!(S, C));
+    static assert(!isInstantiationOf!(C, C));
+    static assert(!isInstantiationOf!(C, S));
+
+    // Variables of a templated type are not considered instantiations of that
+    // type. For templated types, the overload which takes a type must be used.
+    S!int s;
+    C!string c;
+    static assert(!isInstantiationOf!(S, s));
+    static assert(!isInstantiationOf!(C, c));
+}
+
+// Examples of templated functions.
+@safe unittest
+{
+    static int foo(T...)() { return 42; }
+    static void bar(T...)(T var) {}
+    static void baz(T)(T var) {}
+    static bool frobozz(alias pred)(int) { return true; }
+
+    static assert( isInstantiationOf!(foo, foo!int));
+    static assert( isInstantiationOf!(foo, foo!string));
+    static assert( isInstantiationOf!(foo, foo!(int, string)));
+    static assert(!isInstantiationOf!(foo, bar!int));
+    static assert(!isInstantiationOf!(foo, bar!string));
+    static assert(!isInstantiationOf!(foo, bar!(int, string)));
+
+    static assert( isInstantiationOf!(bar, bar!int));
+    static assert( isInstantiationOf!(bar, bar!string));
+    static assert( isInstantiationOf!(bar, bar!(int, string)));
+    static assert(!isInstantiationOf!(bar, foo!int));
+    static assert(!isInstantiationOf!(bar, foo!string));
+    static assert(!isInstantiationOf!(bar, foo!(int, string)));
+
+    static assert( isInstantiationOf!(baz, baz!int));
+    static assert( isInstantiationOf!(baz, baz!string));
+    static assert(!isInstantiationOf!(baz, foo!(int, string)));
+
+    static assert( isInstantiationOf!(frobozz, frobozz!(a => a)));
+    static assert( isInstantiationOf!(frobozz, frobozz!(a => a > 2)));
+    static assert(!isInstantiationOf!(frobozz, baz!int));
+
+    // Unfortunately, the function type is not considered an instantiation of
+    // the template, because that information is not part of the type, unlike
+    // with templated structs or classes.
+    static assert(!isInstantiationOf!(foo, typeof(foo!int)));
+    static assert(!isInstantiationOf!(bar, typeof(bar!int)));
+}
+
+// Examples of templates which aren't types or functions.
+@safe unittest
+{
+    template SingleArg(T) {}
+    template Variadic(T...) {}
+    template ValueArg(string s) {}
+    template Alias(alias symbol) {}
+
+    static assert( isInstantiationOf!(SingleArg, SingleArg!int));
+    static assert( isInstantiationOf!(SingleArg, SingleArg!string));
+    static assert(!isInstantiationOf!(SingleArg, int));
+    static assert(!isInstantiationOf!(SingleArg, Variadic!int));
+
+    static assert( isInstantiationOf!(Variadic, Variadic!()));
+    static assert( isInstantiationOf!(Variadic, Variadic!int));
+    static assert( isInstantiationOf!(Variadic, Variadic!string));
+    static assert( isInstantiationOf!(Variadic, Variadic!(short, int, long)));
+    static assert(!isInstantiationOf!(Variadic, int));
+    static assert(!isInstantiationOf!(Variadic, SingleArg!int));
+
+    static assert( isInstantiationOf!(ValueArg, ValueArg!"dlang"));
+    static assert( isInstantiationOf!(ValueArg, ValueArg!"foobar"));
+    static assert(!isInstantiationOf!(ValueArg, string));
+    static assert(!isInstantiationOf!(ValueArg, Variadic!string));
+
+    int i;
+
+    static assert( isInstantiationOf!(Alias, Alias!int));
+    static assert( isInstantiationOf!(Alias, Alias!42));
+    static assert( isInstantiationOf!(Alias, Alias!i));
+    static assert(!isInstantiationOf!(Alias, int));
+    static assert(!isInstantiationOf!(Alias, SingleArg!int));
+}
+
+/// Examples of partial instantation.
+@safe unittest
+{
+    static struct SingleArg(T) {}
+    static struct Variadic(T...) {}
+
+    alias isSingleArg = isInstantiationOf!SingleArg;
+    alias isVariadic = isInstantiationOf!Variadic;
+
+    static assert( isSingleArg!(SingleArg!int));
+    static assert( isSingleArg!(const SingleArg!int));
+    static assert(!isSingleArg!int);
+    static assert(!isSingleArg!(Variadic!int));
+
+    static assert( isVariadic!(Variadic!()));
+    static assert( isVariadic!(Variadic!int));
+    static assert( isVariadic!(shared Variadic!int));
+    static assert( isVariadic!(Variadic!(int, string)));
+    static assert(!isVariadic!int);
+    static assert(!isVariadic!(SingleArg!int));
+
+    T foo(T)(T t) { return t; }
+    T likeFoo(T)(T t) { return t; }
+    bool bar(alias pred)(int i) { return pred(i); }
+
+    alias isFoo = isInstantiationOf!foo;
+    alias isBar = isInstantiationOf!bar;
+
+    static assert( isFoo!(foo!int));
+    static assert( isFoo!(foo!string));
+    static assert(!isFoo!int);
+    static assert(!isFoo!(likeFoo!int));
+    static assert(!isFoo!(bar!(a => true)));
+
+    static assert( isBar!(bar!(a => true)));
+    static assert( isBar!(bar!(a => a > 2)));
+    static assert(!isBar!int);
+    static assert(!isBar!(foo!int));
+    static assert(!isBar!(likeFoo!int));
 }
 
 /++
