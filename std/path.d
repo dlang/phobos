@@ -3397,7 +3397,7 @@ do
     else
     {
         C[] pattmp;
-        foreach (ref pi; 0 .. pattern.length)
+        for (size_t pi = 0; pi < pattern.length; pi++)
         {
             const pc = pattern[pi];
             switch (pc)
