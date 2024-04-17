@@ -160,7 +160,7 @@ endif
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise $(MODEL_FLAG) $(PIC)
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dip1021 -preview=dtorfields -preview=fieldwise $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
