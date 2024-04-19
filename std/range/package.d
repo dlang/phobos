@@ -1716,7 +1716,7 @@ pure @safe nothrow @nogc unittest
     }
 }
 
-/// $(LINK2 https://issues.dlang.org/show_bug.cgi?id=24243, Bug 24243)
+// https://issues.dlang.org/show_bug.cgi?id=24243
 pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
