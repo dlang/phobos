@@ -1683,7 +1683,7 @@ pure @safe unittest
     assert(range.array == [S(5), S(6)]);
 }
 
-/// https://issues.dlang.org/show_bug.cgi?id=24064
+// https://issues.dlang.org/show_bug.cgi?id=24064
 pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
@@ -1716,7 +1716,7 @@ pure @safe nothrow @nogc unittest
     }
 }
 
-/// https://issues.dlang.org/show_bug.cgi?id=24243
+// https://issues.dlang.org/show_bug.cgi?id=24243
 pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
