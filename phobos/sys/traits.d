@@ -74,6 +74,11 @@
               $(LREF isSameSymbol)
               $(LREF isSameType)
     ))
+    $(TR $(TD Aggregate Type Traits) $(TD
+              $(LREF FieldNames)
+              $(LREF FieldSymbols)
+              $(LREF FieldTypes)
+    ))
     $(TR $(TD General Types) $(TD
               $(LREF KeyType)
               $(LREF OriginalType)
@@ -2466,6 +2471,798 @@ template isSameType(T)
     import phobos.sys.meta : AliasSeq, indexOf;
     alias Types = AliasSeq!(float, string, int, double);
     static assert(indexOf!(isSameType!int, Types) == 2);
+}
+
+/++
+    Evaluates to an $(D AliasSeq) of the names (as $(D string)s) of the member
+    variables of an aggregate type (i.e. a struct, class, interface, or union).
+
+    These are fields which take up memory space within an instance of the type
+    (i.e. not enums / manifest constants, since they don't take up memory
+    space, and not static member variables, since they don't take up memory
+    space within an instance).
+
+    Hidden fields (like the virtual function table pointer or the context
+    pointer for nested types) are not included.
+
+    For classes, only the direct member variables are included and not those
+    of any base classes.
+
+    For interfaces, the result of FieldNames is always empty, because
+    interfaces cannot have member variables. However, because interfaces are
+    aggregate types, they work with FieldNames for consistency so that code
+    that's written to work on aggregate types doesn't have to worry about
+    whether it's dealing with an interface.
+
+    See_Also:
+        $(LREF FieldSymbols)
+        $(LREF FieldTypes)
+        $(DDSUBLINK spec/struct.html, struct_instance_properties, $(D tupleof))
+  +/
+template FieldNames(T)
+if (isAggregateType!T)
+{
+    import phobos.sys.meta : AliasSeq;
+
+    static if (is(T == struct) && __traits(isNested, T))
+        private alias Fields = AliasSeq!(T.tupleof[0 .. $ - 1]);
+    else
+        private alias Fields = T.tupleof;
+
+    alias FieldNames = AliasSeq!();
+    static foreach (Field; Fields)
+        FieldNames = AliasSeq!(FieldNames, Field.stringof);
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    struct S
+    {
+        int x;
+        float y;
+    }
+    static assert(FieldNames!S == AliasSeq!("x", "y"));
+
+    // Since the AliasSeq contains values, all of which are of the same type,
+    // it can be used to create a dynamic array, which would be more
+    // efficient than operating on an AliasSeq in the cases where an
+    // AliasSeq is not necessary.
+    static assert([FieldNames!S] == ["x", "y"]);
+
+    class C
+    {
+        // static variables are not included.
+        static int var;
+
+        // Manifest constants are not included.
+        enum lang = "dlang";
+
+        // Functions are not included, even if they're @property functions.
+        @property int foo() { return 42; }
+
+        string s;
+        int i;
+        int[] arr;
+    }
+    static assert(FieldNames!C == AliasSeq!("s", "i", "arr"));
+
+    static assert([FieldNames!C] == ["s", "i", "arr"]);
+
+    // Only direct member variables are included. Member variables from any base
+    // classes are not.
+    class D : C
+    {
+        real r;
+    }
+    static assert(FieldNames!D == AliasSeq!"r");
+
+    static assert([FieldNames!D] == ["r"]);
+
+    // FieldNames will always be empty for an interface, since it's not legal
+    // for interfaces to have member variables.
+    interface I
+    {
+    }
+    static assert(FieldNames!I.length == 0);
+
+    union U
+    {
+        int i;
+        double d;
+        long l;
+        S s;
+    }
+    static assert(FieldNames!U == AliasSeq!("i", "d", "l", "s"));
+
+    static assert([FieldNames!U] == ["i", "d", "l", "s"]);;
+
+    // FieldNames only operates on aggregate types.
+    static assert(!__traits(compiles, FieldNames!int));
+    static assert(!__traits(compiles, FieldNames!(S*)));
+    static assert(!__traits(compiles, FieldNames!(C[])));
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        static struct S0 {}
+        static assert(FieldNames!S0.length == 0);
+
+        static struct S1 { int a; }
+        static assert(FieldNames!S1 == AliasSeq!"a");
+
+        static struct S2 { int a; string b; }
+        static assert(FieldNames!S2 == AliasSeq!("a", "b"));
+
+        static struct S3 { int a; string b; real c; }
+        static assert(FieldNames!S3 == AliasSeq!("a", "b", "c"));
+    }
+    {
+        int i;
+        struct S0 { void foo() { i = 0; }}
+        static assert(FieldNames!S0.length == 0);
+        static assert(__traits(isNested, S0));
+
+        struct S1 { int a; void foo() { i = 0; } }
+        static assert(FieldNames!S1 == AliasSeq!"a");
+        static assert(__traits(isNested, S1));
+
+        struct S2 { int a; string b; void foo() { i = 0; } }
+        static assert(FieldNames!S2 == AliasSeq!("a", "b"));
+        static assert(__traits(isNested, S2));
+
+        struct S3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(FieldNames!S3 == AliasSeq!("a", "b", "c"));
+        static assert(__traits(isNested, S3));
+    }
+    {
+        static class C0 {}
+        static assert(FieldNames!C0.length == 0);
+
+        static class C1 { int a; }
+        static assert(FieldNames!C1 == AliasSeq!"a");
+
+        static class C2 { int a; string b; }
+        static assert(FieldNames!C2 == AliasSeq!("a", "b"));
+
+        static class C3 { int a; string b; real c; }
+        static assert(FieldNames!C3 == AliasSeq!("a", "b", "c"));
+
+        static class D0 : C3 {}
+        static assert(FieldNames!D0.length == 0);
+
+        static class D1 : C3 { bool x; }
+        static assert(FieldNames!D1 == AliasSeq!"x");
+
+        static class D2 : C3 { bool x; int* y; }
+        static assert(FieldNames!D2 == AliasSeq!("x", "y"));
+
+        static class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(FieldNames!D3 == AliasSeq!("x", "y", "z"));
+    }
+    {
+        int i;
+        class C0 { void foo() { i = 0; }}
+        static assert(FieldNames!C0.length == 0);
+        static assert(__traits(isNested, C0));
+
+        class C1 { int a; void foo() { i = 0; } }
+        static assert(FieldNames!C1 == AliasSeq!"a");
+        static assert(__traits(isNested, C1));
+
+        class C2 { int a; string b; void foo() { i = 0; } }
+        static assert(FieldNames!C2 == AliasSeq!("a", "b"));
+        static assert(__traits(isNested, C2));
+
+        class C3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(FieldNames!C3 == AliasSeq!("a", "b", "c"));
+        static assert(__traits(isNested, C3));
+
+        class D0 : C3 {}
+        static assert(FieldNames!D0.length == 0);
+        static assert(__traits(isNested, D0));
+
+        class D1 : C3 { bool x; }
+        static assert(FieldNames!D1 == AliasSeq!"x");
+        static assert(__traits(isNested, D1));
+
+        class D2 : C3 { bool x; int* y; }
+        static assert(FieldNames!D2 == AliasSeq!("x", "y"));
+        static assert(__traits(isNested, D2));
+
+        class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(FieldNames!D3 == AliasSeq!("x", "y", "z"));
+        static assert(__traits(isNested, D3));
+    }
+    {
+        static union U0 {}
+        static assert(FieldNames!U0.length == 0);
+
+        static union U1 { int a; }
+        static assert(FieldNames!U1 == AliasSeq!"a");
+
+        static union U2 { int a; string b; }
+        static assert(FieldNames!U2 == AliasSeq!("a", "b"));
+
+        static union U3 { int a; string b; real c; }
+        static assert(FieldNames!U3 == AliasSeq!("a", "b", "c"));
+    }
+    {
+        static struct S
+        {
+            enum e = 42;
+            static str = "foobar";
+
+            string name() { return "foo"; }
+
+            int[] arr;
+
+            struct Inner1 { int i; }
+
+            static struct Inner2 { long gnol; }
+
+            union { int a; string b; }
+
+            alias Foo = Inner1;
+        }
+
+        static assert(FieldNames!S == AliasSeq!("arr", "a", "b"));
+        static assert(FieldNames!(const S) == AliasSeq!("arr", "a", "b"));
+        static assert(FieldNames!(S.Inner1) == AliasSeq!"i");
+        static assert(FieldNames!(S.Inner2) == AliasSeq!"gnol");
+    }
+}
+
+/++
+    Evaluates to an $(D AliasSeq) of the symbols for the member variables of an
+    aggregate type (i.e. a struct, class, interface, or union).
+
+    These are fields which take up memory space within an instance of the type
+    (i.e. not enums / manifest constants, since they don't take up memory
+    space, and not static member variables, since they don't take up memory
+    space within an instance).
+
+    Hidden fields (like the virtual function table pointer or the context
+    pointer for nested types) are not included.
+
+    For classes, only the direct member variables are included and not those
+    of any base classes.
+
+    For interfaces, the result of FieldSymbols is always empty, because
+    interfaces cannot have member variables. However, because interfaces are
+    aggregate types, they work with FieldSymbols for consistency so that code
+    that's written to work on aggregate types doesn't have to worry about
+    whether it's dealing with an interface.
+
+    In most cases, $(D FieldSymbols!T) has the same result as $(D T.tupleof).
+    The difference is that for nested structs with a context pointer,
+    $(D T.tupleof) includes the context pointer, whereas $(D FieldSymbols!T)
+    does not. For non-nested structs, and for classes, interfaces, and unions,
+    $(D FieldSymbols!T) and $(D T.tupleof) are the same.
+
+    So, for most cases, $(D T.tupleof) is sufficient and avoids instantiating
+    an additional template, but FieldSymbols is provided so that the code that
+    needs to avoid including context pointers in the list of fields can do so
+    without the programmer having to figure how to do that correctly. It also
+    provides a template that's equivalent to what $(LREF FieldNames) and
+    $(LREF FieldTypes) do in terms of which fields it gives (the difference of
+    course then being whether you get the symbols, names, or types for the
+    fields), whereas the behavior for $(D tupleof) is subtly different.
+
+    See_Also:
+        $(LREF FieldNames)
+        $(LREF FieldTypes)
+        $(DDSUBLINK spec/struct.html, struct_instance_properties, $(D tupleof))
+        $(DDSUBLINK spec/traits, isNested, $(D __traits(isNested, ...))).
+        $(DDSUBLINK spec/traits, isSame, $(D __traits(isSame, ...))).
+  +/
+template FieldSymbols(T)
+if (isAggregateType!T)
+{
+    static if (is(T == struct) && __traits(isNested, T))
+    {
+        import phobos.sys.meta : AliasSeq;
+        alias FieldSymbols = AliasSeq!(T.tupleof[0 .. $ - 1]);
+    }
+    else
+        alias FieldSymbols = T.tupleof;
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    struct S
+    {
+        int x;
+        float y;
+    }
+    static assert(__traits(isSame, FieldSymbols!S, AliasSeq!(S.x, S.y)));
+
+    // FieldSymbols!S and S.tupleof are the same, because S is not nested.
+    static assert(__traits(isSame, FieldSymbols!S, S.tupleof));
+
+    // Note that type qualifiers _should_ be passed on to the result, but due
+    // to https://issues.dlang.org/show_bug.cgi?id=24516, they aren't.
+    // FieldTypes does not have this problem, because it aliases the types
+    // rather than the symbols, so if you need the types from the symbols, you
+    // should use either FieldTypes or tupleof until the compiler bug has been
+    // fixed (and if you use tupleof, you need to avoid aliasing the result
+    // before getting the types from it).
+    static assert(is(typeof(FieldSymbols!S[0]) == int));
+
+    // These currently fail when they shouldn't:
+    //static assert(is(typeof(FieldSymbols!(const S)[0]) == const int));
+    //static assert(is(typeof(FieldSymbols!(shared S)[0]) == shared int));
+
+    class C
+    {
+        // static variables are not included.
+        static int var;
+
+        // Manifest constants are not included.
+        enum lang = "dlang";
+
+        // Functions are not included, even if they're @property functions.
+        @property int foo() { return 42; }
+
+        string s;
+        int i;
+        int[] arr;
+    }
+    static assert(__traits(isSame, FieldSymbols!C, AliasSeq!(C.s, C.i, C.arr)));
+
+    // FieldSymbols!C and C.tupleof have the same symbols, because they are
+    // always the same for classes.
+    static assert(__traits(isSame, FieldSymbols!C, C.tupleof));
+
+    // Only direct member variables are included. Member variables from any base
+    // classes are not.
+    class D : C
+    {
+        real r;
+    }
+    static assert(__traits(isSame, FieldSymbols!D, AliasSeq!(D.r)));
+    static assert(__traits(isSame, FieldSymbols!D, D.tupleof));
+
+    // FieldSymbols will always be empty for an interface, since it's not legal
+    // for interfaces to have member variables.
+    interface I
+    {
+    }
+    static assert(FieldSymbols!I.length == 0);
+    static assert(I.tupleof.length == 0);
+
+    union U
+    {
+        int i;
+        double d;
+        long l;
+        S s;
+    }
+    static assert(__traits(isSame, FieldSymbols!U, AliasSeq!(U.i, U.d, U.l, U.s)));
+
+    // FieldSymbols!C and C.tupleof have the same symbols, because they are
+    // always the same for unions.
+    static assert(__traits(isSame, FieldSymbols!U, U.tupleof));
+
+    // FieldSymbols only operates on aggregate types.
+    static assert(!__traits(compiles, FieldSymbols!int));
+    static assert(!__traits(compiles, FieldSymbols!(S*)));
+    static assert(!__traits(compiles, FieldSymbols!(C[])));
+}
+
+/// Some examples with nested types.
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    int outside;
+
+    struct S
+    {
+        long l;
+        string s;
+
+        void foo() { outside = 2; }
+    }
+    static assert(__traits(isNested, S));
+    static assert(__traits(isSame, FieldSymbols!S, AliasSeq!(S.l, S.s)));
+
+    // FieldSymbols!S and S.tupleof are not the same, because S is nested, and
+    // the context pointer to the outer scope is included in S.tupleof, whereas
+    // it is excluded from FieldSymbols!S.
+    static assert(__traits(isSame, S.tupleof[0 .. $ - 1], AliasSeq!(S.l, S.s)));
+    static assert(S.tupleof[$ - 1].stringof == "this");
+
+    class C
+    {
+        bool b;
+        int* ptr;
+
+        void foo() { outside = 7; }
+    }
+    static assert(__traits(isNested, C));
+    static assert(__traits(isSame, FieldSymbols!C, AliasSeq!(C.b, C.ptr)));
+
+    // FieldSymbols!C and C.tupleof have the same symbols, because they are
+    // always the same for classes. No context pointer is provided as part of
+    // tupleof for nested classes.
+    static assert(__traits(isSame, FieldSymbols!C, C.tupleof));
+
+    // __traits(isNested, ...) is never true for interfaces or unions, since
+    // they cannot have a context pointer to an outer scope. So, tupleof and
+    // FieldSymbols will always be the same for interfaces and unions.
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        static struct S0 {}
+        static assert(FieldSymbols!S0.length == 0);
+
+        static struct S1 { int a; }
+        static assert(__traits(isSame, FieldSymbols!S1, AliasSeq!(S1.a)));
+
+        static struct S2 { int a; string b; }
+        static assert(__traits(isSame, FieldSymbols!S2, AliasSeq!(S2.a, S2.b)));
+
+        static struct S3 { int a; string b; real c; }
+        static assert(__traits(isSame, FieldSymbols!S3, AliasSeq!(S3.a, S3.b, S3.c)));
+    }
+    {
+        int i;
+        struct S0 { void foo() { i = 0; }}
+        static assert(FieldSymbols!S0.length == 0);
+        static assert(__traits(isNested, S0));
+
+        struct S1 { int a; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!S1, AliasSeq!(S1.a)));
+        static assert(__traits(isNested, S1));
+
+        struct S2 { int a; string b; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!S2, AliasSeq!(S2.a, S2.b)));
+        static assert(__traits(isNested, S2));
+
+        struct S3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!S3, AliasSeq!(S3.a, S3.b, S3.c)));
+        static assert(__traits(isNested, S3));
+    }
+    {
+        static class C0 {}
+        static assert(FieldSymbols!C0.length == 0);
+
+        static class C1 { int a; }
+        static assert(__traits(isSame, FieldSymbols!C1, AliasSeq!(C1.a)));
+
+        static class C2 { int a; string b; }
+        static assert(__traits(isSame, FieldSymbols!C2, AliasSeq!(C2.a, C2.b)));
+
+        static class C3 { int a; string b; real c; }
+        static assert(__traits(isSame, FieldSymbols!C3, AliasSeq!(C3.a, C3.b, C3.c)));
+
+        static class D0 : C3 {}
+        static assert(FieldSymbols!D0.length == 0);
+
+        static class D1 : C3 { bool x; }
+        static assert(__traits(isSame, FieldSymbols!D1, AliasSeq!(D1.x)));
+
+        static class D2 : C3 { bool x; int* y; }
+        static assert(__traits(isSame, FieldSymbols!D2, AliasSeq!(D2.x, D2.y)));
+
+        static class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(__traits(isSame, FieldSymbols!D3, AliasSeq!(D3.x, D3.y, D3.z)));
+    }
+    {
+        int i;
+        class C0 { void foo() { i = 0; }}
+        static assert(FieldSymbols!C0.length == 0);
+        static assert(__traits(isNested, C0));
+
+        class C1 { int a; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!C1, AliasSeq!(C1.a)));
+        static assert(__traits(isNested, C1));
+
+        class C2 { int a; string b; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!C2, AliasSeq!(C2.a, C2.b)));
+        static assert(__traits(isNested, C2));
+
+        class C3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(__traits(isSame, FieldSymbols!C3, AliasSeq!(C3.a, C3.b, C3.c)));
+        static assert(__traits(isNested, C3));
+
+        class D0 : C3 {}
+        static assert(FieldSymbols!D0.length == 0);
+        static assert(__traits(isNested, D0));
+
+        class D1 : C3 { bool x; }
+        static assert(__traits(isSame, FieldSymbols!D1, AliasSeq!(D1.x)));
+        static assert(__traits(isNested, D1));
+
+        class D2 : C3 { bool x; int* y; }
+        static assert(__traits(isSame, FieldSymbols!D2, AliasSeq!(D2.x, D2.y)));
+        static assert(__traits(isNested, D2));
+
+        class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(__traits(isSame, FieldSymbols!D3, AliasSeq!(D3.x, D3.y, D3.z)));
+        static assert(__traits(isNested, D3));
+    }
+    {
+        static union U0 {}
+        static assert(FieldSymbols!U0.length == 0);
+
+        static union U1 { int a; }
+        static assert(__traits(isSame, FieldSymbols!U1, AliasSeq!(U1.a)));
+
+        static union U2 { int a; string b; }
+        static assert(__traits(isSame, FieldSymbols!U2, AliasSeq!(U2.a, U2.b)));
+
+        static union U3 { int a; string b; real c; }
+        static assert(__traits(isSame, FieldSymbols!U3, AliasSeq!(U3.a, U3.b, U3.c)));
+    }
+    {
+        static struct S
+        {
+            enum e = 42;
+            static str = "foobar";
+
+            string name() { return "foo"; }
+
+            int[] arr;
+
+            struct Inner1 { int i; }
+
+            static struct Inner2 { long gnol; }
+
+            union { int a; string b; }
+
+            alias Foo = Inner1;
+        }
+
+        static assert(__traits(isSame, FieldSymbols!S, AliasSeq!(S.arr, S.a, S.b)));
+        static assert(__traits(isSame, FieldSymbols!(const S), AliasSeq!(S.arr, S.a, S.b)));
+        static assert(__traits(isSame, FieldSymbols!(S.Inner1), AliasSeq!(S.Inner1.i)));
+        static assert(__traits(isSame, FieldSymbols!(S.Inner2), AliasSeq!(S.Inner2.gnol)));
+    }
+}
+
+/++
+    Evaluates to an $(D AliasSeq) of the types of the member variables of an
+    aggregate type (i.e. a struct, class, interface, or union).
+
+    These are fields which take up memory space within an instance of the type
+    (i.e. not enums / manifest constants, since they don't take up memory
+    space, and not static member variables, since they don't take up memory
+    space within an instance).
+
+    Hidden fields (like the virtual function table pointer or the context
+    pointer for nested types) are not included.
+
+    For classes, only the direct member variables are included and not those
+    of any base classes.
+
+    For interfaces, the result of FieldTypes is always empty, because
+    interfaces cannot have member variables. However, because interfaces are
+    aggregate types, they work with FieldTypes for consistency so that code
+    that's written to work on aggregate types doesn't have to worry about
+    whether it's dealing with an interface.
+
+    See_Also:
+        $(LREF FieldNames)
+        $(LREF FieldSymbols)
+        $(DDSUBLINK spec/struct.html, struct_instance_properties, $(D tupleof))
+  +/
+template FieldTypes(T)
+if (isAggregateType!T)
+{
+    static if (is(T == struct) && __traits(isNested, T))
+        alias FieldTypes = typeof(T.tupleof[0 .. $ - 1]);
+    else
+        alias FieldTypes = typeof(T.tupleof);
+}
+
+///
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    struct S
+    {
+        int x;
+        float y;
+    }
+    static assert(is(FieldTypes!S == AliasSeq!(int, float)));
+
+    // Type qualifers will be passed on to the result.
+    static assert(is(FieldTypes!(const S) == AliasSeq!(const int, const float)));
+    static assert(is(FieldTypes!(shared S) == AliasSeq!(shared int, shared float)));
+
+    class C
+    {
+        // static variables are not included.
+        static int var;
+
+        // Manifest constants are not included.
+        enum lang = "dlang";
+
+        // Functions are not included, even if they're @property functions.
+        @property int foo() { return 42; }
+
+        string s;
+        int i;
+        int[] arr;
+    }
+    static assert(is(FieldTypes!C == AliasSeq!(string, int, int[])));
+
+    // Only direct member variables are included. Member variables from any base
+    // classes are not.
+    class D : C
+    {
+        real r;
+    }
+    static assert(is(FieldTypes!D == AliasSeq!real));
+
+    // FieldTypes will always be empty for an interface, since it's not legal
+    // for interfaces to have member variables.
+    interface I
+    {
+    }
+    static assert(FieldTypes!I.length == 0);
+
+    union U
+    {
+        int i;
+        double d;
+        long l;
+        S s;
+    }
+    static assert(is(FieldTypes!U == AliasSeq!(int, double, long, S)));
+
+    // FieldTypes only operates on aggregate types.
+    static assert(!__traits(compiles, FieldTypes!int));
+    static assert(!__traits(compiles, FieldTypes!(S*)));
+    static assert(!__traits(compiles, FieldTypes!(C[])));
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        static struct S0 {}
+        static assert(FieldTypes!S0.length == 0);
+
+        static struct S1 { int a; }
+        static assert(is(FieldTypes!S1 == AliasSeq!int));
+
+        static struct S2 { int a; string b; }
+        static assert(is(FieldTypes!S2 == AliasSeq!(int, string)));
+
+        static struct S3 { int a; string b; real c; }
+        static assert(is(FieldTypes!S3 == AliasSeq!(int, string, real)));
+    }
+    {
+        int i;
+        struct S0 { void foo() { i = 0; }}
+        static assert(FieldTypes!S0.length == 0);
+        static assert(__traits(isNested, S0));
+
+        struct S1 { int a; void foo() { i = 0; } }
+        static assert(is(FieldTypes!S1 == AliasSeq!int));
+        static assert(__traits(isNested, S1));
+
+        struct S2 { int a; string b; void foo() { i = 0; } }
+        static assert(is(FieldTypes!S2 == AliasSeq!(int, string)));
+        static assert(__traits(isNested, S2));
+
+        struct S3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(is(FieldTypes!S3 == AliasSeq!(int, string, real)));
+        static assert(__traits(isNested, S3));
+    }
+    {
+        static class C0 {}
+        static assert(FieldTypes!C0.length == 0);
+
+        static class C1 { int a; }
+        static assert(is(FieldTypes!C1 == AliasSeq!int));
+
+        static class C2 { int a; string b; }
+        static assert(is(FieldTypes!C2 == AliasSeq!(int, string)));
+
+        static class C3 { int a; string b; real c; }
+        static assert(is(FieldTypes!C3 == AliasSeq!(int, string, real)));
+
+        static class D0 : C3 {}
+        static assert(FieldTypes!D0.length == 0);
+
+        static class D1 : C3 { bool x; }
+        static assert(is(FieldTypes!D1 == AliasSeq!bool));
+
+        static class D2 : C3 { bool x; int* y; }
+        static assert(is(FieldTypes!D2 == AliasSeq!(bool, int*)));
+
+        static class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(is(FieldTypes!D3 == AliasSeq!(bool, int*, short[])));
+    }
+    {
+        int i;
+        class C0 { void foo() { i = 0; }}
+        static assert(FieldTypes!C0.length == 0);
+        static assert(__traits(isNested, C0));
+
+        class C1 { int a; void foo() { i = 0; } }
+        static assert(is(FieldTypes!C1 == AliasSeq!int));
+        static assert(__traits(isNested, C1));
+
+        class C2 { int a; string b; void foo() { i = 0; } }
+        static assert(is(FieldTypes!C2 == AliasSeq!(int, string)));
+        static assert(__traits(isNested, C2));
+
+        class C3 { int a; string b; real c; void foo() { i = 0; } }
+        static assert(is(FieldTypes!C3 == AliasSeq!(int, string, real)));
+        static assert(__traits(isNested, C3));
+
+        class D0 : C3 {}
+        static assert(FieldTypes!D0.length == 0);
+        static assert(__traits(isNested, D0));
+
+        class D1 : C3 { bool x; }
+        static assert(is(FieldTypes!D1 == AliasSeq!bool));
+        static assert(__traits(isNested, D1));
+
+        class D2 : C3 { bool x; int* y; }
+        static assert(is(FieldTypes!D2 == AliasSeq!(bool, int*)));
+        static assert(__traits(isNested, D2));
+
+        class D3 : C3 { bool x; int* y; short[] z; }
+        static assert(is(FieldTypes!D3 == AliasSeq!(bool, int*, short[])));
+        static assert(__traits(isNested, D3));
+    }
+    {
+        static union U0 {}
+        static assert(FieldTypes!U0.length == 0);
+
+        static union U1 { int a; }
+        static assert(is(FieldTypes!U1 == AliasSeq!int));
+
+        static union U2 { int a; string b; }
+        static assert(is(FieldTypes!U2 == AliasSeq!(int, string)));
+
+        static union U3 { int a; string b; real c; }
+        static assert(is(FieldTypes!U3 == AliasSeq!(int, string, real)));
+    }
+    {
+        static struct S
+        {
+            enum e = 42;
+            static str = "foobar";
+
+            string name() { return "foo"; }
+
+            int[] arr;
+
+            struct Inner1 { int i; }
+
+            static struct Inner2 { long gnol; }
+
+            union { int a; string b; }
+
+            alias Foo = Inner1;
+        }
+
+        static assert(is(FieldTypes!S == AliasSeq!(int[], int, string)));
+        static assert(is(FieldTypes!(const S) == AliasSeq!(const(int[]), const int, const string)));
+        static assert(is(FieldTypes!(S.Inner1) == AliasSeq!int));
+        static assert(is(FieldTypes!(S.Inner2) == AliasSeq!long));
+    }
 }
 
 /++
