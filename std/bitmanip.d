@@ -164,8 +164,7 @@ private template createStorageAndFields(Ts...)
         alias StoreType = ulong;
     else
     {
-        import std.conv : to;
-        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ to!string(Size));
+        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ Size.stringof);
         alias StoreType = ulong; // just to avoid another error msg
     }
 
