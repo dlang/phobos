@@ -1271,6 +1271,22 @@ version (Posix)
     assert(received);
 }
 
+version (Posix)
+@safe unittest
+{
+    foreach (i; 0 .. 3)
+    {
+        auto config = Config(
+            preExecFunction: delegate() @trusted {
+                _Exit(i);
+                return true;
+            },
+        );
+        auto pid = spawnProcess(["false"], config: config);
+        assert(wait(pid) == i);
+    }
+}
+
 /*
 Implementation of spawnProcess() for Windows.
 
@@ -2188,11 +2204,11 @@ struct Config
 
         On Windows, this member is not available.
         */
-        bool function() nothrow @nogc @safe preExecFunction;
+        bool delegate() nothrow @nogc @safe preExecFunction;
     }
     else version (Posix)
     {
-        bool function() nothrow @nogc @safe preExecFunction;
+        bool delegate() nothrow @nogc @safe preExecFunction;
     }
 }
 
