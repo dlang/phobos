@@ -1034,6 +1034,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
             if (!(config.flags & Config.Flags.inheritFDs))
             {
+                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
                 import core.sys.posix.dirent : dirent, opendir, readdir, closedir, DIR;
                 import core.sys.posix.unistd : close;
                 import core.sys.posix.stdlib : atoi, malloc, free;
@@ -1042,9 +1043,23 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 pragma(mangle, "dirfd")
                 extern(C) nothrow @nogc int dirfd(DIR* dir);
 
-                // Try to open the directory /dev/fd or /proc/self/fd
-                DIR* dir = opendir("/dev/fd");
-                if (dir is null) dir = opendir("/proc/self/fd");
+                // Get the maximum number of file descriptors that could be open.
+                rlimit r;
+                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+
+                DIR* dir = null;
+
+                // Reading /dev/fd or /proc/self/fd works better than using poll() if ...
+                if (
+                    r.rlim_cur/(forkPipeOut+1) > 120 ||     // ... the number of file descriptors is small ...
+                    r.rlim_cur > 1024*1024                  // ... or the soft limit is high. In this case poll would allocate a huge array)
+                )
+                {
+                    // Try to open the directory /dev/fd or /proc/self/fd
+                    dir = opendir("/dev/fd");
+                    if (dir is null) dir = opendir("/proc/self/fd");
+                }
 
                 // If we have a directory, close all file descriptors except stdin, stdout, stderr and forkPipeOut
                 if (dir)
@@ -1077,14 +1092,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     // in its own implementation via opendir().
                     import core.stdc.stdlib : malloc;
                     import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-                    import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
-                    // Get the maximum number of file descriptors that could be open.
-                    rlimit r;
-                    if (getrlimit(RLIMIT_NOFILE, &r) != 0)
-                    {
-                        abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
-                    }
                     immutable maxDescriptors = cast(int) r.rlim_cur;
 
                     // The above, less stdin, stdout, and stderr
