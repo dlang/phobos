@@ -1925,7 +1925,7 @@ version (StdDdoc)
      * auto abstractAddr = new UnixAddress("\0/tmp/dbus-OtHLWmCLPR");
      * ---
      *
-     * See_Also: $(HTTP http://man7.org/linux/man-pages/man7/unix.7.html, UNIX(7))
+     * See_Also: $(HTTP man7.org/linux/man-pages/man7/unix.7.html, UNIX(7))
      */
     class UnixAddress: Address
     {
