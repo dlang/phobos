@@ -42,6 +42,12 @@ class FileLogger : Logger
          this(fn, lv, CreateFolder.yes);
     }
 
+    ///  ditto
+    this(const string fn, const LogLevel lv = LogLevel.all) shared @safe
+    {
+         this(fn, lv, CreateFolder.yes);
+    }
+
     /** A constructor for the `FileLogger` Logger that takes a reference to
     a `File`.
 
@@ -83,6 +89,30 @@ class FileLogger : Logger
         this.file_.open(this.filename, "a");
     }
 
+    /// ditto
+    this(const string fn, const LogLevel lv, CreateFolder createFileNameFolder) shared @safe
+    {
+        import std.file : exists, mkdirRecurse;
+        import std.path : dirName;
+        import std.conv : text;
+
+        super(lv);
+        this.filename = fn;
+
+        if (createFileNameFolder)
+        {
+            auto d = dirName(this.filename);
+            mkdirRecurse(d);
+            assert(exists(d), text("The folder the FileLogger should have",
+                                   " created in '", d,"' could not be created."));
+        }
+
+        synchronized (mutex)
+        {
+            () @trusted { (cast() this.file_).open(this.filename, "a") }();
+        }
+    }
+
     /** A constructor for the `FileLogger` Logger that takes a reference to
     a `File`.
 
@@ -103,6 +133,12 @@ class FileLogger : Logger
     -------------
     */
     this(File file, const LogLevel lv = LogLevel.all) @safe
+    {
+        super(lv);
+        this.file_ = file;
+    }
+    /// ditto
+    this(shared(File) file, const LogLevel lv = LogLevel.all) shared @safe
     {
         super(lv);
         this.file_ = file;

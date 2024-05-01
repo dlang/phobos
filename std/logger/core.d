@@ -1396,8 +1396,8 @@ abstract class Logger
 
     private void delegate() @safe fatalHandler_;
     private shared LogLevel logLevel_ = LogLevel.info;
-    private Mutex mutex;
 
+    protected Mutex mutex;
     protected Appender!string msgAppender;
     protected LogEntry header;
 }
@@ -1471,6 +1471,20 @@ if (sharedLog !is myLogger)
 @property void sharedLog(shared(Logger) logger) @safe
 {
     atomicStore!(MemoryOrder.seq)(stdSharedLogger, atomicLoad(logger));
+}
+
+///
+@safe unittest
+{
+    import std.logger.filelogger;
+    static import std.file;
+
+    auto deleteme = std.file.deleteme();
+    scope(exit) std.file.remove(deleteme);
+    sharedLog = new shared(FileLogger)(deleteme);
+    // logs go to file.
+    sharedLog = null;
+    // logs go to the default logger.
 }
 
 /** This methods get and set the global `LogLevel`.
