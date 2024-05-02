@@ -1069,14 +1069,14 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     int opendirfd = dirfd(dir);
 
                     // Iterate over all file descriptors
-                    while(true)
+                    while (true)
                     {
                         dirent* entry = readdir(dir);
 
                         if (entry is null) break;
                         if (entry.d_name[0] == '.') continue;
 
-                        int fd = atoi(cast(char*)entry.d_name);
+                        int fd = atoi(cast(char*) entry.d_name);
 
                         // Don't close stdin, stdout, stderr, forkPipeOut or the directory file descriptor
                         if (fd < 3 || fd == forkPipeOut || fd == opendirfd) continue;
