@@ -128,10 +128,6 @@ ifeq (,$(findstring win,$(OS)))
 	ifneq (osx,$(OS))
 		NODEFAULTLIB += -L-lpthread -L-lm
 	endif
-else
-	ifeq ($(MODEL),32omf)
-		CPPFLAGS := -DNO_snprintf
-	endif
 endif
 
 # Set CC, CC_OUTFILEFLAG and CFLAGS unless using importC
@@ -141,9 +137,6 @@ ifneq ($(USE_IMPORTC),1)
 
 	ifeq ($(OS),win32wine)
 		CC := wine dmc.exe
-		CFLAGS := $(if $(findstring $(BUILD),debug),-g,-O)
-	else ifeq ($(MODEL),32omf)
-		CC := dmc
 		CFLAGS := $(if $(findstring $(BUILD),debug),-g,-O)
 	else ifeq ($(OS),windows)
 		CC := cl
@@ -202,9 +195,7 @@ ifeq (,$(findstring win,$(OS)))
 	SONAME:=libphobos2.so.$(MAJOR).$(MINOR)
 	LIBSO:=$(ROOT)/$(SONAME).$(PATCH)
 else
-	ifeq ($(MODEL),32omf)
-		LIB:=phobos.lib
-	else ifeq ($(MODEL),32)
+	ifeq ($(MODEL),32)
 		LIB:=phobos32mscoff.lib
 	else
 		LIB:=phobos$(MODEL).lib

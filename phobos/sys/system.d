@@ -7,9 +7,9 @@
  *  License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *  Authors:   $(HTTP digitalmars.com, Walter Bright) and
                $(HTTP jmdavisprog.com, Jonathan M Davis)
- *  Source:    $(PHOBOSSRC std/system.d)
+ *  Source:    $(PHOBOSSRC phobos/sys/system.d)
  */
-module lib.sys.system;
+module phobos.sys.system;
 
 immutable
 {

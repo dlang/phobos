@@ -1734,7 +1734,7 @@ pure @safe unittest
     assert(range.array == [S(5), S(6)]);
 }
 
-/// https://issues.dlang.org/show_bug.cgi?id=24064
+// https://issues.dlang.org/show_bug.cgi?id=24064
 pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
@@ -1767,7 +1767,7 @@ pure @safe nothrow @nogc unittest
     }
 }
 
-/// https://issues.dlang.org/show_bug.cgi?id=24243
+// https://issues.dlang.org/show_bug.cgi?id=24243
 pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
@@ -1959,7 +1959,7 @@ private struct ChooseResult(Ranges...)
     this(this)
     {
         actOnChosen!((ref r) {
-                static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
+                static if (hasElaborateCopyConstructor!(typeof(r))) r.__xpostblit();
             })(this);
     }
 
@@ -2252,6 +2252,29 @@ pure @safe nothrow unittest
 
     auto chosen2 = choose(false, a, b);
     assert(chosen2.front.v == 4);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15708
+@safe unittest
+{
+    static struct HasPostblit
+    {
+        this(this) {}
+    }
+
+    static struct Range
+    {
+        bool empty;
+        int front;
+        void popFront() {}
+        HasPostblit member;
+    }
+
+    Range range;
+    int[] arr;
+
+    auto chosen = choose(true, range, arr);
+    auto copy = chosen;
 }
 
 /**

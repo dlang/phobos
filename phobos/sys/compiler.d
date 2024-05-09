@@ -6,14 +6,14 @@
  * Copyright: Copyright The D Language Foundation 2000 - 2011.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright), Alex Rønne Petersen
- * Source:    $(PHOBOSSRC std/compiler.d)
+ * Source:    $(PHOBOSSRC phobos/sys/compiler.d)
  */
 /*          Copyright The D Language Foundation 2000 - 2011.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module lib.sys.compiler;
+module phobos.sys.compiler;
 
 immutable
 {
