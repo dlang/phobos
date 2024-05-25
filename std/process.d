@@ -127,26 +127,19 @@ else version (WatchOS)
     version = iOSDerived;
 }
 
-// When the DMC runtime is used, we have to use some custom functions
-// to convert between Windows file handles and FILE*s.
-version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
-
 
 // Some of the following should be moved to druntime.
 private
 {
     // Microsoft Visual C Runtime (MSVCRT) declarations.
-    version (Windows)
+    version (CRuntime_Microsoft)
     {
-        version (DMC_RUNTIME) { } else
+        import core.stdc.stdint;
+        enum
         {
-            import core.stdc.stdint;
-            enum
-            {
-                STDIN_FILENO  = 0,
-                STDOUT_FILENO = 1,
-                STDERR_FILENO = 2,
-            }
+            STDIN_FILENO  = 0,
+            STDOUT_FILENO = 1,
+            STDERR_FILENO = 2,
         }
     }
 
