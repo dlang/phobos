@@ -343,6 +343,8 @@ static:
     */
     bool opBinaryRight(string op : "in")(scope const(char)[] name) @trusted
     {
+        if (name is null)
+            return false;
         version (Posix)
             return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
         else version (Windows)
@@ -444,6 +446,10 @@ private:
     // doesn't exist.
     void getImpl(scope const(char)[] name, scope void delegate(const(OSChar)[]) @safe sink) @trusted
     {
+        // fix issue https://issues.dlang.org/show_bug.cgi?id=24549
+        if (name is null)
+            return sink(null);
+
         version (Windows)
         {
             // first we ask windows how long the environment variable is,
@@ -591,6 +597,15 @@ private:
     // Setting null must have the same effect as remove
     environment["std_process"] = null;
     assert("std_process" !in environment);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24549
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assert(environment.get(null) is null);
+    assertThrown(environment[null]);
+    assert(!(null in environment));
 }
 
 // =============================================================================
