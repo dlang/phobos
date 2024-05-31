@@ -77,6 +77,37 @@ version (D_BetterC) {} else
     assert(!isFahrenheit(t3));
 }
 
+/** $(DIVID matching-with-an-overload-set, $(H3 Matching with an overload set))
+ *
+ * Instead of writing `match` handlers inline as lambdas, you can write them as
+ * overloads of a function. An `alias` can be used to create an additional
+ * overload for the `SumType` itself.
+ *
+ * For example, with this overload set:
+ *
+ * ---
+ * string handle(int n) { return "got an int"; }
+ * string handle(string s) { return "got a string"; }
+ * string handle(double d) { return "got a double"; }
+ * alias handle = match!handle;
+ * ---
+ *
+ * Usage would look like this:
+ */
+version (D_BetterC) {} else
+@safe unittest
+{
+    alias ExampleSumType = SumType!(int, string, double);
+
+    ExampleSumType a = 123;
+    ExampleSumType b = "hello";
+    ExampleSumType c = 3.14;
+
+    assert(a.handle == "got an int");
+    assert(b.handle == "got a string");
+    assert(c.handle == "got a double");
+}
+
 /** $(DIVID arithmetic-expression-evaluator, $(H3 Arithmetic expression evaluator))
  *
  * This example makes use of the special placeholder type `This` to define a
@@ -181,6 +212,10 @@ version (D_BetterC) {} else
     assert(eval(*myExpr, myEnv) == 11);
     assert(pprint(*myExpr) == "(a + (2 * b))");
 }
+
+// For the "Matching with an overload set" example above
+// Needs public import to work with `make publictests`
+version (unittest) public import std.internal.test.sumtype_example_overloads;
 
 import std.format.spec : FormatSpec, singleSpec;
 import std.meta : AliasSeq, Filter, IndexOf = staticIndexOf, Map = staticMap;

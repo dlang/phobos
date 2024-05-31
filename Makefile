@@ -272,6 +272,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
+		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 		windows/advapi32 \
 	) \
