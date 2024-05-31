@@ -108,7 +108,7 @@ version (D_BetterC) {} else
     assert(c.handle == "got a double");
 }
 
-/** $(DIVID arithmetic-expression-evaluator, $(H3 Arithmetic expression evaluator))
+/** $(DIVID recursive-sumtypes, $(H3 Recursive SumTypes))
  *
  * This example makes use of the special placeholder type `This` to define a
  * [recursive data type](https://en.wikipedia.org/wiki/Recursive_data_type): an
@@ -256,8 +256,7 @@ private enum isInout(T) = is(T == inout);
  *
  * The special type `This` can be used as a placeholder to create
  * self-referential types, just like with `Algebraic`. See the
- * ["Arithmetic expression evaluator" example](#arithmetic-expression-evaluator) for
- * usage.
+ * ["Recursive SumTypes" example](#recursive-sumtypes) for usage.
  *
  * A `SumType` is initialized by default to hold the `.init` value of its
  * first member type, just like a regular union. The version identifier
