@@ -77,51 +77,6 @@ version (D_BetterC) {} else
     assert(!isFahrenheit(t3));
 }
 
-/** $(DIVID introspection-based-matching, $(H3 Introspection-based matching))
- *
- * In the `length` and `horiz` functions below, the handlers for `match` do not
- * specify the types of their arguments. Instead, matching is done based on how
- * the argument is used in the body of the handler: any type with `x` and `y`
- * properties will be matched by the `rect` handlers, and any type with `r` and
- * `theta` properties will be matched by the `polar` handlers.
- */
-version (D_BetterC) {} else
-@safe unittest
-{
-    import std.math.operations : isClose;
-    import std.math.trigonometry : cos;
-    import std.math.constants : PI;
-    import std.math.algebraic : sqrt;
-
-    struct Rectangular { double x, y; }
-    struct Polar { double r, theta; }
-    alias Vector = SumType!(Rectangular, Polar);
-
-    double length(Vector v)
-    {
-        return v.match!(
-            rect => sqrt(rect.x^^2 + rect.y^^2),
-            polar => polar.r
-        );
-    }
-
-    double horiz(Vector v)
-    {
-        return v.match!(
-            rect => rect.x,
-            polar => polar.r * cos(polar.theta)
-        );
-    }
-
-    Vector u = Rectangular(1, 1);
-    Vector v = Polar(1, PI/4);
-
-    assert(length(u).isClose(sqrt(2.0)));
-    assert(length(v).isClose(1));
-    assert(horiz(u).isClose(1));
-    assert(horiz(v).isClose(sqrt(0.5)));
-}
-
 /** $(DIVID arithmetic-expression-evaluator, $(H3 Arithmetic expression evaluator))
  *
  * This example makes use of the special placeholder type `This` to define a
@@ -1619,9 +1574,9 @@ enum bool isSumType(T) = is(T : SumType!Args, Args...);
  * overloads are considered as potential matches.
  *
  * Templated handlers are also accepted, and will match any type for which they
- * can be [implicitly instantiated](https://dlang.org/glossary.html#ifti). See
- * ["Introspection-based matching"](#introspection-based-matching) for an
- * example of templated handler usage.
+ * can be [implicitly instantiated](https://dlang.org/glossary.html#ifti).
+ * (Remember that a $(DDSUBLINK spec/expression,function_literals, function literal)
+ * without an explicit argument type is considered a template.)
  *
  * If multiple [SumType]s are passed to match, their values are passed to the
  * handlers as separate arguments, and matching is done for each possible
