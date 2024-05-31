@@ -11,6 +11,15 @@ include:
 * No dependency on runtime type information (`TypeInfo`).
 * Compatibility with BetterC.
 
+$(H3 List of examples)
+
+* [Basic usage](#basic-usage)
+* [Matching with an overload set](#matching-with-an-overload-set)
+* [Recursive SumTypes](#recursive-sumtypes)
+* [Memory corruption](#memory-corruption) (why assignment can be `@system`)
+* [Avoiding unintentional matches](#avoiding-unintentional-matches)
+* [Multiple dispatch](#multiple-dispatch)
+
 License: Boost License 1.0
 Authors: Paul Backus
 Source: $(PHOBOSSRC std/sumtype.d)
