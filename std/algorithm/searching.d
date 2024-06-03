@@ -5134,9 +5134,9 @@ if (isInputRange!Range)
     private bool predSatisfied()
     {
         static if (is(Sentinel == void))
-            return cast(bool) unaryFun!pred(_input.front);
+            return unaryFun!pred(_input.front) != 0;
         else
-            return cast(bool) startsWith!pred(_input, _sentinel);
+            return startsWith!pred(_input, _sentinel) != 0;
     }
 
     ///

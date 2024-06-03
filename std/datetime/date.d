@@ -7775,7 +7775,7 @@ public:
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
 
         auto yearStr = str[0 .. $-6];
-        auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
+        auto signAtBegining = yearStr.startsWith('-', '+') != 0;
         if ((yearStr.length > 4) != signAtBegining)
         {
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
@@ -7914,7 +7914,7 @@ public:
         uint day;
         auto month = monthFromString(str[$ - 6 .. $ - 3]);
         auto yearStr = str[0 .. $ - 7];
-        auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
+        auto signAtBegining = yearStr.startsWith('-', '+') != 0;
         if ((yearStr.length > 4) != signAtBegining)
         {
             throw new DateTimeException(format!"Invalid string format: %s"(simpleString));

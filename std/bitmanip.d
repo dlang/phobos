@@ -1231,7 +1231,7 @@ public:
     }
     do
     {
-        return cast(bool) bt(_ptr, i);
+        return bt(_ptr, i) != 0;
     }
 
     ///
@@ -2905,6 +2905,7 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
         // Check CTFE compiles.
         static assert(swapEndian(swapEndian(T(1))) is T(1));
 
+        static if (!is(T == bool))
         foreach (i; 2 .. 10)
         {
             immutable T maxI = cast(T)(T.max / i);
@@ -2964,6 +2965,8 @@ if (__traits(isIntegral, T))
             result = cast() cast(T) ((result << 8) | b);
     return cast(T) result;
 }
+
+private ubyte[1] ctfeBytes(T : bool)(T value) => [value];
 
 // Can't use EndianSwapper union during CTFE.
 private auto ctfeBytes(T)(const T value)

@@ -2429,7 +2429,7 @@ public:
     // Make sure SocketSet reimplements fd_set correctly
     auto fdset = set.toFd_set();
     foreach (fd; fds[0]..cast(socket_t)(fds[$-1]+1))
-        assert(cast(bool) set.isSet(fd) == cast(bool)(() @trusted => FD_ISSET(fd, fdset))());
+        assert((set.isSet(fd) != 0) == (() @trusted => FD_ISSET(fd, fdset) != 0)());
 
     foreach (fd; fds)
     {
