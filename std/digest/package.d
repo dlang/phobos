@@ -1212,3 +1212,131 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
         assert(!secureEqual(hex1, hex2));
     }
 }
+
+/**
+ * Used to convert hex text to byte range
+ * Params:
+ *  hex = hexdecimal encoded byte array
+ * Returns: byte range
+ * Example:
+ * ---
+ * ubyte[2] sba = "0xAA".fromHexString.staticArray!2;
+ * ubyte[] dby  = "0xBA".fromHexString.array;
+ * ---
+ */
+auto fromHexString(T)(T hex) @safe pure nothrow @nogc
+{
+    return ByteRange!T(hex);
+}
+
+///
+@safe unittest
+{
+    import std.array : array, staticArray;
+    import std;
+
+    void testToDigest(T)(const ubyte[] b, const T s) @safe
+    {
+        import std.conv : text;
+
+        assert(b == s.fromHexString.array,
+                text(s ~ ".fromHexString returned ",
+                s.fromHexString.array,
+                ", instead of ", b));
+    }
+
+    testToDigest([255], "0xff");
+    testToDigest([255], "0xff"w);
+    testToDigest([255], "0xff"d);
+    testToDigest([], "");
+    testToDigest([], ""w);
+    testToDigest([], ""d);
+    testToDigest([], "0x");
+    testToDigest([], "0x"w);
+    testToDigest([], "0x"d);
+    testToDigest([0x01], "0x1");
+    testToDigest([0x01], "0x1"w);
+    testToDigest([0x01], "0x1"d);
+    testToDigest([0xaf], "0xAf");
+    testToDigest([0xaf], "0xaF");
+    testToDigest([0x0f, 0xff], "0xfff");
+    testToDigest([0x1, 0x23, 0xaa, 0xaa], "0x123AaAa");
+
+    void testToStaticDigest(size_t n, T)(const ubyte[n]b, const T s ) @safe
+    {
+        import std.conv : text;
+        assert(b == s.fromHexString.staticArray!n,
+                text(s ~ ".fromHexString returned ",
+                s.fromHexString.staticArray!n,
+                ", instead of ", b));
+    }
+
+    testToStaticDigest!3([0, 0, 255], "0x0000ff");
+    testToStaticDigest!3([0, 0, 255], "0x0000ff"w);
+    testToStaticDigest!3([0, 0, 255], "0x0000ff"d);
+    testToStaticDigest!1([255], "0xff12ff");
+    testToStaticDigest!2([0x12, 255], "0x12ff");
+    testToStaticDigest!4([0x3, 0xaa, 0xaa,0x00], "0x3AaAA");
+}
+
+
+private int toByte(dchar hexDigit) @safe pure nothrow @nogc
+{
+    import std.ascii : isDigit, isAlpha, toLower;
+
+    if (hexDigit.isDigit)
+    {
+        return hexDigit - '0';
+    }
+    else if (hexDigit.isAlpha)
+    {
+        return hexDigit.toLower - 'a' + 10;
+    }
+    assert(0, "Invalid hex digit");
+}
+
+private struct ByteRange(T)
+{
+    T hex;
+
+    size_t length;
+    ubyte front;
+    bool empty;
+
+    this(T hex)
+    {
+        if (hex.length > 0)
+        {
+            if (hex[0 .. 2] == "0x")
+                hex= hex[2 .. $];
+            length = hex.length / 2 + hex.length % 2;
+            if (length == 0) empty = true;
+
+            else if (hex.length % 2 == 1)
+            {
+                front = cast(ubyte)(toByte(hex[0]));
+                hex= hex[1 .. $];
+            }
+            else{
+                front = cast(ubyte)(toByte(hex[0]) << 4 | toByte(hex[1]));
+                hex= hex[2 .. $];
+            }
+            this.hex = hex;
+        }
+        else{
+            empty = true;
+            length = 0;
+        }
+    }
+
+    void popFront()
+    {
+       if (hex.length == 0)
+       {
+           empty = true;
+           return;
+       }
+       front = cast(ubyte)(toByte(hex[0]) << 4 | toByte(hex[1]));
+       hex= hex[2 .. $];
+    }
+}
