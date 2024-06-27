@@ -3245,6 +3245,208 @@ if ((isSomeFiniteCharInputRange!RO || isConvertibleToString!RO) &&
     }
 }
 
+/**
+ *  Defined for allowing automatic detection on symlink type.
+ *  Currently only used on Windows.
+ */
+enum WindowsSymlinkHint
+{
+    ///This hint will try to find whether the linked source is a directory or a file.
+    autoDetect,
+    directory,
+    file
+}
+
+version (StdDdoc)
+{
+    /++
+        $(BLUE This function is Windows-Only.)
+
+        Creates a Windows symbolic link.
+
+        "Developer Mode" may need to be first enabled on the local
+        machine before unprivileged processes are allowed to create
+        symbolic links.
+
+        Note that symbolic links on Windows have slightly different
+        semantics than those on POSIX.  For example, it must be known
+        at creation time whether the symbolic link points / will point
+        to a file or directory.  To delete a Windows symbolic link,
+        `rmdir` must be used instead of `remove` if it was created as
+        pointing at a directory.
+
+        Params:
+            original = The location that is being linked. This is the
+                target path that's stored in the reparse point.  The
+                path may be relative, in which case it is relative to
+                the symbolic link's parent directory.
+
+            link = The location of the junction to create. A relative
+                path is relative to the current working directory.
+
+            hint = When creating links to inexistent files/folders, this
+                hint may be specified for the developer's intention.
+
+        Throws:
+            $(LREF WindowsException) on error.
+      +/
+    void createWindowsSymlink(in char[] original, in char[] link, WindowsSymlinkHint hint = WindowsSymlinkHint.autoDetect);
+
+    /++
+        $(BLUE This function is Windows-Only.)
+
+        Creates a Windows filesystem junction.
+
+        Junctions are similar to symbolic links, but cannot be
+        relative and cannot point to files; on the other hand, they
+        can be created even without special privileges or "Developer
+        Mode".
+
+        Params:
+            original = The location that is being linked.  This is the
+                target path that's stored in the reparse point.  A
+                relative path is first resolved to an absolute path.
+
+            link = The location of the junction to create. A relative
+                path is relative to the current working directory.
+
+        Throws:
+            $(LREF WindowsException) on error.
+      +/
+    void createJunction(in char[] original, in char[] link);
+
+}
+else
+version (Windows)
+{
+    /// Create an NTFS reparse point (junction or symbolic link).
+    private void createReparsePoint
+        (string reparseBufferName, string extraInitialization, string reparseTagName)
+        (in char[] target, in char[] print, in char[] link)
+    {
+        import core.sys.windows.winbase;
+        import core.sys.windows.windef;
+        import core.sys.windows.winioctl;
+        import std.utf : toUTF16z, toUTF16;
+        import std.conv : to;
+        import std.windows.syserror : wenforce;
+        import std.path : isAbsolute;
+
+
+
+        enum SYMLINK_FLAG_RELATIVE = 1;
+
+        HANDLE hLink = CreateFileW(
+            link.toUTF16z(),
+            GENERIC_READ | GENERIC_WRITE,
+            0, null,
+            OPEN_EXISTING,
+            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+            null);
+        wenforce(hLink && hLink != INVALID_HANDLE_VALUE, "CreateFileW");
+        scope(exit) CloseHandle(hLink);
+
+        enum pathOffset =
+            mixin(q{REPARSE_DATA_BUFFER.} ~ reparseBufferName)            .offsetof +
+            mixin(q{REPARSE_DATA_BUFFER.} ~ reparseBufferName)._PathBuffer.offsetof;
+
+        auto targetW = target.toUTF16();
+        auto printW  = print .toUTF16();
+
+        // Despite MSDN, two NUL-terminating characters are needed, one for each string.
+
+        auto pathBufferSize = targetW.length + 1 + printW.length + 1; // in chars
+        auto buf = new ubyte[pathOffset + pathBufferSize * WCHAR.sizeof];
+        auto r = cast(REPARSE_DATA_BUFFER*) buf.ptr;
+
+        r.ReparseTag = mixin(reparseTagName);
+        r.ReparseDataLength = to!WORD(buf.length - mixin(q{r.} ~ reparseBufferName).offsetof);
+
+        auto pathBuffer = mixin(q{r.} ~ reparseBufferName).PathBuffer;
+        auto p = pathBuffer;
+
+        mixin(q{r.} ~ reparseBufferName).SubstituteNameOffset = to!WORD((p-pathBuffer) * WCHAR.sizeof);
+        mixin(q{r.} ~ reparseBufferName).SubstituteNameLength = to!WORD(targetW.length * WCHAR.sizeof);
+        p[0 .. targetW.length] = targetW;
+        p += targetW.length;
+        *p++ = 0;
+
+        mixin(q{r.} ~ reparseBufferName).PrintNameOffset      = to!WORD((p-pathBuffer) * WCHAR.sizeof);
+        mixin(q{r.} ~ reparseBufferName).PrintNameLength      = to!WORD(printW .length * WCHAR.sizeof);
+        p[0 .. printW.length] = printW;
+        p += printW.length;
+        *p++ = 0;
+
+        assert(p-pathBuffer == pathBufferSize);
+
+        mixin(extraInitialization);
+
+        DWORD dwRet; // Needed despite MSDN
+        DeviceIoControl(hLink, FSCTL_SET_REPARSE_POINT, buf.ptr, buf.length.to!DWORD(), null, 0, &dwRet, null).wenforce("DeviceIoControl");
+    }
+
+    void createWindowsSymlink(in char[] original, in char[] link, WindowsSymlinkHint hint = WindowsSymlinkHint.autoDetect)
+    {
+        import core.sys.windows.winnt;
+        import std.path : buildNormalizedPath;
+
+        hintHandling: final switch (hint) with (WindowsSymlinkHint)
+        {
+            case autoDetect:
+                // TODO: isDir(original) is not correct when original is a relative path?
+                hint = isDir(original) ? directory : file;
+                goto hintHandling;
+            case directory:
+                mkdir(link);
+                break;
+            case file:
+                write(link, "");
+                break;
+        }
+
+        scope (failure)
+            if (hint == WindowsSymlinkHint.directory)
+                rmdir(link);
+            else
+                remove(link);
+
+        createReparsePoint!(
+            q{SymbolicLinkReparseBuffer},
+            q{r.SymbolicLinkReparseBuffer.Flags = link.isAbsolute() ? 0 : SYMLINK_FLAG_RELATIVE;},
+            q{IO_REPARSE_TAG_SYMLINK}
+        )(original, original, link);
+    }
+
+    void createJunction(in char[] original, in char[] link)
+    {
+        import std.path : absolutePath, dirName, buildNormalizedPath;
+        mkdir(link);
+        scope(failure) rmdir(link);
+
+        auto target = `\??\` ~ (cast(string) original).absolutePath((cast(string) link.dirName).absolutePath).buildNormalizedPath;
+        if (target[$-1] != '\\')
+            target ~= '\\';
+
+        createReparsePoint!(
+            q{MountPointReparseBuffer},
+            q{},
+            q{IO_REPARSE_TAG_MOUNT_POINT}
+        )(target, null, link);
+    }
+
+    unittest
+    {
+    	import std.exception : assertThrown;
+    	std.file.mkdir("testDir");
+    	scope(exit) std.file.rmdir("testDir");
+    	createJunction("testDir", "linkTestDir");
+    	scope(exit) std.file.rmdir("linkTestDir");
+    	assert(std.file.isSymlink("linkTestDir"));
+    	assertThrown!(Exception)(createWindowsSymlink("testDir", "linkTestDir"));
+    }
+
+}
+
 version (Posix) @safe unittest
 {
     if (system_directory.exists)
