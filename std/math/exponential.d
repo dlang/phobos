@@ -797,7 +797,7 @@ private real _powImpl(real x, real y) @safe @nogc pure nothrow
         // (though complicated) method is described in:
         // "An efficient rounding boundary test for pow(x, y)
         // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
-        Float w = exp2(y * log2(x));
+        auto w = exp2(y * log2(x));
         return sign * w;
     }
 }
