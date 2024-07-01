@@ -15,6 +15,9 @@
 # make BUILD=debug => makes debug build of the library
 #
 # make unittest => builds all unittests (for debug AND release) and runs them
+# make std/somemodule.test => only builds and unittests std.somemodule
+# make std/somepackage.test => only builds and unittests modules in std.somepackage
+# make unittest/std/somemodule.run => run std.somemodule unittest
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
@@ -24,8 +27,6 @@
 # make build-html => makes html documentation
 #
 # make install => copies library to /usr/lib
-#
-# make std/somemodule.test => only builds and unittests std.somemodule
 #
 ################################################################################
 # Configurable stuff, usually from the command line
@@ -272,6 +273,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
+		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 		windows/advapi32 \
 	) \
