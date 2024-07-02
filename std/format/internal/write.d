@@ -34,7 +34,29 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     BooleanTypeOf!T val = obj;
 
     if (f.spec == 's')
-        writeAligned(w, val ? "true" : "false", f);
+    {
+        switch (cast(byte) val)
+        {
+            case 0: writeAligned(w, "false", f); break;
+            case 1: writeAligned(w, "true",  f); break;
+            default:
+            {
+                static char toHexDigit(ubyte b)
+                {
+                    switch (b)
+                    {
+                        case  0: .. case  9: return cast(char)(b + '0');
+                        case 10: .. case 15: return cast(char)(b + ('A' - 10));
+                        default: assert(0);
+                    }
+                }
+                immutable char u = toHexDigit(cast(ubyte) val >> 4);
+                immutable char l = toHexDigit(cast(ubyte) val & 0x0F);
+                immutable char[12] buffer = [ '_', '_', 'b', 'o', 'o', 'l', '(', '0', 'x', u, l, ')' ];
+                writeAligned(w, buffer[],  f);
+            }
+        }
+    }
     else
         formatValueImpl(w, cast(byte) val, f);
 }
@@ -46,6 +68,14 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatTest(false, "false");
         formatTest(true,  "true");
     });
+}
+
+@system pure unittest
+{
+    foreach (ubyte value; 3 .. 0xFF + 1)
+    {
+        assert(format("%s", *cast(bool*) &value) == format("__bool(0x%02X)", value));
+    }
 }
 
 @safe unittest
