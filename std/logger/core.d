@@ -1433,7 +1433,7 @@ logger by the user, the default logger's log level is LogLevel.info.
 
 Example:
 -------------
-sharedLog = new FileLogger(yourFile);
+sharedLog = cast(shared) new FileLogger(yourFile);
 -------------
 The example sets a new `FileLogger` as new `sharedLog`.
 
