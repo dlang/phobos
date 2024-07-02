@@ -1040,56 +1040,111 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             setCLOEXEC(STDOUT_FILENO, false);
             setCLOEXEC(STDERR_FILENO, false);
 
+            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+
+            // Get the maximum number of file descriptors that could be open.
+            rlimit r;
+            if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+
+            immutable maxDescriptors = cast(int) r.rlim_cur;
+
             if (!(config.flags & Config.Flags.inheritFDs))
             {
-                // NOTE: malloc() and getrlimit() are not on the POSIX async
-                // signal safe functions list, but practically this should
-                // not be a problem. Java VM and CPython also use malloc()
-                // in its own implementation via opendir().
-                import core.stdc.stdlib : malloc;
-                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+                import core.sys.posix.dirent : dirent, opendir, readdir, closedir, DIR;
+                import core.sys.posix.unistd : close;
+                import core.sys.posix.stdlib : atoi, malloc, free;
 
-                // Get the maximum number of file descriptors that could be open.
-                rlimit r;
-                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
-                {
-                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
-                }
-                immutable maxDescriptors = cast(int) r.rlim_cur;
+                // Missing druntime declaration
+                pragma(mangle, "dirfd")
+                extern(C) nothrow @nogc int dirfd(DIR* dir);
 
-                // The above, less stdin, stdout, and stderr
-                immutable maxToClose = maxDescriptors - 3;
+                DIR* dir = null;
 
-                // Call poll() to see which ones are actually open:
-                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-                if (pfds is null)
+                // We read from /dev/fd or /proc/self/fd only if the limit is high enough
+                if (maxDescriptors > 128*1024)
                 {
-                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                    // Try to open the directory /dev/fd or /proc/self/fd
+                    dir = opendir("/dev/fd");
+                    if (dir is null) dir = opendir("/proc/self/fd");
                 }
-                foreach (i; 0 .. maxToClose)
+
+                // If we have a directory, close all file descriptors except stdin, stdout, stderr and forkPipeOut
+                if (dir)
                 {
-                    pfds[i].fd = i + 3;
-                    pfds[i].events = 0;
-                    pfds[i].revents = 0;
-                }
-                if (poll(pfds, maxToClose, 0) >= 0)
-                {
-                    foreach (i; 0 .. maxToClose)
+                    scope(exit) closedir(dir);
+
+                    int opendirfd = dirfd(dir);
+
+                    // Iterate over all file descriptors
+                    while (true)
                     {
-                        // don't close pipe write end
-                        if (pfds[i].fd == forkPipeOut) continue;
-                        // POLLNVAL will be set if the file descriptor is invalid.
-                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                        dirent* entry = readdir(dir);
+
+                        if (entry is null) break;
+                        if (entry.d_name[0] == '.') continue;
+
+                        int fd = atoi(cast(char*) entry.d_name);
+
+                        // Don't close stdin, stdout, stderr, forkPipeOut or the directory file descriptor
+                        if (fd < 3 || fd == forkPipeOut || fd == opendirfd) continue;
+
+                        close(fd);
                     }
                 }
                 else
                 {
-                    // Fall back to closing everything.
-                    foreach (i; 3 .. maxDescriptors)
+                    bool fallback = true;
+
+                    // This is going to allocate 8 bytes for each possible file descriptor from 3 to r.rlim_cur
+                    if (maxDescriptors <= 128*1024)
                     {
-                        if (i == forkPipeOut) continue;
-                        close(i);
+                        // NOTE: malloc() and getrlimit() are not on the POSIX async
+                        // signal safe functions list, but practically this should
+                        // not be a problem. Java VM and CPython also use malloc()
+                        // in its own implementation via opendir().
+                        import core.stdc.stdlib : malloc;
+                        import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+
+                        // The above, less stdin, stdout, and stderr
+                        immutable maxToClose = maxDescriptors - 3;
+
+                        // Call poll() to see which ones are actually open:
+                        auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                        if (pfds is null)
+                        {
+                            abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                        }
+
+                        foreach (i; 0 .. maxToClose)
+                        {
+                            pfds[i].fd = i + 3;
+                            pfds[i].events = 0;
+                            pfds[i].revents = 0;
+                        }
+
+                        if (poll(pfds, maxToClose, 0) >= 0)
+                        {
+                            foreach (i; 0 .. maxToClose)
+                            {
+                                // don't close pipe write end
+                                if (pfds[i].fd == forkPipeOut) continue;
+                                // POLLNVAL will be set if the file descriptor is invalid.
+                                if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                            }
+
+                            fallback = false;
+                        }
+                    }
+
+                    if (fallback)
+                    {
+                        // Fall back to closing everything.
+                        foreach (i; 3 .. maxDescriptors)
+                        {
+                            if (i == forkPipeOut) continue;
+                            close(i);
+                        }
                     }
                 }
             }
