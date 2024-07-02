@@ -447,7 +447,8 @@ unittest
 // https://issues.dlang.org/show_bug.cgi?id=6686
 @safe unittest
 {
-    union  S {
+    union  S
+    {
         ulong bits = ulong.max;
         mixin (bitfields!(
             ulong, "back",  31,
@@ -506,7 +507,8 @@ unittest
 @safe unittest
 {
     {
-        static struct Integrals {
+        static struct Integrals
+        {
             bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
 
             mixin(bitfields!(
@@ -528,7 +530,8 @@ unittest
 
     //https://issues.dlang.org/show_bug.cgi?id=8876
     {
-        struct MoreIntegrals {
+        struct MoreIntegrals
+        {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
 
             mixin(bitfields!(
@@ -551,7 +554,8 @@ unittest
 
     enum A { True, False }
     enum B { One, Two, Three, Four }
-    static struct Enums {
+    static struct Enums
+    {
         bool checkExpectations(A ea, B eb) { return a == ea && b == eb; }
 
         mixin(bitfields!(
@@ -606,7 +610,8 @@ unittest
 // https://issues.dlang.org/show_bug.cgi?id=15305
 @safe unittest
 {
-    struct S {
+    struct S
+    {
             mixin(bitfields!(
                     bool, "alice", 1,
                     ulong, "bob", 63,
@@ -656,7 +661,8 @@ Following arguments works the same way as `bitfield`'s. The bitfield must fit in
 bits known to be zero because of the pointer alignment.
 */
 
-template taggedPointer(T : T*, string name, Ts...) {
+template taggedPointer(T : T*, string name, Ts...)
+{
     enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts);
 }
 
@@ -764,7 +770,8 @@ if (is(T == class))
             Object, "a",
             uint, "b", 4)));
 
-    struct S {
+    struct S
+    {
         mixin(taggedClassRef!(
             Object, "a",
             bool, "b", 1));

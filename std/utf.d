@@ -2278,13 +2278,11 @@ version (StdUnittest) private void testBadDecodeBack(R)(R range, size_t line = _
         static assert(isSafe!({ S str; size_t i = 0; decodeFront(str, i); }));
         static assert(isSafe!({ S str; decodeFront(str); }));
         static assert((functionAttributes!({ S str; size_t i = 0; decode(str, i); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({
-            S str; size_t i = 0; decodeFront(str, i);
-        }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; size_t i = 0; decodeFront(str, i);}) &
+                       FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({
-            S str; size_t i = 0; decodeBack(str, i);
-        }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; size_t i = 0; decodeBack(str, i);}) &
+                       FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeBack(str); }) & FunctionAttribute.pure_) != 0);
     }
     });
@@ -2953,7 +2951,8 @@ if (isSomeString!S)
 @safe unittest
 {
     import std.exception;
-    assertThrown((){
+    assertThrown(()
+    {
         char[3]a=[167, 133, 175];
         validate(a[]);
     }());
