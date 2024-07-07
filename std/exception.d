@@ -1540,7 +1540,7 @@ version (StdUnittest)
 }
 
 /+
-Returns true if the field at index `i` in ($D T) shares its address with another field.
+Returns true if the field at index `i` in $(D T) shares its address with another field.
 
 Note: This does not merelly check if the field is a member of an union, but also that
 it is not a single child.
