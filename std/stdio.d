@@ -795,7 +795,7 @@ Throws: `ErrnoException` in case of error.
 /**
 Detaches from the current file (throwing on failure), and then runs a command
 by calling the C standard library function $(HTTP
-opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
+pubs.opengroup.org/onlinepubs/7908799/xsh/popen.html, popen).
 
 Throws: `ErrnoException` in case of error.
  */
@@ -4576,11 +4576,11 @@ if ((isSomeFiniteCharInputRange!R1 || isSomeString!R1) &&
         {
             /*
              * The new opengroup large file support API is transparently
-             * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+             * included in the normal C bindings. https://www.opengroup.org/platform/lfs.html#1.0
              * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
              * the normal functions work fine. If not, then large file support
              * probably isn't available. Do not use the old transitional API
-             * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+             * (the native extern(C) fopen64, https://unix.org/version2/whatsnew/lfs20mar.html#3.0)
              */
             import core.sys.posix.stdio : fopen;
             return fopen(namez, modez);

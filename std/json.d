@@ -13,7 +13,7 @@ also $(LINK https://forum.dlang.org/post/dzfyaxypmkdrpakmycjv@forum.dlang.org).)
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
-References: $(LINK http://json.org/), $(LINK http://seriot.ch/parsing_json.html)
+References: $(LINK http://json.org/), $(LINK https://seriot.ch/projects/parsing_json.html)
 Source:    $(PHOBOSSRC std/json.d)
 */
 /*
