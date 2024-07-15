@@ -6141,33 +6141,39 @@ private struct LockstepMixin(Ranges...)
     }
 
 const:
-    string getAlias() => iq{
-        alias $(name) = $(implName)!(int delegate($(params.join(", "))));
-    }.text;
+    string getAlias()
+    {
+        return iq{
+            alias $(name) = $(implName)!(int delegate($(params.join(", "))));
+        }.text;
+    }
 
-    string getImpl() => iq{
-        int $(implName)(DG)(scope DG dg) scope
-        {
-            import std.exception : enforce;
-
-            auto ranges = this.ranges;
-            $(indexDef)
-
-            while ($(emptyChecks.join(" && ")))
+    string getImpl()
+    {
+        return iq{
+            int $(implName)(DG)(scope DG dg) scope
             {
-                if (int result = dg($(dgArgs.join(", ")))) return result;
-                $(popFronts.join("\n                "))
-                $(indexInc)
-            }
+                import std.exception : enforce;
 
-            if (this.stoppingPolicy == StoppingPolicy.requireSameLength)
-            {
-                foreach (range; ranges)
-                    enforce(range.empty);
+                auto ranges = this.ranges;
+                $(indexDef)
+
+                while ($(emptyChecks.join(" && ")))
+                {
+                    if (int result = dg($(dgArgs.join(", ")))) return result;
+                    $(popFronts.join("\n                "))
+                    $(indexInc)
+                }
+
+                if (this.stoppingPolicy == StoppingPolicy.requireSameLength)
+                {
+                    foreach (range; ranges)
+                        enforce(range.empty);
+                }
+                return 0;
             }
-            return 0;
-        }
-    }.text;
+        }.text;
+    }
 }
 
 /**
