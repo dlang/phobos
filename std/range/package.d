@@ -6143,26 +6143,29 @@ private struct LockstepMixin(Ranges...)
 const:
     string getAlias()
     {
-        return iq{
-            alias $(name) = $(implName)!(int delegate($(params.join(", "))));
-        }.text;
+        return format(q{
+            alias %s = %s!(int delegate(%-(%s%|, %)));
+        },
+            name, implName, params
+        );
     }
 
     string getImpl()
     {
-        return iq{
-            int $(implName)(DG)(scope DG dg) scope
+        return format(q{
+            int %s(DG)(scope DG dg) scope
             {
                 import std.exception : enforce;
 
                 auto ranges = this.ranges;
-                $(indexDef)
+                %s
 
-                while ($(emptyChecks.join(" && ")))
+                while (%-(%s%| && %))
                 {
-                    if (int result = dg($(dgArgs.join(", ")))) return result;
-                    $(popFronts.join("\n                "))
-                    $(indexInc)
+                    if (int result = dg(%-(%s%|, %))) return result;
+                    %-(%s%|
+                    %)
+                    %s
                 }
 
                 if (this.stoppingPolicy == StoppingPolicy.requireSameLength)
@@ -6172,7 +6175,9 @@ const:
                 }
                 return 0;
             }
-        }.text;
+        },
+            implName, indexDef, emptyChecks, dgArgs, popFronts, indexInc
+        );
     }
 }
 
@@ -6217,10 +6222,10 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
         this.stoppingPolicy = sp;
     }
 
-    enum lockstepMixinFF = LockstepMixin!Ranges(withIndex: false, reverse: false);
+    private enum lockstepMixinFF = LockstepMixin!Ranges(withIndex: false, reverse: false);
     mixin(lockstepMixinFF.getImpl);
 
-    enum lockstepMixinTF = LockstepMixin!Ranges(withIndex: true, reverse: false);
+    private enum lockstepMixinTF = LockstepMixin!Ranges(withIndex: true, reverse: false);
     mixin(lockstepMixinTF.getImpl);
 
     mixin(lockstepMixinFF.getAlias);
@@ -6228,11 +6233,11 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 
     static if (allSatisfy!(isBidirectionalRange, Ranges))
     {
-        enum lockstepMixinFT = LockstepMixin!Ranges(withIndex: false, reverse: true);
+        private enum lockstepMixinFT = LockstepMixin!Ranges(withIndex: false, reverse: true);
         mixin(lockstepMixinFT.getImpl);
         static if (allSatisfy!(hasLength, Ranges))
         {
-            enum lockstepMixinTT = LockstepMixin!Ranges(withIndex: true, reverse: true);
+            private enum lockstepMixinTT = LockstepMixin!Ranges(withIndex: true, reverse: true);
             mixin(lockstepMixinTT.getImpl);
             mixin(lockstepMixinTT.getAlias);
         }
