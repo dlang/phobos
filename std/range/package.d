@@ -6217,10 +6217,10 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
         this.stoppingPolicy = sp;
     }
 
-    enum lockstepMixinFF = LockstepMixin!Ranges(false, false);
+    enum lockstepMixinFF = LockstepMixin!Ranges(withIndex: false, reverse: false);
     mixin(lockstepMixinFF.getImpl);
 
-    enum lockstepMixinTF = LockstepMixin!Ranges(true, false);
+    enum lockstepMixinTF = LockstepMixin!Ranges(withIndex: true, reverse: false);
     mixin(lockstepMixinTF.getImpl);
 
     mixin(lockstepMixinFF.getAlias);
@@ -6228,24 +6228,27 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 
     static if (allSatisfy!(isBidirectionalRange, Ranges))
     {
-        enum lockstepMixinFT = LockstepMixin!Ranges(false, true);
+        enum lockstepMixinFT = LockstepMixin!Ranges(withIndex: false, reverse: true);
         mixin(lockstepMixinFT.getImpl);
         static if (allSatisfy!(hasLength, Ranges))
         {
-            enum lockstepMixinTT = LockstepMixin!Ranges(true, true);
+            enum lockstepMixinTT = LockstepMixin!Ranges(withIndex: true, reverse: true);
             mixin(lockstepMixinTT.getImpl);
             mixin(lockstepMixinTT.getAlias);
         }
         else
         {
-            mixin(lockstepReverseFailMixin!Ranges(true));
+            mixin(lockstepReverseFailMixin!Ranges(withIndex: true));
+            alias opApplyReverse = opApplyReverseIdxFail;
         }
         mixin(lockstepMixinFT.getAlias);
     }
     else
     {
-        mixin(lockstepReverseFailMixin!Ranges(false));
-        mixin(lockstepReverseFailMixin!Ranges(true));
+        mixin(lockstepReverseFailMixin!Ranges(withIndex: false));
+        mixin(lockstepReverseFailMixin!Ranges(withIndex: true));
+        alias opApplyReverse = opApplyReverseFail;
+        alias opApplyReverse = opApplyReverseIdxFail;
     }
 }
 
@@ -6298,7 +6301,7 @@ pure @safe unittest
     auto arr1 = [0, 1, 2, 3];
     auto arr2 = [4, 5, 6, 7];
 
-    size_t n = arr1.length -1;
+    size_t n = arr1.length - 1;
     foreach_reverse (index, a, b; lockstep(arr1, arr2, StoppingPolicy.requireSameLength))
     {
         assert(n == index);
@@ -6470,11 +6473,11 @@ private string lockstepReverseFailMixin(Ranges...)(bool withIndex)
 
     return format(
     q{
-        int opApplyReverse()(scope int delegate(%s) dg)
+        int opApplyReverse%sFail()(scope int delegate(%s) dg)
         {
             static assert(false, "%s");
         }
-    }, params.join(", "), message);
+    }, withIndex ? "Idx" : "" , params.join(", "), message);
 }
 
 // For generic programming, make sure Lockstep!(Range) is well defined for a
