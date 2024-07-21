@@ -80,6 +80,7 @@ class FileLogger : Logger
                                    " created in '", d,"' could not be created."));
         }
 
+        // Cast away `shared` when the constructor is inferred shared.
         () @trusted { (cast() this.file_).open(this.filename, "a"); }();
     }
 
