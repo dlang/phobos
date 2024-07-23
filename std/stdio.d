@@ -220,31 +220,6 @@ version (CRuntime_Microsoft)
     private alias _FGETWC = _fgetwc_nolock;
     private alias _FLOCK = _lock_file;
     private alias _FUNLOCK = _unlock_file;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = _fputc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = _fputwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = _fgetc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = _fgetwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = _lock_file;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = _unlock_file;
 }
 else version (CRuntime_Glibc)
 {
@@ -254,31 +229,6 @@ else version (CRuntime_Glibc)
     private alias _FGETWC = fgetwc_unlocked;
     private alias _FLOCK = core.sys.posix.stdio.flockfile;
     private alias _FUNLOCK = core.sys.posix.stdio.funlockfile;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = core.sys.posix.stdio.flockfile;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = core.sys.posix.stdio.funlockfile;
 }
 else version (GENERIC_IO)
 {
@@ -303,52 +253,6 @@ else version (GENERIC_IO)
     else
     {
         static assert(0, "don't know how to lock files on GENERIC_IO");
-    }
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fputc.mangleof) int fputc_unlocked(int c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fputwc.mangleof) int fputwc_unlocked(wchar_t c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fgetc.mangleof) int fgetc_unlocked(_iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int fgetwc_unlocked(_iobuf* fp);
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-
-    version (Posix)
-    {
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FLOCK = core.sys.posix.stdio.flockfile;
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FUNLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FUNLOCK = core.sys.posix.stdio.funlockfile;
     }
 }
 else
