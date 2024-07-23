@@ -6095,8 +6095,9 @@ private struct LockstepMixin(Ranges...)
             {
                 indexDef = q{
                     size_t index = ranges[0].length - 1;
-                    enforce(this.stoppingPolicy == StoppingPolicy.requireSameLength,
-                            "Indexed lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
+                    enforce(
+                        this.stoppingPolicy == StoppingPolicy.requireSameLength,
+                        "Indexed lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
 
                     foreach (range; ranges[1 .. $])
                         enforce(range.length == ranges[0].length);
