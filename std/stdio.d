@@ -1040,6 +1040,9 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
         assert(buf == "\r\n\n\r\n");
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=24685
+    static assert(!__traits(compiles, (File f) @safe { int*[1] bar; f.rawRead(bar[]); }));
+
     // https://issues.dlang.org/show_bug.cgi?id=21729
     @system unittest
     {
@@ -4534,6 +4537,13 @@ private auto trustedFwrite(T)(FILE* f, const T[] obj) @trusted
  * Convenience function that forwards to `core.stdc.stdio.fread`
  */
 private auto trustedFread(T)(FILE* f, T[] obj) @trusted
+if (!imported!"std.traits".hasIndirections!T)
+{
+    return fread(obj.ptr, T.sizeof, obj.length, f);
+}
+
+private auto trustedFread(T)(FILE* f, T[] obj) @system
+if (imported!"std.traits".hasIndirections!T)
 {
     return fread(obj.ptr, T.sizeof, obj.length, f);
 }
