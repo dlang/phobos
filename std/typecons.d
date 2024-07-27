@@ -10928,19 +10928,22 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         swap(_refCounted._store, rhs._refCounted._store);
     }
 
-    void opAssign(T rhs)
+    static if (__traits(compiles, lvalueOf!T = T.init))
     {
-        import std.algorithm.mutation : move;
+        void opAssign(T rhs)
+        {
+            import std.algorithm.mutation : move;
 
-        static if (autoInit == RefCountedAutoInitialize.yes)
-        {
-            _refCounted.ensureInitialized();
+            static if (autoInit == RefCountedAutoInitialize.yes)
+            {
+                _refCounted.ensureInitialized();
+            }
+            else
+            {
+                assert(_refCounted.isInitialized);
+            }
+            move(rhs, _refCounted._store._payload);
         }
-        else
-        {
-            assert(_refCounted.isInitialized);
-        }
-        move(rhs, _refCounted._store._payload);
     }
 
     static if (autoInit == RefCountedAutoInitialize.yes)
