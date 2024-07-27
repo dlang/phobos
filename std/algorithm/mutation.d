@@ -1071,6 +1071,14 @@ Params:
         copy is performed.
 */
 void move(T)(ref T source, ref T target)
+if (__traits(compiles, target = T.init))
+{
+    moveImpl(target, source);
+}
+
+deprecated("Can't move into `target` as `T` can't be assigned")
+void move(T)(ref T source, ref T target)
+if (!__traits(compiles, target = T.init))
 {
     moveImpl(target, source);
 }
@@ -1191,7 +1199,10 @@ unittest
         immutable int i;
         ~this() @safe {}
     }
-    static assert(!__traits(compiles, { S a, b; move(a, b); }));
+    alias os = __traits(getOverloads, std.algorithm.mutation, "move", true);
+    static assert(__traits(isDeprecated, os[1]));
+    // uncomment after deprecation
+    //static assert(!__traits(compiles, { S a, b; move(a, b); }));
 }
 
 /// Ditto
@@ -1253,7 +1264,6 @@ pure nothrow @safe @nogc unittest
 }
 
 private void moveImpl(T)(ref scope T target, ref return scope T source)
-if (__traits(compiles, target = T.init))
 {
     import std.traits : hasElaborateDestructor;
 
