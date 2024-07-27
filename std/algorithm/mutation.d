@@ -1184,6 +1184,16 @@ pure nothrow @safe @nogc unittest
     assert(s53 is s51);
 }
 
+unittest
+{
+    static struct S
+    {
+        immutable int i;
+        ~this() @safe {}
+    }
+    static assert(!__traits(compiles, { S a, b; move(a, b); }));
+}
+
 /// Ditto
 T move(T)(return scope ref T source)
 {
@@ -1243,6 +1253,7 @@ pure nothrow @safe @nogc unittest
 }
 
 private void moveImpl(T)(ref scope T target, ref return scope T source)
+if (__traits(compiles, target = T.init))
 {
     import std.traits : hasElaborateDestructor;
 
