@@ -1192,7 +1192,7 @@ pure nothrow @safe @nogc unittest
     assert(s53 is s51);
 }
 
-unittest
+@system unittest
 {
     static struct S
     {
