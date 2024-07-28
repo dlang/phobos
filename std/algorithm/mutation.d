@@ -1076,9 +1076,11 @@ if (__traits(compiles, target = T.init))
     moveImpl(target, source);
 }
 
+/// ditto
 template move(T)
 if (!__traits(compiles, imported!"std.traits".lvalueOf!T = T.init))
 {
+    ///
     deprecated("Can't move into `target` as `" ~ T.stringof ~ "` can't be assigned")
     void move(ref T source, ref T target) => moveImpl(target, source);
 }
