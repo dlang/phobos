@@ -1076,11 +1076,11 @@ if (__traits(compiles, target = T.init))
     moveImpl(target, source);
 }
 
-deprecated("Can't move into `target` as `T` can't be assigned")
-void move(T)(ref T source, ref T target)
-if (!__traits(compiles, target = T.init))
+template move(T)
+if (!__traits(compiles, imported!"std.traits".lvalueOf!T = T.init))
 {
-    moveImpl(target, source);
+    deprecated("Can't move into `target` as `" ~ T.stringof ~ "` can't be assigned")
+    void move(ref T source, ref T target) => moveImpl(target, source);
 }
 
 /// For non-struct types, `move` just performs `target = source`:
@@ -1199,8 +1199,8 @@ pure nothrow @safe @nogc unittest
         immutable int i;
         ~this() @safe {}
     }
-    alias os = __traits(getOverloads, std.algorithm.mutation, "move", true);
-    static assert(__traits(isDeprecated, os[1]));
+    alias ol = __traits(getOverloads, std.algorithm.mutation, "move", true)[1];
+    static assert(__traits(isDeprecated, ol!S));
     // uncomment after deprecation
     //static assert(!__traits(compiles, { S a, b; move(a, b); }));
 }
