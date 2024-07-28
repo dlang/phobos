@@ -893,7 +893,7 @@ if (__traits(compiles, () @safe => fun(args)) && isSafeTask!F)
 {
     static struct Oops {
         int convert() {
-            *cast(int*)0xcafebabe = 0xdeadbeef;
+            *cast(int*) 0xcafebabe = 0xdeadbeef;
             return 0;
         }
         alias convert this;
