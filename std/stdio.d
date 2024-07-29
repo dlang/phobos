@@ -4607,7 +4607,7 @@ struct lines
     f = File to read lines from.
     terminator = Line separator (`'\n'` by default).
     */
-    this(File f, dchar terminator = '\n')
+    this(File f, dchar terminator = '\n') @safe nothrow @nogc pure
     {
         this.f = f;
         this.terminator = terminator;
