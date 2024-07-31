@@ -795,7 +795,7 @@ if (isInputRange!Values && isInputRange!Keys)
 {
     struct ValueRange
     {
-        string front () const @system { int* ptr = cast(int*)42; *ptr = 42; return null; }
+        string front() const @system;
         @safe:
         void popFront() {}
         bool empty() const { return false; }
