@@ -650,7 +650,8 @@ if (isInputRange!Values && isInputRange!Keys)
                 alias ValueElement = ElementType!Values;
                 static if (hasElaborateDestructor!ValueElement)
                     ValueElement.init.__xdtor();
-                cast(void) values.front;
+
+                aa[key] = values.front;
             })))
             {
                 () @trusted {
