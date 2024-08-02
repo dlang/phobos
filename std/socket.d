@@ -282,7 +282,7 @@ private immutable
     typeof(&freeaddrinfo) freeaddrinfoPointer;
 }
 
-shared static this() @system
+pragma(crt_constructor) @system void socket_initialization()
 {
     version (Windows)
     {
