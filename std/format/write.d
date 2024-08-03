@@ -774,7 +774,7 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     formattedWrite(writer, i"$(str1) is the ultimate $(str2).", 42, "answer");
     assert(writer[] == "42 is the ultimate answer.");
     
-    const string w = "World"
+    const string w = "World";
     writer = appender!string();
     writer.formattedWrite(i"Hello $(w)");
     assert(writer[] == "Hello World");
