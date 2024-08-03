@@ -208,7 +208,7 @@ struct DList(T)
         this (U)(BaseNode _base, U _payload) if(is(U == const(T)) ^ is(U == immutable(T)))
         {
             import std.algorithm.mutation : move;
-            
+
             this._base = _base;
             temp = cast(T)_payload;
             this._payload = move(temp);
