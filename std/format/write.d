@@ -502,9 +502,6 @@ The second version of `formattedWrite` takes the format string as a
 template argument. In this case, it is checked for consistency at
 compile-time.
 
-The third version of `formattedWrite` takes the format string as an
-IES, which is converted to a string and passed to the first version.
-
 Params:
     w = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
         where the formatted result is written to
@@ -513,8 +510,6 @@ Params:
     Writer = the type of the writer `w`
     Char = character type of `fmt`
     Args = a variadic list of types of the arguments
-    FormatandArgs = the types making up the format IES followed by the types
-    of the arguments (used in the third version of the function only).
 
 Returns:
     The index of the last argument that was formatted. If no positional
@@ -701,7 +696,32 @@ if (isSomeString!(typeof(fmt)))
 
 import core.interpolation;
 
+/**
+Converts its arguments according to a format IES and writes
+the result to an output range.
 
+Params:
+    w = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
+        where the formatted result is written to
+    seq = a sequence consisting of the arguments appended to the end of the
+          format IES
+    Writer = the type of the writer `w`
+    FormatandArgs = the types making up the format IES followed by the types
+                    of the arguments.
+
+Returns:
+    The index of the last argument that was formatted. If no positional
+    arguments are used, this is the number of arguments that where formatted.
+
+Throws:
+    A $(REF_ALTTEXT FormatException, FormatException, std, format)
+    if formatting did not succeed.
+
+Note:
+    In theory this function should be `@nogc`. But with the current
+    implementation there are some cases where allocations occur.
+    See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
+ */
 uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs seq) if(is(typeof(seq[0]) == InterpolationHeader))
 {
     string toPass;
@@ -719,8 +739,13 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
         {
             expr = true;
         }
-        else static if(is(typeof(e) == InterpolationFooter) && i < seq.length - 2)
-            return formattedWrite(w, toPass, seq[i + 2 .. $]);
+        else static if(is(typeof(e) == InterpolationFooter))
+        {
+            if(i < seq.length - 2)
+                return formattedWrite(w, toPass, seq[i + 2 .. $]);
+            else
+                break;
+        }
         else
         {
             if(expr)
@@ -738,7 +763,7 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     return formattedWrite(w, toPass);
 }
 
-/// Fix Issue 24550
+/// Fix https://issues.dlang.org/show_bug.cgi?id=24550
 @safe pure unittest
 {    
     import std.array : appender;
@@ -748,6 +773,11 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     string str2 = "%s";
     formattedWrite(writer, i"$(str1) is the ultimate $(str2).", 42, "answer");
     assert(writer[] == "42 is the ultimate answer.");
+    
+    const string w = "World"
+    writer = appender!string();
+    writer.formattedWrite(i"Hello $(w)");
+    assert(writer[] == "Hello World");
     
 }
 
