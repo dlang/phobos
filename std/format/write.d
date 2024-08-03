@@ -731,24 +731,24 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
 
     foreach(i, e; seq[1 .. $])
     {
-        static if(__traits(hasMember, e, "toString") && is(typeof(e) == InterpolatedLiteral!(e.toString)))
+        static if (__traits(hasMember, e, "toString") && is(typeof(e) == InterpolatedLiteral!(e.toString)))
         {
             toPass ~= e.toString;
         }
-        else static if(__traits(hasMember, e, "expression") && is(typeof(e) == InterpolatedExpression!(e.expression)))
+        else static if (__traits(hasMember, e, "expression") && is(typeof(e) == InterpolatedExpression!(e.expression)))
         {
             expr = true;
         }
-        else static if(is(typeof(e) == InterpolationFooter))
+        else static if (is(typeof(e) == InterpolationFooter))
         {
-            if(i < seq.length - 2)
+            if (i < seq.length - 2)
                 return formattedWrite(w, toPass, seq[i + 2 .. $]);
             else
                 break;
         }
         else
         {
-            if(expr)
+            if (expr)
             {
                 toPass ~= e.text;
                 expr = false;
@@ -777,7 +777,6 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     writer = appender!string();
     writer.formattedWrite(i"Hello $(w)");
     assert(writer[] == "Hello World");
-
 }
 
 @safe pure unittest
