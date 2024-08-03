@@ -185,6 +185,7 @@ Implements a doubly-linked list.
 struct DList(T)
 {
     import std.range : Take;
+    import std.traits : isMutable;
 
     /*
     A Node with a Payload. A PayNode.
@@ -203,6 +204,15 @@ struct DList(T)
             this._base = _base;
             this._payload = move(_payload);
         }
+        
+        this (U)(BaseNode _base, U _payload) if(is(U == const(T)) ^ is(U == immutable(T)))
+        {
+            import std.algorithm.mutation : move;
+            
+            this._base = _base;
+            temp = cast(T)_payload;
+            this._payload = move(temp);
+        }
 
         inout(BaseNode)* asBaseNode() inout @trusted
         {
@@ -219,8 +229,10 @@ struct DList(T)
     static BaseNode* createNode(Stuff)(auto ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         import std.algorithm.mutation : move;
-
-        return (new PayNode(BaseNode(prev, next), move(arg))).asBaseNode();
+        static if(isMutable!Stuff)
+            return (new PayNode(BaseNode(prev, next), move(arg))).asBaseNode();
+        else
+            return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
     }
 
     void initialize() nothrow @safe pure
@@ -1147,4 +1159,18 @@ private:
     assert(list.front.x == 2);
     list.removeFront();
     assert(list[].walkLength == 0);
+}
+
+// Regression https://issues.dlang.org/show_bug.cgi?id=24637
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    DList!int D;
+
+    D.insert(1);
+    assert(D[].equal([1]));
+
+    const c = 3;
+    D.insert(c);
+    assert(D[].equal([1, 3]));
 }
