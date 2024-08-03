@@ -204,7 +204,7 @@ struct DList(T)
             this._base = _base;
             this._payload = move(_payload);
         }
-        
+
         this (U)(BaseNode _base, U _payload) if(is(U == const(T)) ^ is(U == immutable(T)))
         {
             import std.algorithm.mutation : move;
@@ -229,7 +229,7 @@ struct DList(T)
     static BaseNode* createNode(Stuff)(auto ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         import std.algorithm.mutation : move;
-        static if(isMutable!Stuff)
+        static if (isMutable!Stuff)
             return (new PayNode(BaseNode(prev, next), move(arg))).asBaseNode();
         else
             return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
