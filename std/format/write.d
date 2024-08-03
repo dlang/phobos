@@ -728,7 +728,7 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     bool expr = false;
     import std.conv : text;
     import std.format : FormatException;
-    
+
     foreach(i, e; seq[1 .. $])
     {
         static if(__traits(hasMember, e, "toString") && is(typeof(e) == InterpolatedLiteral!(e.toString)))
@@ -759,13 +759,12 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
                 ". Got: `", typeof(e).stringof, "`"));
         }
     }
-    
     return formattedWrite(w, toPass);
 }
 
 /// Fix https://issues.dlang.org/show_bug.cgi?id=24550
 @safe pure unittest
-{    
+{
     import std.array : appender;
 
     auto writer = appender!string();
@@ -773,12 +772,12 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     string str2 = "%s";
     formattedWrite(writer, i"$(str1) is the ultimate $(str2).", 42, "answer");
     assert(writer[] == "42 is the ultimate answer.");
-    
+
     const string w = "World";
     writer = appender!string();
     writer.formattedWrite(i"Hello $(w)");
     assert(writer[] == "Hello World");
-    
+
 }
 
 @safe pure unittest
