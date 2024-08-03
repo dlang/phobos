@@ -502,6 +502,9 @@ The second version of `formattedWrite` takes the format string as a
 template argument. In this case, it is checked for consistency at
 compile-time.
 
+The third version of `formattedWrite` takes the format string as an
+IES, which is converted to a string and passed to the first version.
+
 Params:
     w = an $(REF_ALTTEXT output range, isOutputRange, std, range, primitives),
         where the formatted result is written to
@@ -510,6 +513,8 @@ Params:
     Writer = the type of the writer `w`
     Char = character type of `fmt`
     Args = a variadic list of types of the arguments
+    FormatandArgs = the types making up the format IES followed by the types
+    of the arguments (used in the third version of the function only).
 
 Returns:
     The index of the last argument that was formatted. If no positional
@@ -692,6 +697,58 @@ if (isSomeString!(typeof(fmt)))
 
     // This line doesn't compile, because 3.14 cannot be formatted with %d:
     // writer.formattedWrite!"%d is the ultimate %s."(3.14, "answer");
+}
+
+import core.interpolation;
+
+
+uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs seq) if(is(typeof(seq[0]) == InterpolationHeader))
+{
+    string toPass;
+    bool expr = false;
+    import std.conv : text;
+    import std.format : FormatException;
+    
+    foreach(i, e; seq[1 .. $])
+    {
+        static if(__traits(hasMember, e, "toString") && is(typeof(e) == InterpolatedLiteral!(e.toString)))
+        {
+            toPass ~= e.toString;
+        }
+        else static if(__traits(hasMember, e, "expression") && is(typeof(e) == InterpolatedExpression!(e.expression)))
+        {
+            expr = true;
+        }
+        else static if(is(typeof(e) == InterpolationFooter) && i < seq.length - 2)
+            return formattedWrite(w, toPass, seq[i + 2 .. $]);
+        else
+        {
+            if(expr)
+            {
+                toPass ~= e.text;
+                expr = false;
+            }
+            else
+                throw new FormatException(
+                text("Unterminated Interpolated Expression Sequence:  expected `InterpolationFooter` at index ", i+1,
+                ". Got: `", typeof(e).stringof, "`"));
+        }
+    }
+    
+    return formattedWrite(w, toPass);
+}
+
+/// Fix Issue 24550
+@safe pure unittest
+{    
+    import std.array : appender;
+
+    auto writer = appender!string();
+    string str1 = "%d";
+    string str2 = "%s";
+    formattedWrite(writer, i"$(str1) is the ultimate $(str2).", 42, "answer");
+    assert(writer[] == "42 is the ultimate answer.");
+    
 }
 
 @safe pure unittest
