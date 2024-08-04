@@ -205,7 +205,7 @@ struct DList(T)
             this._payload = move(_payload);
         }
 
-        this (U)(BaseNode _base, U _payload) if(is(U == const(T)) ^ is(U == immutable(T)))
+        this (U)(BaseNode _base, U _payload) if (is(U == const(T)) ^ is(U == immutable(T)))
         {
             import std.algorithm.mutation : move;
 
