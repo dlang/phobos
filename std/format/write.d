@@ -729,7 +729,7 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
     import std.conv : text;
     import std.format : FormatException;
 
-    foreach(i, e; seq[1 .. $])
+    foreach (i, e; seq[1 .. $])
     {
         static if (__traits(hasMember, e, "toString") && is(typeof(e) == InterpolatedLiteral!(e.toString)))
         {
