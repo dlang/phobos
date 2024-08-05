@@ -722,7 +722,8 @@ Note:
     implementation there are some cases where allocations occur.
     See $(REF_ALTTEXT $(D sformat), sformat, std, format) for more details.
  */
-uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs seq) if (is(typeof(seq[0]) == InterpolationHeader))
+uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs seq)
+if (is(typeof(seq[0]) == InterpolationHeader))
 {
     string toPass;
     bool expr = false;
@@ -755,7 +756,7 @@ uint formattedWrite(Writer, FormatandArgs ...)(auto ref Writer w, FormatandArgs 
             }
             else
                 throw new FormatException(
-                text("Unterminated Interpolated Expression Sequence:  expected `InterpolationFooter` at index ", i+1,
+                text("Unterminated Interpolated Expression Sequence:  expected `InterpolationFooter` at index ", ++i,
                 ". Got: `", typeof(e).stringof, "`"));
         }
     }
