@@ -756,8 +756,8 @@ if (is(typeof(seq[0]) == InterpolationHeader))
             }
             else
                 throw new FormatException(
-                text("Unterminated Interpolated Expression Sequence:  expected `InterpolationFooter` at index ", ++i,
-                ". Got: `", typeof(e).stringof, "`"));
+                text("Unterminated Interpolated Expression Sequence:  expected `InterpolationFooter` at index ",
+                i + 1, ". Got: `", typeof(e).stringof, "`"));
         }
     }
     return formattedWrite(w, toPass);
