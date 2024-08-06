@@ -4738,10 +4738,11 @@ if (isIntegral!T)
     {
         mixin(bitfields!(Bar, "bar", 1, ubyte, "", 7,));
     }
-    
+
     Foo foo;
     foo.bar = Bar.a;
     assert(foo.bar == Bar.a);
     foo.bar = Bar.b;
     assert(foo.bar == Bar.b);
 }
+ 
