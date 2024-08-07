@@ -210,8 +210,7 @@ struct DList(T)
             import std.algorithm.mutation : move;
 
             this._base = _base;
-            temp = cast(T)_payload;
-            this._payload = move(temp);
+            this._payload = move(cast(T)_payload);
         }
 
         inout(BaseNode)* asBaseNode() inout @trusted
