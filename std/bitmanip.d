@@ -4745,4 +4745,3 @@ if (isIntegral!T)
     foo.bar = Bar.b;
     assert(foo.bar == Bar.b);
 }
- 
