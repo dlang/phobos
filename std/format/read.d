@@ -198,7 +198,8 @@ module std.format.read;
 
 import std.format.spec : FormatSpec;
 import std.format.internal.read;
-import std.traits : isSomeString;
+import std.meta : allSatisfy;
+import std.traits : isSomeString, isType;
 
 /**
 Reads an input range according to a format string and stores the read
@@ -300,7 +301,7 @@ uint formattedRead(Range, Char, Args...)(auto ref Range r, const(Char)[] fmt, au
 
 /// ditto
 uint formattedRead(alias fmt, Range, Args...)(auto ref Range r, auto ref Args args)
-if (isSomeString!(typeof(fmt)))
+if (!isType!fmt && isSomeString!(typeof(fmt)))
 {
     import std.format : checkFormatException;
     import std.meta : staticMap;
@@ -690,6 +691,105 @@ if (isSomeString!(typeof(fmt)))
     int[string] aa2;
     formattedRead(`{"hello"=1; "world"=2}`, "{%(%s=%s; %)}", aa2);
     assert(aa2 == ["hello":1, "world":2]);
+}
+
+/**
+Reads an input range according to a format string and returns a tuple with the
+read values.
+
+Format specifiers with format character $(B 'd'), $(B 'u') and $(B
+'c') can take a $(B '*') parameter for skipping values.
+
+The second version of `formattedRead` takes the format string as
+template argument. In this case, it is checked for consistency at
+compile-time.
+
+Params:
+    Args = a variadic list of types of the arguments
+ */
+template formattedRead(Args...)
+if (Args.length && allSatisfy!(isType, Args))
+{
+    import std.typecons : Flag, Tuple, Yes;
+
+    /**
+    Params:
+        r = an $(REF_ALTTEXT input range, isInputRange, std, range, primitives),
+            where the formatted input is read from
+        fmt = a $(MREF_ALTTEXT format string, std,format)
+        Range = the type of the input range `r`
+        Char = the character type used for `fmt`
+
+    Returns:
+        A Tuple!Args with the elements filled. If the input range `r` ends early,
+        the missing arguments will be default initialized.
+
+    Throws:
+        A $(REF_ALTTEXT FormatException, FormatException, std, format)
+        if reading did not succeed.
+    */
+    Tuple!Args formattedRead(Range, Char)(auto ref Range r, const(Char)[] fmt, Flag!"exhaustive" exhaustive = Yes.exhaustive)
+    {
+        import core.lifetime : forward;
+        import std.exception : enforce;
+        import std.format : FormatException;
+
+        Tuple!Args args;
+        const numArgsFilled = .formattedRead(forward!r, fmt, args.expand);
+        if (exhaustive) enforce!FormatException(numArgsFilled == Args.length);
+        return args;
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : No, tuple;
+
+    auto complete = "hello!34.5:124".formattedRead!(string, double, int)("%s!%s:%s");
+    assert(complete == tuple("hello", 34.5, 124));
+
+    assertThrown!FormatException("hello!34.5:".formattedRead!(string, double, int)("%s!%s:%s"));
+
+    auto missing = "hello!34.5:".formattedRead!(string, double, int)("%s!%s:%s", No.exhaustive);
+    assert(missing == tuple("hello", 34.5, int.init));
+}
+
+/// ditto
+template formattedRead(alias fmt, Args...)
+if (!isType!fmt && isSomeString!(typeof(fmt)) && Args.length && allSatisfy!(isType, Args))
+{
+    import std.typecons : Flag, Tuple, Yes;
+    Tuple!Args formattedRead(Range)(auto ref Range r, Flag!"exhaustive" exhaustive = Yes.exhaustive)
+    {
+        import core.lifetime : forward;
+        import std.exception : enforce;
+        import std.format : FormatException;
+
+        Tuple!Args args;
+        const numArgsFilled = .formattedRead!fmt(forward!r, args.expand);
+        if (exhaustive) enforce!FormatException(numArgsFilled == Args.length);
+        return args;
+    }
+}
+
+/// The format string can be checked at compile-time:
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.format : FormatException;
+    import std.typecons : No, tuple;
+
+    auto expected = tuple("hello", 124, 34.5);
+    auto result = "hello!124:34.5".formattedRead!("%s!%s:%s", string, int, double);
+    assert(result == expected);
+
+    assertThrown!FormatException("hello!34.5:".formattedRead!("%s!%s:%s", string, double, int));
+
+    auto missing = "hello!34.5:".formattedRead!("%s!%s:%s", string, double, int)(No.exhaustive);
+    assert(missing == tuple("hello", 34.5, int.init));
 }
 
 /**
