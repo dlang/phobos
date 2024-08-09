@@ -2454,7 +2454,8 @@ if (isFloatingPoint!T)
 @safe unittest
 {
     import std.meta : AliasSeq;
-    void foo() {
+    void foo()
+    {
         static foreach (T; AliasSeq!(real, double, float))
         {{
             int exp;
