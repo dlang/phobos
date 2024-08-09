@@ -1165,7 +1165,7 @@ private:
     DList!A B;
     B.insert(A(1));
     assert(B[].equal([A(1)]));
-    
+
     const a = A(3);
     B.insert(a);
     assert(B[].equal([A(1), A(3)]));
