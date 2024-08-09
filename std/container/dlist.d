@@ -205,14 +205,6 @@ struct DList(T)
             this._payload = move(_payload);
         }
 
-        this (U)(BaseNode _base, U _payload) if (is(U == const(T)) ^ is(U == immutable(T)))
-        {
-            import std.algorithm.mutation : move;
-
-            this._base = _base;
-            this._payload = move(cast(T)_payload);
-        }
-
         inout(BaseNode)* asBaseNode() inout @trusted
         {
             return &_base;
@@ -1164,12 +1156,17 @@ private:
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    DList!int D;
 
-    D.insert(1);
-    assert(D[].equal([1]));
+    struct A
+    {
+        int c;
+    }
 
-    const c = 3;
-    D.insert(c);
-    assert(D[].equal([1, 3]));
+    DList!A B;
+    B.insert(A(1));
+    assert(B[].equal([A(1)]));
+    
+    const a = A(3);
+    B.insert(a);
+    assert(B[].equal([A(1), A(3)]));
 }
