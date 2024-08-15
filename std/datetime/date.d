@@ -41,6 +41,7 @@ $(TR $(TD Other) $(TD
 +/
 module std.datetime.date;
 
+import std.exception : assertThrown, assertNotThrown;
 import core.time : TimeException;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
@@ -200,10 +201,10 @@ public:
             minute = The minute portion of the time;
             second = The second portion of the time;
       +/
-    this(int year, int month, int day, int hour = 0, int minute = 0, int second = 0) @safe pure
+    this(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int hnsec = 0) @safe pure
     {
         _date = Date(year, month, day);
-        _tod = TimeOfDay(hour, minute, second);
+        _tod = TimeOfDay(hour, minute, second, hnsec);
     }
 
     @safe unittest
@@ -218,6 +219,12 @@ public:
             auto dt = DateTime(1999, 7 ,6, 12, 30, 33);
             assert(dt._date == Date(1999, 7, 6));
             assert(dt._tod == TimeOfDay(12, 30, 33));
+        }
+
+        {
+            auto dt = DateTime(1999, 7 ,6, 12, 30, 33, 5*10^^6);
+            assert(dt._date == Date(1999, 7, 6));
+            assert(dt._tod == TimeOfDay(12, 30, 33, 5*10^^6));
         }
     }
 
@@ -2942,7 +2949,9 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string with the format
-        `YYYY-MM-DDTHH:MM:SS`. If `writer` is set, the resulting
+        `YYYY-MM-DDTHH:MM:SS`. If there is a hnsec set, it will
+        add
+        If `writer` is set, the resulting
         string will be written directly to it.
 
         Params:
@@ -2975,6 +2984,13 @@ public:
             _tod._minute,
             _tod._second
         );
+        if (_tod._hnsecs)
+        {
+            import std.format : format;
+            auto fraction = 10_000_000.0 / _tod._hnsecs;
+            auto fracStr = format ("%f", fraction)[2..$];
+            formattedWrite!("%s")(writer, fracStr);
+        }
     }
 
     ///
@@ -2986,8 +3002,8 @@ public:
         assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() ==
                "1998-12-25T02:15:00");
 
-        assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() ==
-               "0000-01-05T23:09:59");
+        assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59, 2_500_000)).toISOExtString() ==
+               "0000-01-05T23:09:59.25.25");
 
         assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
                "-0004-01-05T00:00:02");
@@ -3730,6 +3746,11 @@ private:
     assert(dt == DateTime(2000, 6, 11, 10, 31, 40));
 
     assert(dt.toISOExtString() == "2000-06-11T10:31:40");
+    assert(dt.toISOString() == "20000611T103140");
+    assert(dt.toSimpleString() == "2000-Jun-11 10:31:40");
+
+    assert(dt == DateTime(2000, 6, 11, 10, 31, 40, 123));
+    assert(dt.toISOExtString() == "2000-06-11T10:31:40.123");
     assert(dt.toISOString() == "20000611T103140");
     assert(dt.toSimpleString() == "2000-Jun-11 10:31:40");
 
@@ -8317,20 +8338,23 @@ public:
             hour   = Hour of the day [0 - 24$(RPAREN).
             minute = Minute of the hour [0 - 60$(RPAREN).
             second = Second of the minute [0 - 60$(RPAREN).
+            hnsefracs  =
 
         Throws:
             $(REF DateTimeException,std,datetime,date) if the resulting
             $(LREF TimeOfDay) would be not be valid.
      +/
-    this(int hour, int minute, int second = 0) @safe pure
+    this(int hour, int minute, int second = 0, int hnsecs = 0) @safe pure
     {
         enforceValid!"hours"(hour);
         enforceValid!"minutes"(minute);
         enforceValid!"seconds"(second);
+        enforceValid!"hnsecs"(hnsecs);
 
         _hour   = cast(ubyte) hour;
         _minute = cast(ubyte) minute;
         _second = cast(ubyte) second;
+        _hnsecs = cast(uint) hnsecs;
     }
 
     @safe unittest
@@ -8342,6 +8366,7 @@ public:
             assert(tod._hour == 0);
             assert(tod._minute == 0);
             assert(tod._second == 0);
+            assert(tod._hnsecs == 0);
         }
 
         {
@@ -8349,18 +8374,21 @@ public:
             assert(tod._hour == 12);
             assert(tod._minute == 30);
             assert(tod._second == 33);
+            assert(tod._hnsecs == 0);
         }
 
         {
-            auto tod = TimeOfDay(23, 59, 59);
+            auto tod = TimeOfDay(23, 59, 59, 123);
             assert(tod._hour == 23);
             assert(tod._minute == 59);
             assert(tod._second == 59);
+            assert(tod._hnsecs == 123);
         }
 
         assertThrown!DateTimeException(TimeOfDay(24, 0, 0));
         assertThrown!DateTimeException(TimeOfDay(0, 60, 0));
         assertThrown!DateTimeException(TimeOfDay(0, 0, 60));
+        assertThrown!DateTimeException(TimeOfDay(0, 0, 0, 9_999_999 + 1));
     }
 
 
@@ -9330,10 +9358,14 @@ public:
         import std.string : strip;
 
         auto str = strip(isoExtString);
-        int hours, minutes, seconds;
+        int hours, minutes, seconds, hnsecs;
 
-        if (str.length != 8 || str[2] != ':' || str[5] != ':')
-            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
+        if (str.length < 8 || str[2] != ':' || str[5] != ':')
+            throw new DateTimeException(text("Invalid ISO Extended String 1: ", isoExtString));
+        if (str.length ==9)
+            throw new DateTimeException(text("Invalid ISO Extended String 2: ", isoExtString));
+        if (str.length > 9 && str[8] != '.')
+            throw new DateTimeException(text("Invalid ISO Extended String 3: ", isoExtString));
 
         try
         {
@@ -9341,14 +9373,24 @@ public:
             // non digits without extra loops
             hours = cast(int) to!uint(str[0 .. 2]);
             minutes = cast(int) to!uint(str[3 .. 5]);
-            seconds = cast(int) to!uint(str[6 .. $]);
+            if (str.length == 8)
+            {
+                seconds = cast(int) to!uint(str[6 .. $]);
+                hnsecs = 0;
+            }
+            else
+            {
+                seconds = cast(int) to!uint(str[6 .. 8]);
+                auto fracs = to!double(str[8 .. $]);
+                hnsecs = cast(int) ( 10_000_000.0 * fracs);
+            }
         }
         catch (ConvException)
         {
-            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
+            throw new DateTimeException(text("Invalid ISO Extended String 4: ", isoExtString));
         }
 
-        return TimeOfDay(hours, minutes, seconds);
+        return TimeOfDay(hours, minutes, seconds, hnsecs);
     }
 
     ///
@@ -9357,6 +9399,9 @@ public:
         assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+
+        assert(TimeOfDay.fromISOExtString("12:30:33.25") == TimeOfDay(12, 30, 33, 5*10^^6));
+        assert(TimeOfDay.fromISOExtString("12:30:33.250") == TimeOfDay(12, 30, 33, 5*10^^6));
     }
 
     @safe unittest
@@ -9420,6 +9465,8 @@ public:
         assert(TimeOfDay.fromISOExtString("01:12:17 ") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
+
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:33."));
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=17801
@@ -9609,6 +9656,7 @@ package:
     ubyte _hour;
     ubyte _minute;
     ubyte _second;
+    ulong _hnsecs;
 
     enum ubyte maxHour   = 24 - 1;
     enum ubyte maxMinute = 60 - 1;
@@ -9646,7 +9694,8 @@ bool valid(string units)(int value) @safe pure nothrow @nogc
 if (units == "months" ||
     units == "hours" ||
     units == "minutes" ||
-    units == "seconds")
+    units == "seconds" ||
+    units == "hnsecs")
 {
     static if (units == "months")
         return value >= Month.jan && value <= Month.dec;
@@ -9656,7 +9705,8 @@ if (units == "months" ||
         return value >= 0 && value <= 59;
     else static if (units == "seconds")
         return value >= 0 && value <= 59;
-}
+    else static if (units == "hnsecs")
+        return value >= 0 && value <= 9_999_999;}
 
 ///
 @safe unittest
@@ -9717,7 +9767,8 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
 if (units == "months" ||
     units == "hours" ||
     units == "minutes" ||
-    units == "seconds")
+    units == "seconds" ||
+    units == "hnsecs" )
 {
     import std.format : format;
 
@@ -9740,6 +9791,11 @@ if (units == "months" ||
     {
         if (!valid!units(value))
             throw new DateTimeException(format("%s is not a valid second of a minute.", value), file, line);
+    }
+    else static if (units == "hnsecs")
+    {
+        if (!valid!units(value))
+            throw new DateTimeException(format("%s is not a valid hnsec of a second.", value), file, line);
     }
 }
 
