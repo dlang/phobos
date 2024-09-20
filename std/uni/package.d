@@ -708,8 +708,8 @@ import std.meta : AliasSeq;
 import std.range.primitives : back, ElementEncodingType, ElementType, empty,
     front, hasLength, hasSlicing, isForwardRange, isInputRange,
     isRandomAccessRange, popFront, put, save;
-import std.traits : isConvertibleToString, isIntegral, isSomeChar,
-    isSomeString, Unqual, isDynamicArray;
+import std.traits : isAutodecodableString, isConvertibleToString, isIntegral,
+    isSomeChar, isSomeString, Unqual, isDynamicArray;
 // debug = std_uni;
 
 import std.internal.unicode_tables; // generated file
@@ -7148,17 +7148,25 @@ private immutable TransformRes
             TransformRes.goOn
 ];
 
-template genericDecodeGrapheme(bool getValue)
-{
-    static if (getValue)
+enum GraphemeRet { none, step, value }
+
+template genericDecodeGrapheme(GraphemeRet retType)
+{   alias Ret = GraphemeRet;
+
+    static if (retType == Ret.value)
         alias Value = Grapheme;
-    else
+    else static if (retType == Ret.step)
+        alias Value = size_t;
+    else static if (retType == Ret.none)
         alias Value = void;
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
-        static if (getValue)
-            Grapheme grapheme;
+        static if (retType == Ret.value)
+            Grapheme result;
+        else static if (retType == Ret.step)
+            size_t result = 0;
+
         auto state = GraphemeState.Start;
         dchar ch;
 
@@ -7173,8 +7181,10 @@ template genericDecodeGrapheme(bool getValue)
                 with(TransformRes)
             {
             case goOn:
-                static if (getValue)
-                    grapheme ~= ch;
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
                 range.popFront();
                 continue;
 
@@ -7182,8 +7192,10 @@ template genericDecodeGrapheme(bool getValue)
                 goto rerun;
 
             case retInclude:
-                static if (getValue)
-                    grapheme ~= ch;
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
                 range.popFront();
                 break outer;
 
@@ -7192,8 +7204,8 @@ template genericDecodeGrapheme(bool getValue)
             }
         }
 
-        static if (getValue)
-            return grapheme;
+        static if (retType != Ret.none)
+            return result;
     }
 }
 
@@ -7217,7 +7229,7 @@ if (is(C : dchar))
 {
     auto src = input[index..$];
     auto n = src.length;
-    genericDecodeGrapheme!(false)(src);
+    genericDecodeGrapheme!(GraphemeRet.none)(src);
     return n - src.length;
 }
 
@@ -7279,7 +7291,7 @@ if (is(C : dchar))
 Grapheme decodeGrapheme(Input)(ref Input inp)
 if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
-    return genericDecodeGrapheme!true(inp);
+    return genericDecodeGrapheme!(GraphemeRet.value)(inp);
 }
 
 @safe unittest
@@ -7302,6 +7314,73 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
     // Two Union Jacks of the Great Britain
     s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
     assert(equal(decodeGrapheme(s)[], "\U0001F1EC\U0001F1E7"));
+}
+
+/++
+    Reads one full grapheme cluster from an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of dchar `inp`,
+    but doesn't return it. Instead returns the number of code units read.
+    This differs from number of code points read only if `input` is an
+    autodecodable string.
+
+    Note:
+    This function modifies `inp` and thus `inp`
+    must be an L-value.
++/
+size_t popGrapheme(Input)(ref Input inp)
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
+{
+    static if (isAutodecodableString!Input || isRandomAccessRange!Input)
+    {
+        // Why count each step in the decoder when you can just
+        // measure the grapheme in one go?
+        auto n = inp.length;
+        genericDecodeGrapheme!(GraphemeRet.none)(inp);
+        return n - inp.length;
+    }
+    else return genericDecodeGrapheme!(GraphemeRet.step)(inp);
+}
+
+///
+@safe pure unittest
+{
+    // Two Union Jacks of the Great Britain in each
+    string s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    wstring ws = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    dstring ds = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+
+    // String pop length in code units, not points.
+    assert(s.popGrapheme() == 8);
+    assert(ws.popGrapheme() == 4);
+    assert(ds.popGrapheme() == 2);
+
+    assert(s == "\U0001F1EC\U0001F1E7");
+    assert(ws == "\U0001F1EC\U0001F1E7");
+    assert(ds == "\U0001F1EC\U0001F1E7");
+
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
+
+    // Also works for non-random access ranges as long as the
+    // character type is 32-bit.
+    auto testPiece = "\r\nhello!"d.filter!(x => !x.isAlpha);
+    // Windows-style line ending is two code points in a single grapheme.
+    assert(testPiece.popGrapheme() == 2);
+    assert(testPiece.equal("!"d));
+}
+
+// Attribute compliance test. Should be nothrow `@nogc` when
+// no autodecoding needed.
+@safe pure nothrow @nogc unittest
+{
+    import std.algorithm.iteration : filter;
+
+    auto str = "abcdef"d;
+    assert(str.popGrapheme() == 1);
+
+    // also test with non-random access
+    auto filtered = "abcdef"d.filter!(x => x%2);
+    assert(filtered.popGrapheme() == 1);
 }
 
 /++
@@ -7722,7 +7801,7 @@ public:
     @property bool valid()() /*const*/
     {
         auto r = this[];
-        genericDecodeGrapheme!false(r);
+        genericDecodeGrapheme!(GraphemeRet.none)(r);
         return r.length == 0;
     }
 

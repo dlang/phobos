@@ -1,0 +1,37 @@
+Added popGrapheme function to std.uni.
+
+The new function is a cross between the existing $(REF graphemeStride, std, uni)
+and $(REF decodeGrapheme, std, uni) functions. The new function both supports
+all four attributes like `graphemeStride` does as long as you don't rely on
+autodecoding (side node: `@nogc` support for `graphemeStride` added in this
+release), and works with any non-array ranges just like `decodeGrapheme` does.
+
+Example:
+
+-------
+import std.uni;
+
+// Two Union Jacks of the Great Britain in each
+string s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+wstring ws = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+dstring ds = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+
+// String pop length in code units, not points.
+assert(s.popGrapheme() == 8);
+assert(ws.popGrapheme() == 4);
+assert(ds.popGrapheme() == 2);
+
+assert(s == "\U0001F1EC\U0001F1E7");
+assert(ws == "\U0001F1EC\U0001F1E7");
+assert(ds == "\U0001F1EC\U0001F1E7");
+
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : filter;
+
+// Also works for non-random access ranges as long as the
+// character type is 32-bit.
+auto testPiece = "\r\nhello!"d.filter!(x => !x.isAlpha);
+// Windows-style line ending is two code point in a single grapheme.
+assert(testPiece.popGrapheme() == 2);
+assert(testPiece.equal("!"d));
+-------
