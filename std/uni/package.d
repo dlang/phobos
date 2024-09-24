@@ -7330,7 +7330,7 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 size_t popGrapheme(Input)(ref Input inp)
 if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
-    static if (isAutodecodableString!Input || isRandomAccessRange!Input)
+    static if (isAutodecodableString!Input || hasLength!Input)
     {
         // Why count each step in the decoder when you can just
         // measure the grapheme in one go?

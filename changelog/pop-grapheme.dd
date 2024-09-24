@@ -1,10 +1,11 @@
 Added popGrapheme function to std.uni.
 
-The new function is a cross between the existing $(REF graphemeStride, std, uni)
-and $(REF decodeGrapheme, std, uni) functions. The new function both supports
-all four attributes like `graphemeStride` does as long as you don't rely on
-autodecoding (side node: `@nogc` support for `graphemeStride` added in this
-release), and works with any non-array ranges just like `decodeGrapheme` does.
+The new function is a cross between the existing $(REF graphemeStride, std,
+uni) and $(REF decodeGrapheme, std, uni) functions. The new function both
+supports `@safe pure nothrow @nogc` like `graphemeStride` does as long as you
+don't rely on autodecoding (side node: `@nogc` support for `graphemeStride`
+added in this release), and works with any non-array ranges just like
+`decodeGrapheme` does.
 
 Example:
 
