@@ -1292,7 +1292,8 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
 @safe pure unittest
 {
     static enum State: ubyte { INACTIVE }
-    static struct S {
+    static struct S
+    {
         State state = State.INACTIVE;
         int generation = 1;
         alias state this;

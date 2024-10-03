@@ -436,7 +436,8 @@ struct FreeList(ParentAllocator,
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
 
-    struct StatsCollectorWrapper {
+    struct StatsCollectorWrapper
+    {
         ~this()
         {
             // buf2 should still be around and buf1 deallocated
