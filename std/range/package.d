@@ -12502,10 +12502,10 @@ public:
         import std.traits : isSafe;
         private alias S = typeof((() => (*_range).save)());
 
-        static if (is(typeof(((const R* r) => (*r).save)(null)))) 
+        static if (is(typeof(((const R* r) => (*r).save)(null))))
             private alias CS = typeof(((const R* r) => (*r).save)(null));
 
-       
+
         static if (isSafe!((R* r) => (*r).save))
         {
             @property RefRange!S save() @trusted
@@ -13109,7 +13109,7 @@ private:
 // https://issues.dlang.org/show_bug.cgi?id=24801
 @safe unittest
 {
-    
+
     {
         static struct R
         {
@@ -13136,7 +13136,7 @@ private:
             bool empty() => length == 0;
             R save() const => R();
         }
-    
+
         R range;
         auto r = RefRange!R(&range);
     }
