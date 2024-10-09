@@ -12444,7 +12444,7 @@ public:
             return (*_range).front;
         }
 
-        static if (is(typeof((*(cast(const R*)_range)).front))) @property auto front() const
+        static if (is(typeof(((const R* r) => (*r).front)(null)))) @property auto front() const
         {
             return (*_range).front;
         }
@@ -12470,7 +12470,7 @@ public:
             return (*_range).empty;
         }
 
-        static if (is(typeof((*cast(const R*)_range).empty))) @property bool empty() const
+        static if (is(typeof(((const R* r) => (*r).empty)(null)))) @property bool empty() const
         {
             return (*_range).empty;
         }
@@ -12500,11 +12500,12 @@ public:
     else static if (isForwardRange!R)
     {
         import std.traits : isSafe;
-        private alias S = typeof((*_range).save);
+        private alias S = typeof((() => (*_range).save)());
 
-        static if (is(typeof((*cast(const R*)_range).save)))
-            private alias CS = typeof((*cast(const R*)_range).save);
+        static if (is(typeof(((const R* r) => (*r).save)(null)))) 
+            private alias CS = typeof(((const R* r) => (*r).save)(null));
 
+       
         static if (isSafe!((R* r) => (*r).save))
         {
             @property RefRange!S save() @trusted
@@ -12512,7 +12513,7 @@ public:
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() @trusted const
+            static if (is(typeof(((const R* r) => (*r).save)(null)))) @property RefRange!CS save() @trusted const
             {
                 mixin(_genSave());
             }
@@ -12524,7 +12525,7 @@ public:
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() const
+            static if (is(typeof(((const R* r) => (*r).save)(null)))) @property RefRange!CS save() const
             {
                 mixin(_genSave());
             }
@@ -12543,7 +12544,7 @@ public:
         private static string _genSave() @safe pure nothrow
         {
             return `import core.lifetime : emplace;` ~
-                   `alias S = typeof((*_range).save);` ~
+                   `alias S = typeof((() => (*_range).save)());` ~
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range).save);` ~
@@ -12572,7 +12573,7 @@ public:
             return (*_range).back;
         }
 
-        static if (is(typeof((*(cast(const R*)_range)).back))) @property auto back() const
+        static if (is(typeof(((const R* r) => (*r).back)(null)))) @property auto back() const
         {
             return (*_range).back;
         }
@@ -12662,7 +12663,7 @@ public:
         {
             return (*_range).length;
         }
-        static if (is(typeof((*cast(const R*)_range).length))) @property auto length() const
+        static if (is(typeof(((const R* r) => (*r).length)(null)))) @property auto length() const
         {
             return (*_range).length;
         }
@@ -13103,6 +13104,44 @@ private:
     static assert(isBidirectionalRange!R2);
     R2 r2;
     auto rr2 = refRange(&r2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24801
+@safe unittest
+{
+    
+    {
+        static struct R
+        {
+            int front() => 0;
+            void popFront() {}
+            bool empty() => false;
+        }
+        R range;
+        auto r = RefRange!R(&range);
+    }
+
+    {
+        static struct R
+        {
+            size_t start, end;
+            size_t length() => end - start;
+            int opIndex(size_t i) => 0;
+
+
+            int front() => this[0];
+            int back() => this[length-1];
+            void popFront() { start++; }
+            void popBack() { end--; }
+            bool empty() => length == 0;
+            R save() const => R();
+        }
+    
+        R range;
+        auto r = RefRange!R(&range);
+    }
+
+
 }
 
 /// ditto
