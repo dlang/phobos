@@ -16,6 +16,7 @@ $(TR $(TD Decode) $(TD
     $(LREF byGrapheme)
     $(LREF decodeGrapheme)
     $(LREF graphemeStride)
+    $(LREF popGrapheme)
 ))
 $(TR $(TD Comparison) $(TD
     $(LREF icmp)
