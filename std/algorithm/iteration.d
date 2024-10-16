@@ -2766,11 +2766,12 @@ if (isInputRange!Range)
     {
         import std.algorithm.comparison : equal;
         import std.algorithm.setops : multiwayMerge;
+        import std.range : assumeSorted;
 
         {
-            auto a0 = [2, 3, 5];
-            auto a1 = [2, 4, 5];
-            auto a2 = [1, 2, 4, 5];
+            auto a0 = assumeSorted([2, 3, 5]);
+            auto a1 = assumeSorted([2, 4, 5]);
+            auto a2 = assumeSorted([1, 2, 4, 5]);
 
             auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
             auto r = multiwayMerge([a0, a1, a2]).chunkBy!((a, b) => a == b);
@@ -2783,7 +2784,9 @@ if (isInputRange!Range)
 
             auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
             auto r =
-                multiwayMerge([valInputRange(a0), valInputRange(a1), valInputRange(a2)])
+                multiwayMerge([assumeSorted(valInputRange(a0))
+                        , assumeSorted(valInputRange(a1))
+                        , assumeSorted(valInputRange(a2))])
                 .chunkBy!((a, b) => a == b);
             assert(r.equal!equal(expected));
         }
@@ -2794,7 +2797,9 @@ if (isInputRange!Range)
 
             auto expected = [[1], [2, 2, 2], [3], [4, 4], [5, 5, 5]];
             auto r =
-                multiwayMerge([refInputRange(a0), refInputRange(a1), refInputRange(a2)])
+                multiwayMerge([assumeSorted(refInputRange(a0))
+                        , assumeSorted(refInputRange(a1))
+                        , assumeSorted(refInputRange(a2))])
                 .chunkBy!((a, b) => a == b);
             assert(r.equal!equal(expected));
         }
