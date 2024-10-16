@@ -998,7 +998,6 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
     isIntegral!(ElementType!RangeIndex) && hasAssignableElements!RangeIndex)
 {
-    import std.conv : to;
     import std.exception : enforce;
 
     alias IndexType = Unqual!(ElementType!RangeIndex);
@@ -1007,8 +1006,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     static if (IndexType.sizeof < size_t.sizeof)
     {
         enforce(r.length <= size_t(1) + IndexType.max, "Cannot create an index with " ~
-            "element type " ~ IndexType.stringof ~ " with length " ~
-            to!string(r.length) ~ ".");
+            "element type " ~ IndexType.stringof ~ " with length ", r.length,  ".");
     }
 
     // Use size_t as loop index to avoid overflow on ++i,
