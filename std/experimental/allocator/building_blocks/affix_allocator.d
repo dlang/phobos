@@ -446,7 +446,8 @@ version (StdUnittest)
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
     import std.experimental.allocator.common : testAllocator;
-    testAllocator!({
+    testAllocator!(
+    {
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
             (BitmappedBlock!128(new ubyte[128 * 4096]));
         return a;
