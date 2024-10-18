@@ -1053,7 +1053,8 @@ if (!(is(S : T) &&
     else static if (isPointer!S && isSomeChar!(PointerTarget!S))
     {
         // This is unsafe because we cannot guarantee that the pointer is null terminated.
-        return () @system {
+        return () @system
+        {
             static if (is(S : const(char)*))
                 import core.stdc.string : strlen;
             else
@@ -1208,7 +1209,8 @@ if (!(is(S : T) &&
 */
 private template isSwitchable(E)
 {
-    enum bool isSwitchable = is(typeof({
+    enum bool isSwitchable = is(typeof(
+    {
         switch (E.init) { default: }
     }));
 }
@@ -2786,12 +2788,14 @@ Lerr:
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
 
+    //dfmt off
     assertCTFEable!({ string s =  "1234abc"; assert(parse!( int, string, Yes.doCount)(s) ==
         tuple( 1234, 4) && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse!( int, string, Yes.doCount)(s) ==
         tuple(-1234, 5) && s == "abc"); });
     assertCTFEable!({ string s =  "1234abc"; assert(parse!(uint, string, Yes.doCount)(s) ==
         tuple( 1234 ,4) && s == "abc"); });
+    //dfmt on
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13931

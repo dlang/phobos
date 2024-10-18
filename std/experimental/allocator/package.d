@@ -1007,7 +1007,8 @@ private ref RCIAllocator setupThreadAllocator()
     assert(_threadAllocator.isNull);
     import core.lifetime : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
-    () @trusted {
+    () @trusted
+    {
         _threadAllocator = RCIAllocator(emplace!(ThreadAllocator)(_threadAllocatorState[], processAllocator()));
     }();
     return _threadAllocator;
@@ -1375,9 +1376,13 @@ nothrow @safe @nogc unittest
     cast(void) Mallocator.instance.make!Pure(0);
 
     static int g = 0;
-    static struct Impure { this(int) nothrow @nogc @safe {
-        g++;
-    } }
+    static struct Impure
+    {
+        this(int) nothrow @nogc @safe
+        {
+            g++;
+        }
+    }
     static assert(!__traits(compiles, cast(void) Mallocator.instance.make!Impure(0)));
 }
 
@@ -2047,7 +2052,8 @@ if (isInputRange!R && !isInfinite!R)
         int val;
         @disable this();
 
-        this(int b){
+        this(int b)
+        {
             this.val = i++;
         }
 
@@ -3743,7 +3749,8 @@ unittest
 
     foreach (b; allox)
     {
-        () pure nothrow @safe {
+        () pure nothrow @safe
+        {
             void[] p;
             Ternary r = (() @nogc => a.resolveInternalPointer(&b[0], p))();
             assert(&p[0] == &b[0] && p.length >= b.length);
