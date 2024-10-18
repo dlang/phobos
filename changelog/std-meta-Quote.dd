@@ -1,0 +1,22 @@
+Add a `Quote` template that wraps a tuple so it can be passed around without being coalesced with other tuples.
+
+---
+import std.meta : Quote, AliasSeq;
+import std.traits : isInstanceOf;
+
+/// merge two sorted list
+template merge(A, B)
+if (isInstanceOf!(Quote, A) && isInstanceOf!(Quote, B))
+{
+    static if (A.length == 0)
+        alias merge = B.quoted;
+    else static if (B.length == 0)
+        alias merge = A.quoted;
+    else static if ((A)[0] < (B)[0])
+        alias merge = AliasSeq!((A)[0], merge!(A.tail, B));
+    else
+        alias merge = AliasSeq!((B)[0], merge!(A, B.tail));
+}
+
+pragma(msg, merge!(Quote!(1,3,5), Quote!(2,4,6,7,8)));
+---
