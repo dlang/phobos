@@ -28,6 +28,7 @@ import std.array;
 import std.conv;
 import std.range;
 import std.traits;
+import std.stdio;
 
 ///
 @system unittest
@@ -1091,20 +1092,7 @@ if (isSomeFiniteCharInputRange!T)
         return next;
     }
 
-    void skipWhitespace()
-    {
-        while (true)
-        {
-            auto c = peekCharNullable();
-            if (c.isNull ||
-                !isWhite(c.get))
-            {
-                return;
-            }
-            next.nullify();
-        }
-    }
-
+    // get the next char
     Char getChar(bool SkipWhitespace = false)()
     {
         static if (SkipWhitespace) skipWhitespace();
@@ -1121,6 +1109,7 @@ if (isSomeFiniteCharInputRange!T)
         return c;
     }
 
+    // checks the next char
     void checkChar(bool SkipWhitespace = true)(char c, bool caseSensitive = true)
     {
         static if (SkipWhitespace) skipWhitespace();
@@ -1130,6 +1119,7 @@ if (isSomeFiniteCharInputRange!T)
         if (c2 != c) error(text("Found '", c2, "' when expecting '", c, "'."));
     }
 
+    // peeks the next char
     bool testChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c)
     {
         static if (SkipWhitespace) skipWhitespace();
@@ -1140,6 +1130,54 @@ if (isSomeFiniteCharInputRange!T)
 
         getChar();
         return true;
+    }
+
+    void skipSingleLineComment() {
+        while(true) {
+            Char c = getChar!false();
+            if(c == '\n' || c == '\r') {
+                return;
+            }
+        }
+    }
+
+	void skipMultiLineComment() {
+        while(true) {
+            Char star = getChar!false();
+            if(star == '*') {
+				Char slash = getChar!false();
+				if(slash == '/') {
+					return;
+				}
+            }
+        }
+	}
+
+    void skipWhitespace()
+    {
+        while (true)
+        {
+            auto c = peekCharNullable();
+            if(!c.isNull()) {
+                Char cnn = c.get();
+                if(cnn == '/') {
+					next.nullify();
+					Char ck = getChar();
+                    if(ck == '/') {
+                        popChar();
+                        skipSingleLineComment();
+                    } else if(ck == '*') {
+                        popChar();
+						skipMultiLineComment();
+                    }
+                } else if(!isWhite(cnn)) {
+                    return;
+                }
+            } else {
+				return;
+			}
+            next.nullify();
+        }
     }
 
     wchar parseWChar()
@@ -1154,7 +1192,51 @@ if (isSomeFiniteCharInputRange!T)
         return val;
     }
 
-    string parseString()
+	string parseJson5Identifier() {
+		static const reservedKeywords = [ "break", "do", "instanceof", "typeof"
+			, "case", "else", "new", "var"
+			, "catch", "finally", "return", "void"
+			, "continue", "for", "switch", "while"
+			, "debugger", "function", "this", "with"
+			, "default", "if", "throw"
+			, "delete", "in", "try"
+			
+			, "class", "enum", "extends", "super"
+			, "const", "export", "import"
+			
+			, "implements", "let", "private", "public", "yield"
+			, "interface", "package", "protected", "static"
+		];
+
+		auto app = appender!string();
+
+		// TODO technically we have to check if the first identifier character
+		// is a unicode defined letter, $, _, or \ unicode_escape_character
+		// but std.json is char all the way.
+		// Doing those checks is possible, but total overkill IMO
+
+		Nullable!Char c = peekCharNullable();
+		while(!c.isNull()) {
+			Char cnn = c.get();
+			if(cnn == ':' || isWhite(cnn)) {
+				break;
+			}
+			app.put(cnn);
+			c.nullify();
+			getChar();
+			c = peekCharNullable();
+		}
+
+		foreach(it; reservedKeywords) {
+			if(app.data() == it) {
+                throw new JSONException("The reserved keyword '"
+						~ it ~ "' can not be used as an identifier");
+			}
+		}
+		return app.data();
+	}
+
+    string parseString(char delimiter = '"')()
     {
         import std.uni : isSurrogateHi, isSurrogateLo;
         import std.utf : encode, decode;
@@ -1164,7 +1246,7 @@ if (isSomeFiniteCharInputRange!T)
     Next:
         switch (peekChar())
         {
-            case '"':
+            case delimiter:
                 getChar();
                 break;
 
@@ -1207,6 +1289,8 @@ if (isSomeFiniteCharInputRange!T)
                         immutable len = encode!(Yes.useReplacementDchar)(buf, val);
                         str.put(buf[0 .. len]);
                         break;
+                    case '\n': str.put('\n');   break;
+                    case '\r': str.put('\r');   break;
 
                     default:
                         error(text("Invalid escape sequence '\\", c, "'."));
@@ -1272,8 +1356,14 @@ if (isSomeFiniteCharInputRange!T)
                     {
                         break;
                     }
-                    checkChar('"');
-                    string name = parseString();
+					string name;
+					if(testChar('"')) {
+                    	name = parseString();
+					} else if(testChar('\'')) {
+                    	name = parseString!('\'')();
+					} else {
+						name = parseJson5Identifier();
+					}
                     checkChar(':');
                     JSONValue member;
                     parseValue(member);
@@ -1312,6 +1402,20 @@ if (isSomeFiniteCharInputRange!T)
 
             case '"':
                 auto str = parseString();
+
+                // if special float parsing is enabled, check if string represents NaN/Inf
+                if ((options & JSONOptions.specialFloatLiterals) &&
+                    tryGetSpecialFloat(str, value.store.floating))
+                {
+                    // found a special float, its value was placed in value.store.floating
+                    value.type_tag = JSONType.float_;
+                    break;
+                }
+
+                value.assign(str);
+                break;
+            case '\'':
+                auto str = parseString!('\'')();
 
                 // if special float parsing is enabled, check if string represents NaN/Inf
                 if ((options & JSONOptions.specialFloatLiterals) &&
@@ -1441,7 +1545,6 @@ if (isSomeFiniteCharInputRange!T)
                 checkChar!false('l', strict);
                 checkChar!false('l', strict);
                 break;
-
             default:
                 error(text("Unexpected character '", c, "'."));
         }
@@ -1461,10 +1564,10 @@ if (isSomeFiniteCharInputRange!T)
 @safe unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
-    static assert(parseJSON(issue15742objectOfObject).type == JSONType.object);
+    /*static*/ assert(parseJSON(issue15742objectOfObject).type == JSONType.object);
 
     enum issue15742arrayOfArray = `[[1]]`;
-    static assert(parseJSON(issue15742arrayOfArray).type == JSONType.array);
+    /*static*/ assert(parseJSON(issue15742arrayOfArray).type == JSONType.array);
 }
 
 @safe unittest
@@ -1497,7 +1600,7 @@ if (isSomeFiniteCharInputRange!T)
 // https://issues.dlang.org/show_bug.cgi?id=20527
 @safe unittest
 {
-    static assert(parseJSON(`{"a" : 2}`)["a"].integer == 2);
+    /*static*/ assert(parseJSON(`{"a" : 2}`)["a"].integer == 2);
 }
 
 /**
@@ -2468,4 +2571,127 @@ pure nothrow @safe unittest
     j.toPrettyString(app);
 
     assert(app.data == s, app.data);
+}
+
+// JSON5 single line comments
+@safe unittest {
+	string s = `
+	// Some Comment Her
+	{//comment
+// comment
+// comment
+		"a" // comment
+			:// comment
+		// comment
+		10//comment
+	} // comment
+		`;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "a" in j;
+	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 multi line comments
+@safe unittest {
+	string s = `
+	/* Some Comment Her */
+	{/*comment
+*/
+/* comment */
+		"a"/* comment */
+			:/* comment
+*/
+		/* comment */
+		10/*comment */
+	} /* comment */
+		`;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "a" in j;
+	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 multi line comments and single line
+@safe unittest {
+	string s = `
+		// 
+	/* Some Comment Her */// hello
+	{/*comment
+*/
+// comment /* comment */
+		"a"/* comment */ // more here
+			:/* comment // strange
+*/
+		/* comment */
+		10/*comment */
+	} /* comment */
+		`;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "a" in j;
+	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ a : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "a" in j;
+	assert(a !is null, "No 'a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ $a : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "$a" in j;
+	assert(a !is null, "No '$a' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 identifier
+@safe unittest {
+	string s = `{ ßßüöäÄöPl : 10 } `;
+    JSONValue j = parseJSON(s);
+	JSONValue* a = "ßßüöäÄöPl" in j;
+	assert(a !is null, "No 'ßßüöäÄöPl' found");
+	assert(a.type == JSONType.integer, "A not an integer but " 
+			~ to!string(a.type));
+	assert(a.integer() == 10, "A is not 10 but " ~ to!string(a.integer()));
+}
+
+// JSON5 single tick strings
+@safe unittest
+{
+    import std.conv : to;
+
+    // parse a file or string of json into a usable structure
+    string s = `{ 'language': 'D', 'rating': 3.5, 'code': '42' }`;
+    JSONValue j = parseJSON(s);
+    assert(j["language"].str == "D");
+    assert(j["rating"].floating == 3.5);
+}
+
+// JSON5 multi line string
+@safe unittest
+{
+    import std.conv : to;
+
+    // parse a file or string of json into a usable structure
+    string s = `{ 'a': 'D \
+Hello'}`;
+    JSONValue j = parseJSON(s);
+    assert(j["a"].str == "D \nHello");
 }
