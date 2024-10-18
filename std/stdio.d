@@ -2542,13 +2542,14 @@ Windows specific Example:
 ----
 import std.stdio;
 
+version(Windows)
 void main()
 {
 
 	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n"))
 	{
 		writeln("|"~line~"|");
-		if (line == "HelloWorld") 
+		if (line == "HelloWorld")
 		    writeln("^This Line is here.");
 	}
 
