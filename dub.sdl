@@ -18,3 +18,11 @@ configuration "unittest" {
     targetPath "generated-lib"
     #excludedSourceFiles "unittest.d" "test/**" "std/**" "tools/**" "etc/**"
 }
+
+buildType "unittest-debug" {
+    buildOptions "unittests" "debugMode" "debugInfo"
+}
+
+buildType "unittest-release" {
+    buildOptions "unittests" "releaseMode" "optimize"
+}
