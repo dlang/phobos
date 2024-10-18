@@ -2838,7 +2838,7 @@ Params:
     rhs = Data to be swapped with `lhs`.
 */
 void swap(T)(ref T lhs, ref T rhs)
-    if (is(typeof(lhs.proxySwap(rhs))))
+if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }
