@@ -2542,7 +2542,7 @@ Windows specific Example:
 ----
 import std.stdio;
 
-version(Windows)
+version (Windows)
 void main()
 {
 
