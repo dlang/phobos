@@ -2153,7 +2153,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
 }
 
 // Implementation of uniform for integral types
-/+ Description of algorithm and suggestion of correctness:
+/** Description of algorithm and suggestion of correctness:
 
 The modulus operator maps an integer to a small, finite space. For instance, `x
 % 3` will map whatever x is into the range [0 .. 3). 0 maps to 0, 1 maps to 1, 2
@@ -2214,7 +2214,7 @@ at least that number won't be represented fairly.
 
 Hence, our condition to reroll is
 `bucketFront > (UpperType.max - (upperDist - 1))`
-+/
+*/
 auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 (T1 a, T2 b, ref RandomGen rng)
 if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
@@ -2277,6 +2277,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     return cast(ResultType)(lower + offset);
 }
 
+///
 @safe unittest
 {
     import std.conv : to;
