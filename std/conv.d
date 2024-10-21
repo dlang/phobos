@@ -924,8 +924,8 @@ if (!is(S : T) &&
          }
          else
          {
-             auto nameDyn = typeid(value).info.name;
-             auto nameS   = typeid(S).info.name;
+             auto nameDyn = typeid(value).name;
+             auto nameS   = typeid(S).name;
          }
          static if (is(T == interface))
              auto nameT = typeid(T).info.name;
