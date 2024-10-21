@@ -917,9 +917,22 @@ if (!is(S : T) &&
     auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
-        throw new ConvException("Cannot convert object of static type "
-                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
-                ~" to type "~T.classinfo.name);
+        static if (is(S == interface))
+         {
+             auto nameDyn = typeid(value).info.name;
+             auto nameS   = typeid(S).info.name;
+         }
+         else
+         {
+             auto nameDyn = typeid(value).info;
+             auto nameS   = typeid(S).info;
+         }
+         static if (is(T == interface))
+             auto nameT = typeid(T).info.name;
+         else
+             auto nameT = typeid(T).name;
+         throw new ConvException("Cannot convert object of static type " ~
+                 nameS ~ " and dynamic type " ~ nameDyn ~ " to type " ~ nameT);
     }
     return result;
 }
