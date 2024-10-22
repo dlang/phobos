@@ -158,4 +158,3 @@ immutable
     else version (Alpha)    ISA instructionSetArchitecture = ISA.alpha;
     else ISA instructionSetArchitecture = ISA.unknown;
 }
-
