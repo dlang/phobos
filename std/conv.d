@@ -927,7 +927,9 @@ if (!is(S : T) &&
             {
                 ti = tinf.info;
             }
-            return ti.name;
+            TypeInfo_Class tc = cast(TypeInfo_Class) ti;
+            assert(tc);
+            return tc.name;
         }
         throw new ConvException("Cannot convert object of static type " ~
                 name(typeid(S)) ~ " and dynamic type " ~ name(typeid(value)) ~ " to type " ~ name(typeid(T));
