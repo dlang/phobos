@@ -1331,8 +1331,7 @@ Returns:
     The extreme value according to `map` and `selector` of the passed-in values.
 */
 private auto extremum(alias map, alias selector = "a < b", Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range &&
-    is(typeof(unaryFun!map(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range && is(typeof(unaryFun!map(ElementType!(Range).init))))
 in
 {
     assert(!r.empty, "r is an empty range");
@@ -1425,8 +1424,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 private auto extremum(alias selector = "a < b", Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range &&
-    !is(typeof(unaryFun!selector(ElementType!(Range).init))))
+if (isInputRange!Range && !isInfinite!Range && !is(typeof(unaryFun!selector(ElementType!(Range).init))))
 {
     return extremum!(a => a, selector)(r);
 }

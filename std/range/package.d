@@ -7492,7 +7492,8 @@ if (!isIntegral!(CommonType!(B, E)) &&
 
         bool opEquals(Cyclic c) const { return current == c.current; }
         bool opEquals(int i) const { return current == i; }
-        void opUnary(string op)() if (op == "++")
+        void opUnary(string op)()
+        if (op == "++")
         {
             current = (current + 1) % wrapAround;
         }
@@ -12607,13 +12608,13 @@ public:
     else static if (isRandomAccessRange!R)
     {
         auto ref opIndex(IndexType)(IndexType index)
-            if (is(typeof((*_range)[index])))
+        if (is(typeof((*_range)[index])))
         {
             return (*_range)[index];
         }
 
         auto ref opIndex(IndexType)(IndexType index) const
-            if (is(typeof((*cast(const R*)_range)[index])))
+        if (is(typeof((*cast(const R*)_range)[index])))
         {
             return (*_range)[index];
         }
@@ -12695,14 +12696,14 @@ public:
 
         RefRange!T opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end)
-            if (is(typeof((*_range)[begin .. end])))
+        if (is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
         RefRange!CT opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const
-            if (is(typeof((*cast(const R*)_range)[begin .. end])))
+        if (is(typeof((*cast(const R*)_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }

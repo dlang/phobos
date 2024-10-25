@@ -2332,8 +2332,7 @@ if (isInputRange!RoR &&
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-if (isInputRange!RoR &&
-    isInputRange!(Unqual!(ElementType!RoR)))
+if (isInputRange!RoR && isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
     alias ConstRetTypeElement = ElementEncodingType!RetType;
@@ -3701,7 +3700,8 @@ if (isDynamicArray!A)
      * Params:
      *     item = the single item to append
      */
-    void put(U)(U item) if (canPutItem!U)
+    void put(U)(U item)
+    if (canPutItem!U)
     {
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
@@ -3730,7 +3730,8 @@ if (isDynamicArray!A)
     }
 
     // Const fixing hack.
-    void put(Range)(Range items) if (canPutConstRange!Range)
+    void put(Range)(Range items)
+    if (canPutConstRange!Range)
     {
         alias p = put!(Unqual!Range);
         p(items);
@@ -3743,7 +3744,8 @@ if (isDynamicArray!A)
      * Params:
      *     items = the range of items to append
      */
-    void put(Range)(Range items) if (canPutRange!Range)
+    void put(Range)(Range items)
+    if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.

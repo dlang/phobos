@@ -935,7 +935,8 @@ Parameters for the generator.
    `Exception` if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
  */
-    void seed(T)(T range) if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
+    void seed(T)(T range)
+    if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         this.seedImpl(range, this.state);
     }
@@ -945,7 +946,7 @@ Parameters for the generator.
        which can be used with an arbitrary `State` instance
     */
     private static void seedImpl(T)(T range, ref State mtState)
-        if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
+    if (isInputRange!T && is(immutable ElementType!T == immutable UIntType))
     {
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())

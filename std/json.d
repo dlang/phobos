@@ -652,7 +652,8 @@ struct JSONValue
         }
     }
 
-    private void assignRef(T)(ref T arg) if (isStaticArray!T)
+    private void assignRef(T)(ref T arg)
+    if (isStaticArray!T)
     {
         type_tag = JSONType.array;
         static if (is(ElementEncodingType!T : JSONValue))
@@ -680,12 +681,14 @@ struct JSONValue
      * and `K` i.e. a JSON object, any array or `bool`. The type will
      * be set accordingly.
      */
-    this(T)(T arg) if (!isStaticArray!T)
+    this(T)(T arg)
+    if (!isStaticArray!T)
     {
         assign(arg);
     }
     /// Ditto
-    this(T)(ref T arg) if (isStaticArray!T)
+    this(T)(ref T arg)
+    if (isStaticArray!T)
     {
         assignRef(arg);
     }
@@ -774,12 +777,14 @@ struct JSONValue
         assert(arr1 != arr2);
     }
 
-    void opAssign(T)(T arg) if (!isStaticArray!T && !is(T : JSONValue))
+    void opAssign(T)(T arg)
+    if (!isStaticArray!T && !is(T : JSONValue))
     {
         assign(arg);
     }
 
-    void opAssign(T)(ref T arg) if (isStaticArray!T)
+    void opAssign(T)(ref T arg)
+    if (isStaticArray!T)
     {
         assignRef(arg);
     }

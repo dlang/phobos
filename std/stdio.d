@@ -447,7 +447,7 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name)
-        if (isSomeFiniteCharInputRange!R1)
+    if (isSomeFiniteCharInputRange!R1)
     {
         import std.conv : to;
         this(name.to!string, "rb");
@@ -455,8 +455,8 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name, R2 mode)
-        if (isSomeFiniteCharInputRange!R1 &&
-            isSomeFiniteCharInputRange!R2)
+    if (isSomeFiniteCharInputRange!R1 &&
+        isSomeFiniteCharInputRange!R2)
     {
         import std.conv : to;
         this(name.to!string, mode.to!string);
@@ -3015,10 +3015,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         /// Range primitive implementations.
         void put(A)(scope A writeme)
-            if ((isSomeChar!(ElementType!A) ||
-                  is(ElementType!A : const(ubyte))) &&
-                isInputRange!A &&
-                !isInfinite!A)
+        if ((isSomeChar!(ElementType!A) || is(ElementType!A : const(ubyte))) && isInputRange!A && !isInfinite!A)
         {
             import std.exception : errnoEnforce;
 
@@ -3044,7 +3041,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// ditto
-        void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
+        void put(C)(scope C c) @safe
+        if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.utf : decodeFront, encode, stride;
 

@@ -1925,7 +1925,7 @@ public:
      * Support for unary operator ~ for `BitArray`.
      */
     BitArray opUnary(string op)() const pure nothrow
-        if (op == "~")
+    if (op == "~")
     {
         auto dim = this.dim;
 
@@ -1962,7 +1962,7 @@ public:
      * Support for binary bitwise operators for `BitArray`.
      */
     BitArray opBinary(string op)(const BitArray e2) const pure nothrow
-        if (op == "-" || op == "&" || op == "|" || op == "^")
+    if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
         assert(e2.length == _len, "e2 must have the same length as this");
@@ -2064,7 +2064,7 @@ public:
      * Support for operator op= for `BitArray`.
      */
     BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow return scope
-        if (op == "-" || op == "&" || op == "|" || op == "^")
+    if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
         assert(e2.length == _len, "e2 must have the same length as this");
@@ -2185,7 +2185,7 @@ public:
      * concatenation semantics are not followed)
      */
     BitArray opOpAssign(string op)(bool b) pure nothrow return scope
-        if (op == "~")
+    if (op == "~")
     {
         length = _len + 1;
         this[_len - 1] = b;
@@ -2215,7 +2215,7 @@ public:
      * ditto
      */
     BitArray opOpAssign(string op)(BitArray b) pure nothrow return scope
-        if (op == "~")
+    if (op == "~")
     {
         auto istart = _len;
         length = _len + b.length;
@@ -2249,7 +2249,7 @@ public:
      * Support for binary operator ~ for `BitArray`.
      */
     BitArray opBinary(string op)(bool b) const pure nothrow
-        if (op == "~")
+    if (op == "~")
     {
         BitArray r;
 
@@ -2261,7 +2261,7 @@ public:
 
     /** ditto */
     BitArray opBinaryRight(string op)(bool b) const pure nothrow
-        if (op == "~")
+    if (op == "~")
     {
         BitArray r;
 
@@ -2274,7 +2274,7 @@ public:
 
     /** ditto */
     BitArray opBinary(string op)(BitArray b) const pure nothrow
-        if (op == "~")
+    if (op == "~")
     {
         BitArray r;
 
@@ -2398,7 +2398,7 @@ public:
      * preserve bits past the end of the array.)
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
-        if (op == "<<")
+    if (op == "<<")
     {
         size_t wordsToShift = nbits / bitsPerSizeT;
         size_t bitsToShift = nbits % bitsPerSizeT;
@@ -2432,7 +2432,7 @@ public:
      * preserve bits past the end of the array.)
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
-        if (op == ">>")
+    if (op == ">>")
     {
         size_t wordsToShift = nbits / bitsPerSizeT;
         size_t bitsToShift = nbits % bitsPerSizeT;
