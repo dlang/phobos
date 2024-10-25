@@ -923,7 +923,7 @@ if (!is(S : T) &&
         static if (is(S == const) || is(S == immutable))
         {
             tv = tv.base;
-            ts = ts.base
+            ts = ts.base;
         }
         static if (is(S == interface))
         {
