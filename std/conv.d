@@ -918,7 +918,7 @@ if (!is(S : T) &&
     if (!result && value)
     {
         auto tv = typeid(value);
-        auto rs = typeid(S);
+        auto ts = typeid(S);
         auto tt = typeid(T);
         static if (is(S == const) || is(S == immutable))
         {
