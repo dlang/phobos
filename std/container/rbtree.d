@@ -1285,7 +1285,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      * Complexity: $(BIGOH m * log(n))
      */
     size_t stableInsert(Stuff)(scope Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    if (isInputRange!Stuff &&
+        isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
         size_t result = 0;
         static if (allowDuplicates)
@@ -1565,7 +1566,9 @@ assert(equal(rbt[], [5]));
 
     /++ Ditto +/
     size_t removeKey(Stuff)(Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem) && !isDynamicArray!Stuff)
+    if (isInputRange!Stuff &&
+        isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
+        !isDynamicArray!Stuff)
     {
         import std.array : array;
         //We use array in case stuff is a Range from this RedBlackTree - either

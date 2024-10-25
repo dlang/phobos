@@ -1154,8 +1154,10 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args)
-    if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
-        && !is(immutable A[0] == immutable LogLevel)) || args.length == 0)
+    if ((args.length > 1
+        && !is(Unqual!(A[0]) : bool)
+        && !is(immutable A[0] == immutable LogLevel))
+        || args.length == 0)
     {
         synchronized (mutex)
         {

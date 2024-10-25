@@ -7643,7 +7643,8 @@ public:
 
     ///ditto
     this(Input)(Input seq)
-    if (!isDynamicArray!Input && isInputRange!Input && is(ElementType!Input : dchar))
+    if (!isDynamicArray!Input
+        && isInputRange!Input && is(ElementType!Input : dchar))
     {
         this ~= seq;
     }
@@ -9945,7 +9946,8 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 // case-converted stuf to the new string
 private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 {
-    void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx, size_t destIdx) @trusted pure
+    void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx,
+        size_t destIdx) @trusted pure
     if (is(C == char) || is(C == wchar) || is(C == dchar))
     {
         import std.utf : decode;

@@ -2332,7 +2332,8 @@ if (isInputRange!RoR &&
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-if (isInputRange!RoR && isInputRange!(Unqual!(ElementType!RoR)))
+if (isInputRange!RoR &&
+    isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
     alias ConstRetTypeElement = ElementEncodingType!RetType;

@@ -300,7 +300,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * ditto
      */
     char[] encode(R1, R2)(R1 source, R2 buffer)
-    if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : ubyte) && hasLength!R1 && is(R2 == char[]))
+    if (!isArray!R1 && isInputRange!R1 &&
+        is(ElementType!R1 : ubyte) && hasLength!R1 &&
+        is(R2 == char[]))
     in
     {
         assert(buffer.length >= encodeLength(source.length), "Insufficient buffer for encoding");
@@ -576,7 +578,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * ditto
      */
     char[] encode(Range)(Range source)
-    if (!isArray!Range && isInputRange!Range && is(ElementType!Range : ubyte) && hasLength!Range)
+    if (!isArray!Range && isInputRange!Range &&
+        is(ElementType!Range : ubyte) && hasLength!Range)
     {
         return encode(source, new char[encodeLength(source.length)]);
     }
@@ -593,7 +596,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * use the $(LREF encoder) function instead.
      */
     struct Encoder(Range)
-    if (isInputRange!Range && (is(ElementType!Range : const(ubyte)[]) || is(ElementType!Range : const(char)[])))
+    if (isInputRange!Range && (is(ElementType!Range : const(ubyte)[]) ||
+        is(ElementType!Range : const(char)[])))
     {
       private:
         Range  range_;
@@ -984,7 +988,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      */
     @trusted
     pure ubyte[] decode(R1, R2)(in R1 source, return scope R2 buffer)
-    if (isArray!R1 && is(ElementType!R1 : dchar) && is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
+    if (isArray!R1 && is(ElementType!R1 : dchar) &&
+        is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
         assert(buffer.length >= realDecodeLength(source), "Insufficient buffer for decoding");
@@ -1068,8 +1073,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * ditto
      */
     ubyte[] decode(R1, R2)(R1 source, R2 buffer)
-    if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : dchar) && hasLength!R1
-        && is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
+    if (!isArray!R1 && isInputRange!R1 &&
+        is(ElementType!R1 : dchar) && hasLength!R1 &&
+        is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
         assert(buffer.length >= decodeLength(source.length), "Insufficient buffer for decoding");
@@ -1354,7 +1360,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * ditto
      */
     ubyte[] decode(Range)(Range source)
-    if (!isArray!Range && isInputRange!Range && is(ElementType!Range : dchar) && hasLength!Range)
+    if (!isArray!Range && isInputRange!Range &&
+        is(ElementType!Range : dchar) && hasLength!Range)
     {
         return decode(source, new ubyte[decodeLength(source.length)]);
     }
@@ -1371,7 +1378,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * use the $(LREF decoder) function instead.
      */
     struct Decoder(Range)
-    if (isInputRange!Range && (is(ElementType!Range : const(char)[]) || is(ElementType!Range : const(ubyte)[])))
+    if (isInputRange!Range && (is(ElementType!Range : const(char)[]) ||
+        is(ElementType!Range : const(ubyte)[])))
     {
       private:
         Range   range_;
