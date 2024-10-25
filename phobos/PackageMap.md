@@ -56,8 +56,8 @@ phobos.sys
     | traits
     | trigonometry
     | special
+    | numeric
   | meta
-  | numeric
   | outbuffer
   | process
   | random
