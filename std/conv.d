@@ -923,7 +923,7 @@ if (!is(S : T) &&
             {
                 ti = tc.base;
             }
-            if (auto tinf = (cast(TypeInfo_Interface)tv))
+            if (auto tinf = (cast(TypeInfo_Interface)ti))
             {
                 ti = tinf.info;
             }
