@@ -17,7 +17,7 @@ import std.string;
 int main(string[] args)
 {
     int result = 0;
-    
+
     bool buildUnittest = false;
     bool buildRelease = false;
     if (args.length > 1)
@@ -25,24 +25,25 @@ int main(string[] args)
         buildUnittest = args[1] == "unittest";
         buildRelease = args[1] == "release";
     }
-    
+
     string argFilePath = buildNormalizedPath(getcwd(), "phobosbuildargs.txt");
     auto dFiles = dirEntries(buildNormalizedPath(getcwd(), "phobos"), "*.d", SpanMode.breadth);
     auto argFile = File(argFilePath, "w");
+
+    version(Windows)
+    {
+        string unittestExecutable = buildNormalizedPath(getcwd(), "unittest.exe");
+    }
+    else
+    {
+        string unittestExecutable = buildNormalizedPath(getcwd(), "unittest");
+    }
+
     scope(exit)
     {
         argFile.close();
         remove(argFilePath);
-        
-        version(Windows)
-        {
-            string unittestExecutable = buildNormalizedPath(getcwd(), "unittest.exe");
-        }
-        else
-        {
-            string unittestExecutable = buildNormalizedPath(getcwd(), "unittest");
-        }
-        
+
         if (exists(unittestExecutable)) remove(unittestExecutable);
     }
 
@@ -112,7 +113,7 @@ int main(string[] args)
     if (buildUnittest)
     {
         writeln("Running tests...");
-        result = runCommand("unittest", getcwd());
+        result = runCommand(unittestExecutable, getcwd());
 
         if (result != 0)
         {
