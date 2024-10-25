@@ -917,22 +917,33 @@ if (!is(S : T) &&
     auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
+        auto tv = typeid(value);
+        auto rs = typeid(S);
+        auto tt = typeid(T);
+        static if (is(S == const) || is(S == immutable))
+        {
+            tv = tv.base;
+            ts = ts.base
+        }
         static if (is(S == interface))
-         {
-             auto nameDyn = typeid(value).info.name;
-             auto nameS   = typeid(S).info.name;
-         }
-         else
-         {
-             auto nameDyn = typeid(value).name;
-             auto nameS   = typeid(S).name;
-         }
-         static if (is(T == interface))
-             auto nameT = typeid(T).info.name;
-         else
-             auto nameT = typeid(T).name;
-         throw new ConvException("Cannot convert object of static type " ~
-                 nameS ~ " and dynamic type " ~ nameDyn ~ " to type " ~ nameT);
+        {
+            tv = (cast(TypeInfo_Interface)tv).info;
+            ts = (cast(TypeInfo_Interface)ts).info;
+        }
+        static if (is(T == const) || is(T == immutable))
+        {
+            tt = tt.base;
+        }
+        static if (is(T == interface))
+        {
+            tt = (cast(TypeInfo_Interface)tt).info;
+        }
+
+        auto nameDyn = tv.name;
+        auto nameS   = ts.name;
+        auto nameT   = tt.name;
+        throw new ConvException("Cannot convert object of static type " ~
+                nameS ~ " and dynamic type " ~ nameDyn ~ " to type " ~ nameT);
     }
     return result;
 }
