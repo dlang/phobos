@@ -1,4 +1,4 @@
-# Phobos 3
+# Phobos 3 Design Goals
 
 ## Rationale
 
@@ -26,6 +26,8 @@ Therefore, v2 will continue to be supported following these rules moving forward
 - User code must be able to use v2 and v3 capabilities in the same project, however, there may be instances of incompatibility as v2 types are not support in v3 and vice versa.
 
 ## Phobos 3
+
+This section is a list of design principles and goals that we have established for Phobos 3.
 
 ### Hybrid single-root/multi-trunk package design
 
@@ -59,7 +61,9 @@ v2 throws an Exception when encountering invalid Unicode. Throwing an Exception 
 
 Removal of autodecoding will in itself address most of the problem. When decoding code units into code points is needed, APIs should allow callers to specify the desired behavior, such as returning an "error" result, or replacing invalid sequences with the Unicode substitution character. Applications which need to handle untrusted data should be encouraged to use functions such as `std.utf.validate` (which return a `string` from `ubyte[]` only when it is valid UTF-8), or by-code-point decoding which reports errors for individual decoding operations.
 
-### Minimize Memory Allocation
+### Memory Management
+
+#### Minimize Memory Allocation
 
 Enormous troubles and inefficiencies stem from general purpose library code allocating memory as the library sees fit. This makes the library code far less usable. Memory allocation strategies should be decided upon by the user of the library, not the library.
 
@@ -67,22 +71,29 @@ The easiest way to achieve this is to design the library to not use memory alloc
 
 Library routines may allocate memory internally, but not in a way that affects the user.
 
-### Minimize Exceptions
+#### Minimize Exceptions
 
-Exceptions are inefficient and use the GC. Of course, they cannot be used in `nothrow` code. Examine each use of an Exception to see if it can be designed out of existence, like the Replacement Character method above. Design the return value such that an error is not necessary - for example, a string search function can return an empty string if not found rather than throw an Exception.
+Exceptions are inefficient, use the GC, and they cannot be used in `nothrow` code. Examine each use of an Exception to see if it can be designed out of existence, like the Replacement Character method above. Design the return value such that an error is not necessary - for example, a string search function can return an empty string if not found rather than throw an Exception.
+
 Investigate the use of Option/Sum types for error returns.
 
-### Reduce Template Layers
+#### Split-Level Design
 
-Phobos 2 frequently over-uses templates resulting in situations like `std.conv.to` with over 10 layers of templates before the actual implementation is reached. This makes the code virtually impossible to comprehend and significantly increases compile times. Templates in Phobos 2 were often used as a way to add in new functionality without breaking existing code or as premature optimizations, this led to haphazard and frequently unnecessary layering of templates. When porting code from Phobos 2 into Phobos 3, care should be taken to audit the template usage and determine where reductions in usage can be made.
+To achieve the twin goals of minimizing allocations and exceptions we will pursue a "split-level" design. The low-level function will take in a buffer instead of allocating and will return an error code instead of throwing exceptions. Then the high-level function can then call the low-level function with the appropriate buffers and can convert the error codes into exceptions. This allows us to maintain the simplicity of the high-level API while offering a low-level API those who need the additional performance.
 
-### Source Only
+### Additional Goals
+
+#### Reduce Template Layering
+
+Phobos 2 frequently over-uses templates resulting in situations such as `std.conv.to`, which has over 10 layers of templates before the actual implementation is reached. This makes the code virtually impossible to comprehend and significantly increases compile times. Templates in Phobos 2 were often used as a way to add in new functionality without breaking existing code or as premature optimizations, this led to haphazard and frequently unnecessary layering of templates. When porting code from Phobos 2 into Phobos 3, care should be taken to audit the usage of template and determine where reductions can be made.
+
+#### Source Only
 
 Currently, Phobos is distributed as a separately compiled library with "header" files that contain only the necessary Template implementations. The net result is that Phobos is primarily a source-only library in practice. By formalizing the library as a source only library, it becomes inured against variations in compiler flags. Whether it's a static or dynamic library becomes irrelevant, and there won't be impedance mismatches. DRuntime will remain a separately compiled library.
 
-### DUB Only Builds
+#### Single Script Builds
 
-The current Phobos build process is convoluted and relies on old or niche tools. This makes the process of building Phobos tedious and discourages active community participation. DUB will be the only tool needed to build and test Phobos v3. Building and testing Phobos v3 should be as simple as issuing a `dub test` command. The complete CI process for Phobos3 will be a single build script that the developer can comprehend and execute easily.
+The current Phobos build process is convoluted and relies on old or niche tools. This makes the process of building Phobos tedious and discourages active community participation. Phobos 3 will use a single build script written in D. For example, running unittests would be accomplished with the command: `dmd -run build_v3.d unittests`.
 
 ### Versioning and Release Schedule
 
@@ -94,10 +105,7 @@ Phobos will use a slightly modified SemVer. The major version will increment wit
 
 ### std.stdio
 
-This module merges file I/O with formatting. Those should be split apart. File I/O should be done with ranges, and the formatting should work with any ranges.
-
-stdin, stdout, and stderr match the stdin, stdout and stderr of core.stdc.stdio.
-This causes terrible confusion. Should be stdIn, stdOut, and stdErr.
+This module merges file I/O with formatting. Those should be split apart. File I/O should be done with ranges, and the formatting should work with any ranges. `stdin`, `stdout`, and `stderr` match the `stdin`, `stdout` and `stderr` of `core.stdc.stdio`. This causes terrible confusion and will be renamed to `stdIn`, `stdOut`, and `stdErr`.
 
 #### std.stdio.File
 

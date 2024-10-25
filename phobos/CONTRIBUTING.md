@@ -1,12 +1,14 @@
 # Phobos 3 Contributors Guide
 
+This document refers to contributions specific to Phobos 3. For the full documentation on contributing please see the guide here: [D Contributors Guide](https://github.com/dlang/phobos/blob/master/CONTRIBUTING.md).
+
 ## Naming and Style Guidelines
 
 Names should follow the existing naming guidelines here: [D Style Guide](https://dlang.org/dstyle.html)
 
-When selecting a name for a type or method, a quick survey of how other popular languages name the equivalent type/method should be performed. For example, in .NET and Java, the `currTime()` method would be named `now()`. Using the same names as popular languages reduces the friction experienced by the engineer when migrating to D. Be prepared to provide examples from your survey in the Pull Request. In cases where there is no clear agreement or two examples are equally represented and alias *may* be appropriate for the purposes of moving past the block.
+When selecting a name for a type or method, a quick survey of how other popular languages name the equivalent type/method should be performed. For example, in .NET and Java, the `currTime()` method would be named `now()`. Using the same names as popular languages reduces the friction experienced by the engineer when migrating to D. Be prepared to provide examples from your survey in the Pull Request. In cases where there is no clear agreement or two examples are equally represented an alias *may* be appropriate for the purposes of moving past the block.
 
-Prefer whole words over abbreviations and dropped letters. For example, prefer `writeLine` over `writeln`. Choose the shortest name that accurately describes the feature. Abbreviations are acceptable where the abbreviation is in common usage and/or would result in a cumbersome name.
+Prefer whole words over abbreviations and dropped letters. For example, prefer `writeLine` over `writeln`. Choose the shortest name that accurately describes the feature. Abbreviations are acceptable where the abbreviation is in common usage and/or would result in a cumbersome name. Furthermore, non-standard abbreviations make it more difficult for non-English speakers to adopt the library.
 
 Phobos will use a 100 soft and 120 hard character column limit. This will be enforced via `dfmt` and `.editorconfig` files provided with the distribution.
 
