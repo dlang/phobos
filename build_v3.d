@@ -1,3 +1,11 @@
+#!/usr/bin/env rdmd
+/**
+Phobos V3 Build Script
+
+Usage:
+  ./build_v3.d [debug,release,unittest]
+*/
+
 import std.conv;
 import std.datetime;
 import std.file;
