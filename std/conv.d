@@ -932,7 +932,7 @@ if (!is(S : T) &&
             return tc.name;
         }
         throw new ConvException("Cannot convert object of static type " ~
-                name(typeid(S)) ~ " and dynamic type " ~ name(typeid(value)) ~ " to type " ~ name(typeid(T));
+                name(typeid(S)) ~ " and dynamic type " ~ name(typeid(value)) ~ " to type " ~ name(typeid(T)));
     }
     return result;
 }
