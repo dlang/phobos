@@ -27,3 +27,10 @@ libphobos_*
 source/
 
 tools/ucd*
+
+# Build specific exclusions
+*.o
+*.a
+*.obj
+*.exe
+unittest
