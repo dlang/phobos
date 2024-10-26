@@ -1446,8 +1446,7 @@ private auto _withDefaultExtension(R, C)(R path, C[] ext)
         of segments to assemble the path from.
     Returns: The assembled path.
 */
-immutable(ElementEncodingType!(ElementType!Range))[]
-    buildPath(Range)(scope Range segments)
+immutable(ElementEncodingType!(ElementType!Range))[] buildPath(Range)(scope Range segments)
 if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
