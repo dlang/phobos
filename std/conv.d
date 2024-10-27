@@ -205,21 +205,21 @@ $(PRE $(I UnsignedInteger):
 template to(T)
 {
     T to(A...)(A args)
-        if (A.length > 0)
+    if (A.length > 0)
     {
         return toImpl!T(args);
     }
 
     // Fix https://issues.dlang.org/show_bug.cgi?id=6175
     T to(S)(ref S arg)
-        if (isStaticArray!S)
+    if (isStaticArray!S)
     {
         return toImpl!T(arg);
     }
 
     // Fix https://issues.dlang.org/show_bug.cgi?id=16108
     T to(S)(ref S arg)
-        if (isAggregateType!S && !isCopyable!S)
+    if (isAggregateType!S && !isCopyable!S)
     {
         return toImpl!T(arg);
     }
