@@ -3487,7 +3487,9 @@ do
                             if (pattmp is null)
                             {
                                 // Allocate this only once per function invocation.
-                                pattmp = (() @trusted => (cast(C*) pureMalloc(C.sizeof * pattern.length))[0 .. pattern.length])();
+                                pattmp = (() @trusted =>
+                                    (cast(C*) pureMalloc(C.sizeof * pattern.length))[0 .. pattern.length])
+                                ();
                             }
 
                             const len1 = pi - 1 - pi0;
