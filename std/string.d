@@ -1348,8 +1348,7 @@ if (isSomeChar!Char)
 }
 
 /++
-    Searches for the last occurrence of substring `sub` in string `s` starting
-    at `startIdx`. If `startIdx` is not given, it defaults to 0.
+    Searches for the last occurrence of a substring in a string.
 
     Params:
         s = string to search for `sub` in
