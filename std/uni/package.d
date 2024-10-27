@@ -16,6 +16,7 @@ $(TR $(TD Decode) $(TD
     $(LREF byGrapheme)
     $(LREF decodeGrapheme)
     $(LREF graphemeStride)
+    $(LREF popGrapheme)
 ))
 $(TR $(TD Comparison) $(TD
     $(LREF icmp)
@@ -708,9 +709,11 @@ import std.meta : AliasSeq;
 import std.range.primitives : back, ElementEncodingType, ElementType, empty,
     front, hasLength, hasSlicing, isForwardRange, isInputRange,
     isRandomAccessRange, popFront, put, save;
-import std.traits : isConvertibleToString, isIntegral, isSomeChar,
-    isSomeString, Unqual, isDynamicArray;
+import std.traits : isAutodecodableString, isConvertibleToString, isIntegral,
+    isSomeChar, isSomeString, Unqual, isDynamicArray;
 // debug = std_uni;
+
+import std.internal.unicode_tables; // generated file
 
 debug(std_uni) import std.stdio; // writefln, writeln
 
@@ -959,7 +962,7 @@ struct MultiArray(Types...)
     }
 
     void store(OutRange)(scope OutRange sink) const
-        if (isOutputRange!(OutRange, char))
+    if (isOutputRange!(OutRange, char))
     {
         import std.format.write : formattedWrite;
         formattedWrite(sink, "[%( 0x%x, %)]", offsets[]);
@@ -1528,7 +1531,7 @@ if (is(Unqual!T == T))
     return SliceOverIndexed!T(a, b, x);
 }
 
-@safe unittest
+@system unittest
 {
     int[] idxArray = [2, 3, 5, 8, 13];
     auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
@@ -1650,7 +1653,7 @@ if (is(T : ElementType!Range))
 template sharMethod(alias uniLowerBound)
 {
     size_t sharMethod(alias _pred="a<b", Range, T)(Range range, T needle)
-        if (is(T : ElementType!Range))
+    if (is(T : ElementType!Range))
     {
         import std.functional : binaryFun;
         import std.math.algebraic : nextPow2, truncPow2;
@@ -1766,19 +1769,19 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if (!isInputRange!V)
+    if (!isInputRange!V)
     {
         arr ~= force!T(value);
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if (isInputRange!V)
+    if (isInputRange!V)
     {
         insertInPlace(arr, arr.length, value);
     }
 
     static void destroy(T)(ref T arr) pure // pure required for -dip25, inferred for -dip1000
-        if (isDynamicArray!T && is(Unqual!T == T))
+    if (isDynamicArray!T && is(Unqual!T == T))
     {
         debug
         {
@@ -1788,7 +1791,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     }
 
     static void destroy(T)(ref T arr) pure // pure required for -dip25, inferred for -dip1000
-        if (isDynamicArray!T && !is(Unqual!T == T))
+    if (isDynamicArray!T && !is(Unqual!T == T))
     {
         arr = null;
     }
@@ -1843,7 +1846,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if (!isInputRange!V)
+    if (!isInputRange!V)
     {
         if (arr.length == size_t.max) assert(0);
         arr = realloc(arr, arr.length+1);
@@ -1860,7 +1863,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     }
 
     static void append(T, V)(ref T[] arr, V value)
-        if (isInputRange!V && hasLength!V)
+    if (isInputRange!V && hasLength!V)
     {
         import core.checkedint : addu;
         bool overflow;
@@ -2056,7 +2059,7 @@ public struct InversionList(SP=GcPolicy)
         Construct from another code point set of any type.
     */
     this(Set)(Set set) pure
-        if (isCodepointSet!Set)
+    if (isCodepointSet!Set)
     {
         uint[] arr;
         foreach (v; set.byInterval)
@@ -2071,7 +2074,7 @@ public struct InversionList(SP=GcPolicy)
         Construct a set from a forward range of code point intervals.
     */
     this(Range)(Range intervals) pure
-        if (isForwardRange!Range && isIntegralPair!(ElementType!Range))
+    if (isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
         uint[] arr;
         foreach (v; intervals)
@@ -2243,7 +2246,7 @@ public:
         )
     */
     This opBinary(string op, U)(U rhs)
-        if (isCodepointSet!U || is(U:dchar))
+    if (isCodepointSet!U || is(U:dchar))
     {
         static if (op == "&" || op == "|" || op == "~")
         {// symmetric ops thus can swap arguments to reuse r-value
@@ -2308,7 +2311,7 @@ public:
 
     /// The 'op=' versions of the above overloaded operators.
     ref This opOpAssign(string op, U)(U rhs)
-        if (isCodepointSet!U || is(U:dchar))
+    if (isCodepointSet!U || is(U:dchar))
     {
         static if (op == "|")    // union
         {
@@ -2340,7 +2343,7 @@ public:
         the same as $(LREF opIndex).
     */
     bool opBinaryRight(string op: "in", U)(U ch) const
-        if (is(U : dchar))
+    if (is(U : dchar))
     {
         return this[ch];
     }
@@ -2472,19 +2475,19 @@ public:
         import std.format : format;
         import std.uni : unicode;
 
-        assert(unicode.Cyrillic.to!string ==
-            "[1024..1157) [1159..1320) [7467..7468) [7544..7545) [11744..11776) [42560..42648) [42655..42656)");
+        // This was originally using Cyrillic script.
+        // Unfortunately this is a pretty active range for changes,
+        // and hence broke in an update.
+        // Therefore the range Basic latin was used instead as it
+        // unlikely to ever change.
+
+        assert(unicode.InBasic_latin.to!string == "[0..128)");
 
         // The specs '%s' and '%d' are equivalent to the to!string call above.
-        assert(format("%d", unicode.Cyrillic) == unicode.Cyrillic.to!string);
+        assert(format("%d", unicode.InBasic_latin) == unicode.InBasic_latin.to!string);
 
-        assert(format("%#x", unicode.Cyrillic) ==
-            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) "
-            ~"[0xa640..0xa698) [0xa69f..0xa6a0)");
-
-        assert(format("%#X", unicode.Cyrillic) ==
-            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) "
-            ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
+        assert(format("%#x", unicode.InBasic_latin) == "[0..0x80)");
+        assert(format("%#X", unicode.InBasic_latin) == "[0..0X80)");
     }
 
     pure @safe unittest
@@ -2520,7 +2523,7 @@ private:
 
   package(std)  // used from: std.regex.internal.parser
     ref intersect(U)(U rhs)
-        if (isCodepointSet!U)
+    if (isCodepointSet!U)
     {
         Marker mark;
         foreach ( i; rhs.byInterval)
@@ -2554,7 +2557,7 @@ private:
     // same as the above except that skip & drop parts are swapped
   package(std)  // used from: std.regex.internal.parser
     ref sub(U)(U rhs)
-        if (isCodepointSet!U)
+    if (isCodepointSet!U)
     {
         Marker mark;
         foreach (i; rhs.byInterval)
@@ -2567,7 +2570,7 @@ private:
 
   package(std)  // used from: std.regex.internal.parse
     ref add(U)(U rhs)
-        if (isCodepointSet!U)
+    if (isCodepointSet!U)
     {
         Marker start;
         foreach (i; rhs.byInterval)
@@ -3204,7 +3207,7 @@ struct CowArray(SP=GcPolicy)
     }
 
     this(Range)(Range range)
-        if (isInputRange!Range && hasLength!Range)
+    if (isInputRange!Range && hasLength!Range)
     {
         import std.algorithm.mutation : copy;
         length = range.length;
@@ -3212,7 +3215,7 @@ struct CowArray(SP=GcPolicy)
     }
 
     this(Range)(Range range)
-        if (isForwardRange!Range && !hasLength!Range)
+    if (isForwardRange!Range && !hasLength!Range)
     {
         import std.algorithm.mutation : copy;
         import std.range.primitives : walkLength;
@@ -3334,7 +3337,7 @@ struct CowArray(SP=GcPolicy)
     }
 
     void append(Range)(Range range)
-        if (isInputRange!Range && hasLength!Range && is(ElementType!Range : uint))
+    if (isInputRange!Range && hasLength!Range && is(ElementType!Range : uint))
     {
         size_t nl = length + range.length;
         length = nl;
@@ -3347,7 +3350,7 @@ struct CowArray(SP=GcPolicy)
         data[$-val.length-1 .. $-1] = val[];
     }
 
-    bool opEquals()(auto const ref CowArray rhs)const
+    bool opEquals()(auto ref const CowArray rhs) const
     {
         if (empty ^ rhs.empty)
             return false; // one is empty and the other isn't
@@ -3791,7 +3794,7 @@ auto arrayRepr(T)(T x)
 template mapTrieIndex(Prefix...)
 {
     size_t mapTrieIndex(Key)(Key key)
-        if (isValidPrefixForTrie!(Key, Prefix))
+    if (isValidPrefixForTrie!(Key, Prefix))
     {
         alias p = Prefix;
         size_t idx;
@@ -4182,7 +4185,7 @@ if (isValidPrefixForTrie!(Key, Args)
 
     ///
     void store(OutRange)(scope OutRange sink) const
-        if (isOutputRange!(OutRange, char))
+    if (isOutputRange!(OutRange, char))
     {
         _table.store(sink);
     }
@@ -4283,7 +4286,7 @@ public template codepointSetTrie(sizes...)
 if (sumOfIntegerTuple!sizes == 21)
 {
     auto codepointSetTrie(Set)(Set set)
-        if (isCodepointSet!Set)
+    if (isCodepointSet!Set)
     {
         auto builder = TrieBuilder!(bool, dchar, lastDchar+1, GetBitSlicing!(21, sizes))(false);
         foreach (ival; set.byInterval)
@@ -4320,7 +4323,7 @@ if (sumOfIntegerTuple!sizes == 21)
     static if (is(TypeOfBitPacked!T == bool))
     {
         auto codepointTrie(Set)(const scope Set set)
-            if (isCodepointSet!Set)
+        if (isCodepointSet!Set)
         {
             return codepointSetTrie(set);
         }
@@ -4335,9 +4338,9 @@ if (sumOfIntegerTuple!sizes == 21)
     // unsorted range of pairs
     ///
     auto codepointTrie(R)(R range, T defValue=T.init)
-        if (isInputRange!R
-            && is(typeof(ElementType!R.init[0]) : T)
-            && is(typeof(ElementType!R.init[1]) : dchar))
+    if (isInputRange!R
+        && is(typeof(ElementType!R.init[0]) : T)
+        && is(typeof(ElementType!R.init[1]) : dchar))
     {
         // build from unsorted array of pairs
         // TODO: expose index sorting functions for Trie
@@ -4465,8 +4468,8 @@ if (isValidArgsForTrie!(Key, Args))
         $(REF setUnion, std,_algorithm).
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if (isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
-            && is(typeof(Range.init.front[1]) : Key))
+    if (isInputRange!Range && is(typeof(Range.init.front[0]) : Value)
+        && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
         foreach (v; range)
@@ -4485,9 +4488,9 @@ if (isValidArgsForTrie!(Key, Args))
         and `filler` is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if (is(TypeOfBitPacked!Value ==  bool)
-            && isInputRange!Range && is(typeof(Range.init.front[0]) : Key)
-            && is(typeof(Range.init.front[1]) : Key))
+    if (is(TypeOfBitPacked!Value ==  bool)
+        && isInputRange!Range && is(typeof(Range.init.front[0]) : Key)
+        && is(typeof(Range.init.front[1]) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
         foreach (ival; range)
@@ -4496,9 +4499,9 @@ if (isValidArgsForTrie!(Key, Args))
     }
 
     auto buildTrie(Range)(Range range, Value filler, bool unsorted)
-        if (isInputRange!Range
-            && is(typeof(Range.init.front[0]) : Value)
-            && is(typeof(Range.init.front[1]) : Key))
+    if (isInputRange!Range
+        && is(typeof(Range.init.front[0]) : Value)
+        && is(typeof(Range.init.front[1]) : Key))
     {
         import std.algorithm.sorting : multiSort;
         alias Comps = GetComparators!(Prefix.length);
@@ -4517,8 +4520,8 @@ if (isValidArgsForTrie!(Key, Args))
         If no filler provided keys map to true, and `filler` is false.
     */
     auto buildTrie(Range)(Range range, Value filler=Value.init)
-        if (is(TypeOfBitPacked!Value ==  bool)
-            && isInputRange!Range && is(typeof(Range.init.front) : Key))
+    if (is(TypeOfBitPacked!Value ==  bool)
+        && isInputRange!Range && is(typeof(Range.init.front) : Key))
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
         foreach (v; range)
@@ -4531,7 +4534,7 @@ if (isValidArgsForTrie!(Key, Args))
         of values where array index serves as key.
     */
     auto buildTrie()(Value[] array, Value filler=Value.init)
-        if (isUnsigned!Key)
+    if (isUnsigned!Key)
     {
         auto builder = TrieBuilder!(Value, Key, Prefix)(filler);
         foreach (idx, v; array)
@@ -4593,21 +4596,21 @@ public struct MatcherConcept
         of the result of test.)
     */
     public bool match(Range)(ref Range inp)
-        if (isRandomAccessRange!Range && is(ElementType!Range : char))
+    if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
        assert(false);
     }
 
     ///ditto
     public bool skip(Range)(ref Range inp)
-        if (isRandomAccessRange!Range && is(ElementType!Range : char))
+    if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
         assert(false);
     }
 
     ///ditto
     public bool test(Range)(ref Range inp)
-        if (isRandomAccessRange!Range && is(ElementType!Range : char))
+    if (isRandomAccessRange!Range && is(ElementType!Range : char))
     {
         assert(false);
     }
@@ -4763,7 +4766,7 @@ template Utf8Matcher()
     }
 
     static auto encode(size_t sz)(dchar ch)
-        if (sz > 1)
+    if (sz > 1)
     {
         import std.utf : encodeUTF = encode;
         char[4] buf;
@@ -4819,8 +4822,8 @@ template Utf8Matcher()
         enum dispatch = genDispatch();
 
         public bool match(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
-                !isDynamicArray!Range)
+        if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+            !isDynamicArray!Range)
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
@@ -4844,8 +4847,8 @@ template Utf8Matcher()
         static if (Sizes.length == 4) // can skip iff can detect all encodings
         {
             public bool skip(Range)(ref Range inp) const
-                if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
-                    !isDynamicArray!Range)
+            if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+                !isDynamicArray!Range)
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
@@ -4866,12 +4869,13 @@ template Utf8Matcher()
         }
 
         public bool test(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
-                !isDynamicArray!Range)
+        if (isRandomAccessRange!Range && is(ElementType!Range : char) &&
+            !isDynamicArray!Range)
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
             auto ch = inp[0];
+
             static if (hasASCII)
             {
                 if (ch < 0x80)
@@ -4884,19 +4888,19 @@ template Utf8Matcher()
         }
 
         bool match(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
         bool skip(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
         bool test(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"test"(str);
         }
@@ -4970,6 +4974,7 @@ template Utf8Matcher()
             else
             {
                 static assert(mode == Mode.skipOnMatch);
+
                 if (tab!size[needle])
                 {
                     inp.popFrontN(size);
@@ -5052,8 +5057,8 @@ template Utf16Matcher()
     mixin template DefMatcher()
     {
         public bool match(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
-                !isDynamicArray!Range)
+        if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+            !isDynamicArray!Range)
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
@@ -5079,8 +5084,8 @@ template Utf16Matcher()
         static if (Sizes.length == 2)
         {
             public bool skip(Range)(ref Range inp) const
-                if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
-                    !isDynamicArray!Range)
+            if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+                !isDynamicArray!Range)
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
@@ -5101,8 +5106,8 @@ template Utf16Matcher()
         }
 
         public bool test(Range)(ref Range inp) const
-            if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
-                !isDynamicArray!Range)
+        if (isRandomAccessRange!Range && is(ElementType!Range : wchar) &&
+            !isDynamicArray!Range)
         {
             enum mode = Mode.neverSkip;
             assert(!inp.empty);
@@ -5114,19 +5119,19 @@ template Utf16Matcher()
         }
 
         bool match(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"match"(str);
         }
 
         bool skip(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"skip"(str);
         }
 
         bool test(C)(ref C[] str) const
-            if (isSomeChar!C)
+        if (isSomeChar!C)
         {
             return fwdStr!"test"(str);
         }
@@ -5135,7 +5140,7 @@ template Utf16Matcher()
     }
 
     struct Impl(Sizes...)
-        if (Sizes.length >= 1 && Sizes.length <= 2)
+    if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
         import std.meta : allSatisfy;
@@ -5225,7 +5230,7 @@ template Utf16Matcher()
     }
 
     struct CherryPick(I, Sizes...)
-        if (Sizes.length >= 1 && Sizes.length <= 2)
+    if (Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
         import std.meta : allSatisfy;
@@ -5312,23 +5317,31 @@ pure @safe unittest
     auto utf8 =  utf8Matcher(unicode.Letter);
     auto asc = utf8.subMatcher!(1);
     auto uni = utf8.subMatcher!(2,3,4);
+
+    // h
     assert(asc.test(codec));
     assert(!uni.match(codec));
     assert(utf8.skip(codec));
     assert(codec.idx == 1);
 
-    assert(!uni.match(codec));
+    // i
     assert(asc.test(codec));
+    assert(!uni.match(codec));
     assert(utf8.skip(codec));
     assert(codec.idx == 2);
-    assert(!asc.match(codec));
 
+    // !
+    assert(!asc.match(codec));
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
+    assert(codec.idx == 3);
 
+    // space
     assert(!asc.test(codec));
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
+    assert(codec.idx == 4);
+
     assert(utf8.test(codec));
     foreach (i; 0 .. 7)
     {
@@ -5338,6 +5351,7 @@ pure @safe unittest
     }
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
+
     //the same with match where applicable
     codec = rs.decoder;
     assert(utf8.match(codec));
@@ -5360,7 +5374,7 @@ pure @safe unittest
     assert(codec.idx == i);
 }
 
-pure @safe unittest
+pure @system unittest
 {
     import std.range : stride;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r) @safe
@@ -6020,11 +6034,11 @@ bool loadProperty(Set=CodepointSet, C)
     }
     else if (ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
-        target = asSet(uniProps.Co);
-        target |= asSet(uniProps.Lo);
-        target |= asSet(uniProps.No);
-        target |= asSet(uniProps.So);
-        target |= asSet(uniProps.Po);
+        target = asSet(uniProps.Cc);
+        target |= asSet(uniProps.Cf);
+        target |= asSet(uniProps.Cs);
+        target |= asSet(uniProps.Co);
+        target |= asSet(uniProps.Cn);
     }
     else if (ucmp(name, "graphical") == 0)
     {
@@ -6092,7 +6106,7 @@ template SetSearcher(alias table, string kind)
 {
     /// Run-time checked search.
     static auto opCall(C)(const scope C[] name)
-        if (is(C : dchar))
+    if (is(C : dchar))
     {
         import std.conv : to;
         CodepointSet set;
@@ -6271,8 +6285,8 @@ struct UnicodeSetParser(Range)
         {
             if (casefold_)
             {
-                auto range = simpleCaseFoldings(ch);
-                foreach (v; range)
+                auto foldings = simpleCaseFoldings(ch);
+                foreach (v; foldings)
                     set |= v;
             }
             else
@@ -6752,7 +6766,7 @@ struct UnicodeSetParser(Range)
         sets.
     */
     static auto opCall(C)(const scope C[] name)
-        if (is(C : dchar))
+    if (is(C : dchar))
     {
         return loadAny(name);
     }
@@ -6951,139 +6965,249 @@ private:
 
 enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
-// control - '\r'
-enum controlSwitch = `
-    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..
-    case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
-`;
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
-// kill unrolled switches
+// Use combined trie instead of checking for '\r' | '\n' | ccTrie,
+//   or extend | '\u200D' separately
 
 private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 {
     return ch >= '\U0001F1E6' && ch <= '\U0001F1FF';
 }
 
-template genericDecodeGrapheme(bool getValue)
+// Our grapheme decoder is a state machine, this is list of all possible
+// states before each code point.
+private enum GraphemeState
 {
-    alias graphemeExtend = graphemeExtendTrie;
-    alias spacingMark = mcTrie;
-    static if (getValue)
+    Start,
+    CR,
+    RI,
+    L,
+    V,
+    LVT,
+    Emoji,
+    EmojiZWJ,
+    Prepend,
+    End
+}
+
+// Message values whether end of grapheme is reached
+private enum TransformRes
+{
+    // No, unless the source range ends here
+    // (GB2 - break at end of text, unless text is empty)
+    goOn,
+    redo, // Run last character again with new state
+    retInclude, // Yes, after the just iterated character
+    retExclude // Yes, before the just iterated character
+}
+
+// The logic of the grapheme decoding is all here
+// GB# means Grapheme Breaking rule number # - see Unicode standard annex #29
+// Note, getting GB1 (break at start of text, unless text is empty) right
+// relies on the user starting grapheme walking from beginning of the text, and
+// not attempting to walk an empty text.
+private immutable TransformRes
+    function(ref GraphemeState, dchar) @safe pure nothrow @nogc [] graphemeTransforms =
+[
+    GraphemeState.Start: (ref state, ch)
+    {
+        // GB4. Break after controls.
+        if (graphemeControlTrie[ch] || ch == '\n')
+            return TransformRes.retInclude;
+
+        with (GraphemeState) state =
+            ch == '\r' ? CR :
+            isRegionalIndicator(ch) ? RI :
+            isHangL(ch) ? L :
+            hangLV[ch] || isHangV(ch) ? V :
+            hangLVT[ch] || isHangT(ch) ? LVT :
+            prependTrie[ch] ? Prepend :
+            xpictoTrie[ch] ? Emoji :
+            End;
+
+        // No matter what we encountered, we always include the
+        // first code point in the grapheme.
+        return TransformRes.goOn;
+    },
+
+    // GB3, GB4. Do not break between a CR and LF.
+    // Otherwise, break after controls.
+    GraphemeState.CR: (ref state, ch) => ch == '\n' ?
+        TransformRes.retInclude :
+        TransformRes.retExclude,
+
+    // GB12 - GB13. Do not break within emoji flag sequences.
+    // That is, do not break between regional indicator (RI) symbols if
+    // there is an odd number of RI characters before the break point.
+    // This state applies if one and only one RI code point has been
+    // encountered.
+    GraphemeState.RI: (ref state, ch)
+    {
+        state = GraphemeState.End;
+
+        return isRegionalIndicator(ch) ?
+            TransformRes.goOn :
+            TransformRes.redo;
+    },
+
+    // GB6. Do not break Hangul syllable sequences.
+    GraphemeState.L: (ref state, ch)
+    {
+        if (isHangL(ch))
+            return TransformRes.goOn;
+        else if (isHangV(ch) || hangLV[ch])
+        {
+            state = GraphemeState.V;
+            return TransformRes.goOn;
+        }
+        else if (hangLVT[ch])
+        {
+            state = GraphemeState.LVT;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    // GB7. Do not break Hangul syllable sequences.
+    GraphemeState.V: (ref state, ch)
+    {
+        if (isHangV(ch))
+            return TransformRes.goOn;
+        else if (isHangT(ch))
+        {
+            state = GraphemeState.LVT;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    // GB8. Do not break Hangul syllable sequences.
+    GraphemeState.LVT: (ref state, ch)
+    {
+        if (isHangT(ch))
+            return TransformRes.goOn;
+
+        state = GraphemeState.End;
+        return TransformRes.redo;
+    },
+
+    // GB11. Do not break within emoji modifier sequences or emoji
+    // zwj sequences. This state applies when the last code point was
+    // NOT a ZWJ.
+    GraphemeState.Emoji: (ref state, ch)
+    {
+        if (graphemeExtendTrie[ch])
+            return TransformRes.goOn;
+
+        static assert(!graphemeExtendTrie['\u200D']);
+
+        if (ch == '\u200D')
+        {
+            state = GraphemeState.EmojiZWJ;
+            return TransformRes.goOn;
+        }
+
+        state = GraphemeState.End;
+        // There might still be spacing marks are
+        // at the end, which are not allowed in
+        // middle of emoji sequences
+        return TransformRes.redo;
+    },
+
+    // GB11. Do not break within emoji modifier sequences or emoji
+    // zwj sequences. This state applies when the last code point was
+    // a ZWJ.
+    GraphemeState.EmojiZWJ: (ref state, ch)
+    {
+        state = GraphemeState.Emoji;
+        if (xpictoTrie[ch])
+            return TransformRes.goOn;
+        return TransformRes.redo;
+    },
+
+    // GB9b. Do not break after Prepend characters.
+    GraphemeState.Prepend: (ref state, ch)
+    {
+        // GB5. Break before controls.
+        if (graphemeControlTrie[ch] || ch == '\r' || ch == '\n')
+            return TransformRes.retExclude;
+
+        state = GraphemeState.Start;
+        return TransformRes.redo;
+    },
+
+    // GB9, GB9a. Do not break before extending characters, ZWJ
+    // or SpacingMarks.
+    // GB999. Otherwise, break everywhere.
+    GraphemeState.End: (ref state, ch)
+        => !graphemeExtendTrie[ch] && !spacingMarkTrie[ch] && ch != '\u200D' ?
+            TransformRes.retExclude :
+            TransformRes.goOn
+];
+
+enum GraphemeRet { none, step, value }
+
+template genericDecodeGrapheme(GraphemeRet retType)
+{   alias Ret = GraphemeRet;
+
+    static if (retType == Ret.value)
         alias Value = Grapheme;
-    else
+    else static if (retType == Ret.step)
+        alias Value = size_t;
+    else static if (retType == Ret.none)
         alias Value = void;
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
-        import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
-        enum GraphemeState {
-            Start,
-            CR,
-            RI,
-            L,
-            V,
-            LVT
-        }
-        static if (getValue)
-            Grapheme grapheme;
-        auto state = GraphemeState.Start;
-        enum eat = q{
-            static if (getValue)
-                grapheme ~= ch;
-            range.popFront();
-        };
+        static if (retType == Ret.value)
+            Grapheme result;
+        else static if (retType == Ret.step)
+            size_t result = 0;
 
+        auto state = GraphemeState.Start;
         dchar ch;
+
         assert(!range.empty, "Attempting to decode grapheme from an empty " ~ Input.stringof);
+    outer:
         while (!range.empty)
         {
             ch = range.front;
-            final switch (state) with(GraphemeState)
+
+        rerun:
+            final switch (graphemeTransforms[state](state, ch))
+                with(TransformRes)
             {
-            case Start:
-                mixin(eat);
-                if (ch == '\r')
-                    state = CR;
-                else if (isRegionalIndicator(ch))
-                    state = RI;
-                else if (isHangL(ch))
-                    state = L;
-                else if (hangLV[ch] || isHangV(ch))
-                    state = V;
-                else if (hangLVT[ch])
-                    state = LVT;
-                else if (isHangT(ch))
-                    state = LVT;
-                else
-                {
-                    switch (ch)
-                    {
-                    mixin(controlSwitch);
-                        goto L_End;
-                    default:
-                        goto L_End_Extend;
-                    }
-                }
-            break;
-            case CR:
-                if (ch == '\n')
-                    mixin(eat);
-                goto L_End_Extend;
-            case RI:
-                if (isRegionalIndicator(ch))
-                    mixin(eat);
-                goto L_End_Extend;
-            case L:
-                if (isHangL(ch))
-                    mixin(eat);
-                else if (isHangV(ch) || hangLV[ch])
-                {
-                    state = V;
-                    mixin(eat);
-                }
-                else if (hangLVT[ch])
-                {
-                    state = LVT;
-                    mixin(eat);
-                }
-                else
-                    goto L_End_Extend;
-            break;
-            case V:
-                if (isHangV(ch))
-                    mixin(eat);
-                else if (isHangT(ch))
-                {
-                    state = LVT;
-                    mixin(eat);
-                }
-                else
-                    goto L_End_Extend;
-            break;
-            case LVT:
-                if (isHangT(ch))
-                {
-                    mixin(eat);
-                }
-                else
-                    goto L_End_Extend;
-            break;
+            case goOn:
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
+                range.popFront();
+                continue;
+
+            case redo:
+                goto rerun;
+
+            case retInclude:
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
+                range.popFront();
+                break outer;
+
+            case retExclude:
+                break outer;
             }
         }
-    L_End_Extend:
-        while (!range.empty)
-        {
-            ch = range.front;
-            // extend & spacing marks
-            if (!graphemeExtend[ch] && !spacingMark[ch])
-                break;
-            mixin(eat);
-        }
-    L_End:
-        static if (getValue)
-            return grapheme;
-    }
 
+        static if (retType != Ret.none)
+            return result;
+    }
 }
 
 public: // Public API continues
@@ -7106,7 +7230,7 @@ if (is(C : dchar))
 {
     auto src = input[index..$];
     auto n = src.length;
-    genericDecodeGrapheme!(false)(src);
+    genericDecodeGrapheme!(GraphemeRet.none)(src);
     return n - src.length;
 }
 
@@ -7132,6 +7256,29 @@ if (is(C : dchar))
     static assert(c2 == 3); // \u0301 has 2 UTF-8 code units
 }
 
+@safe pure nothrow @nogc unittest
+{
+    // grinning face ~ emoji modifier fitzpatrick type-5 ~ grinning face
+    assert(graphemeStride("\U0001F600\U0001f3FE\U0001F600"d, 0) == 2);
+    // skier ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\u2640€"d, 0) == 1);
+    // skier ~ emoji modifier fitzpatrick type-5 ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\U0001f3FE\u2640€"d, 0) == 2);
+    // skier ~ zero-width joiner ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\u200D\u2640€"d, 0) == 3);
+    // skier ~ emoji modifier fitzpatrick type-5 ~ zero-width joiner
+    // ~ female sign ~ '€'
+    assert(graphemeStride("\u26F7\U0001f3FE\u200D\u2640€"d, 0) == 4);
+    // skier ~ zero-width joiner ~ '€'
+    assert(graphemeStride("\u26F7\u200D€"d, 0) == 2);
+    //'€' ~ zero-width joiner ~ skier
+    assert(graphemeStride("€\u200D\u26F7"d, 0) == 2);
+    // Kaithi number sign ~ Devanagari digit four ~ Devanagari digit two
+    assert(graphemeStride("\U000110BD\u096A\u0968"d, 0) == 2);
+    // Kaithi number sign ~ null
+    assert(graphemeStride("\U000110BD\0"d, 0) == 1);
+}
+
 /++
     Reads one full grapheme cluster from an
     $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of dchar `inp`.
@@ -7145,7 +7292,7 @@ if (is(C : dchar))
 Grapheme decodeGrapheme(Input)(ref Input inp)
 if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
-    return genericDecodeGrapheme!true(inp);
+    return genericDecodeGrapheme!(GraphemeRet.value)(inp);
 }
 
 @safe unittest
@@ -7168,6 +7315,73 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
     // Two Union Jacks of the Great Britain
     s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
     assert(equal(decodeGrapheme(s)[], "\U0001F1EC\U0001F1E7"));
+}
+
+/++
+    Reads one full grapheme cluster from an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of dchar `inp`,
+    but doesn't return it. Instead returns the number of code units read.
+    This differs from number of code points read only if `input` is an
+    autodecodable string.
+
+    Note:
+    This function modifies `inp` and thus `inp`
+    must be an L-value.
++/
+size_t popGrapheme(Input)(ref Input inp)
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
+{
+    static if (isAutodecodableString!Input || hasLength!Input)
+    {
+        // Why count each step in the decoder when you can just
+        // measure the grapheme in one go?
+        auto n = inp.length;
+        genericDecodeGrapheme!(GraphemeRet.none)(inp);
+        return n - inp.length;
+    }
+    else return genericDecodeGrapheme!(GraphemeRet.step)(inp);
+}
+
+///
+@safe pure unittest
+{
+    // Two Union Jacks of the Great Britain in each
+    string s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    wstring ws = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    dstring ds = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+
+    // String pop length in code units, not points.
+    assert(s.popGrapheme() == 8);
+    assert(ws.popGrapheme() == 4);
+    assert(ds.popGrapheme() == 2);
+
+    assert(s == "\U0001F1EC\U0001F1E7");
+    assert(ws == "\U0001F1EC\U0001F1E7");
+    assert(ds == "\U0001F1EC\U0001F1E7");
+
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
+
+    // Also works for non-random access ranges as long as the
+    // character type is 32-bit.
+    auto testPiece = "\r\nhello!"d.filter!(x => !x.isAlpha);
+    // Windows-style line ending is two code points in a single grapheme.
+    assert(testPiece.popGrapheme() == 2);
+    assert(testPiece.equal("!"d));
+}
+
+// Attribute compliance test. Should be nothrow `@nogc` when
+// no autodecoding needed.
+@safe pure nothrow @nogc unittest
+{
+    import std.algorithm.iteration : filter;
+
+    auto str = "abcdef"d;
+    assert(str.popGrapheme() == 1);
+
+    // also test with non-random access
+    auto filtered = "abcdef"d.filter!(x => x%2);
+    assert(filtered.popGrapheme() == 1);
 }
 
 /++
@@ -7272,6 +7486,13 @@ private static @safe struct InputRangeString
     auto nonForwardRange = InputRangeString("noe\u0308l").byGrapheme;
     static assert(!isForwardRange!(typeof(nonForwardRange)));
     assert(nonForwardRange.walkLength == 4);
+}
+
+// Issue 23474
+@safe pure unittest
+{
+    import std.range.primitives : walkLength;
+    assert(byGrapheme("\r\u0308").walkLength == 2);
 }
 
 /++
@@ -7415,15 +7636,15 @@ if (isInputRange!Range && is(immutable ElementType!Range == immutable dchar))
 public:
     /// Ctor
     this(C)(const scope C[] chars...)
-        if (is(C : dchar))
+    if (is(C : dchar))
     {
         this ~= chars;
     }
 
     ///ditto
     this(Input)(Input seq)
-        if (!isDynamicArray!Input
-            && isInputRange!Input && is(ElementType!Input : dchar))
+    if (!isDynamicArray!Input
+        && isInputRange!Input && is(ElementType!Input : dchar))
     {
         this ~= seq;
     }
@@ -7542,7 +7763,7 @@ public:
 
     /// Append all $(CHARACTERS) from the input range `inp` to this Grapheme.
     ref opOpAssign(string op, Input)(scope Input inp)
-        if (isInputRange!Input && is(ElementType!Input : dchar))
+    if (isInputRange!Input && is(ElementType!Input : dchar))
     {
         static if (op == "~")
         {
@@ -7552,6 +7773,21 @@ public:
         }
         else
             static assert(false, "No operation "~op~" defined for Grapheme");
+    }
+
+    // This is not a good `opEquals`, but formerly the automatically generated
+    // opEquals was used, which was inferred `@safe` because of bugzilla 20655:
+    // https://issues.dlang.org/show_bug.cgi?id=20655
+    // This `@trusted opEquals` is only here to prevent breakage.
+    bool opEquals(R)(const auto ref R other) const @trusted
+    {
+        return this.tupleof == other.tupleof;
+    }
+
+    // Define a default toHash to allow AA usage
+    size_t toHash() const @trusted
+    {
+        return hashOf(slen_, hashOf(small_));
     }
 
     /++
@@ -7566,7 +7802,7 @@ public:
     @property bool valid()() /*const*/
     {
         auto r = this[];
-        genericDecodeGrapheme!false(r);
+        genericDecodeGrapheme!(GraphemeRet.none)(r);
         return r.length == 0;
     }
 
@@ -7755,6 +7991,12 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     assert(equal(h[], iota(cast(int)'A', cast(int)'Z'+1)));
 }
 
+// ensure Grapheme can be used as an AA key.
+@safe unittest
+{
+    int[Grapheme] aa;
+}
+
 /++
     $(P Does basic case-insensitive comparison of `r1` and `r2`.
     This function uses simpler comparison rule thus achieving better performance
@@ -7852,19 +8094,19 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
             if (idx2 != EMPTY_CASE_TRIE)
             {// both cased chars
                 // adjust idx --> start of bucket
-                idx = idx - sTable[idx].n;
-                idx2 = idx2 - sTable[idx2].n;
+                idx = idx - sTable(idx).n;
+                idx2 = idx2 - sTable(idx2).n;
                 if (idx == idx2)// one bucket, equivalent chars
                     continue;
                 else//  not the same bucket
-                    diff = sTable[idx].ch - sTable[idx2].ch;
+                    diff = sTable(idx).ch - sTable(idx2).ch;
             }
             else
-                diff = sTable[idx - sTable[idx].n].ch - rhs;
+                diff = sTable(idx - sTable(idx).n).ch - rhs;
         }
         else if (idx2 != EMPTY_CASE_TRIE)
         {
-            diff = lhs - sTable[idx2 - sTable[idx2].n].ch;
+            diff = lhs - sTable(idx2 - sTable(idx2).n).ch;
         }
         // one of chars is not cased at all
         return diff;
@@ -7909,22 +8151,23 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     // fullCaseTrie is packed index table
     if (idx == EMPTY_CASE_TRIE)
         return lhs;
-    immutable start = idx - fTable[idx].n;
-    immutable end = fTable[idx].size + start;
-    assert(fTable[start].entry_len == 1);
+    immutable start = idx - fTable(idx).n;
+    immutable end = fTable(idx).size + start;
+    assert(fTable(start).entry_len == 1);
     for (idx=start; idx<end; idx++)
     {
-        auto entryLen = fTable[idx].entry_len;
+        const entryLen = fTable(idx).entry_len;
         if (entryLen == 1)
         {
-            if (fTable[idx].seq[0] == rhs)
+            if (fTable(idx).seq[0] == rhs)
             {
                 return 0;
             }
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq[0 .. entryLen];
+            dchar[3] arr = fTable(idx).seq;
+            const dchar[] seq = arr[0 .. entryLen];
             if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -7934,7 +8177,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
             }
         }
     }
-    return fTable[start].seq[0]; // new remapped character for accurate diffs
+    return fTable(start).seq[0]; // new remapped character for accurate diffs
 }
 
 /++
@@ -8166,7 +8409,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
             {
                 return c;
             }
-            auto ch = sTable[idx].ch;
+            auto ch = sTable(idx).ch;
             return ch;
         }
 
@@ -8202,7 +8445,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
     immutable idx = simpleCaseTrie[ch];
     if (idx == EMPTY_CASE_TRIE)
         return Range(ch);
-    auto entry = sTable[idx];
+    auto entry = sTable(idx);
     immutable start = idx - entry.n;
     return Range(start, entry.size);
 }
@@ -8293,21 +8536,21 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
-    import std.range : assumeSorted;
+    import std.range : assumeSorted, stride;
     immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
     immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
-    auto r = compositionTable[idx .. idx+cnt].map!"a.rhs"().assumeSorted();
+    auto r = compositionTable.stride(2)[idx .. idx+cnt].assumeSorted();
     immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
-    immutable entry = compositionTable[idx+target];
-    if (entry.rhs != second)
+    immutable entry = compositionTable[(idx+target)*2];
+    if (entry != second)
         return dchar.init;
-    return entry.composed;
+    return compositionTable[(idx+target)*2 + 1];
 }
 
 ///
@@ -8449,7 +8692,7 @@ public:
     Decomposes a Hangul syllable. If `ch` is not a composed syllable
     then this function returns $(LREF Grapheme) containing only `ch` as is.
 */
-Grapheme decomposeHangul(dchar ch) @safe
+Grapheme decomposeHangul(dchar ch) nothrow pure @safe
 {
     immutable idxS = cast(int) ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
@@ -8566,7 +8809,15 @@ enum {
     In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
 +/
-inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] input)
+/*
+    WARNING: @trusted lambda inside - handle with same care as @trusted
+        functions
+
+    Despite being a template, the attributes do no harm since this doesn't work
+    with user-defined range or character types anyway.
+*/
+pure @safe inout(C)[] normalize(NormalizationForm norm=NFC, C)
+    (return scope inout(C)[] input)
 {
     import std.algorithm.mutation : SwapStrategy;
     import std.algorithm.sorting : sort;
@@ -8647,20 +8898,24 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] inpu
         // reset variables
         decomposed.length = 0;
         () @trusted {
-            decomposed.assumeSafeAppend();
+            // assumeSafeAppend isn't considered pure as of writing, hence the
+            // cast. It isn't pure in the sense that the elements after
+            // the array in question are affected, but we don't use those
+            // making the call pure for our purposes.
+            (cast(void delegate() pure nothrow) {decomposed.assumeSafeAppend();})();
             ccc.length = 0;
-            ccc.assumeSafeAppend();
+            (cast(void delegate() pure nothrow) {ccc.assumeSafeAppend();})();
         } ();
         input = input[anchors[1]..$];
         // and move on
         anchors = splitNormalized!norm(input);
-    }while (anchors[0] != input.length);
+    } while (anchors[0] != input.length);
     app.put(input[0 .. anchors[0]]);
     return () @trusted inout { return cast(inout(C)[]) app.data; } ();
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     // any encoding works
     wstring greet = "Hello world";
@@ -8674,7 +8929,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] inpu
     assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
-@safe unittest
+@safe pure unittest
 {
     import std.conv : text;
 
@@ -8682,18 +8937,9 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(return scope inout(C)[] inpu
     assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
     assert(normalize!NFD("Äffin") == "A\u0308ffin");
 
-    // check example
-
-    // any encoding works
-    wstring greet = "Hello world";
+    // test with dstring
+    dstring greet = "Hello world";
     assert(normalize(greet) is greet); // the same exact slice
-
-    // An example of a character with all 4 forms being different:
-    // Greek upsilon with acute and hook symbol (code point 0x03D3)
-    assert(normalize!NFC("ϓ") == "\u03D3");
-    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
-    assert(normalize!NFKC("ϓ") == "\u038E");
-    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
@@ -9702,7 +9948,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 {
     void toCaseInPlaceAlloc(C)(ref C[] s, size_t curIdx,
         size_t destIdx) @trusted pure
-        if (is(C == char) || is(C == wchar) || is(C == dchar))
+    if (is(C == char) || is(C == wchar) || is(C == dchar))
     {
         import std.utf : decode;
         alias caseLength = toCaseLength!(indexFn, maxIdx, tableFn);
@@ -10193,16 +10439,7 @@ bool isAlpha(dchar c)
     // optimization
     if (c < 0xAA)
     {
-        size_t x = c - 'A';
-        if (x <= 'Z' - 'A')
-            return true;
-        else
-        {
-            x = c - 'a';
-            if (x <= 'z'-'a')
-                return true;
-        }
-        return false;
+        return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
     }
 
     return alphaTrie[c];
@@ -10528,8 +10765,6 @@ private:
 
 @safe pure nothrow @nogc @property
 {
-    import std.internal.unicode_tables; // generated file
-
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
@@ -10576,10 +10811,10 @@ private:
     }
 
     //grapheme breaking algorithm tables
-    auto mcTrie()
+    auto spacingMarkTrie()
     {
-        import std.internal.unicode_grapheme : mcTrieEntries;
-        static immutable res = asTrie(mcTrieEntries);
+        import std.internal.unicode_grapheme : spacingMarkTrieEntries;
+        static immutable res = asTrie(spacingMarkTrieEntries);
         return res;
     }
 
@@ -10601,6 +10836,27 @@ private:
     {
         import std.internal.unicode_grapheme : hangulLVTTrieEntries;
         static immutable res = asTrie(hangulLVTTrieEntries);
+        return res;
+    }
+
+    auto prependTrie()
+    {
+        import std.internal.unicode_grapheme : prependTrieEntries;
+        static immutable res = asTrie(prependTrieEntries);
+        return res;
+    }
+
+    auto graphemeControlTrie()
+    {
+        import std.internal.unicode_grapheme : controlTrieEntries;
+        static immutable res = asTrie(controlTrieEntries);
+        return res;
+    }
+
+    auto xpictoTrie()
+    {
+        import std.internal.unicode_grapheme : Extended_PictographicTrieEntries;
+        static immutable res = asTrie(Extended_PictographicTrieEntries);
         return res;
     }
 

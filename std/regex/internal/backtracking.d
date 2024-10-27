@@ -73,12 +73,7 @@ final:
     override @property ref size_t refCount() { return _refCount; }
     override @property ref const(RegEx) pattern(){ return re; }
 
-    static if (__traits(hasMember,Stream, "search"))
-    {
-        enum kicked = true;
-    }
-    else
-        enum kicked = false;
+    enum kicked = __traits(hasMember, Stream, "search");
 
     static size_t initialMemory(const ref RegEx re)
     {
@@ -687,7 +682,7 @@ final:
                     while (prevStack()) {}
                     return re.ir[pc].data;
                 default:
-                    debug printBytecode(re.ir[0..$]);
+                    debug(std_regex_debug) printBytecode(re.ir[0..$]);
                     assert(0);
                 L_backtrack:
                     if (!popState())
@@ -707,7 +702,7 @@ final:
     }
 
     void stackPush(T)(T val)
-        if (!isDynamicArray!T)
+    if (!isDynamicArray!T)
     {
         *cast(T*)&memory[lastState] = val;
         enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
@@ -725,7 +720,7 @@ final:
     }
 
     void stackPop(T)(ref T val)
-        if (!isDynamicArray!T)
+    if (!isDynamicArray!T)
     {
         enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
         lastState -= delta;

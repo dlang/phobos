@@ -14,6 +14,7 @@
 circleci.sh @CyberShadow @MartinNowak @wilzbach
 etc/c/* @CyberShadow
 posix.mak @CyberShadow @MartinNowak @wilzbach
+# tools/unicode_table_generator.d
 std/* @andralex
 std/algorithm/* @andralex @JackStouffer @wilzbach @PetarKirov
 std/array.d @JackStouffer @wilzbach @PetarKirov

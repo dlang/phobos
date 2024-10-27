@@ -34,8 +34,16 @@ $(TR $(TD Misc) $(TD
 ))
 ))
 
-Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
+Standard I/O functions that extend $(LINK2 https://dlang.org/phobos/core_stdc_stdio.html, core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
+
+There are three layers of I/O:
+$(OL
+$(LI The lowest layer is the operating system layer. The two main schemes are Windows and Posix.)
+$(LI C's $(TT stdio.h) which unifies the two operating system schemes.)
+$(LI $(TT std.stdio), this module, unifies the various $(TT stdio.h) implementations into
+a high level package for D programs.)
+)
 
 Source: $(PHOBOSSRC std/stdio.d)
 Copyright: Copyright The D Language Foundation 2007-.
@@ -43,8 +51,59 @@ License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
            $(HTTP erdani.org, Andrei Alexandrescu),
            Alex Rønne Petersen
+Macros:
+CSTDIO=$(HTTP cplusplus.com/reference/cstdio/$1/, $1)
  */
 module std.stdio;
+
+/*
+# Glossary
+
+The three layers have many terms for their data structures and types.
+Here we try to bring some sanity to them for the intrepid code spelunker.
+
+## Windows
+
+Handle
+
+        A Windows handle is an opaque object of type HANDLE.
+        The `HANDLE` for standard devices can be retrieved with
+        Windows `GetStdHandle()`.
+
+## Posix
+
+file descriptor, aka fileno, aka fildes
+
+        An int from 0..`FOPEN_MAX`, which is an index into some internal data
+        structure.
+        0 is for `stdin`, 1 for `stdout`, 2 for `stderr`.
+        Negative values usually indicate an error.
+
+## stdio.h
+
+`FILE`
+
+        A struct that encapsulates the C library's view of the operating system
+        files. A `FILE` should only be referred to via a pointer.
+
+`fileno`
+
+        A field of `FILE` which is the Posix file descriptor for Posix systems, and
+        and an index into an array of file `HANDLE`s for Windows.
+        This array is how Posix behavior is emulated on Windows.
+        For Digital Mars C, that array is `__osfhnd[]`, and is initialized
+        at program start by the C runtime library.
+        In this module, they are typed as `fileno_t`.
+
+`stdin`, `stdout`, `stderr`
+
+        Global pointers to `FILE` representing standard input, output, and error streams.
+        Being global means there are synchronization issues when multiple threads
+        are doing I/O on the same streams.
+
+## std.stdio
+
+*/
 
 import core.stdc.stddef : wchar_t;
 public import core.stdc.stdio;
@@ -52,7 +111,7 @@ import std.algorithm.mutation : copy;
 import std.meta : allSatisfy;
 import std.range : ElementEncodingType, empty, front, isBidirectionalRange,
     isInputRange, isSomeFiniteCharInputRange, put;
-import std.traits : isSomeChar, isSomeString, Unqual, isPointer;
+import std.traits : isSomeChar, isSomeString, Unqual;
 import std.typecons : Flag, No, Yes;
 
 /++
@@ -63,17 +122,9 @@ alias KeepTerminator = Flag!"keepTerminator";
 
 version (CRuntime_Microsoft)
 {
-    version = MICROSOFT_STDIO;
-}
-else version (CRuntime_DigitalMars)
-{
-    // Specific to the way Digital Mars C does stdio
-    version = DIGITAL_MARS_STDIO;
 }
 else version (CRuntime_Glibc)
 {
-    // Specific to the way Gnu C does stdio
-    version = GCC_IO;
 }
 else version (CRuntime_Bionic)
 {
@@ -127,6 +178,10 @@ else version (Solaris)
 {
     version = GENERIC_IO;
 }
+else
+{
+    static assert(0, "unsupported operating system");
+}
 
 // Character type used for operating system filesystem APIs
 version (Windows)
@@ -138,6 +193,7 @@ else
     private alias FSChar = char;
 }
 
+private alias fileno_t = int;   // file descriptor, fildes, fileno
 
 version (Windows)
 {
@@ -145,8 +201,8 @@ version (Windows)
     // encoded in CP_ACP on Windows instead of UTF-8.
     /+ Waiting for druntime pull 299
     +/
-    extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
-    extern (C) nothrow @nogc FILE* _wfreopen(in wchar* filename, in wchar* mode, FILE* fp);
+    extern (C) nothrow @nogc FILE* _wfopen(scope const wchar* filename, scope const wchar* mode);
+    extern (C) nothrow @nogc FILE* _wfreopen(scope const wchar* filename, scope const wchar* mode, FILE* fp);
 
     import core.sys.windows.basetsd : HANDLE;
 }
@@ -156,54 +212,7 @@ version (Posix)
     static import core.sys.posix.stdio; // getdelim, flockfile
 }
 
-version (DIGITAL_MARS_STDIO)
-{
-    private alias _FPUTC = _fputc_nlock;
-    private alias _FPUTWC = _fputwc_nlock;
-    private alias _FGETC = _fgetc_nlock;
-    private alias _FGETWC = _fgetwc_nlock;
-    private alias _FLOCK = __fp_lock;
-    private alias _FUNLOCK = __fp_unlock;
-
-    // Alias for MICROSOFT_STDIO compatibility.
-    // @@@DEPRECATED_2.107@@@
-    // Rename this back to _setmode once the deprecation phase has ended.
-    private alias __setmode = setmode;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = _fputc_nlock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = _fputwc_nlock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = _fgetc_nlock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = _fgetwc_nlock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = __fp_lock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = __fp_unlock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias _setmode was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias _setmode = setmode;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function _fileno was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    int _fileno(FILE* f) { return f._file; }
-}
-else version (MICROSOFT_STDIO)
+version (CRuntime_Microsoft)
 {
     private alias _FPUTC = _fputc_nolock;
     private alias _FPUTWC = _fputwc_nolock;
@@ -211,37 +220,8 @@ else version (MICROSOFT_STDIO)
     private alias _FGETWC = _fgetwc_nolock;
     private alias _FLOCK = _lock_file;
     private alias _FUNLOCK = _unlock_file;
-
-    // @@@DEPRECATED_2.107@@@
-    // Remove this once the deprecation phase for DIGITAL_MARS_STDIO has ended.
-    private alias __setmode = _setmode;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = _fputc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = _fputwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = _fgetc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = _fgetwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = _lock_file;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = _unlock_file;
 }
-else version (GCC_IO)
+else version (CRuntime_Glibc)
 {
     private alias _FPUTC = fputc_unlocked;
     private alias _FPUTWC = fputwc_unlocked;
@@ -249,31 +229,6 @@ else version (GCC_IO)
     private alias _FGETWC = fgetwc_unlocked;
     private alias _FLOCK = core.sys.posix.stdio.flockfile;
     private alias _FUNLOCK = core.sys.posix.stdio.funlockfile;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = core.sys.posix.stdio.flockfile;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = core.sys.posix.stdio.funlockfile;
 }
 else version (GENERIC_IO)
 {
@@ -299,52 +254,6 @@ else version (GENERIC_IO)
     {
         static assert(0, "don't know how to lock files on GENERIC_IO");
     }
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fputc.mangleof) int fputc_unlocked(int c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fputwc.mangleof) int fputwc_unlocked(wchar_t c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fgetc.mangleof) int fgetc_unlocked(_iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int fgetwc_unlocked(_iobuf* fp);
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-
-    version (Posix)
-    {
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FLOCK = core.sys.posix.stdio.flockfile;
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FUNLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FUNLOCK = core.sys.posix.stdio.funlockfile;
-    }
 }
 else
 {
@@ -354,26 +263,7 @@ else
 private extern (C) @nogc nothrow
 {
     pragma(mangle, _FPUTC.mangleof) int trustedFPUTC(int ch, _iobuf* h) @trusted;
-
-    version (DIGITAL_MARS_STDIO)
-        pragma(mangle, _FPUTWC.mangleof) int trustedFPUTWC(int ch, _iobuf* h) @trusted;
-    else
-        pragma(mangle, _FPUTWC.mangleof) int trustedFPUTWC(wchar_t ch, _iobuf* h) @trusted;
-}
-
-static if (__traits(compiles, core.sys.posix.stdio.getdelim))
-{
-    extern(C) nothrow @nogc
-    {
-        // @@@DEPRECATED_2.104@@@
-        deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getdelim instead.")
-        ptrdiff_t getdelim(char**, size_t*, int, FILE*);
-
-        // @@@DEPRECATED_2.104@@@
-        // getline() always comes together with getdelim()
-        deprecated("To be removed after 2.104. Use core.sys.posix.stdio.getline instead.")
-        ptrdiff_t getline(char**, size_t*, FILE*);
-    }
+    pragma(mangle, _FPUTWC.mangleof) int trustedFPUTWC(wchar_t ch, _iobuf* h) @trusted;
 }
 
 //------------------------------------------------------------------------------
@@ -534,8 +424,7 @@ Params:
     name = range or string representing the file _name
     stdioOpenmode = range or string represting the open mode
         (with the same semantics as in the C standard library
-        $(HTTP cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
-        function)
+        $(CSTDIO fopen) function)
 
 Throws: `ErrnoException` if the file could not be opened.
  */
@@ -549,8 +438,8 @@ Throws: `ErrnoException` if the file could not be opened.
                                 stdioOpenmode, "'")),
                 name);
 
-        // MSVCRT workaround (issue 14422)
-        version (MICROSOFT_STDIO)
+        // MSVCRT workaround (https://issues.dlang.org/show_bug.cgi?id=14422)
+        version (CRuntime_Microsoft)
         {
             setAppendWin(stdioOpenmode);
         }
@@ -558,7 +447,7 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name)
-        if (isSomeFiniteCharInputRange!R1)
+    if (isSomeFiniteCharInputRange!R1)
     {
         import std.conv : to;
         this(name.to!string, "rb");
@@ -566,8 +455,8 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name, R2 mode)
-        if (isSomeFiniteCharInputRange!R1 &&
-            isSomeFiniteCharInputRange!R2)
+    if (isSomeFiniteCharInputRange!R1 &&
+        isSomeFiniteCharInputRange!R2)
     {
         import std.conv : to;
         this(name.to!string, mode.to!string);
@@ -618,8 +507,7 @@ file.
 /**
 Detaches from the current file (throwing on failure), and then attempts to
 _open file `name` with mode `stdioOpenmode`. The mode has the
-same semantics as in the C standard library $(HTTP
-cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
+same semantics as in the C standard library $(CSTDIO fopen) function.
 
 Throws: `ErrnoException` in case of error.
  */
@@ -679,7 +567,7 @@ Throws: `ErrnoException` in case of error.
         }
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
         initImpl(handle, name, 1, isPopened);
-        version (MICROSOFT_STDIO)
+        version (CRuntime_Microsoft)
         {
             setAppendWin(stdioOpenmode);
         }
@@ -708,13 +596,13 @@ Throws: `ErrnoException` in case of error.
         {
             auto handle = _p.handle;
             _p.handle = null;
-            // fclose disassociates the FILE* even in case of error (issue 19751)
+            // fclose disassociates the FILE* even in case of error (https://issues.dlang.org/show_bug.cgi?id=19751)
             errnoEnforce(.fclose(handle) == 0,
                     "Could not close file `"~_name~"'");
         }
     }
 
-    version (MICROSOFT_STDIO)
+    version (CRuntime_Microsoft)
     {
         private void setAppendWin(scope const(char)[] stdioOpenmode) @safe
         {
@@ -735,8 +623,7 @@ Reuses the `File` object to either open a different file, or change
 the file mode. If `name` is `null`, the mode of the currently open
 file is changed; otherwise, a new file is opened, reusing the C
 `FILE*`. The function has the same semantics as in the C standard
-library $(HTTP cplusplus.com/reference/cstdio/freopen/, freopen)
-function.
+library $(CSTDIO freopen) function.
 
 Note: Calling `reopen` with a `null` `name` is not implemented
 in all C runtimes.
@@ -768,7 +655,7 @@ Throws: `ErrnoException` in case of error.
             _name = name;
     }
 
-    @system unittest // Test changing filename
+    @safe unittest // Test changing filename
     {
         import std.exception : assertThrown, assertNotThrown;
         static import std.file;
@@ -788,9 +675,8 @@ Throws: `ErrnoException` in case of error.
         f.close();
     }
 
-    version (CRuntime_DigitalMars) {} else // Not implemented
     version (CRuntime_Microsoft) {} else // Not implemented
-    @system unittest // Test changing mode
+    @safe unittest // Test changing mode
     {
         import std.exception : assertThrown, assertNotThrown;
         static import std.file;
@@ -813,7 +699,7 @@ Throws: `ErrnoException` in case of error.
 /**
 Detaches from the current file (throwing on failure), and then runs a command
 by calling the C standard library function $(HTTP
-opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
+pubs.opengroup.org/onlinepubs/7908799/xsh/popen.html, popen).
 
 Throws: `ErrnoException` in case of error.
  */
@@ -831,9 +717,10 @@ The mode must be compatible with the mode of the file descriptor.
 Throws: `ErrnoException` in case of error.
 Params:
     fd = File descriptor to associate with this `File`.
-    stdioOpenmode = Mode to associate with this File. The mode has the same semantics
-        semantics as in the C standard library
-        $(HTTP cplusplus.com/reference/cstdio/fopen/, fdopen) function, and must be compatible with `fd`.
+    stdioOpenmode = Mode to associate with this File. The mode has the same
+        semantics as in the POSIX library function $(HTTP
+        pubs.opengroup.org/onlinepubs/7908799/xsh/fdopen.html, fdopen)
+        and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
     {
@@ -848,32 +735,20 @@ Params:
         auto modez = stdioOpenmode.tempCString();
         detach();
 
-        version (DIGITAL_MARS_STDIO)
+        version (CRuntime_Microsoft)
         {
-            // This is a re-implementation of DMC's fdopen, but without the
-            // mucking with the file descriptor.  POSIX standard requires the
-            // new fdopen'd file to retain the given file descriptor's
-            // position.
-            auto fp = fopen("NUL", modez);
-            errnoEnforce(fp, "Cannot open placeholder NUL stream");
-            _FLOCK(fp);
-            auto iob = cast(_iobuf*) fp;
-            .close(iob._file);
-            iob._file = fd;
-            iob._flag &= ~_IOTRAN;
-            _FUNLOCK(fp);
-        }
-        else
-        {
-            version (Windows) // MSVCRT
-                auto fp = _fdopen(fd, modez);
-            else version (Posix)
-            {
-                import core.sys.posix.stdio : fdopen;
-                auto fp = fdopen(fd, modez);
-            }
+            auto fp = _fdopen(fd, modez);
             errnoEnforce(fp);
         }
+        else version (Posix)
+        {
+            import core.sys.posix.stdio : fdopen;
+            auto fp = fdopen(fd, modez);
+            errnoEnforce(fp);
+        }
+        else
+            static assert(0, "no fdopen() available");
+
         this = File(fp, name);
     }
 
@@ -899,26 +774,21 @@ Throws: `ErrnoException` in case of error.
         import std.format : format;
 
         // Create file descriptors from the handles
-        version (DIGITAL_MARS_STDIO)
-            auto fd = _handleToFD(handle, FHND_DEVICE);
-        else // MSVCRT
-        {
-            int mode;
-            modeLoop:
-            foreach (c; stdioOpenmode)
-                switch (c)
-                {
-                    case 'r': mode |= _O_RDONLY; break;
-                    case '+': mode &=~_O_RDONLY; break;
-                    case 'a': mode |= _O_APPEND; break;
-                    case 'b': mode |= _O_BINARY; break;
-                    case 't': mode |= _O_TEXT;   break;
-                    case ',': break modeLoop;
-                    default: break;
-                }
+        int mode;
+        modeLoop:
+        foreach (c; stdioOpenmode)
+            switch (c)
+            {
+                case 'r': mode |= _O_RDONLY; break;
+                case '+': mode &=~_O_RDONLY; break;
+                case 'a': mode |= _O_APPEND; break;
+                case 'b': mode |= _O_BINARY; break;
+                case 't': mode |= _O_TEXT;   break;
+                case ',': break modeLoop;
+                default: break;
+            }
 
-            auto fd = _open_osfhandle(cast(intptr_t) handle, mode);
-        }
+        auto fd = _open_osfhandle(cast(intptr_t) handle, mode);
 
         errnoEnforce(fd >= 0, "Cannot open Windows HANDLE");
         fdopen(fd, stdioOpenmode, "HANDLE(%s)".format(handle));
@@ -932,8 +802,7 @@ Throws: `ErrnoException` in case of error.
     }
 
 /**
-Returns `true` if the file is at end (see $(HTTP
-cplusplus.com/reference/clibrary/cstdio/feof.html, feof)).
+Returns `true` if the file is at end (see $(CSTDIO feof)).
 
 Throws: `Exception` if the file is not opened.
  */
@@ -961,8 +830,7 @@ Throws: `Exception` if the file is not opened.
 
 /**
 If the file is closed or not yet opened, returns `true`. Otherwise, returns
-$(HTTP cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
-the file handle.
+$(CSTDIO ferror) for the file handle.
  */
     @property bool error() const @trusted pure nothrow
     {
@@ -1017,8 +885,7 @@ Throws: `ErrnoException` on failure if closing the file.
 
 /**
 If the file was closed or not yet opened, succeeds vacuously. Otherwise
-closes the file (by calling $(HTTP
-cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
+closes the file (by calling $(CSTDIO fclose)),
 throwing on error. Even if an exception is thrown, afterwards the $(D
 File) object is empty. This is different from `detach` in that it
 always closes the file; consequently, all other `File` objects
@@ -1046,8 +913,7 @@ Throws: `ErrnoException` on error.
 
 /**
 If the file is closed or not yet opened, succeeds vacuously. Otherwise, returns
-$(HTTP cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
-_clearerr) for the file handle.
+$(CSTDIO clearerr) for the file handle.
  */
     void clearerr() @safe pure nothrow
     {
@@ -1058,8 +924,7 @@ _clearerr) for the file handle.
 /**
 Flushes the C `FILE` buffers.
 
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
-for the file handle.
+Calls $(CSTDIO fflush) for the file handle.
 
 Throws: `Exception` if the file is not opened or if the call to `fflush` fails.
  */
@@ -1125,7 +990,7 @@ Throws: `Exception` if the file is not opened or if the OS call fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
+Calls $(CSTDIO fread) for the
 file handle. The number of items to read and the size of
 each item is inferred from the size and type of the input array, respectively.
 
@@ -1146,18 +1011,9 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
         enforce(isOpen, "Attempting to read from an unopened file");
         version (Windows)
         {
-            immutable fd = .fileno(_p.handle);
-            immutable mode = .__setmode(fd, _O_BINARY);
-            scope(exit) .__setmode(fd, mode);
-            version (DIGITAL_MARS_STDIO)
-            {
-                import core.atomic : atomicOp;
-
-                // https://issues.dlang.org/show_bug.cgi?id=4243
-                immutable info = __fhnd_info[fd];
-                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                scope(exit) __fhnd_info[fd] = info;
-            }
+            immutable fileno_t fd = .fileno(_p.handle);
+            immutable mode = ._setmode(fd, _O_BINARY);
+            scope(exit) ._setmode(fd, mode);
         }
         immutable freadResult = trustedFread(_p.handle, buffer);
         assert(freadResult <= buffer.length); // fread return guarantee
@@ -1183,6 +1039,9 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
         f.close();
         assert(buf == "\r\n\n\r\n");
     }
+
+    // https://issues.dlang.org/show_bug.cgi?id=24685
+    static assert(!__traits(compiles, (File f) @safe { int*[1] bar; f.rawRead(bar[]); }));
 
     // https://issues.dlang.org/show_bug.cgi?id=21729
     @system unittest
@@ -1220,7 +1079,7 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+Calls $(CSTDIO fwrite) for the file
 handle. The number of items to write and the size of each
 item is inferred from the size and type of the input array, respectively. An
 error is thrown if the buffer could not be written in its entirety.
@@ -1236,25 +1095,15 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
 
         version (Windows)
         {
-            immutable fd = .fileno(_p.handle);
-            immutable oldMode = .__setmode(fd, _O_BINARY);
+            immutable fileno_t fd = .fileno(_p.handle);
+            immutable oldMode = ._setmode(fd, _O_BINARY);
 
             if (oldMode != _O_BINARY)
             {
                 // need to flush the data that was written with the original mode
-                .__setmode(fd, oldMode);
-                flush(); // before changing translation mode .__setmode(fd, _O_BINARY);
-                .__setmode(fd, _O_BINARY);
-            }
-
-            version (DIGITAL_MARS_STDIO)
-            {
-                import core.atomic : atomicOp;
-
-                // https://issues.dlang.org/show_bug.cgi?id=4243
-                immutable info = __fhnd_info[fd];
-                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                scope (exit) __fhnd_info[fd] = info;
+                ._setmode(fd, oldMode);
+                flush(); // before changing translation mode ._setmode(fd, _O_BINARY);
+                ._setmode(fd, _O_BINARY);
             }
 
             scope (exit)
@@ -1262,7 +1111,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
                 if (oldMode != _O_BINARY)
                 {
                     flush();
-                    .__setmode(fd, oldMode);
+                    ._setmode(fd, oldMode);
                 }
             }
         }
@@ -1290,7 +1139,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
+Calls $(CSTDIO fseek)
 for the file handle to move its position indicator.
 
 Params:
@@ -1355,9 +1204,6 @@ Throws: `Exception` if the file is not opened.
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
 
-        version (CRuntime_DigitalMars)
-            auto bigOffset = int.max - 100;
-        else
         version (CRuntime_Bionic)
             auto bigOffset = int.max - 100;
         else
@@ -1374,8 +1220,9 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
-managed file handle.
+Calls $(CSTDIO ftell)
+for the managed file handle, which returns the current value of
+the position indicator of the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `ftell` fails.
@@ -1419,8 +1266,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind)
-for the file handle.
+Calls $(CSTDIO rewind) for the file handle.
 
 Throws: `Exception` if the file is not opened.
  */
@@ -1433,8 +1279,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
-the file handle.
+Calls $(CSTDIO setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `setvbuf` fails.
@@ -1449,8 +1294,7 @@ Throws: `Exception` if the file is not opened.
     }
 
 /**
-Calls $(HTTP cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
-_setvbuf) for the file handle.
+Calls $(CSTDIO setvbuf) for the file handle.
 
 Throws: `Exception` if the file is not opened.
         `ErrnoException` if the call to `setvbuf` fails.
@@ -1853,15 +1697,15 @@ void main()
 }
 ---
 */
-    S readln(S = string)(dchar terminator = '\n')
+    S readln(S = string)(dchar terminator = '\n') @safe
     if (isSomeString!S)
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return cast(S) buf;
+        return (() @trusted => cast(S) buf)();
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         static import std.file;
@@ -1885,7 +1729,7 @@ void main()
         }}
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         import std.typecons : Tuple;
@@ -1984,7 +1828,7 @@ void main()
 This is actually what $(LREF byLine) does internally, so its usage
 is recommended if you want to process a complete file.
 */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') @safe
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum))
     {
         import std.exception : enforce;
@@ -2020,9 +1864,8 @@ is recommended if you want to process a complete file.
         }
     }
 
-    @system unittest
+    @safe unittest
     {
-        // @system due to readln
         static import std.file;
         auto deleteme = testFilename();
         std.file.write(deleteme, "123\n456789");
@@ -2039,7 +1882,7 @@ is recommended if you want to process a complete file.
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=15293
-    @system unittest
+    @safe unittest
     {
         // @system due to readln
         static import std.file;
@@ -2063,7 +1906,7 @@ is recommended if you want to process a complete file.
     }
 
 /** ditto */
-    size_t readln(C, R)(ref C[] buf, R terminator)
+    size_t readln(C, R)(ref C[] buf, R terminator) @safe
     if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
         isBidirectionalRange!R && is(typeof(terminator.front == dchar.init)))
     {
@@ -2093,7 +1936,7 @@ is recommended if you want to process a complete file.
         return buf.length;
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         import std.typecons : Tuple;
@@ -2252,8 +2095,7 @@ $(CONSOLE
     }
 
 /**
- Returns a temporary file by calling
- $(HTTP cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
+ Returns a temporary file by calling $(CSTDIO tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
     {
@@ -2297,7 +2139,7 @@ Returns the `FILE*` corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    @property int fileno() const @trusted
+    @property fileno_t fileno() const @trusted
     {
         import std.exception : enforce;
 
@@ -2314,10 +2156,7 @@ Returns the underlying operating system `HANDLE` (Windows only).
     version (Windows)
     @property HANDLE windowsHandle()
     {
-        version (DIGITAL_MARS_STDIO)
-            return _fdToHandle(fileno);
-        else
-            return cast(HANDLE)_get_osfhandle(fileno);
+        return cast(HANDLE)_get_osfhandle(fileno);
     }
 
 
@@ -2501,6 +2340,24 @@ void main()
 Notice that neither example accesses the line data returned by
 `front` after the corresponding `popFront` call is made (because
 the contents may well have changed).
+----
+
+Windows specific Example:
+----
+import std.stdio;
+
+version (Windows)
+void main()
+{
+
+	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n"))
+	{
+		writeln("|"~line~"|");
+		if (line == "HelloWorld")
+		    writeln("^This Line is here.");
+	}
+
+}
 */
     auto byLine(Terminator = char, Char = char)
             (KeepTerminator keepTerminator = No.keepTerminator,
@@ -3110,18 +2967,21 @@ is empty, throws an `Exception`. In case of an I/O error throws
             file_ = f;
             FILE* fps = f._p.handle;
 
-            version (MICROSOFT_STDIO)
+            version (CRuntime_Microsoft)
             {
                 // Microsoft doesn't implement fwide. Instead, there's the
                 // concept of ANSI/UNICODE mode. fputc doesn't work in UNICODE
                 // mode; fputwc has to be used. So that essentially means
                 // "wide-oriented" for us.
-                immutable int mode = __setmode(f.fileno, _O_TEXT);
+                immutable int mode = _setmode(f.fileno, _O_TEXT);
                     // Set some arbitrary mode to obtain the previous one.
-                __setmode(f.fileno, mode); // Restore previous mode.
-                if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                if (mode != -1) // _setmode() succeeded
                 {
-                    orientation_ = 1; // wide
+                    _setmode(f.fileno, mode); // Restore previous mode.
+                    if (mode & (_O_WTEXT | _O_U16TEXT | _O_U8TEXT))
+                    {
+                        orientation_ = 1; // wide
+                    }
                 }
             }
             else
@@ -3155,10 +3015,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         /// Range primitive implementations.
         void put(A)(scope A writeme)
-            if ((isSomeChar!(ElementType!A) ||
-                  is(ElementType!A : const(ubyte))) &&
-                isInputRange!A &&
-                !isInfinite!A)
+        if ((isSomeChar!(ElementType!A) ||
+            is(ElementType!A : const(ubyte))) &&
+            isInputRange!A &&
+            !isInfinite!A)
         {
             import std.exception : errnoEnforce;
 
@@ -3184,7 +3044,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// ditto
-        void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
+        void put(C)(scope C c) @safe
+        if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.utf : decodeFront, encode, stride;
 
@@ -3346,9 +3207,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         version (Windows)
         {
-            int fd, oldMode;
-            version (DIGITAL_MARS_STDIO)
-                ubyte oldInfo;
+            fileno_t fd;
+            int oldMode;
         }
 
     public:
@@ -3368,15 +3228,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             {
                 .fflush(fps); // before changing translation mode
                 fd = .fileno(fps);
-                oldMode = .__setmode(fd, _O_BINARY);
-                version (DIGITAL_MARS_STDIO)
-                {
-                    import core.atomic : atomicOp;
-
-                    // https://issues.dlang.org/show_bug.cgi?id=4243
-                    oldInfo = __fhnd_info[fd];
-                    atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
-                }
+                oldMode = ._setmode(fd, _O_BINARY);
             }
         }
 
@@ -3390,12 +3242,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
             version (Windows)
             {
                 .fflush(fps); // before restoring translation mode
-                version (DIGITAL_MARS_STDIO)
-                {
-                    // https://issues.dlang.org/show_bug.cgi?id=4243
-                    __fhnd_info[fd] = oldInfo;
-                }
-                .__setmode(fd, oldMode);
+                ._setmode(fd, oldMode);
             }
 
             _FUNLOCK(fps);
@@ -3735,9 +3582,8 @@ void main()
     assert(f.tell == 0);
 }
 
-@system unittest
+@safe unittest
 {
-    // @system due to readln
     static import std.file;
     import std.range : chain, only, repeat;
     import std.range.primitives : isOutputRange;
@@ -3806,7 +3652,7 @@ void main()
     assert(std.file.readText!string(deleteme) == "y");
 }
 
-@safe unittest // issue 18801
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=18801
 {
     static import std.file;
     import std.string : stripLeft;
@@ -3849,19 +3695,12 @@ void main()
         return setlocale(LC_CTYPE, loc.ptr).fromStringz.endsWith(loc);
     });
     scope(exit) () @trusted { setlocale(LC_CTYPE, oldCt); } ();
-    version (DIGITAL_MARS_STDIO) // DM can't handle Unicode above U+07FF.
-    {
-        alias strs = AliasSeq!("xä\u07FE", "yö\u07FF"w);
-    }
-    else
-    {
-        alias strs = AliasSeq!("xä\U0001F607", "yö\U0001F608"w);
-    }
+    alias strs = AliasSeq!("xä\U0001F607", "yö\U0001F608"w);
     {
         auto f = File(deleteme, "w");
-        version (MICROSOFT_STDIO)
+        version (CRuntime_Microsoft)
         {
-            () @trusted { __setmode(fileno(f.getFP()), _O_U8TEXT); } ();
+            () @trusted { _setmode(fileno(f.getFP()), _O_U8TEXT); } ();
         }
         else
         {
@@ -4664,11 +4503,11 @@ if ((isSomeFiniteCharInputRange!R1 || isSomeString!R1) &&
         {
             /*
              * The new opengroup large file support API is transparently
-             * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+             * included in the normal C bindings. https://www.opengroup.org/platform/lfs.html#1.0
              * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
              * the normal functions work fine. If not, then large file support
              * probably isn't available. Do not use the old transitional API
-             * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+             * (the native extern(C) fopen64, https://unix.org/version2/whatsnew/lfs20mar.html#3.0)
              */
             import core.sys.posix.stdio : fopen;
             return fopen(namez, modez);
@@ -4717,6 +4556,13 @@ private auto trustedFwrite(T)(FILE* f, const T[] obj) @trusted
  * Convenience function that forwards to `core.stdc.stdio.fread`
  */
 private auto trustedFread(T)(FILE* f, T[] obj) @trusted
+if (!imported!"std.traits".hasIndirections!T)
+{
+    return fread(obj.ptr, T.sizeof, obj.length, f);
+}
+
+private auto trustedFread(T)(FILE* f, T[] obj) @system
+if (imported!"std.traits".hasIndirections!T)
 {
     return fread(obj.ptr, T.sizeof, obj.length, f);
 }
@@ -5169,13 +5015,13 @@ Initialize with a message and an error code.
     }
 
 /** Convenience functions that throw an `StdioException`. */
-    static void opCall(string msg)
+    static void opCall(string msg) @safe
     {
         throw new StdioException(msg);
     }
 
 /// ditto
-    static void opCall()
+    static void opCall() @safe
     {
         throw new StdioException(null, core.stdc.errno.errno);
     }
@@ -5388,7 +5234,7 @@ private struct ReadlnAppender
     size_t pos;
     bool safeAppend = false;
 
-    void initialize(char[] b)
+    void initialize(char[] b) @safe
     {
         buf = b;
         pos = 0;
@@ -5445,7 +5291,7 @@ private struct ReadlnAppender
         foreach (c; ubuf)
             buf.ptr[pos++] = c;
     }
-    void putonly(char[] b) @trusted
+    void putonly(const char[] b) @trusted
     {
         import core.stdc.string : memcpy;
         assert(pos == 0);   // assume this is the only put call
@@ -5457,145 +5303,57 @@ private struct ReadlnAppender
     }
 }
 
-// Private implementation of readln
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
+private struct LockedFile
 {
-    version (DIGITAL_MARS_STDIO)
+    private @system _iobuf* fp;
+
+    this(FILE* fps) @trusted
     {
         _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
-
-        /* Since fps is now locked, we can create an "unshared" version
-         * of fp.
-         */
-        auto fp = cast(_iobuf*) fps;
-
-        ReadlnAppender app;
-        app.initialize(buf);
-
-        if (__fhnd_info[fp._file] & FHND_WCHAR)
-        {   /* Stream is in wide characters.
-             * Read them and convert to chars.
-             */
-            static assert(wchar_t.sizeof == 2);
-            for (int c = void; (c = _FGETWC(fp)) != -1; )
-            {
-                if ((c & ~0x7F) == 0)
-                {
-                    app.putchar(cast(char) c);
-                    if (c == terminator)
-                        break;
-                }
-                else
-                {
-                    if (c >= 0xD800 && c <= 0xDBFF)
-                    {
-                        int c2 = void;
-                        if ((c2 = _FGETWC(fp)) != -1 ||
-                                c2 < 0xDC00 && c2 > 0xDFFF)
-                        {
-                            StdioException("unpaired UTF-16 surrogate");
-                        }
-                        c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                    }
-                    app.putdchar(cast(dchar) c);
-                }
-            }
-            if (ferror(fps))
-                StdioException();
-        }
-
-        else if (fp._flag & _IONBF)
-        {
-            /* Use this for unbuffered I/O, when running
-             * across buffer boundaries, or for any but the common
-             * cases.
-             */
-        L1:
-            int c;
-            while ((c = _FGETC(fp)) != -1)
-            {
-                app.putchar(cast(char) c);
-                if (c == terminator)
-                {
-                    buf = app.data;
-                    return buf.length;
-                }
-
-            }
-
-            if (ferror(fps))
-                StdioException();
-        }
-        else
-        {
-            int u = fp._cnt;
-            char* p = fp._ptr;
-            int i;
-            if (fp._flag & _IOTRAN)
-            {   /* Translated mode ignores \r and treats ^Z as end-of-file
-                 */
-                char c;
-                while (1)
-                {
-                    if (i == u)         // if end of buffer
-                        goto L1;        // give up
-                    c = p[i];
-                    i++;
-                    if (c != '\r')
-                    {
-                        if (c == terminator)
-                            break;
-                        if (c != 0x1A)
-                            continue;
-                        goto L1;
-                    }
-                    else
-                    {   if (i != u && p[i] == terminator)
-                            break;
-                        goto L1;
-                    }
-                }
-                app.putonly(p[0 .. i]);
-                app.buf[i - 1] = cast(char) terminator;
-                if (terminator == '\n' && c == '\r')
-                    i++;
-            }
-            else
-            {
-                while (1)
-                {
-                    if (i == u)         // if end of buffer
-                        goto L1;        // give up
-                    auto c = p[i];
-                    i++;
-                    if (c == terminator)
-                        break;
-                }
-                app.putonly(p[0 .. i]);
-            }
-            fp._cnt -= i;
-            fp._ptr += i;
-        }
-
-        buf = app.data;
-        return buf.length;
+        // Since fps is now locked, we can cast away shared
+        fp = cast(_iobuf*) fps;
     }
-    else version (MICROSOFT_STDIO)
-    {
-        _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
 
-        /* Since fps is now locked, we can create an "unshared" version
-         * of fp.
-         */
-        auto fp = cast(_iobuf*) fps;
+    @disable this();
+    @disable this(this);
+    @disable void opAssign(LockedFile);
+
+    // these use unlocked fgetc calls
+    @trusted fgetc() { return _FGETC(fp); }
+    @trusted fgetwc() { return _FGETWC(fp); }
+
+    ~this() @trusted
+    {
+        _FUNLOCK(cast(FILE*) fp);
+    }
+}
+
+@safe unittest
+{
+    void f() @safe
+    {
+        FILE* fps;
+        auto lf = LockedFile(fps);
+        static assert(!__traits(compiles, lf = LockedFile(fps)));
+        version (ShouldFail)
+        {
+            lf.fps = null; // error with -preview=systemVariables
+        }
+    }
+}
+
+// Private implementation of readln
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation) @safe
+{
+    version (CRuntime_Microsoft)
+    {
+        auto lf = LockedFile(fps);
 
         ReadlnAppender app;
         app.initialize(buf);
 
         int c;
-        while ((c = _FGETC(fp)) != -1)
+        while ((c = lf.fgetc()) != -1)
         {
             app.putchar(cast(char) c);
             if (c == terminator)
@@ -5613,21 +5371,18 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     }
     else static if (__traits(compiles, core.sys.posix.stdio.getdelim))
     {
-        import core.stdc.stdlib : free;
-        import core.stdc.wchar_ : fwide;
-
         if (orientation == File.Orientation.wide)
         {
+            import core.stdc.wchar_ : fwide;
+
+            auto lf = LockedFile(fps);
             /* Stream is in wide characters.
              * Read them and convert to chars.
              */
-            _FLOCK(fps);
-            scope(exit) _FUNLOCK(fps);
-            auto fp = cast(_iobuf*) fps;
             version (Windows)
             {
                 buf.length = 0;
-                for (int c = void; (c = _FGETWC(fp)) != -1; )
+                for (int c = void; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5639,7 +5394,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = _FGETWC(fp)) != -1 ||
+                            if ((c2 = lf.fgetwc()) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5650,14 +5405,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
             else version (Posix)
             {
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     import std.utf : encode;
 
@@ -5677,47 +5432,49 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 static assert(0);
             }
         }
+        return () @trusted {
+            import core.stdc.stdlib : free;
 
-        static char *lineptr = null;
-        static size_t n = 0;
-        scope(exit)
-        {
-            if (n > 128 * 1024)
+            static char *lineptr = null;
+            static size_t n = 0;
+            scope(exit)
             {
-                // Bound memory used by readln
-                free(lineptr);
-                lineptr = null;
-                n = 0;
+                if (n > 128 * 1024)
+                {
+                    // Bound memory used by readln
+                    free(lineptr);
+                    lineptr = null;
+                    n = 0;
+                }
             }
-        }
 
-        auto s = core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps);
-        if (s < 0)
-        {
-            if (ferror(fps))
-                StdioException();
-            buf.length = 0;                // end of file
-            return 0;
-        }
+            const s = core.sys.posix.stdio.getdelim(&lineptr, &n, terminator, fps);
+            if (s < 0)
+            {
+                if (ferror(fps))
+                    StdioException();
+                buf.length = 0;                // end of file
+                return 0;
+            }
 
-        if (s <= buf.length)
-        {
-            buf = buf[0 .. s];
-            buf[] = lineptr[0 .. s];
-        }
-        else
-        {
-            buf = lineptr[0 .. s].dup;
-        }
-        return s;
+            const line = lineptr[0 .. s];
+            if (s <= buf.length)
+            {
+                buf = buf[0 .. s];
+                buf[] = line;
+            }
+            else
+            {
+                buf = line.dup;
+            }
+            return s;
+        }();
     }
     else // version (NO_GETDELIM)
     {
         import core.stdc.wchar_ : fwide;
 
-        _FLOCK(fps);
-        scope(exit) _FUNLOCK(fps);
-        auto fp = cast(_iobuf*) fps;
+        auto lf = LockedFile(fps);
         if (orientation == File.Orientation.wide)
         {
             /* Stream is in wide characters.
@@ -5726,7 +5483,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             version (Windows)
             {
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                     {   buf ~= c;
@@ -5738,7 +5495,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         if (c >= 0xD800 && c <= 0xDBFF)
                         {
                             int c2 = void;
-                            if ((c2 = _FGETWC(fp)) != -1 ||
+                            if ((c2 = lf.fgetwc()) != -1 ||
                                     c2 < 0xDC00 && c2 > 0xDFFF)
                             {
                                 StdioException("unpaired UTF-16 surrogate");
@@ -5749,7 +5506,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                         encode(buf, c);
                     }
                 }
-                if (ferror(fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
@@ -5757,7 +5514,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             {
                 import std.utf : encode;
                 buf.length = 0;
-                for (int c; (c = _FGETWC(fp)) != -1; )
+                for (int c; (c = lf.fgetwc()) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
                         buf ~= cast(char) c;
@@ -5780,7 +5537,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         // First, fill the existing buffer
         for (size_t bufPos = 0; bufPos < buf.length; )
         {
-            immutable c = _FGETC(fp);
+            immutable c = lf.fgetc();
             if (c == -1)
             {
                 buf.length = bufPos;
@@ -5795,7 +5552,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
         }
         // Then, append to it
-        for (int c; (c = _FGETC(fp)) != -1; )
+        for (int c; (c = lf.fgetc()) != -1; )
         {
             buf ~= cast(char) c;
             if (c == terminator)

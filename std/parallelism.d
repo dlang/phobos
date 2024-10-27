@@ -418,8 +418,8 @@ Bugs:  Changes to `ref` and `out` arguments are not propagated to the
 */
 struct Task(alias fun, Args...)
 {
-    AbstractTask base = {runTask : &impl};
-    alias base this;
+    private AbstractTask base = {runTask : &impl};
+    private alias base this;
 
     private @property AbstractTask* basePtr()
     {
@@ -884,9 +884,24 @@ identical to the non-@safe case, but safety introduces some restrictions:
 
 */
 @trusted auto task(F, Args...)(F fun, Args args)
-if (is(typeof(fun(args))) && isSafeTask!F)
+if (__traits(compiles, () @safe => fun(args)) && isSafeTask!F)
 {
     return new Task!(run, F, Args)(fun, args);
+}
+
+@safe unittest
+{
+    static struct Oops {
+        int convert() {
+            *cast(int*) 0xcafebabe = 0xdeadbeef;
+            return 0;
+        }
+        alias convert this;
+    }
+    static void foo(int) @safe {}
+
+    static assert(!__traits(compiles, task(&foo, Oops.init)));
+    static assert(!__traits(compiles, scopedTask(&foo, Oops.init)));
 }
 
 /**
@@ -928,7 +943,7 @@ if (is(typeof(delegateOrFp(args))) && !isSafeTask!F)
 
 /// Ditto
 @trusted auto scopedTask(F, Args...)(F fun, Args args)
-if (is(typeof(fun(args))) && isSafeTask!F)
+if (__traits(compiles, () @safe => fun(args)) && isSafeTask!F)
 {
     auto ret = Task!(run, F, Args)(fun, args);
     ret.isScoped = true;
@@ -1508,7 +1523,7 @@ public:
 
         if (this.size == 0)
         {
-            return rangeLen;
+            return max(rangeLen, 1);
         }
 
         immutable size_t eightSize = 4 * (this.size + 1);
@@ -1581,7 +1596,7 @@ public:
     auto logs = new double[10_000_000];
 
     // Parallel foreach works with or without an index
-    // variable.  It can be iterate by ref if range.front
+    // variable.  It can iterate by ref if range.front
     // returns by ref.
 
     // Iterate over logs using work units of size 100.
@@ -2254,7 +2269,8 @@ public:
     call to `popFront` or, if thrown during construction, simply
     allowed to propagate to the caller.
     */
-    auto asyncBuf(S)(S source, size_t bufSize = 100) if (isInputRange!S)
+    auto asyncBuf(S)(S source, size_t bufSize = 100)
+    if (isInputRange!S)
     {
         static final class AsyncBuf
         {
@@ -3644,6 +3660,15 @@ ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     assert(arrIndex.sum == 10.iota.sum);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=22745
+@system unittest
+{
+    auto pool = new TaskPool(0);
+    int[] empty;
+    foreach (i; pool.parallel(empty)) {}
+    pool.finish();
+}
+
 // Thrown when a parallel foreach loop is broken from.
 class ParallelForeachError : Error
 {
@@ -4339,7 +4364,7 @@ version (StdUnittest)
 
     foreach (i, elem; logs)
     {
-        assert(isClose(elem, cast(double) log(i + 1)));
+        assert(isClose(elem, log(double(i + 1))));
     }
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);

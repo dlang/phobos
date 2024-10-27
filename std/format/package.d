@@ -60,7 +60,7 @@ Limitation: This package does not support localization, but
     adheres to the rounding mode of the floating point unit, if
     available.
 
-$(SECTION3 Format Strings)
+$(H3 $(LNAME2 format-strings, Format Strings))
 
 The functions contained in this package use $(I format strings). A
 format string describes the layout of another string for reading or
@@ -144,7 +144,7 @@ recommended to assign (lower- and uppercase) letters.
 Note: The $(I Parameters) of a $(I CompoundIndicator) are currently
 limited to a $(B '-') flag.
 
-$(SECTION4 Format Indicator)
+$(H4 $(LNAME2 format-indicator, Format Indicator))
 
 The $(I format indicator) can either be a single character or an
 expression surrounded by $(B %\() and $(B %\)). It specifies the
@@ -205,24 +205,24 @@ Note: Inside a $(I compound indicator), strings and characters are
 escaped automatically. To avoid this behavior, use `"%-$(LPAREN)"`
 instead of `"%$(LPAREN)"`.
 
-$(SECTION4 Flags)
+$(H4 $(LNAME2 flags, Flags))
 
 There are several flags that affect the outcome of the formatting.
 
 $(BOOKTABLE ,
    $(TR $(TH Flag) $(TH Semantics))
    $(TR $(TD $(B '-'))
-        $(TD When the formatted result is shorter then the value
-             given by the width parameter, the output is right
-             justified. With the $(B '-') flag this is changed
-             to left justification.
+        $(TD When the formatted result is shorter than the value
+             given by the width parameter, the output is left
+             justified. Without the $(B '-') flag, the output remains
+             right justified.
 
              There are two exceptions where the $(B '-') flag has a
              different meaning: (1) with $(B 'r') it denotes to use little
              endian and (2) in case of a compound indicator it means that
              no special handling of the members is applied.))
    $(TR $(TD $(B '='))
-        $(TD When the formatted result is shorter then the value
+        $(TD When the formatted result is shorter than the value
              given by the width parameter, the output is centered.
              If the central position is not possible it is moved slightly
              to the right. In this case, if $(B '-') flag is present in
@@ -244,7 +244,7 @@ $(BOOKTABLE ,
              sections below for more information.))
 )
 
-$(SECTION4 Width$(COMMA) Precision and Separator)
+$(H4 $(LNAME2 width-precision-separator, Width, Precision and Separator))
 
 The $(I width) parameter specifies the minimum width of the result.
 
@@ -269,7 +269,7 @@ The $(I separator) can also be followed by a $(B '?'). In that case,
 an additional argument is used to specify the symbol that should be
 used to separate the chunks.
 
-$(SECTION4 Position)
+$(H4 $(LNAME2 position, Position))
 
 By default, the arguments are processed in the provided order. With
 the $(I position) parameter it is possible to address arguments
@@ -282,7 +282,7 @@ It's also possible to use positional arguments for $(I width), $(I
 precision) and $(I separator) by adding a number and a $(B
 '$(DOLLAR)') after the $(B '*').
 
-$(SECTION4 Types)
+$(H4 $(LNAME2 types, Types))
 
 This section describes the result of combining types with format
 characters. It is organized in 2 subsections: a list of general
@@ -358,7 +358,7 @@ $(BOOKTABLE ,
                  Default precision is large enough to add all digits
                  of the integral value.
 
-                 In case of ($B 'a') and $(B 'A'), the integral digit can be
+                 In case of $(B 'a') and $(B 'A'), the integral digit can be
                  any hexadecimal digit.
                )
    )
@@ -1563,6 +1563,14 @@ char[] sformat(Char, Args...)(return scope char[] buf, scope const(Char)[] fmt, 
     {
         char[] buf;
         size_t i;
+        void put(char c)
+        {
+            if (buf.length <= i)
+                throw new RangeError(__FILE__, __LINE__);
+
+            buf[i] = c;
+            i += 1;
+        }
         void put(dchar c)
         {
             char[4] enc;
@@ -1685,6 +1693,19 @@ if (isSomeString!(typeof(fmt)))
     sformat(buf, "%s", 'c');
     const v = () @trusted { return GC.stats().usedSize; } ();
     assert(u == v);
+}
+
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=23488
+{
+    static struct R
+    {
+        string s = "Ü";
+        bool empty() { return s.length == 0; }
+        char front() { return s[0]; }
+        void popFront() { s = s[1 .. $]; }
+    }
+    char[2] buf;
+    assert(sformat(buf, "%s", R()) == "Ü");
 }
 
 version (StdUnittest)

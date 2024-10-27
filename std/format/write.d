@@ -28,7 +28,7 @@ $(TR $(TD $(I delegates)) $(TD yes) $(TD $(MDASH)) $(TD $(MDASH)) $(TD $(MDASH))
 
 Enums can be used with all format characters of the base type.
 
-$(SECTION3 Structs$(COMMA) Unions$(COMMA) Classes$(COMMA) and Interfaces)
+$(H3 $(LNAME2 aggregates, Structs, Unions, Classes, and Interfaces))
 
 Aggregate types can define various `toString` functions. If this
 function takes a $(REF_ALTTEXT FormatSpec, FormatSpec, std, format,
@@ -1309,4 +1309,24 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, scope const
     S a;
     writer.formatValue(a, spec);
     assert(writer.data == "0");
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23400
+@safe pure unittest
+{
+    import std.range : nullSink;
+    import std.format.spec : singleSpec;
+
+    static struct S
+    {
+        // non-const opEquals method
+        bool opEquals(S rhs) { return false; }
+    }
+
+    enum E { a = S() }
+
+    E e;
+    auto writer = nullSink;
+    const spec = singleSpec("%s");
+    writer.formatValue(e, spec);
 }

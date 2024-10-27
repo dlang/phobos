@@ -43,7 +43,7 @@ alignedReallocate) APIs.))
 $(TR $(TDC size_t goodAllocSize(size_t n);, $(POST $(RES) >= n)) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
 `n` bytes may result in a larger allocation. The extra memory allocated goes
-unused and adds to the so-called $(HTTP goo.gl/YoKffF,internal fragmentation).
+unused and adds to the so-called $(HTTPS en.wikipedia.org/wiki/Fragmentation_(computing)#Internal_fragmentation,internal fragmentation).
 The function `goodAllocSize(n)` returns the actual number of bytes that would
 be allocated upon a request for `n` bytes. This module defines a default
 implementation that returns `n` rounded up to a multiple of the allocator's
@@ -137,7 +137,7 @@ thread-safe or not, this instance may be `shared`.))
 
 $(H2 Sample Assembly)
 
-The example below features an _allocator modeled after $(HTTP goo.gl/m7329l,
+The example below features an _allocator modeled after $(HTTP jemalloc.net/,
 jemalloc), which uses a battery of free-list allocators spaced so as to keep
 internal fragmentation to a minimum. The `FList` definitions specify no
 bounds for the freelist because the `Segregator` does all size selection in
@@ -147,7 +147,11 @@ Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
 from 3585 bytes through 4072 KB are handled by a `BitmappedBlock` with a
 block size of 4 KB. Sizes above that are passed direct to the `GCAllocator`.
 
-----
+$(RUNNABLE_EXAMPLE
+    ----
+    import std.experimental.allocator;
+    import std.algorithm.comparison : max;
+
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
         8, FreeList!(GCAllocator, 0, 8),
@@ -157,8 +161,7 @@ block size of 4 KB. Sizes above that are passed direct to the `GCAllocator`.
         1024, Bucketizer!(FList, 513, 1024, 128),
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
-        4072 * 1024, AllocatorList!(
-            () => BitmappedBlock!(GCAllocator, 4096)(4072 * 1024)),
+        4072 * 1024, AllocatorList!(n => Region!GCAllocator(max(n, 1024 * 4096))),
         GCAllocator
     );
     A tuMalloc;
@@ -169,7 +172,8 @@ block size of 4 KB. Sizes above that are passed direct to the `GCAllocator`.
     assert(tuMalloc.expand(c, 14));
     tuMalloc.deallocate(b);
     tuMalloc.deallocate(c);
-----
+    ----
+)
 
 $(H2 Allocating memory for sharing across threads)
 

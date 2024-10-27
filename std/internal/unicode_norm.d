@@ -1,548 +1,513 @@
+//Written in the D programming language
+/**
+ * License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *
+ * Authors: Dmitry Olshansky
+ *
+ */
+// !!! DO NOT EDIT !!!
+// !!! Did you even read the comment? !!!
+// This module is automatically generated from Unicode Character Database files
+// https://github.com/dlang/phobos/blob/master/tools/unicode_table_generator.d
+//dfmt off
 module std.internal.unicode_norm;
 import std.internal.unicode_tables;
 
 package(std):
 
-static if (size_t.sizeof == 8)
-{
-    //1600 bytes
-    enum nfcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x20, 0x60],
-            [0x100, 0x100, 0x1a00], [0x302020202020100, 0x205020202020204,
-            0x602020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x1000000000000, 0x200000000, 0x5000400030000, 0x8000000070006,
-            0xa0009, 0x0, 0xb000000000000, 0xc000000000000, 0xf0000000e000d,
-            0x0, 0x1000000000, 0x0, 0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x14001300120000,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x160015, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x170000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x1800120012, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x10361f8081a9fdf, 0x401000000000003f, 0x80, 0x0,
-            0x0, 0x380000, 0x0, 0x0, 0x1000000000000000, 0xff000000,
-            0x4000000000000000, 0xb0800000, 0x48000000000000, 0x4e000000, 0x0,
-            0x0, 0x4000000000000000, 0x30c00000, 0x4000000000000000, 0x800000,
-            0x0, 0x400000, 0x0, 0x600004, 0x4000000000000000, 0x800000, 0x0,
-            0x80008400, 0x0, 0x168020010842008, 0x200108420080002, 0x0,
-            0x400000000000, 0x0, 0x0, 0x0, 0x0, 0x3ffffe00000000,
-            0xffffff0000000000, 0x7, 0x20000000000000, 0x0, 0x0, 0x0, 0x0,
-            0x2aaa000000000000, 0x4800000000000000, 0x2a00c80808080a00, 0x3,
-            0x0, 0x0, 0x0, 0xc4000000000, 0x0, 0x0, 0x0, 0x60000000000, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x10000000, 0x0, 0x0, 0x6000000, 0x0,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xfffffc657fe53fff, 0xffff3fffffffffff,
-            0xffffffffffffffff, 0x3ffffff, 0x5f7ffc00a0000000, 0x7fdb, 0x0,
-            0x0, 0x0, 0x0, 0x400000000000000, 0x0, 0x8000000000, 0x0, 0x0, 0x0,
-            0x0, 0x1fc0000000, 0xf800000000000000, 0x1, 0x3fffffff, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0]);
-    //1920 bytes
-    enum nfdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x20, 0x70],
-            [0x100, 0x140, 0x2000], [0x504030202020100, 0x207020202020206,
-            0x802020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x3000200010000, 0x5000600050004, 0x9000800070005, 0xc0005000b000a,
-            0x500050005000d, 0x5000500050005, 0xe000500050005,
-            0x10000f00050005, 0x14001300120011, 0x5000500050005,
-            0x5001500050005, 0x5000500050005, 0x5000500050016, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x17001700170017, 0x17001700170017,
-            0x17001700170017, 0x17001700170017, 0x17001700170017,
-            0x17001700170017, 0x17001700170017, 0x17001700170017,
-            0x17001700170017, 0x17001700170017, 0x18001700170017,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x1a001900170005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x50005001c001b,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x50005001d0005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5001e00170017, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x5000500050005,
-            0x5000500050005, 0x5000500050005, 0x5000500050005, 0x0, 0x0, 0x0,
-            0xbe7effbf3e7effbf, 0x7ef1ff3ffffcffff, 0x7fffff3ffff3f1f8,
-            0x1800300000000, 0xff31ffcfdfffe000, 0xfffc0cfffffff, 0x0, 0x0,
-            0x0, 0x0, 0x401000000000001b, 0x1fc000001d7e0, 0x187c00,
-            0x20000000200708b, 0xc00000708b0000, 0x0, 0x33ffcfcfccf0006, 0x0,
-            0x0, 0x0, 0x0, 0x7c00000000, 0x0, 0x0, 0x80005, 0x12020000000000,
-            0xff000000, 0x0, 0xb0001800, 0x48000000000000, 0x4e000000, 0x0,
-            0x0, 0x0, 0x30001900, 0x100000, 0x1c00, 0x0, 0x100, 0x0, 0xd81,
-            0x0, 0x1c00, 0x0, 0x74000000, 0x0, 0x168020010842008,
-            0x200108420080002, 0x0, 0x4000000000, 0x0, 0x0, 0x0,
-            0x2800000000045540, 0xb, 0x0, 0x0, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffff0bffffff, 0x3ffffffffffffff,
-            0xffffffff3f3fffff, 0x3fffffffaaff3f3f, 0x5fdfffffffffffff,
-            0x3fdcffffefcfffde, 0x3, 0x0, 0x0, 0x0, 0xc4000000000, 0x0,
-            0x40000c000000, 0xe000, 0x5000001210, 0x333e00500000292,
-            0xf00000000333, 0x3c0f00000000, 0x60000000000, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x10000000, 0x0, 0x36db02a555555000, 0x5555500040100000,
-            0x4790000036db02a5, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xfffffffff, 0x0, 0xfffffc657fe53fff,
-            0xffff3fffffffffff, 0xffffffffffffffff, 0x3ffffff,
-            0x5f7ffc00a0000000, 0x7fdb, 0x0, 0x0, 0x0, 0x0, 0x80014000000, 0x0,
-            0xc00000000000, 0x0, 0x0, 0x0, 0x0, 0x1fc0000000,
-            0xf800000000000000, 0x1, 0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
-    //2560 bytes
-    enum nfkcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x20, 0x70],
-            [0x100, 0x140, 0x3400], [0x402030202020100, 0x706020202020205,
-            0x802020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x3000200010000, 0x4000600050004, 0x9000800070004, 0xd000c000b000a,
-            0x40004000f000e, 0x4000400040004, 0x10000400040004,
-            0x13001200110004, 0x17001600150014, 0x4000400040018,
-            0x4001900040004, 0x1d001c001b001a, 0x210020001f001e,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x22000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x24002300210004,
-            0x27002600250021, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400290028, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x40004002a0004,
-            0x2e002d002c002b, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4002f00040004,
-            0x4003100300004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4003200210021, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x4000400040004, 0x4000400040004, 0x4000400040004, 0x4000400040004,
-            0x0, 0x0, 0x773c850100000000, 0x0, 0x800c000000000000,
-            0x8000000000000201, 0x0, 0xe000000001ff0, 0x0, 0x0,
-            0x1ff000000000000, 0x1f3f000000, 0x10361f8081a9fdf,
-            0x441000000000003f, 0xb0, 0x2370000007f0000, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x80, 0x0, 0x0, 0x1e0000000380000, 0x0, 0x0,
-            0x1000000000000000, 0xff000000, 0x4000000000000000, 0xb0800000,
-            0x48000000000000, 0x4e000000, 0x0, 0x0, 0x4000000000000000,
-            0x30c00000, 0x4000000000000000, 0x800000, 0x0, 0x400000, 0x0,
-            0x600004, 0x4000000000000000, 0x800000, 0x0, 0x80008400,
-            0x8000000000000, 0x0, 0x8000000000000, 0x30000000, 0x1000,
-            0x3e8020010842008, 0x200108420080002, 0x0, 0x400000000000, 0x0,
-            0x0, 0x1000000000000000, 0x0, 0x3ffffe00000000, 0xffffff0000000000,
-            0x7, 0x20000000000000, 0x0, 0x0, 0x0, 0xf7ff700000000000,
-            0x10007ffffffbfff, 0xfffffffff8000000, 0x0, 0x0, 0x0, 0xc000000,
-            0x0, 0x0, 0x2aaa000000000000, 0xe800000000000000,
-            0x6a00e808e808ea03, 0x50d88070008207ff, 0xfff3000080800380,
-            0x1001fff7fff, 0x0, 0xfbfbbd573e6ffeef, 0xffffffffffff03e1, 0x200,
-            0x0, 0x1b00000000000, 0x0, 0x0, 0x0, 0x60000000000, 0x0, 0x0, 0x0,
-            0x0, 0xffffffff00000000, 0xffffffffffffffff, 0x7ffffffffff, 0x1000,
-            0x70000000000000, 0x0, 0x10000000, 0x0, 0x3000000000000000, 0x0,
-            0x0, 0x0, 0x800000000000, 0x0, 0x0, 0x0, 0x0, 0x80000000,
-            0x8000000000000, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0x3fffff, 0x740000000000001, 0x0, 0x9e000000,
-            0x8000000000000000, 0xfffe000000000000, 0xffffffffffffffff,
-            0xfffc7fff, 0x0, 0xffffffff7fffffff, 0x7fffffffffff00ff,
-            0xffffffffffffffff, 0x7fffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff, 0x0,
-            0x1000000000000, 0x0, 0x300000000000000, 0xfffffc657fe53fff,
-            0xffff3fffffffffff, 0xffffffffffffffff, 0x3ffffff,
-            0x5f7fffffa0f8007f, 0xffffffffffffffdb, 0x3ffffffffffff,
-            0xfffffffffff80000, 0x3fffffffffffffff, 0xffffffffffff0000,
-            0xfffffffffffcffff, 0x1fff0000000000ff, 0xffff000003ff0000,
-            0xffd70f7ffff7ff9f, 0xffffffffffffffff, 0x1fffffffffffffff,
-            0xfffffffffffffffe, 0xffffffffffffffff, 0x7fffffffffffffff,
-            0x7f7f1cfcfcfc, 0x0, 0x0, 0x400000000000000, 0x0, 0x8000000000,
-            0x0, 0x0, 0x0, 0x0, 0x1fc0000000, 0xf800000000000000, 0x1,
-            0xffffffffffffffff, 0xffffffffffdfffff, 0xebffde64dfffffff,
-            0xffffffffffffffef, 0x7bffffffdfdfe7bf, 0xfffffffffffdfc5f,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffff3fffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffcfff, 0xaf7fe96ffffffef, 0x5ef7f796aa96ea84,
-            0xffffbee0ffffbff, 0x0, 0xffff7fffffff07ff, 0xc000000ffff, 0x10000,
-            0x0, 0x7ffffffffff0007, 0x301ff, 0x0, 0x0, 0x3fffffff, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0]);
-    //2656 bytes
-    enum nfkdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x20, 0x78],
-            [0x100, 0x160, 0x3500], [0x504030202020100, 0x807020202020206,
-            0x902020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202,
-            0x202020202020202, 0x202020202020202, 0x202020202020202, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x3000200010000, 0x7000600050004, 0xa000900080007, 0xe000d000c000b,
-            0x700070007000f, 0x7000700070007, 0x10000700070007,
-            0x13001200110007, 0x17001600150014, 0x7000700070018,
-            0x7001900070007, 0x1d001c001b001a, 0x210020001f001e,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x22000700070007, 0x7000700070007, 0x21002100210021,
-            0x21002100210021, 0x21002100210021, 0x21002100210021,
-            0x21002100210021, 0x21002100210021, 0x21002100210021,
-            0x21002100210021, 0x21002100210021, 0x21002100210021,
-            0x23002100210021, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x25002400210007,
-            0x28002700260021, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x70007002a0029, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x70007002b0007,
-            0x2f002e002d002c, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7003000070007,
-            0x7003200310007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7003300210021, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x7000700070007, 0x7000700070007, 0x7000700070007, 0x7000700070007,
-            0x0, 0x0, 0x773c850100000000, 0xbe7effbf3e7effbf,
-            0xfefdff3ffffcffff, 0xffffff3ffff3f3f9, 0x1800300000000,
-            0xff3fffcfdffffff0, 0xfffc0cfffffff, 0x0, 0x1ff000000000000,
-            0x1f3f000000, 0x0, 0x441000000000001b, 0x1fc000001d7f0,
-            0x2370000007f7c00, 0x20000000200708b, 0xc00000708b0000, 0x0,
-            0x33ffcfcfccf0006, 0x0, 0x0, 0x80, 0x0, 0x7c00000000,
-            0x1e0000000000000, 0x0, 0x80005, 0x0, 0x0, 0x0, 0x0,
-            0x12020000000000, 0xff000000, 0x0, 0xb0001800, 0x48000000000000,
-            0x4e000000, 0x0, 0x0, 0x0, 0x30001900, 0x100000, 0x1c00, 0x0,
-            0x100, 0x0, 0xd81, 0x0, 0x1c00, 0x0, 0x74000000, 0x8000000000000,
-            0x0, 0x8000000000000, 0x30000000, 0x1000, 0x3e8020010842008,
-            0x200108420080002, 0x0, 0x4000000000, 0x0, 0x0, 0x1000000000000000,
-            0x2800000000045540, 0xb, 0x0, 0x0, 0xf7ff700000000000,
-            0x10007ffffffbfff, 0xfffffffff8000000, 0x0, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffff0fffffff, 0x3ffffffffffffff,
-            0xffffffff3f3fffff, 0x3fffffffaaff3f3f, 0xffdfffffffffffff,
-            0x7fdcffffefcfffdf, 0x50d88070008207ff, 0xfff3000080800380,
-            0x1001fff7fff, 0x0, 0xfbfbbd573e6ffeef, 0xffffffffffff03e1,
-            0x40000c000200, 0xe000, 0x1b05000001210, 0x333e00500000292,
-            0xf00000000333, 0x3c0f00000000, 0x60000000000, 0x0, 0x0, 0x0, 0x0,
-            0xffffffff00000000, 0xffffffffffffffff, 0x7ffffffffff, 0x1000,
-            0x70000000000000, 0x0, 0x10000000, 0x0, 0x3000000000000000, 0x0,
-            0x0, 0x0, 0x800000000000, 0x0, 0x0, 0x0, 0x0, 0x80000000,
-            0x8000000000000, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0x3fffff, 0x740000000000001,
-            0x36db02a555555000, 0x55555000d8100000, 0xc790000036db02a5,
-            0xfffe000000000000, 0xffffffffffffffff, 0xfffc7fff, 0x0,
-            0xffffffff7fffffff, 0x7fffffffffff00ff, 0xffffffffffffffff,
-            0x7fffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0x0, 0x1000000000000, 0x0,
-            0x300000000000000, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xfffffffff, 0x0, 0xfffffc657fe53fff, 0xffff3fffffffffff,
-            0xffffffffffffffff, 0x3ffffff, 0x5f7fffffa0f8007f,
-            0xffffffffffffffdb, 0x3ffffffffffff, 0xfffffffffff80000,
-            0x3fffffffffffffff, 0xffffffffffff0000, 0xfffffffffffcffff,
-            0x1fff0000000000ff, 0xffff000003ff0000, 0xffd70f7ffff7ff9f,
-            0xffffffffffffffff, 0x1fffffffffffffff, 0xfffffffffffffffe,
-            0xffffffffffffffff, 0x7fffffffffffffff, 0x7f7f1cfcfcfc, 0x0, 0x0,
-            0x80014000000, 0x0, 0xc00000000000, 0x0, 0x0, 0x0, 0x0,
-            0x1fc0000000, 0xf800000000000000, 0x1, 0xffffffffffffffff,
-            0xffffffffffdfffff, 0xebffde64dfffffff, 0xffffffffffffffef,
-            0x7bffffffdfdfe7bf, 0xfffffffffffdfc5f, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffff3fffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
-            0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffcfff,
-            0xaf7fe96ffffffef, 0x5ef7f796aa96ea84, 0xffffbee0ffffbff, 0x0,
-            0xffff7fffffff07ff, 0xc000000ffff, 0x10000, 0x0, 0x7ffffffffff0007,
-            0x301ff, 0x0, 0x0, 0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
-
-}
 
 static if (size_t.sizeof == 4)
 {
-    //1600 bytes
-    enum nfcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x40, 0xc0],
-            [0x100, 0x100, 0x1a00], [0x2020100, 0x3020202, 0x2020204,
-            0x2050202, 0x2020202, 0x6020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x10000, 0x0, 0x2, 0x30000,
-            0x50004, 0x70006, 0x80000, 0xa0009, 0x0, 0x0, 0x0, 0x0, 0xb0000,
-            0x0, 0xc0000, 0xe000d, 0xf0000, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0,
-            0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x120000,
-            0x140013, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x160015, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x170000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x120012, 0x18, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x81a9fdf, 0x10361f8, 0x3f, 0x40100000, 0x80, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x380000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x10000000, 0xff000000, 0x0, 0x0, 0x40000000, 0xb0800000, 0x0, 0x0,
-            0x480000, 0x4e000000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40000000,
-            0x30c00000, 0x0, 0x0, 0x40000000, 0x800000, 0x0, 0x0, 0x0,
-            0x400000, 0x0, 0x0, 0x0, 0x600004, 0x0, 0x0, 0x40000000, 0x800000,
-            0x0, 0x0, 0x0, 0x80008400, 0x0, 0x0, 0x0, 0x10842008, 0x1680200,
-            0x20080002, 0x2001084, 0x0, 0x0, 0x0, 0x4000, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x3ffffe, 0x0, 0xffffff00, 0x7, 0x0, 0x0,
-            0x200000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2aaa0000,
-            0x0, 0x48000000, 0x8080a00, 0x2a00c808, 0x3, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0xc40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x600, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x10000000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x6000000, 0x0, 0x0, 0x0,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0x7fe53fff, 0xfffffc65,
-            0xffffffff, 0xffff3fff, 0xffffffff, 0xffffffff, 0x3ffffff, 0x0,
-            0xa0000000, 0x5f7ffc00, 0x7fdb, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x4000000, 0x0, 0x0, 0x0, 0x80, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0xc0000000, 0x1f, 0x0, 0xf8000000, 0x1, 0x0,
-            0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0]);
-    //1920 bytes
-    enum nfdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x40, 0xe0],
-            [0x100, 0x140, 0x2000], [0x2020100, 0x5040302, 0x2020206,
-            0x2070202, 0x2020202, 0x8020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x10000, 0x30002, 0x50004, 0x50006,
-            0x70005, 0x90008, 0xb000a, 0xc0005, 0x5000d, 0x50005, 0x50005,
-            0x50005, 0x50005, 0xe0005, 0x50005, 0x10000f, 0x120011, 0x140013,
-            0x50005, 0x50005, 0x50005, 0x50015, 0x50005, 0x50005, 0x50016,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x170017, 0x170017, 0x170017, 0x170017, 0x170017,
-            0x170017, 0x170017, 0x170017, 0x170017, 0x170017, 0x170017,
-            0x170017, 0x170017, 0x170017, 0x170017, 0x170017, 0x170017,
-            0x170017, 0x170017, 0x170017, 0x170017, 0x180017, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x170005, 0x1a0019, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x1c001b, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x1d0005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x170017,
-            0x5001e, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x50005,
-            0x50005, 0x50005, 0x50005, 0x50005, 0x50005, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x3e7effbf, 0xbe7effbf, 0xfffcffff, 0x7ef1ff3f,
-            0xfff3f1f8, 0x7fffff3f, 0x0, 0x18003, 0xdfffe000, 0xff31ffcf,
-            0xcfffffff, 0xfffc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1b,
-            0x40100000, 0x1d7e0, 0x1fc00, 0x187c00, 0x0, 0x200708b, 0x2000000,
-            0x708b0000, 0xc00000, 0x0, 0x0, 0xfccf0006, 0x33ffcfc, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x7c, 0x0, 0x0, 0x0, 0x0,
-            0x80005, 0x0, 0x0, 0x120200, 0xff000000, 0x0, 0x0, 0x0, 0xb0001800,
-            0x0, 0x0, 0x480000, 0x4e000000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x30001900, 0x0, 0x100000, 0x0, 0x1c00, 0x0, 0x0, 0x0, 0x100, 0x0,
-            0x0, 0x0, 0xd81, 0x0, 0x0, 0x0, 0x1c00, 0x0, 0x0, 0x0, 0x74000000,
-            0x0, 0x0, 0x0, 0x10842008, 0x1680200, 0x20080002, 0x2001084, 0x0,
-            0x0, 0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x45540, 0x28000000,
-            0xb, 0x0, 0x0, 0x0, 0x0, 0x0, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xbffffff, 0xffffffff, 0xffffffff, 0x3ffffff,
-            0x3f3fffff, 0xffffffff, 0xaaff3f3f, 0x3fffffff, 0xffffffff,
-            0x5fdfffff, 0xefcfffde, 0x3fdcffff, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0xc40, 0x0, 0x0, 0xc000000, 0x4000, 0xe000, 0x0,
-            0x1210, 0x50, 0x292, 0x333e005, 0x333, 0xf000, 0x0, 0x3c0f, 0x0,
-            0x600, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x10000000, 0x0, 0x0, 0x0, 0x55555000, 0x36db02a5, 0x40100000,
-            0x55555000, 0x36db02a5, 0x47900000, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xf, 0x0, 0x0, 0x7fe53fff, 0xfffffc65, 0xffffffff,
-            0xffff3fff, 0xffffffff, 0xffffffff, 0x3ffffff, 0x0, 0xa0000000,
-            0x5f7ffc00, 0x7fdb, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x14000000, 0x800, 0x0, 0x0, 0x0, 0xc000, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0xc0000000, 0x1f, 0x0, 0xf8000000, 0x1, 0x0,
-            0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0]);
-    //2560 bytes
-    enum nfkcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x40, 0xe0],
-            [0x100, 0x140, 0x3400], [0x2020100, 0x4020302, 0x2020205,
-            0x7060202, 0x2020202, 0x8020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x10000, 0x30002, 0x50004, 0x40006,
-            0x70004, 0x90008, 0xb000a, 0xd000c, 0xf000e, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x100004, 0x110004, 0x130012, 0x150014, 0x170016,
-            0x40018, 0x40004, 0x40004, 0x40019, 0x1b001a, 0x1d001c, 0x1f001e,
-            0x210020, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x220004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x210004, 0x240023, 0x250021, 0x270026, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x290028, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x2a0004, 0x40004, 0x2c002b, 0x2e002d, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x4002f, 0x300004, 0x40031, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x210021, 0x40032, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004, 0x40004,
-            0x40004, 0x40004, 0x0, 0x0, 0x0, 0x0, 0x0, 0x773c8501, 0x0, 0x0,
-            0x0, 0x800c0000, 0x201, 0x80000000, 0x0, 0x0, 0x1ff0, 0xe0000, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x1ff0000, 0x3f000000, 0x1f, 0x81a9fdf,
-            0x10361f8, 0x3f, 0x44100000, 0xb0, 0x0, 0x7f0000, 0x2370000, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x80, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x380000, 0x1e00000, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x10000000, 0xff000000, 0x0, 0x0, 0x40000000, 0xb0800000, 0x0, 0x0,
-            0x480000, 0x4e000000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40000000,
-            0x30c00000, 0x0, 0x0, 0x40000000, 0x800000, 0x0, 0x0, 0x0,
-            0x400000, 0x0, 0x0, 0x0, 0x600004, 0x0, 0x0, 0x40000000, 0x800000,
-            0x0, 0x0, 0x0, 0x80008400, 0x0, 0x0, 0x80000, 0x0, 0x0, 0x0,
-            0x80000, 0x30000000, 0x0, 0x1000, 0x0, 0x10842008, 0x3e80200,
-            0x20080002, 0x2001084, 0x0, 0x0, 0x0, 0x4000, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x10000000, 0x0, 0x0, 0x0, 0x3ffffe, 0x0, 0xffffff00, 0x7,
-            0x0, 0x0, 0x200000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xf7ff7000,
-            0xffffbfff, 0x10007ff, 0xf8000000, 0xffffffff, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0xc000000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2aaa0000, 0x0,
-            0xe8000000, 0xe808ea03, 0x6a00e808, 0x8207ff, 0x50d88070,
-            0x80800380, 0xfff30000, 0x1fff7fff, 0x100, 0x0, 0x0, 0x3e6ffeef,
-            0xfbfbbd57, 0xffff03e1, 0xffffffff, 0x200, 0x0, 0x0, 0x0, 0x0,
-            0x1b000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x600, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0x7ff, 0x1000, 0x0, 0x0, 0x700000, 0x0, 0x0,
-            0x10000000, 0x0, 0x0, 0x0, 0x0, 0x30000000, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x8000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x80000000, 0x0, 0x0, 0x80000, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0x3fffff, 0x0, 0x1, 0x7400000,
-            0x0, 0x0, 0x9e000000, 0x0, 0x0, 0x80000000, 0x0, 0xfffe0000,
-            0xffffffff, 0xffffffff, 0xfffc7fff, 0x0, 0x0, 0x0, 0x7fffffff,
-            0xffffffff, 0xffff00ff, 0x7fffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x0,
-            0x0, 0x0, 0x10000, 0x0, 0x0, 0x0, 0x3000000, 0x7fe53fff,
-            0xfffffc65, 0xffffffff, 0xffff3fff, 0xffffffff, 0xffffffff,
-            0x3ffffff, 0x0, 0xa0f8007f, 0x5f7fffff, 0xffffffdb, 0xffffffff,
-            0xffffffff, 0x3ffff, 0xfff80000, 0xffffffff, 0xffffffff,
-            0x3fffffff, 0xffff0000, 0xffffffff, 0xfffcffff, 0xffffffff, 0xff,
-            0x1fff0000, 0x3ff0000, 0xffff0000, 0xfff7ff9f, 0xffd70f7f,
-            0xffffffff, 0xffffffff, 0xffffffff, 0x1fffffff, 0xfffffffe,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x7fffffff,
-            0x1cfcfcfc, 0x7f7f, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4000000, 0x0, 0x0,
-            0x0, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xc0000000,
-            0x1f, 0x0, 0xf8000000, 0x1, 0x0, 0xffffffff, 0xffffffff,
-            0xffdfffff, 0xffffffff, 0xdfffffff, 0xebffde64, 0xffffffef,
-            0xffffffff, 0xdfdfe7bf, 0x7bffffff, 0xfffdfc5f, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffff3f,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffcfff, 0xffffffff,
-            0xffffffef, 0xaf7fe96, 0xaa96ea84, 0x5ef7f796, 0xffffbff,
-            0xffffbee, 0x0, 0x0, 0xffff07ff, 0xffff7fff, 0xffff, 0xc00,
-            0x10000, 0x0, 0x0, 0x0, 0xffff0007, 0x7ffffff, 0x301ff, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
-    //2656 bytes
-    enum nfkdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)([0x0, 0x40, 0xf0],
-            [0x100, 0x160, 0x3500], [0x2020100, 0x5040302, 0x2020206,
-            0x8070202, 0x2020202, 0x9020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202, 0x2020202,
-            0x2020202, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x10000, 0x30002, 0x50004, 0x70006,
-            0x80007, 0xa0009, 0xc000b, 0xe000d, 0x7000f, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x100007, 0x110007, 0x130012, 0x150014, 0x170016,
-            0x70018, 0x70007, 0x70007, 0x70019, 0x1b001a, 0x1d001c, 0x1f001e,
-            0x210020, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x220007, 0x70007,
-            0x70007, 0x210021, 0x210021, 0x210021, 0x210021, 0x210021,
-            0x210021, 0x210021, 0x210021, 0x210021, 0x210021, 0x210021,
-            0x210021, 0x210021, 0x210021, 0x210021, 0x210021, 0x210021,
-            0x210021, 0x210021, 0x210021, 0x210021, 0x230021, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x210007, 0x250024, 0x260021, 0x280027, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x2a0029, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x2b0007, 0x70007, 0x2d002c, 0x2f002e, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70030, 0x310007, 0x70032, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x210021, 0x70033, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007,
-            0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x70007, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x773c8501, 0x3e7effbf, 0xbe7effbf, 0xfffcffff,
-            0xfefdff3f, 0xfff3f3f9, 0xffffff3f, 0x0, 0x18003, 0xdffffff0,
-            0xff3fffcf, 0xcfffffff, 0xfffc0, 0x0, 0x0, 0x0, 0x1ff0000,
-            0x3f000000, 0x1f, 0x0, 0x0, 0x1b, 0x44100000, 0x1d7f0, 0x1fc00,
-            0x7f7c00, 0x2370000, 0x200708b, 0x2000000, 0x708b0000, 0xc00000,
-            0x0, 0x0, 0xfccf0006, 0x33ffcfc, 0x0, 0x0, 0x0, 0x0, 0x80, 0x0,
-            0x0, 0x0, 0x0, 0x7c, 0x0, 0x1e00000, 0x0, 0x0, 0x80005, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x120200, 0xff000000, 0x0,
-            0x0, 0x0, 0xb0001800, 0x0, 0x0, 0x480000, 0x4e000000, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x30001900, 0x0, 0x100000, 0x0, 0x1c00,
-            0x0, 0x0, 0x0, 0x100, 0x0, 0x0, 0x0, 0xd81, 0x0, 0x0, 0x0, 0x1c00,
-            0x0, 0x0, 0x0, 0x74000000, 0x0, 0x0, 0x80000, 0x0, 0x0, 0x0,
-            0x80000, 0x30000000, 0x0, 0x1000, 0x0, 0x10842008, 0x3e80200,
-            0x20080002, 0x2001084, 0x0, 0x0, 0x0, 0x40, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x10000000, 0x45540, 0x28000000, 0xb, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0xf7ff7000, 0xffffbfff, 0x10007ff, 0xf8000000, 0xffffffff,
-            0x0, 0x0, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xfffffff, 0xffffffff, 0xffffffff, 0x3ffffff, 0x3f3fffff,
-            0xffffffff, 0xaaff3f3f, 0x3fffffff, 0xffffffff, 0xffdfffff,
-            0xefcfffdf, 0x7fdcffff, 0x8207ff, 0x50d88070, 0x80800380,
-            0xfff30000, 0x1fff7fff, 0x100, 0x0, 0x0, 0x3e6ffeef, 0xfbfbbd57,
-            0xffff03e1, 0xffffffff, 0xc000200, 0x4000, 0xe000, 0x0, 0x1210,
-            0x1b050, 0x292, 0x333e005, 0x333, 0xf000, 0x0, 0x3c0f, 0x0, 0x600,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0x7ff, 0x1000, 0x0, 0x0,
-            0x700000, 0x0, 0x0, 0x10000000, 0x0, 0x0, 0x0, 0x0, 0x30000000,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8000, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x80000000, 0x0, 0x0, 0x80000, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0x3fffff, 0x0, 0x1, 0x7400000, 0x55555000, 0x36db02a5, 0xd8100000,
-            0x55555000, 0x36db02a5, 0xc7900000, 0x0, 0xfffe0000, 0xffffffff,
-            0xffffffff, 0xfffc7fff, 0x0, 0x0, 0x0, 0x7fffffff, 0xffffffff,
-            0xffff00ff, 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x0, 0x0, 0x0,
-            0x10000, 0x0, 0x0, 0x0, 0x3000000, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xf, 0x0, 0x0, 0x7fe53fff,
-            0xfffffc65, 0xffffffff, 0xffff3fff, 0xffffffff, 0xffffffff,
-            0x3ffffff, 0x0, 0xa0f8007f, 0x5f7fffff, 0xffffffdb, 0xffffffff,
-            0xffffffff, 0x3ffff, 0xfff80000, 0xffffffff, 0xffffffff,
-            0x3fffffff, 0xffff0000, 0xffffffff, 0xfffcffff, 0xffffffff, 0xff,
-            0x1fff0000, 0x3ff0000, 0xffff0000, 0xfff7ff9f, 0xffd70f7f,
-            0xffffffff, 0xffffffff, 0xffffffff, 0x1fffffff, 0xfffffffe,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x7fffffff,
-            0x1cfcfcfc, 0x7f7f, 0x0, 0x0, 0x0, 0x0, 0x14000000, 0x800, 0x0,
-            0x0, 0x0, 0xc000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0xc0000000, 0x1f, 0x0, 0xf8000000, 0x1, 0x0, 0xffffffff,
-            0xffffffff, 0xffdfffff, 0xffffffff, 0xdfffffff, 0xebffde64,
-            0xffffffef, 0xffffffff, 0xdfdfe7bf, 0x7bffffff, 0xfffdfc5f,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffff3f, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-            0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffcfff,
-            0xffffffff, 0xffffffef, 0xaf7fe96, 0xaa96ea84, 0x5ef7f796,
-            0xffffbff, 0xffffbee, 0x0, 0x0, 0xffff07ff, 0xffff7fff, 0xffff,
-            0xc00, 0x10000, 0x0, 0x0, 0x0, 0xffff0007, 0x7ffffff, 0x301ff, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x3fffffff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
+//1856 bytes
+enum nfcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+0000000000000040000000D0",
+x"
+000001000000012000002000",
+x"
+020201000302020205020204020602020202020207020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000010000000000000000000200030000000500040007000600080000
+000A000900000000000000000000000000000000000B000000000000000C0000000E000D000F00000000000000000000
+000000000000001000000000000000000000001100000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000012000000140013000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000160015001700000019001800000000001A0000000000000000000000000000
+001B00000000000000000000000000000000000000000000001C00000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001D00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000001200120000001E0000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+081A9FDF010361F80000003F401000000000008000000000000000000000000000000000000000000038000000000000
+000000000000000000000000000000000000000010000000FF000000000000000000000040000000B080000000000000
+00000000004800004E0000000000000000000000000000000000000000000000000000004000000030C0000000000000
+000000004000000000800000000000000000000000000000004000000000000000000000000000000060000400000000
+000000004000000000800000000000000000000000000000800084000000000000000000000000001084200801680200
+200800020200108400000000000000000000000000004000000000000000000000000000000000000000000000000000
+000000000000000000000000003FFFFE00000000FFFFFF00000000070000000000000000002000000000000000000000
+000000000000000000000000000000000000000000000000000000002AAA0000000000004800000008080A002A00C808
+00000003000000000000000000000000000000000000000000000000000000000000000000000C400000000000000000
+000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000
+06000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+7FE53FFFFFFFFC65FFFFFFFFFFFF3FFFFFFFFFFFFFFFFFFF03FFFFFF00000000A00000005F7FFC0000007FDB00000000
+000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000
+000000000000008000000000000000000000000000000000000000000000000000000000400000000080000000000000
+0000000009000000000003A4000000000000000000000000000000000000000000000000240100000000000000000000
+000000000000000000000000000000000000000000008000000000000000000000000000000100000000000000000000
+00000000000000000000000000000000C0000000000003FF000000000000000000000000000000000000000000000000
+00000000000000000000000000000180000000000000000000000000000000000000000000000000C00000000000001F
+00000000F800000000000001000000003FFFFFFF00000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000",
+);
+//2208 bytes
+enum nfdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+0000000000000040000000F0",
+x"
+000001000000016000002700",
+x"
+020201000504030207020206020802020202020209020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000100000003000200050004000500060007000500090008000B000A000C0005
+0005000D00050005000500050005000500050005000E0005000500050010000F00120011001400130005000500050005
+000500050005001500050005000500050005001600050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050017001700170017
+001700170017001700170017001700170017001700170017001700170017001700170017001700170017001700170017
+001700170017001700170017001700170017001700170017001700170018001700050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+00170005001A001900050005000500050005000500050005001B00050005000500050005000500050005000500050005
+001D001C001E00050020001F000500050021000500050005000500050005000500220005000500050005000500050005
+000500050005000500230005000500050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500240005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050017001700050025000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+0000000000000000000000000000000000000000000000003E7EFFBFBE7EFFBFFFFCFFFF7EF1FF3FFFF3F1F87FFFFF3F
+0000000000018003DFFFE000FF31FFCFCFFFFFFF000FFFC0000000000000000000000000000000000000000000000000
+00000000000000000000001B401000000001D7E00001FC0000187C00000000000200708B02000000708B000000C00000
+0000000000000000FCCF0006033FFCFC0000000000000000000000000000000000000000000000000000000000000000
+000000000000007C0000000000000000000000000000000000080005000000000000000000120200FF00000000000000
+0000000000000000B00018000000000000000000004800004E0000000000000000000000000000000000000000000000
+00000000000000003000190000000000001000000000000000001C000000000000000000000000000000010000000000
+000000000000000000000D8100000000000000000000000000001C000000000000000000000000007400000000000000
+000000000000000010842008016802002008000202001084000000000000000000000000000000400000000000000000
+0000000000000000000000000000000000045540280000000000000B0000000000000000000000000000000000000000
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0BFFFFFFFFFFFFFFFFFFFFFF03FFFFFF3F3FFFFFFFFFFFFFAAFF3F3F3FFFFFFF
+FFFFFFFF5FDFFFFFEFCFFFDE3FDCFFFF0000000300000000000000000000000000000000000000000000000000000000
+0000000000000C4000000000000000000C000000000040000000E000000000000000121000000050000002920333E005
+000003330000F0000000000000003C0F0000000000000600000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000100000000000000000000000000000005555500036DB02A5
+401000005555500036DB02A547900000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000F00000000000000007FE53FFFFFFFFC65FFFFFFFFFFFF3FFF
+FFFFFFFFFFFFFFFF03FFFFFF00000000A00000005F7FFC0000007FDB0000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000002000000001000000000000000000000000000000000
+14000000000008000000000000000000000000000000C000000000000000000000000000000000000000000000000000
+000000000000000000001800000000000002402800000000000001A00000000000000000000000000000000000000000
+0000000058000000000000000000000000000000000000000000000000000000000000000C0000000000000000000000
+000000000100000000000000000000000000000000000000000000000000000000000000000001FE0000000000000000
+000000000000000000000000000000000000000000000000000000000000070000000000000000000000000000000000
+0000000000000000C00000000000001F00000000F800000000000001000000003FFFFFFF000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+);
+//3008 bytes
+enum nfkcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+0000000000000040000000F0",
+x"
+000001000000016000004000",
+x"
+020201000402030206020205080702020202020209020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000100000003000200050004000400060007000400090008000B000A000D000C
+000F000E0004000400040004000400040004000400100004001100040013001200150014001700160004001800040004
+0004000400040019001B001A001D001C001F001E00210020000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040023002200040004002400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400210004002600250027002100290028
+000400040004000400040004002A000400040004000400040004000400040004002C002B002D0004002F002E00040004
+003000040004000400040004000400040031000400040004000400040004000400040004000400040032000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040033000400040034000400040004003600350038003700040004000400040004000400040004
+000400390004000400040004000400040004000400040004000400040004003A003B00040004003C0004000400040004
+00040004003D000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+00040004000400040004000400040004002100210004003E000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+0000000000000000000000000000000000000000773C8501000000000000000000000000800C00000000020180000000
+000000000000000000001FF0000E0000000000000000000000000000000000000000000001FF00003F0000000000001F
+081A9FDF010361F80000003F44100000000000B000000000007F00000237000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000
+00000000000000000038000001E00000000000000000000000000000000000000000000010000000FF00000000000000
+0000000040000000B08000000000000000000000004800004E0000000000000000000000000000000000000000000000
+000000004000000030C00000000000000000000040000000008000000000000000000000000000000040000000000000
+000000000000000000600004000000000000000040000000008000000000000000000000000000008000840000000000
+000000000008000000000000000000000000000000080000300000000000000000001000000000001084200803E80200
+200800020200108400000000000000000000000000004000000000000000000000000000000000000000000010000000
+000000000000000000000000003FFFFE00000000FFFFFF00000000070000000000000000002000000000000000000000
+0000000000000000000000000000000000000000F7FF7000FFFFBFFF010007FFF8000000FFFFFFFF0000000000000000
+000000000000000000000000000000000C0000000000000000000000000000000000000000000000000000002AAA0000
+00000000E8000000E808EA036A00E808008207FF50D8807080800380FFF300001FFF7FFF000001000000000000000000
+3E6FFEEFFBFBBD57FFFF03E1FFFFFFFF00000200000000000000000000000000000000000001B0000000000000000000
+000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000
+000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000007FF00001000000000000000000000700000
+000000000000000010000000000000000000000000000000000000003000000000000000000000000000000000000000
+000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000
+80000000000000000000000000080000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF003FFFFF00000000
+000000010740000000000000000000009E00000000000000000000008000000000000000FFFE0000FFFFFFFFFFFFFFFF
+FFFC7FFF0000000000000000000000007FFFFFFFFFFFFFFFFFFF00FF7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000
+3000000000000000000000000000000000000000000000000000000000010000000000000000000000000000031C0000
+0000000000000000F000000000000200000000000000000000000000000000007FE53FFFFFFFFC65FFFFFFFFFFFF3FFF
+FFFFFFFFFFFFFFFF03FFFFFF00000000A0F8007F5F7FFFFFFFFFFFDBFFFFFFFFFFFFFFFF0003FFFFFFF80000FFFFFFFF
+FFFFFFFF3FFFFFFFFFFF0000FFFFFFFFFFFCFFFFFFFFFFFF000000FF1FFF000003FF0000FFFF0000FFF7FF9FFFD70F7F
+FFFFFFFFFFFFFFFFFFFFFFFF1FFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF1CFCFCFC00007F7F
+00000000000000000000000000000000FFFFFFBE07FDFFFF000000000000000000000000000000000000000000000000
+000000000400000000000000000000000000000000000080000000000000000000000000000000000000000000000000
+000000004000000000800000000000000000000009000000000003A40000000000000000000000000000000000000000
+000000002401000000000000000000000000000000000000000000000000000000000000000080000000000000000000
+0000000000010000000000000000000000000000000000000000000000000000C0000000000003FF0000000000000000
+000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000
+000000000000000000000000000000000000000000000000FFC0000003FFFFFF0000000000000000C00000000000001F
+00000000F80000000000000100000000FFFFFFFFFFFFFFFFFFDFFFFFFFFFFFFFDFFFFFFFEBFFDE64FFFFFFEFFFFFFFFF
+DFDFE7BF7BFFFFFFFFFDFC5FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFF3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFCFFFFFFFFFFF
+00000000FFFF0000FFFFFFFF00003FFF00000000000000000000000000000000FFFFFFEF0AF7FE96AA96EA845EF7F796
+0FFFFBFF0FFFFBEE0000000000000000FFFF07FFFFFF7FFF0000FFFF00001C0000010000000000000000000000000000
+FFFF00070FFFFFFF000301FF000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000003FF00003FFFFFFF00000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000",
+);
+//3136 bytes
+enum nfkdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+000000000000004000000100",
+x"
+000001000000018000004200",
+x"
+02020100050403020702020609080202020202020A020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000001000000030002000500040007000600080007000A0009000C000B000E000D
+0007000F0007000700070007000700070007000700100007001100070013001200150014001700160007001800070007
+0007000700070019001B001A001D001C001F001E00210020000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070023002200070007002400070021002100210021
+002100210021002100210021002100210021002100210021002100210021002100210021002100210021002100210021
+002100210021002100210021002100210021002100210021002100210025002100070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+002100070027002600280021002A00290007000700070007002B0007002C000700070007000700070007000700070007
+002E002D002F000700310030000700070032000700070007000700070007000700330007000700070007000700070007
+000700070007000700340007000700070007000700070007000700070007000700070007000700070007000700070007
+0007000700070007000700070007000700070007000700070007003500070007003600070007000700380037003A0039
+000700070007000700070007000700070007003B0007000700070007000700070007000700070007000700070007003C
+003D00070007003E000700070007000700070007003F0007000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700210021000700400007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+000700070007000700070007000700070000000000000000000000000000000000000000773C85013E7EFFBFBE7EFFBF
+FFFCFFFFFEFDFF3FFFF3F3F9FFFFFF3F0000000000018003DFFFFFF0FF3FFFCFCFFFFFFF000FFFC00000000000000000
+0000000001FF00003F0000000000001F00000000000000000000001B441000000001D7F00001FC00007F7C0002370000
+0200708B02000000708B000000C000000000000000000000FCCF0006033FFCFC00000000000000000000000000000000
+00000080000000000000000000000000000000000000007C0000000001E0000000000000000000000008000500000000
+00000000000000000000000000000000000000000000000000000000000000000000000000120200FF00000000000000
+0000000000000000B00018000000000000000000004800004E0000000000000000000000000000000000000000000000
+00000000000000003000190000000000001000000000000000001C000000000000000000000000000000010000000000
+000000000000000000000D8100000000000000000000000000001C000000000000000000000000007400000000000000
+000000000008000000000000000000000000000000080000300000000000000000001000000000001084200803E80200
+200800020200108400000000000000000000000000000040000000000000000000000000000000000000000010000000
+00045540280000000000000B000000000000000000000000000000000000000000000000F7FF7000FFFFBFFF010007FF
+F8000000FFFFFFFF0000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0FFFFFFFFFFFFFFFFFFFFFFF03FFFFFF
+3F3FFFFFFFFFFFFFAAFF3F3F3FFFFFFFFFFFFFFFFFDFFFFFEFCFFFDF7FDCFFFF008207FF50D8807080800380FFF30000
+1FFF7FFF0000010000000000000000003E6FFEEFFBFBBD57FFFF03E1FFFFFFFF0C000200000040000000E00000000000
+000012100001B050000002920333E005000003330000F0000000000000003C0F00000000000006000000000000000000
+00000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000007FF
+000010000000000000000000007000000000000000000000100000000000000000000000000000000000000030000000
+000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000
+0000000000000000000000000000000080000000000000000000000000080000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFF003FFFFF0000000000000001074000005555500036DB02A5D81000005555500036DB02A5C7900000
+00000000FFFE0000FFFFFFFFFFFFFFFFFFFC7FFF0000000000000000000000007FFFFFFFFFFFFFFFFFFF00FF7FFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000010000
+000000000000000000000000031C00000000000000000000F00000000000020000000000000000000000000000000000
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000F00000000000000007FE53FFFFFFFFC65FFFFFFFFFFFF3FFF
+FFFFFFFFFFFFFFFF03FFFFFF00000000A0F8007F5F7FFFFFFFFFFFDBFFFFFFFFFFFFFFFF0003FFFFFFF80000FFFFFFFF
+FFFFFFFF3FFFFFFFFFFF0000FFFFFFFFFFFCFFFFFFFFFFFF000000FF1FFF000003FF0000FFFF0000FFF7FF9FFFD70F7F
+FFFFFFFFFFFFFFFFFFFFFFFF1FFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF1CFCFCFC00007F7F
+000000000000000000000000000000000000000000000000000002000000001000000000000000000000000000000000
+FFFFFFBE07FDFFFF00000000000000000000000000000000000000000000000014000000000008000000000000000000
+000000000000C00000000000000000000000000000000000000000000000000000000000000000000000180000000000
+0002402800000000000001A0000000000000000000000000000000000000000000000000580000000000000000000000
+00000000000000000000000000000000000000000C000000000000000000000000000000010000000000000000000000
+0000000000000000000000000000000000000000000001FE000000000000000000000000000000000000000000000000
+000000000000000000000000000007000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000FFC0000003FFFFFF0000000000000000C00000000000001F00000000F80000000000000100000000
+FFFFFFFFFFFFFFFFFFDFFFFFFFFFFFFFDFFFFFFFEBFFDE64FFFFFFEFFFFFFFFFDFDFE7BF7BFFFFFFFFFDFC5FFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF3FFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFCFFFFFFFFFFF00000000FFFF0000FFFFFFFF00003FFF
+00000000000000000000000000000000FFFFFFEF0AF7FE96AA96EA845EF7F7960FFFFBFF0FFFFBEE0000000000000000
+FFFF07FFFFFF7FFF0000FFFF00001C0000010000000000000000000000000000FFFF00070FFFFFFF000301FF00000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003FF0000
+3FFFFFFF0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000",
+);
 
 }
+
+
+static if (size_t.sizeof == 8)
+{
+//1856 bytes
+enum nfcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+000000000000000000000000000000200000000000000068",
+x"
+000000000000010000000000000001200000000000002000",
+x"
+030202020202010002060202050202040702020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000001000000000000000000020000000000050004000300000008000000070006
+00000000000A00090000000000000000000B000000000000000C000000000000000F0000000E000D0000000000000000
+000000100000000000000000000000000000000000000011000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000014001300120000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000017000000160015000000000019001800000000001A00000000000000000000
+00000000001B00000000000000000000000000000000000000000000001C000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000001D000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000001E001200120000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010361F8081A9FDF401000000000003F0000000000000080000000000000000000000000000000000000000000380000
+00000000000000000000000000000000100000000000000000000000FF000000400000000000000000000000B0800000
+0048000000000000000000004E0000000000000000000000000000000000000040000000000000000000000030C00000
+400000000000000000000000008000000000000000000000000000000040000000000000000000000000000000600004
+400000000000000000000000008000000000000000000000000000008000840000000000000000000168020010842008
+020010842008000200000000000000000000400000000000000000000000000000000000000000000000000000000000
+0000000000000000003FFFFE00000000FFFFFF0000000000000000000000000700200000000000000000000000000000
+0000000000000000000000000000000000000000000000002AAA00000000000048000000000000002A00C80808080A00
+000000000000000300000000000000000000000000000000000000000000000000000C40000000000000000000000000
+000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000
+00000000060000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFC657FE53FFFFFFF3FFFFFFFFFFFFFFFFFFFFFFFFFFF0000000003FFFFFF5F7FFC00A00000000000000000007FDB
+000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000
+000000800000000000000000000000000000000000000000000000000000000040000000000000000000000000800000
+090000000000000000000000000003A40000000000000000000000000000000024010000000000000000000000000000
+000000000000000000000000000000000000800000000000000000000000000000010000000000000000000000000000
+00000000000000000000000000000000000003FFC0000000000000000000000000000000000000000000000000000000
+000000000000000000000180000000000000000000000000000000000000000000000000000000000000001FC0000000
+F8000000000000000000000000000001000000003FFFFFFF000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000",
+);
+//2208 bytes
+enum nfdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+000000000000000000000000000000200000000000000078",
+x"
+000000000000010000000000000001600000000000002700",
+x"
+050403020202010002080202070202060902020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000300020001000000050006000500040009000800070005000C0005000B000A
+000500050005000D0005000500050005000E0005000500050010000F0005000500140013001200110005000500050005
+000500150005000500050005000500050005000500050016000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050017001700170017
+001700170017001700170017001700170017001700170017001700170017001700170017001700170017001700170017
+001700170017001700170017001700170017001700170017001800170017001700050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+001A0019001700050005000500050005000500050005000500050005001B000500050005000500050005000500050005
+001E0005001D001C000500050020001F0005000500210005000500050005000500050005002200050005000500050005
+000500050005000500050005002300050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005002400050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005002500170017000500050005000500050005000500050005000500050005
+000500050005000500050005000500050005000500050005000500050005000500050005000500050005000500050005
+000000000000000000000000000000000000000000000000BE7EFFBF3E7EFFBF7EF1FF3FFFFCFFFF7FFFFF3FFFF3F1F8
+0001800300000000FF31FFCFDFFFE000000FFFC0CFFFFFFF000000000000000000000000000000000000000000000000
+0000000000000000401000000000001B0001FC000001D7E00000000000187C00020000000200708B00C00000708B0000
+0000000000000000033FFCFCFCCF00060000000000000000000000000000000000000000000000000000000000000000
+0000007C00000000000000000000000000000000000000000000000000080005001202000000000000000000FF000000
+000000000000000000000000B00018000048000000000000000000004E00000000000000000000000000000000000000
+0000000000000000000000003000190000000000001000000000000000001C0000000000000000000000000000000100
+00000000000000000000000000000D8100000000000000000000000000001C0000000000000000000000000074000000
+000000000000000001680200108420080200108420080002000000000000000000000040000000000000000000000000
+000000000000000000000000000000002800000000045540000000000000000B00000000000000000000000000000000
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0BFFFFFF03FFFFFFFFFFFFFFFFFFFFFF3F3FFFFF3FFFFFFFAAFF3F3F
+5FDFFFFFFFFFFFFF3FDCFFFFEFCFFFDE0000000000000003000000000000000000000000000000000000000000000000
+00000C40000000000000000000000000000040000C000000000000000000E00000000050000012100333E00500000292
+0000F0000000033300003C0F000000000000060000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000010000000000000000000000036DB02A555555000
+55555000401000004790000036DB02A5FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000FFFFFFFFF0000000000000000FFFFFC657FE53FFFFFFF3FFFFFFFFFFF
+FFFFFFFFFFFFFFFF0000000003FFFFFF5F7FFC00A00000000000000000007FDB00000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000100000020000000000000000000000000000000000
+000008001400000000000000000000000000C00000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000001800000000000002402800000000000001A000000000000000000000000000000000
+58000000000000000000000000000000000000000000000000000000000000000C000000000000000000000000000000
+0100000000000000000000000000000000000000000000000000000000000000000001FE000000000000000000000000
+000000000000000000000000000000000000000000000000000007000000000000000000000000000000000000000000
+00000000000000000000001FC0000000F8000000000000000000000000000001000000003FFFFFFF0000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+);
+//3008 bytes
+enum nfkcQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+000000000000000000000000000000200000000000000078",
+x"
+000000000000010000000000000001600000000000004000",
+x"
+040203020202010008070202060202050902020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000300020001000000040006000500040009000800070004000D000C000B000A
+00040004000F000E00040004000400040010000400040004001300120011000400170016001500140004000400040018
+0004001900040004001D001C001B001A00210020001F001E000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004002300220004000400240004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400260025002100040029002800270021
+0004000400040004002A00040004000400040004000400040004000400040004002D0004002C002B00040004002F002E
+000400040030000400040004000400040004000400310004000400040004000400040004000400040004000400320004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400330004000400340004003800370036003500040004000400040004000400040004
+0004000400040039000400040004000400040004000400040004003A000400040004003C003B00040004000400040004
+003D00040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004003E00210021000400040004000400040004000400040004000400040004
+000400040004000400040004000400040004000400040004000400040004000400040004000400040004000400040004
+00000000000000000000000000000000773C8501000000000000000000000000800C0000000000008000000000000201
+0000000000000000000E000000001FF00000000000000000000000000000000001FF0000000000000000001F3F000000
+010361F8081A9FDF441000000000003F00000000000000B002370000007F000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000
+000000000000000001E000000038000000000000000000000000000000000000100000000000000000000000FF000000
+400000000000000000000000B08000000048000000000000000000004E00000000000000000000000000000000000000
+40000000000000000000000030C000004000000000000000000000000080000000000000000000000000000000400000
+000000000000000000000000006000044000000000000000000000000080000000000000000000000000000080008400
+0008000000000000000000000000000000080000000000000000000030000000000000000000100003E8020010842008
+020010842008000200000000000000000000400000000000000000000000000000000000000000001000000000000000
+0000000000000000003FFFFE00000000FFFFFF0000000000000000000000000700200000000000000000000000000000
+00000000000000000000000000000000F7FF700000000000010007FFFFFFBFFFFFFFFFFFF80000000000000000000000
+00000000000000000000000000000000000000000C000000000000000000000000000000000000002AAA000000000000
+E8000000000000006A00E808E808EA0350D88070008207FFFFF3000080800380000001001FFF7FFF0000000000000000
+FBFBBD573E6FFEEFFFFFFFFFFFFF03E1000000000000020000000000000000000001B000000000000000000000000000
+000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000
+0000000000000000FFFFFFFF00000000FFFFFFFFFFFFFFFF000007FFFFFFFFFF00000000000010000070000000000000
+000000000000000000000000100000000000000000000000300000000000000000000000000000000000000000000000
+000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000800000000008000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000003FFFFF
+07400000000000010000000000000000000000009E0000008000000000000000FFFE000000000000FFFFFFFFFFFFFFFF
+00000000FFFC7FFF0000000000000000FFFFFFFF7FFFFFFF7FFFFFFFFFFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000
+00000000300000000000000000000000000000000000000000010000000000000000000000000000031C000000000000
+000000000000000000000200F000000000000000000000000000000000000000FFFFFC657FE53FFFFFFF3FFFFFFFFFFF
+FFFFFFFFFFFFFFFF0000000003FFFFFF5F7FFFFFA0F8007FFFFFFFFFFFFFFFDB0003FFFFFFFFFFFFFFFFFFFFFFF80000
+3FFFFFFFFFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFCFFFF1FFF0000000000FFFFFF000003FF0000FFD70F7FFFF7FF9F
+FFFFFFFFFFFFFFFF1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF7FFFFFFFFFFFFFFF00007F7F1CFCFCFC
+0000000000000000000000000000000007FDFFFFFFFFFFBE000000000000000000000000000000000000000000000000
+040000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000
+40000000000000000000000000800000090000000000000000000000000003A400000000000000000000000000000000
+240100000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000
+0001000000000000000000000000000000000000000000000000000000000000000003FFC00000000000000000000000
+000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000003FFFFFFFFC0000000000000000000000000001FC0000000
+F8000000000000000000000000000001FFFFFFFFFFFFFFFFFFFFFFFFFFDFFFFFEBFFDE64DFFFFFFFFFFFFFFFFFFFFFEF
+7BFFFFFFDFDFE7BFFFFFFFFFFFFDFC5FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFF3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFCFFF
+FFFF00000000000000003FFFFFFFFFFF000000000000000000000000000000000AF7FE96FFFFFFEF5EF7F796AA96EA84
+0FFFFBEE0FFFFBFF0000000000000000FFFF7FFFFFFF07FF00001C000000FFFF00000000000100000000000000000000
+0FFFFFFFFFFF000700000000000301FF0000000000000000000000000000000000000000000000000000000000000000
+000000000000000003FF000000000000000000003FFFFFFF000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000",
+);
+//3136 bytes
+enum nfkdQCTrieEntries = TrieEntry!(bool, 8, 5, 8)(x"
+000000000000000000000000000000200000000000000080",
+x"
+000000000000010000000000000001800000000000004200",
+x"
+050403020202010009080202070202060A02020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202
+020202020202020202020202020202020202020202020202020202020202020202020202020202020000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000030002000100000007000600050004000A000900080007000E000D000C000B
+000700070007000F00070007000700070010000700070007001300120011000700170016001500140007000700070018
+0007001900070007001D001C001B001A00210020001F001E000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007002300220007000700240007000700070021002100210021
+002100210021002100210021002100210021002100210021002100210021002100210021002100210021002100210021
+002100210021002100210021002100210021002100210021002500210021002100070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+0027002600210007002A0029002800210007000700070007002C0007002B000700070007000700070007000700070007
+002F0007002E002D00070007003100300007000700320007000700070007000700070007003300070007000700070007
+000700070007000700070007003400070007000700070007000700070007000700070007000700070007000700070007
+00070007000700070007000700070007000700070007000700070007000700350007000700360007003A003900380037
+00070007000700070007000700070007000700070007003B000700070007000700070007000700070007003C00070007
+0007003E003D00070007000700070007003F000700070007000700070007000700070007000700070007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070040002100210007000700070007
+000700070007000700070007000700070007000700070007000700070007000700070007000700070007000700070007
+0007000700070007000700070007000700000000000000000000000000000000773C850100000000BE7EFFBF3E7EFFBF
+FEFDFF3FFFFCFFFFFFFFFF3FFFF3F3F90001800300000000FF3FFFCFDFFFFFF0000FFFC0CFFFFFFF0000000000000000
+01FF0000000000000000001F3F0000000000000000000000441000000000001B0001FC000001D7F002370000007F7C00
+020000000200708B00C00000708B00000000000000000000033FFCFCFCCF000600000000000000000000000000000000
+000000000000008000000000000000000000007C0000000001E000000000000000000000000000000000000000080005
+0000000000000000000000000000000000000000000000000000000000000000001202000000000000000000FF000000
+000000000000000000000000B00018000048000000000000000000004E00000000000000000000000000000000000000
+0000000000000000000000003000190000000000001000000000000000001C0000000000000000000000000000000100
+00000000000000000000000000000D8100000000000000000000000000001C0000000000000000000000000074000000
+0008000000000000000000000000000000080000000000000000000030000000000000000000100003E8020010842008
+020010842008000200000000000000000000004000000000000000000000000000000000000000001000000000000000
+2800000000045540000000000000000B00000000000000000000000000000000F7FF700000000000010007FFFFFFBFFF
+FFFFFFFFF80000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0FFFFFFF03FFFFFFFFFFFFFF
+FFFFFFFF3F3FFFFF3FFFFFFFAAFF3F3FFFDFFFFFFFFFFFFF7FDCFFFFEFCFFFDF50D88070008207FFFFF3000080800380
+000001001FFF7FFF0000000000000000FBFBBD573E6FFEEFFFFFFFFFFFFF03E1000040000C000200000000000000E000
+0001B050000012100333E005000002920000F0000000033300003C0F0000000000000600000000000000000000000000
+000000000000000000000000000000000000000000000000FFFFFFFF00000000FFFFFFFFFFFFFFFF000007FFFFFFFFFF
+000000000000100000700000000000000000000000000000000000001000000000000000000000003000000000000000
+000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000800000000008000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFF00000000003FFFFF074000000000000136DB02A55555500055555000D8100000C790000036DB02A5
+FFFE000000000000FFFFFFFFFFFFFFFF00000000FFFC7FFF0000000000000000FFFFFFFF7FFFFFFF7FFFFFFFFFFF00FF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+000000000000000000000000000000000000000030000000000000000000000000000000000000000001000000000000
+0000000000000000031C000000000000000000000000000000000200F000000000000000000000000000000000000000
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000FFFFFFFFF0000000000000000FFFFFC657FE53FFFFFFF3FFFFFFFFFFF
+FFFFFFFFFFFFFFFF0000000003FFFFFF5F7FFFFFA0F8007FFFFFFFFFFFFFFFDB0003FFFFFFFFFFFFFFFFFFFFFFF80000
+3FFFFFFFFFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFCFFFF1FFF0000000000FFFFFF000003FF0000FFD70F7FFFF7FF9F
+FFFFFFFFFFFFFFFF1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF7FFFFFFFFFFFFFFF00007F7F1CFCFCFC
+000000000000000000000000000000000000000000000000000000100000020000000000000000000000000000000000
+07FDFFFFFFFFFFBE00000000000000000000000000000000000000000000000000000800140000000000000000000000
+0000C0000000000000000000000000000000000000000000000000000000000000000000000000000000000000001800
+000000000002402800000000000001A00000000000000000000000000000000058000000000000000000000000000000
+000000000000000000000000000000000C00000000000000000000000000000001000000000000000000000000000000
+00000000000000000000000000000000000001FE00000000000000000000000000000000000000000000000000000000
+000000000000000000000700000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000003FFFFFFFFC0000000000000000000000000001FC0000000F8000000000000000000000000000001
+FFFFFFFFFFFFFFFFFFFFFFFFFFDFFFFFEBFFDE64DFFFFFFFFFFFFFFFFFFFFFEF7BFFFFFFDFDFE7BFFFFFFFFFFFFDFC5F
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF3FFFFFFFFFFFFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFCFFFFFFF00000000000000003FFFFFFFFFFF
+000000000000000000000000000000000AF7FE96FFFFFFEF5EF7F796AA96EA840FFFFBEE0FFFFBFF0000000000000000
+FFFF7FFFFFFF07FF00001C000000FFFF000000000001000000000000000000000FFFFFFFFFFF000700000000000301FF
+0000000000000000000000000000000000000000000000000000000000000000000000000000000003FF000000000000
+000000003FFFFFFF00000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000",
+);
+
+}
+

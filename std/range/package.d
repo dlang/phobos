@@ -232,10 +232,10 @@ module std.range;
 public import std.array;
 public import std.range.interfaces;
 public import std.range.primitives;
-public import std.typecons : Flag, Yes, No;
+public import std.typecons : Flag, Yes, No, Rebindable, rebindable;
 
 import std.internal.attributes : betterC;
-import std.meta : allSatisfy, anySatisfy, staticMap;
+import std.meta : aliasSeqOf, allSatisfy, anySatisfy, staticMap;
 import std.traits : CommonType, isCallable, isFloatingPoint, isIntegral,
     isPointer, isSomeFunction, isStaticArray, Unqual, isInstanceOf;
 
@@ -313,12 +313,18 @@ if (isBidirectionalRange!(Unqual!Range))
             {
                 @property void front(ElementType!R val)
                 {
-                    source.back = val;
+                    import core.lifetime : forward;
+
+                    // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    source.back = __ctfe ? val : forward!val;
                 }
 
                 @property void back(ElementType!R val)
                 {
-                    source.front = val;
+                    import core.lifetime : forward;
+
+                    // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    source.front = __ctfe ? val : forward!val;
                 }
             }
 
@@ -330,7 +336,10 @@ if (isBidirectionalRange!(Unqual!Range))
                 {
                     void opIndexAssign(ElementType!R val, size_t n)
                     {
-                        source[retroIndex(n)] = val;
+                        import core.lifetime : forward;
+
+                        // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                        source[retroIndex(n)] = __ctfe ? val : forward!val;
                     }
                 }
 
@@ -474,6 +483,45 @@ pure @safe nothrow @nogc unittest
     foreach (x; data.retro) {}
 }
 
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    immutable foo = [S(1), S(2), S(3)];
+    auto r = retro(foo);
+    assert(equal(r, [S(3), S(2), S(1)]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[5] arr = [Handle(0), Handle(1), Handle(2), Handle(3), Handle(4)];
+    auto range = arr[].retro();
+
+    called = false;
+    range.front = Handle(42);
+    assert(called);
+
+    called = false;
+    range.back = Handle(42);
+    assert(called);
+
+    called = false;
+    range[2] = Handle(42);
+    assert(called);
+}
 
 /**
 Iterates range `r` with stride `n`. If the range is a
@@ -585,7 +633,10 @@ do
             {
                 @property void front(ElementType!R val)
                 {
-                    source.front = val;
+                    import core.lifetime : forward;
+
+                    // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    source.front = __ctfe ? val : forward!val;
                 }
             }
 
@@ -864,6 +915,38 @@ pure @safe nothrow unittest
     assert(equal(s, [1L, 4L, 7L]));
 }
 
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    immutable foo = [S(1), S(2), S(3), S(4), S(5)];
+    auto r = stride(foo, 3);
+    assert(equal(r, [S(1), S(4)]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[5] arr = [Handle(0), Handle(1), Handle(2), Handle(3), Handle(4)];
+    auto range = arr[].stride(2);
+
+    called = false;
+    range.front = Handle(42);
+    assert(called);
+}
+
 /**
 Spans multiple ranges in sequence. The function `chain` takes any
 number of ranges and returns a $(D Chain!(R1, R2,...)) object. The
@@ -871,6 +954,11 @@ ranges may be different, but they must have the same element type. The
 result is a range that offers the `front`, `popFront`, and $(D
 empty) primitives. If all input ranges offer random access and $(D
 length), `Chain` offers them as well.
+
+Note that repeated random access of the resulting range is likely
+to perform somewhat badly since lengths of the ranges in the chain have to be
+added up for each random access operation. Random access to elements of
+the first remaining range is still efficient.
 
 If only one range is offered to `Chain` or `chain`, the $(D
 Chain) type exits the picture by aliasing itself directly to that
@@ -907,7 +995,12 @@ if (Ranges.length > 0 &&
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }
 
-            enum bool allSameType = allSatisfy!(sameET, R);
+            enum bool allSameType = allSatisfy!(sameET, R),
+                bidirectional = allSatisfy!(isBidirectionalRange, R),
+                mobileElements = allSatisfy!(hasMobileElements, R),
+                assignableElements = allSameType
+                    && allSatisfy!(hasAssignableElements, R);
+
             alias ElementType = RvalueElementType;
 
             static if (allSameType && allSatisfy!(hasLvalueElements, R))
@@ -925,17 +1018,49 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            // This is the entire state
             R source;
-            // TODO: use a vtable (or more) instead of linear iteration
+            size_t frontIndex;
+            // Always points to index one past the last non-empty range,
+            // because otherwise decrementing while pointing to first range
+            // would overflow to size_t.max.
+            static if (bidirectional) size_t backIndex;
+            else enum backIndex = source.length;
+
+            this(typeof(Result.tupleof) fields)
+            {
+                this.tupleof = fields;
+            }
 
         public:
             this(R input)
             {
-                // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
-                static foreach (i, v; input)
+                frontIndex = source.length;
+                static if (bidirectional) backIndex = 0;
+
+                foreach (i, ref v; input) source[i] = v;
+
+                // We do this separately to avoid invoking `empty` needlessly.
+                // While not recommended, a range may depend on side effects of
+                // `empty` call.
+                foreach (i, ref v; input) if (!v.empty)
                 {
-                    source[i] = v;
+                    frontIndex = i;
+                    static if (bidirectional) backIndex = i+1;
+                    break;
+                }
+
+                // backIndex is already set in the first loop to
+                // as frontIndex+1, so we'll use that if we don't find a
+                // non-empty range here.
+                static if (bidirectional)
+                    static foreach_reverse (i; 1 .. R.length + 1)
+                {
+                    if (i <= frontIndex + 1) return;
+                    if (!input[i-1].empty)
+                    {
+                        backIndex = i;
+                        return;
+                    }
                 }
             }
 
@@ -950,118 +1075,219 @@ if (Ranges.length > 0 &&
             {
                 @property bool empty()
                 {
-                    foreach (i, Unused; R)
+                    if (frontIndex == 0)
                     {
-                        if (!source[i].empty) return false;
+                        // special handling: we might be in Range.init state!
+                        // For instance, `format!"%s"` uses Range.init to ensure
+                        // that formatting is possible.
+                        // In that case, we must still behave in an internally consistent way.
+                        return source[0].empty;
                     }
-                    return true;
+                    return frontIndex >= backIndex;
                 }
             }
 
             static if (allSatisfy!(isForwardRange, R))
+            {
                 @property auto save()
                 {
-                    auto saveSource(size_t len)()
-                    {
-                        import std.typecons : tuple;
-                        static assert(len > 0);
-                        static if (len == 1)
-                        {
-                            return tuple(source[0].save);
-                        }
-                        else
-                        {
-                            return saveSource!(len - 1)() ~
-                                tuple(source[len - 1].save);
-                        }
-                    }
-                    return Result(saveSource!(R.length).expand);
+                    auto saveI(size_t i)() => source[i].save;
+
+                    // TODO: this has the constructor needlessly refind
+                    // frontIndex and backIndex. It'd be better to just copy
+                    // those from `.this`.
+                    auto saveResult =
+                        Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
+
+                    return saveResult;
                 }
+            }
 
             void popFront()
             {
-                foreach (i, Unused; R)
+                sw1: switch (frontIndex)
                 {
-                    if (source[i].empty) continue;
-                    source[i].popFront();
-                    return;
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        source[i].popFront();
+                        break sw1;
+                    }
+
+                case R.length:
+                    assert(0, "Attempt to `popFront` of empty `chain` range");
+
+                default:
+                    assert(0, "Internal library error. Please report it.");
                 }
-                assert(false, "Attempt to `popFront` of empty `chain` range");
+
+                sw2: switch (frontIndex)
+                {
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        if (source[i].empty)
+                        {
+                            frontIndex++;
+                            goto case;
+                        }
+                        else break sw2;
+                    }
+
+                // Only possible to reach from goto of previous case.
+                case R.length:
+                    break;
+
+                default:
+                    assert(0, "Internal library error. Please report it.");
+                }
             }
 
             @property auto ref front()
             {
-                foreach (i, Unused; R)
+                switch (frontIndex)
                 {
-                    if (source[i].empty) continue;
-                    return fixRef(source[i].front);
+                    static foreach (i; 0 .. R.length)
+                    {
+                    case i:
+                        return fixRef(source[i].front);
+                    }
+
+                case R.length:
+                    assert(0, "Attempt to get `front` of empty `chain` range");
+
+                default:
+                    assert(0, "Internal library error. Please report it.");
                 }
-                assert(false, "Attempt to get `front` of empty `chain` range");
             }
 
-            static if (allSameType && allSatisfy!(hasAssignableElements, R))
+            static if (assignableElements)
             {
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
 
                 @property void front(RvalueElementType v)
                 {
-                    foreach (i, Unused; R)
+                    import core.lifetime : forward;
+
+                    sw: switch (frontIndex)
                     {
-                        if (source[i].empty) continue;
-                        source[i].front = v;
-                        return;
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                            source[i].front = __ctfe ? v : forward!v;
+                            break sw;
+                        }
+
+                    case R.length:
+                        assert(0, "Attempt to set `front` of empty `chain` range");
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    assert(false, "Attempt to set `front` of empty `chain` range");
                 }
             }
 
-            static if (allSatisfy!(hasMobileElements, R))
+            static if (mobileElements)
             {
                 RvalueElementType moveFront()
                 {
-                    foreach (i, Unused; R)
+                    switch (frontIndex)
                     {
-                        if (source[i].empty) continue;
-                        return source[i].moveFront();
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            return source[i].moveFront();
+                        }
+
+                    case R.length:
+                        assert(0, "Attempt to `moveFront` of empty `chain` range");
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    assert(false, "Attempt to `moveFront` of empty `chain` range");
                 }
             }
 
-            static if (allSatisfy!(isBidirectionalRange, R))
+            static if (bidirectional)
             {
                 @property auto ref back()
                 {
-                    foreach_reverse (i, Unused; R)
+                    switch (backIndex)
                     {
-                        if (source[i].empty) continue;
-                        return fixRef(source[i].back);
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            return fixRef(source[i-1].back);
+                        }
+
+                    case 0:
+                        assert(0, "Attempt to get `back` of empty `chain` range");
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    assert(false, "Attempt to get `back` of empty `chain` range");
                 }
 
                 void popBack()
                 {
-                    foreach_reverse (i, Unused; R)
+                    sw1: switch (backIndex)
                     {
-                        if (source[i].empty) continue;
-                        source[i].popBack();
-                        return;
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            source[i-1].popBack();
+                            break sw1;
+                        }
+
+                    case 0:
+                        assert(0, "Attempt to `popFront` of empty `chain` range");
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    assert(false, "Attempt to `popBack` of empty `chain` range");
+
+                    sw2: switch (backIndex)
+                    {
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            if (source[i-1].empty)
+                            {
+                                backIndex--;
+                                goto case;
+                            }
+                            else break sw2;
+                        }
+
+                    // Only possible to reach from goto of previous case.
+                    case 0:
+                        break;
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
+                    }
                 }
 
-                static if (allSatisfy!(hasMobileElements, R))
+                static if (mobileElements)
                 {
                     RvalueElementType moveBack()
                     {
-                        foreach_reverse (i, Unused; R)
+                        switch (backIndex)
                         {
-                            if (source[i].empty) continue;
-                            return source[i].moveBack();
+                            static foreach_reverse (i; 1 .. R.length + 1)
+                            {
+                            case i:
+                                return source[i-1].moveBack();
+                            }
+
+                        case 0:
+                            assert(0, "Attempt to `moveBack` of empty `chain` range");
+
+                        default:
+                            assert(0, "Internal library error. Please report it.");
                         }
-                        assert(false, "Attempt to `moveBack` of empty `chain` range");
                     }
                 }
 
@@ -1069,13 +1295,24 @@ if (Ranges.length > 0 &&
                 {
                     @property void back(RvalueElementType v)
                     {
-                        foreach_reverse (i, Unused; R)
+                        import core.lifetime : forward;
+
+                        sw: switch (backIndex)
                         {
-                            if (source[i].empty) continue;
-                            source[i].back = v;
-                            return;
+                            static foreach_reverse (i; 1 .. R.length + 1)
+                            {
+                            case i:
+                                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                                source[i - 1].back = __ctfe ? v : forward!v;
+                                break sw;
+                            }
+
+                        case 0:
+                            assert(0, "Attempt to set `back` of empty `chain` range");
+
+                        default:
+                            assert(0, "Internal library error. Please report it.");
                         }
-                        assert(false, "Attempt to set `back` of empty `chain` range");
                     }
                 }
             }
@@ -1084,11 +1321,24 @@ if (Ranges.length > 0 &&
             {
                 @property size_t length()
                 {
-                    size_t result;
-                    foreach (i, Unused; R)
+                    size_t result = 0;
+                    sw: switch (frontIndex)
                     {
-                        result += source[i].length;
+                        static foreach (i; 0 .. R.length)
+                        {
+                        case i:
+                            result += source[i].length;
+                            if (backIndex == i+1) break sw;
+                            else goto case;
+                        }
+
+                    case R.length:
+                        break;
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
+
                     return result;
                 }
 
@@ -1099,106 +1349,182 @@ if (Ranges.length > 0 &&
             {
                 auto ref opIndex(size_t index)
                 {
-                    foreach (i, Range; R)
+                    switch (frontIndex)
                     {
-                        static if (isInfinite!(Range))
+                        static foreach (i; 0 .. R.length)
                         {
-                            return source[i][index];
+                        case i:
+                            static if (!isInfinite!(R[i]))
+                            {
+                                immutable length = source[i].length;
+                                if (index >= length)
+                                {
+                                    index -= length;
+                                    goto case;
+                                }
+                            }
+
+                            return fixRef(source[i][index]);
                         }
-                        else
-                        {
-                            immutable length = source[i].length;
-                            if (index < length) return fixRef(source[i][index]);
-                            index -= length;
-                        }
+
+                    case R.length:
+                        assert(0, "Attempt to access out-of-bounds index of `chain` range");
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    assert(false, "Attempt to access out-of-bounds index of `chain` range");
                 }
 
-                static if (allSatisfy!(hasMobileElements, R))
+                static if (mobileElements)
                 {
                     RvalueElementType moveAt(size_t index)
                     {
-                        foreach (i, Range; R)
+                        switch (frontIndex)
                         {
-                            static if (isInfinite!(Range))
+                            static foreach (i; 0 .. R.length)
                             {
+                            case i:
+                                static if (!isInfinite!(R[i]))
+                                {
+                                    immutable length = source[i].length;
+                                    if (index >= length)
+                                    {
+                                        index -= length;
+                                        goto case;
+                                    }
+                                }
+
                                 return source[i].moveAt(index);
                             }
-                            else
-                            {
-                                immutable length = source[i].length;
-                                if (index < length) return source[i].moveAt(index);
-                                index -= length;
-                            }
+
+                        case R.length:
+                            assert(0, "Attempt to move out-of-bounds index of `chain` range");
+
+                        default:
+                            assert(0, "Internal library error. Please report it.");
                         }
-                        assert(false, "Attempt to move out-of-bounds index of `chain` range");
                     }
                 }
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
                     void opIndexAssign(ElementType v, size_t index)
                     {
-                        foreach (i, Range; R)
+                        import core.lifetime : forward;
+
+                        sw: switch (frontIndex)
                         {
-                            static if (isInfinite!(Range))
+                            static foreach (i; 0 .. R.length)
                             {
-                                source[i][index] = v;
-                            }
-                            else
-                            {
-                                immutable length = source[i].length;
-                                if (index < length)
+                            case i:
+                                static if (!isInfinite!(R[i]))
                                 {
-                                    source[i][index] = v;
-                                    return;
+                                    immutable length = source[i].length;
+                                    if (index >= length)
+                                    {
+                                        index -= length;
+                                        goto case;
+                                    }
                                 }
-                                index -= length;
+
+                                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                                source[i][index] = __ctfe ? v : forward!v;
+                                break sw;
                             }
+
+                        case R.length:
+                            assert(0, "Attempt to write out-of-bounds index of `chain` range");
+
+                        default:
+                            assert(0, "Internal library error. Please report it.");
                         }
-                        assert(false, "Attempt to write out-of-bounds index of `chain` range");
                     }
             }
 
             static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
                 auto opSlice(size_t begin, size_t end) return scope
                 {
-                    auto result = this;
-                    foreach (i, Unused; R)
+                    // force staticMap type conversion to Rebindable
+                    static struct ResultRanges
                     {
-                        immutable len = result.source[i].length;
-                        if (len < begin)
-                        {
-                            result.source[i] = result.source[i]
-                                [len .. len];
-                            begin -= len;
-                        }
-                        else
-                        {
-                            result.source[i] = result.source[i]
-                                [begin .. len];
-                            break;
-                        }
+                        staticMap!(Rebindable, typeof(source)) fields;
                     }
-                    auto cut = length;
-                    cut = cut <= end ? 0 : cut - end;
-                    foreach_reverse (i, Unused; R)
+                    auto sourceI(size_t i)() => rebindable(this.source[i]);
+                    auto resultRanges = ResultRanges(staticMap!(sourceI, aliasSeqOf!(R.length.iota))).fields;
+                    size_t resultFrontIndex = this.frontIndex;
+                    static if (bidirectional)
+                        size_t resultBackIndex = this.backIndex;
+
+                    sw: switch (frontIndex)
                     {
-                        immutable len = result.source[i].length;
-                        if (cut > len)
+                        static foreach (i; 0 .. R.length)
                         {
-                            result.source[i] = result.source[i]
-                                [0 .. 0];
-                            cut -= len;
+                        case i:
+                            immutable len = resultRanges[i].length;
+                            if (len <= begin)
+                            {
+                                resultRanges[i] = resultRanges[i]
+                                    [len .. len];
+                                begin -= len;
+                                resultFrontIndex++;
+                                goto case;
+                            }
+                            else
+                            {
+                                resultRanges[i] = resultRanges[i]
+                                    [begin .. len];
+                                break sw;
+                            }
                         }
-                        else
-                        {
-                            result.source[i] = result.source[i]
-                                [0 .. len - cut];
-                            break;
-                        }
+
+                    case R.length:
+                        assert(begin == 0,
+                            "Attempt to access out-of-bounds slice of `chain` range");
+                        break;
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
                     }
-                    return result;
+
+                    // Overflow intentional if end index too big.
+                    // This will trigger the bounds check failure below.
+                    auto cut = length - end;
+
+                    sw2: switch (backIndex)
+                    {
+                        static foreach_reverse (i; 1 .. R.length + 1)
+                        {
+                        case i:
+                            immutable len = resultRanges[i-1].length;
+                            if (len <= cut)
+                            {
+                                resultRanges[i-1] = resultRanges[i-1]
+                                    [0 .. 0];
+                                cut -= len;
+                                resultBackIndex--;
+                                goto case;
+                            }
+                            else
+                            {
+                                resultRanges[i-1] = resultRanges[i-1]
+                                    [0 .. len - cut];
+                                break sw2;
+                            }
+                        }
+
+                    case 0:
+                        assert(cut == 0, end > length?
+                            "Attempt to access out-of-bounds slice of `chain` range":
+                            "Attempt to access negative length slice of `chain` range");
+                        break sw2;
+
+                    default:
+                        assert(0, "Internal library error. Please report it.");
+                    }
+
+                    static if (bidirectional)
+                        return Result(resultRanges, resultFrontIndex, resultBackIndex);
+                    else
+                        return Result(resultRanges, resultFrontIndex);
                 }
         }
         return Result(rs);
@@ -1293,6 +1619,10 @@ pure @safe nothrow unittest
         auto s = chain(arr1, arr2, arr3);
         assert(s[5] == 6);
         assert(equal(s, witness));
+        assert(s[4 .. 6].equal(arr2));
+        assert(s[2 .. 5].equal([3, 4, 5]));
+        assert(s[0 .. 0].empty);
+        assert(s[7 .. $].empty);
         assert(s[5] == 6);
     }
     {
@@ -1390,6 +1720,88 @@ pure @safe unittest
     auto r = refRange(&s).chain("bar");
     assert(equal(r.save, "foobar"));
     assert(equal(r, "foobar"));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23844
+pure @safe unittest
+{
+    struct S
+    {
+        immutable int value;
+    }
+
+    auto range = chain(only(S(5)), only(S(6)));
+    assert(range.array == [S(5), S(6)]);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24064
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.typecons : Nullable;
+
+    immutable Nullable!string foo = "b";
+    string[] bar = ["a"];
+    assert(chain(bar, foo).equal(["a", "b"]));
+}
+
+pure @safe nothrow @nogc unittest
+{
+    // support non-copyable items
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    S[2] s0, s1;
+    foreach (ref el; chain(s0[], s1[]))
+    {
+        int n = el.v;
+    }
+
+    S[] s2, s3;
+    foreach (ref el; chain(s2, s3))
+    {
+        int n = el.v;
+    }
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24243
+pure @safe nothrow unittest
+{
+    import std.algorithm.iteration : filter;
+
+    auto range = chain([2], [3].filter!"a");
+
+    // This might happen in format!"%s"(range), for instance.
+    assert(typeof(range).init.empty);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[5] arr = [Handle(0), Handle(1), Handle(2), Handle(3), Handle(4)];
+    auto range = arr[0 .. 2].chain(arr[4 .. 5]);
+
+    called = false;
+    range.front = Handle(42);
+    assert(called);
+
+    called = false;
+    range.back = Handle(42);
+    assert(called);
+
+    called = false;
+    range[2] = Handle(42);
+    assert(called);
 }
 
 /**
@@ -1547,7 +1959,7 @@ private struct ChooseResult(Ranges...)
     this(this)
     {
         actOnChosen!((ref r) {
-                static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
+                static if (hasElaborateCopyConstructor!(typeof(r))) r.__xpostblit();
             })(this);
     }
 
@@ -1825,6 +2237,46 @@ pure @safe unittest
     auto chosen2 = chosen.save;
 }
 
+pure @safe nothrow unittest
+{
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    auto a = [S(1), S(2), S(3)];
+    auto b = [S(4), S(5), S(6)];
+
+    auto chosen = choose(true, a, b);
+    assert(chosen.front.v == 1);
+
+    auto chosen2 = choose(false, a, b);
+    assert(chosen2.front.v == 4);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=15708
+@safe unittest
+{
+    static struct HasPostblit
+    {
+        this(this) {}
+    }
+
+    static struct Range
+    {
+        bool empty;
+        int front;
+        void popFront() {}
+        HasPostblit member;
+    }
+
+    Range range;
+    int[] arr;
+
+    auto chosen = choose(true, range, arr);
+    auto copy = chosen;
+}
+
 /**
 Choose one of multiple ranges at runtime.
 
@@ -2075,7 +2527,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         }
     }
 
-    return Result(rs, 0);
+    size_t firstNonEmpty = size_t.max;
+    static foreach (i; 0 .. Rs.length)
+    {
+        if (firstNonEmpty == size_t.max && !rs[i].empty)
+            firstNonEmpty = i;
+    }
+
+    return Result(rs, firstNonEmpty);
 }
 
 ///
@@ -2121,6 +2580,28 @@ pure @safe unittest
     auto r = roundRobin(refRange(&f), refRange(&b));
     assert(equal(r.save, "fboaor"));
     assert(equal(r.save, "fboaor"));
+}
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct S {
+        int v;
+        @disable this(this);
+    }
+
+    S[] a = [ S(1), S(2) ];
+    S[] b = [ S(10), S(20) ];
+    auto r = roundRobin(a, b);
+    assert(equal(r, [ S(1), S(10), S(2), S(20) ]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24384
+@safe unittest
+{
+    auto r = roundRobin("", "a");
+    assert(!r.empty);
+    auto e = r.front;
 }
 
 /**
@@ -2313,12 +2794,14 @@ if (isInputRange!(Unqual!Range) &&
         /// ditto
         @property void front(ElementType!R v)
         {
+            import core.lifetime : forward;
+
             assert(!empty,
                 "Attempting to assign to the front of an empty "
                 ~ Take.stringof);
-            // This has to return auto instead of void because of
-            // https://issues.dlang.org/show_bug.cgi?id=4706
-            source.front = v;
+
+            // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+            source.front = __ctfe ? v : forward!v;
         }
 
     static if (hasMobileElements!R)
@@ -2615,6 +3098,25 @@ pure @safe nothrow @nogc unittest
     assert(r.take(2).equal(repeat(1, 2)));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    import std.algorithm.iteration : filter;
+
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[5] arr = [Handle(0), Handle(1), Handle(2), Handle(3), Handle(4)];
+    auto range = arr[].filter!(a => true)().take(3);
+
+    called = false;
+    range.front = Handle(42);
+    assert(called);
+}
 
 /**
 Similar to $(LREF take), but assumes that `range` has at least $(D
@@ -2694,10 +3196,14 @@ if (isInputRange!R)
             {
                 @property auto ref front(ElementType!R v)
                 {
+                    import core.lifetime : forward;
+
                     assert(!empty,
                         "Attempting to assign to the front of an empty "
                         ~ typeof(this).stringof);
-                    return _input.front = v;
+
+                    // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    return _input.front = __ctfe ? v : forward!v;
                 }
             }
         }
@@ -2832,6 +3338,26 @@ pure @safe nothrow unittest
         assert(r.takeExactly(6).takeExactly(2).equal([1, 2]));
         assert(r.takeExactly(6).take(2).equal([1, 2]));
     }}
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    import std.algorithm.iteration : filter;
+
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[5] arr = [Handle(0), Handle(1), Handle(2), Handle(3), Handle(4)];
+    auto range = arr[].filter!(a => true)().takeExactly(3);
+
+    called = false;
+    range.front = Handle(42);
+    assert(called);
 }
 
 /**
@@ -3567,24 +4093,17 @@ Returns:
 struct Repeat(T)
 {
 private:
-    //Store a non-qualified T when possible: This is to make Repeat assignable
-    static if ((is(T == class) || is(T == interface)) && (is(T == const) || is(T == immutable)))
-    {
-        import std.typecons : Rebindable;
-        alias UT = Rebindable!T;
-    }
-    else static if (is(T : Unqual!T) && is(Unqual!T : T))
-        alias UT = Unqual!T;
-    else
-        alias UT = T;
-    UT _value;
+    import std.typecons : Rebindable2;
+
+    // Store a rebindable T to make Repeat assignable.
+    Rebindable2!T _value;
 
 public:
     /// Range primitives
-    @property inout(T) front() inout { return _value; }
+    @property inout(T) front() inout { return _value.get; }
 
     /// ditto
-    @property inout(T) back() inout { return _value; }
+    @property inout(T) back() inout { return _value.get; }
 
     /// ditto
     enum bool empty = false;
@@ -3599,7 +4118,7 @@ public:
     @property auto save() inout { return this; }
 
     /// ditto
-    inout(T) opIndex(size_t) inout { return _value; }
+    inout(T) opIndex(size_t) inout { return _value.get; }
 
     /// ditto
     auto opSlice(size_t i, size_t j)
@@ -3624,7 +4143,12 @@ public:
 }
 
 /// Ditto
-Repeat!T repeat(T)(T value) { return Repeat!T(value); }
+Repeat!T repeat(T)(T value)
+{
+    import std.typecons : Rebindable2;
+
+    return Repeat!T(Rebindable2!T(value));
+}
 
 ///
 pure @safe nothrow unittest
@@ -3774,10 +4298,17 @@ private:
         alias fun = Fun[0];
 
     enum returnByRef_ = (functionAttributes!fun & FunctionAttribute.ref_) ? true : false;
-    static if (returnByRef_)
-        ReturnType!fun *elem_;
+
+    import std.traits : hasIndirections;
+    static if (!hasIndirections!(ReturnType!fun))
+        alias RetType = Unqual!(ReturnType!fun);
     else
-        ReturnType!fun elem_;
+        alias RetType = ReturnType!fun;
+
+    static if (returnByRef_)
+        RetType *elem_;
+    else
+        RetType elem_;
 public:
     /// Range primitives
     enum empty = false;
@@ -3866,6 +4397,13 @@ public:
     assert(g.front == f + 5);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=23319
+@safe pure nothrow unittest
+{
+    auto b = generate!(() => const(int)(42));
+    assert(b.front == 42);
+}
+
 /**
 Repeats the given forward range ad infinitum. If the original range is
 infinite (fact that would make `Cycle` the identity application),
@@ -3915,7 +4453,10 @@ if (isForwardRange!R && !isInfinite!R)
             /// ditto
             @property void front(ElementType!R val)
             {
-                _original[_index] = val;
+                import core.lifetime : forward;
+
+                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                _original[_index] = __ctfe ? val : forward!val;
             }
         }
 
@@ -4025,7 +4566,10 @@ if (isForwardRange!R && !isInfinite!R)
             /// ditto
             @property auto front(ElementType!R val)
             {
-                return _current.front = val;
+                import core.lifetime : forward;
+
+                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                return _current.front = __ctfe ? val : forward!val;
             }
         }
 
@@ -4366,6 +4910,35 @@ pure @safe unittest
     auto r = refRange(&s).cycle.take(4);
     assert(equal(r.save, "foof"));
     assert(equal(r.save, "foof"));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    import std.algorithm.iteration : filter;
+
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[3] arr = [Handle(0), Handle(1), Handle(2)];
+    {
+        auto range = arr[].cycle().take(5);
+
+        called = false;
+        range.front = Handle(42);
+        assert(called);
+    }
+    {
+        auto range = arr[].filter!(a => true)().cycle().take(5);
+
+        called = false;
+        range.front = Handle(42);
+        assert(called);
+    }
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
@@ -5497,10 +6070,13 @@ nothrow pure @system unittest
     Generate lockstep's opApply function as a mixin string.
     If withIndex is true prepend a size_t index to the delegate.
 */
-private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
+private struct LockstepMixin(Ranges...)
 {
+    import std.conv : text;
     import std.format : format;
 
+    string name;
+    string implName;
     string[] params;
     string[] emptyChecks;
     string[] dgArgs;
@@ -5508,76 +6084,103 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
     string indexDef;
     string indexInc;
 
-    if (withIndex)
+@safe pure:
+    this(bool withIndex, bool reverse)
     {
-        params ~= "size_t";
-        dgArgs ~= "index";
+        if (withIndex)
+        {
+            params ~= "size_t";
+            dgArgs ~= "index";
+            if (reverse)
+            {
+                indexDef = q{
+                    size_t index = ranges[0].length - 1;
+                    enforce(
+                        this.stoppingPolicy == StoppingPolicy.requireSameLength,
+                        "Indexed lockstep can only be used with foreach_reverse when " ~
+                        "stoppingPolicy == requireSameLength");
+
+                    foreach (range; ranges[1 .. $])
+                        enforce(range.length == ranges[0].length);
+                    };
+                indexInc = "--index;";
+            }
+            else
+            {
+                indexDef = "size_t index = 0;";
+                indexInc = "++index;";
+            }
+        }
+
+        foreach (idx, Range; Ranges)
+        {
+            params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
+            emptyChecks ~= format("!ranges[%s].empty", idx);
+            if (reverse)
+            {
+                dgArgs ~= format("ranges[%s].back", idx);
+                popFronts ~= format("ranges[%s].popBack();", idx);
+            }
+            else
+            {
+                dgArgs ~= format("ranges[%s].front", idx);
+                popFronts ~= format("ranges[%s].popFront();", idx);
+            }
+        }
+
         if (reverse)
         {
-            indexDef = q{
-                size_t index = ranges[0].length-1;
-                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength,
-                        "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
-
-                foreach (range; ranges[1..$])
-                    enforce(range.length == ranges[0].length);
-                };
-            indexInc = "--index;";
+            name = "opApplyReverse";
+            if (withIndex) implName = "opApplyReverseIdxImpl";
+            else           implName = "opApplyReverseImpl";
         }
         else
         {
-            indexDef = "size_t index = 0;";
-            indexInc = "++index;";
+            name = "opApply";
+            if (withIndex) implName = "opApplyIdxImpl";
+            else           implName = "opApplyImpl";
         }
     }
 
-    foreach (idx, Range; Ranges)
+const:
+    string getAlias()
     {
-        params ~= format("%sElementType!(Ranges[%s])", hasLvalueElements!Range ? "ref " : "", idx);
-        emptyChecks ~= format("!ranges[%s].empty", idx);
-        if (reverse)
-        {
-            dgArgs ~= format("ranges[%s].back", idx);
-            popFronts ~= format("ranges[%s].popBack();", idx);
-        }
-        else
-        {
-            dgArgs ~= format("ranges[%s].front", idx);
-            popFronts ~= format("ranges[%s].popFront();", idx);
-        }
+        return format(q{
+            alias %s = %s!(int delegate(%-(%s%|, %)));
+        },
+            name, implName, params
+        );
     }
 
-    string name = reverse ? "opApplyReverse" : "opApply";
-
-    return format(
-    q{
-        int %s(scope int delegate(%s) dg)
-        {
-            import std.exception : enforce;
-
-            auto ranges = _ranges;
-            int res;
-            %s
-
-            while (%s)
+    string getImpl()
+    {
+        return format(q{
+            int %s(DG)(scope DG dg) scope
             {
-                res = dg(%s);
-                if (res) break;
-                %s
-                %s
-            }
+                import std.exception : enforce;
 
-            if (_stoppingPolicy == StoppingPolicy.requireSameLength)
-            {
-                foreach (range; ranges)
-                    enforce(range.empty);
+                auto ranges = this.ranges;
+                %s
+
+                while (%-(%s%| && %))
+                {
+                    if (int result = dg(%-(%s%|, %))) return result;
+                    %-(%s%|
+                    %)
+                    %s
+                }
+
+                if (this.stoppingPolicy == StoppingPolicy.requireSameLength)
+                {
+                    foreach (range; ranges)
+                        enforce(range.empty);
+                }
+                return 0;
             }
-            return res;
-        }
-    }, name, params.join(", "), indexDef,
-       emptyChecks.join(" && "), dgArgs.join(", "),
-       popFronts.join("\n                "),
-       indexInc);
+        },
+            implName, indexDef, emptyChecks, dgArgs, popFronts, indexInc
+        );
+    }
 }
 
 /**
@@ -5597,10 +6200,6 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
 
    By default `StoppingPolicy` is set to `StoppingPolicy.shortest`.
 
-   Limitations: The `pure`, `@safe`, `@nogc`, or `nothrow` attributes cannot be
-   inferred for `lockstep` iteration. $(LREF zip) can infer the first two due to
-   a different implementation.
-
    See_Also: $(LREF zip)
 
        `lockstep` is similar to $(LREF zip), but `zip` bundles its
@@ -5611,41 +6210,53 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
 struct Lockstep(Ranges...)
 if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
+    private Ranges ranges;
+    private StoppingPolicy stoppingPolicy;
+
     ///
-    this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
+    this(Ranges ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
         import std.exception : enforce;
 
-        _ranges = ranges;
+        this.ranges = ranges;
         enforce(sp != StoppingPolicy.longest,
-                "Can't use StoppingPolicy.Longest on Lockstep.");
-        _stoppingPolicy = sp;
+            "Can't use StoppingPolicy.Longest on Lockstep.");
+        this.stoppingPolicy = sp;
     }
 
-    mixin(lockstepMixin!Ranges(false, false));
-    mixin(lockstepMixin!Ranges(true, false));
+    private enum lockstepMixinFF = LockstepMixin!Ranges(withIndex: false, reverse: false);
+    mixin(lockstepMixinFF.getImpl);
+
+    private enum lockstepMixinTF = LockstepMixin!Ranges(withIndex: true, reverse: false);
+    mixin(lockstepMixinTF.getImpl);
+
+    mixin(lockstepMixinFF.getAlias);
+    mixin(lockstepMixinTF.getAlias);
+
     static if (allSatisfy!(isBidirectionalRange, Ranges))
     {
-        mixin(lockstepMixin!Ranges(false, true));
+        private enum lockstepMixinFT = LockstepMixin!Ranges(withIndex: false, reverse: true);
+        mixin(lockstepMixinFT.getImpl);
         static if (allSatisfy!(hasLength, Ranges))
         {
-            mixin(lockstepMixin!Ranges(true, true));
+            private enum lockstepMixinTT = LockstepMixin!Ranges(withIndex: true, reverse: true);
+            mixin(lockstepMixinTT.getImpl);
+            mixin(lockstepMixinTT.getAlias);
         }
         else
         {
-            mixin(lockstepReverseFailMixin!Ranges(true));
+            mixin(lockstepReverseFailMixin!Ranges(withIndex: true));
+            alias opApplyReverse = opApplyReverseIdxFail;
         }
+        mixin(lockstepMixinFT.getAlias);
     }
     else
     {
-        mixin(lockstepReverseFailMixin!Ranges(false));
-        mixin(lockstepReverseFailMixin!Ranges(true));
+        mixin(lockstepReverseFailMixin!Ranges(withIndex: false));
+        mixin(lockstepReverseFailMixin!Ranges(withIndex: true));
+        alias opApplyReverse = opApplyReverseFail;
+        alias opApplyReverse = opApplyReverseIdxFail;
     }
-
-private:
-    alias R = Ranges;
-    R _ranges;
-    StoppingPolicy _stoppingPolicy;
 }
 
 /// Ditto
@@ -5665,33 +6276,39 @@ if (allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-@system unittest
+pure @safe unittest
 {
-   auto arr1 = [1,2,3,4,5,100];
-   auto arr2 = [6,7,8,9,10];
+    int[6] arr1 = [1,2,3,4,5,100];
+    int[5] arr2 = [6,7,8,9,10];
 
-   foreach (ref a, b; lockstep(arr1, arr2))
-   {
-       a += b;
-   }
+    foreach (ref a, b; lockstep(arr1[], arr2[]))
+    {
+        a += b;
+    }
 
-   assert(arr1 == [7,9,11,13,15,100]);
+    assert(arr1 == [7,9,11,13,15,100]);
+}
 
-   /// Lockstep also supports iterating with an index variable:
-   foreach (index, a, b; lockstep(arr1, arr2))
-   {
-       assert(arr1[index] == a);
-       assert(arr2[index] == b);
-   }
+/// Lockstep also supports iterating with an index variable:
+pure @safe unittest
+{
+    int[3] arr1 = [1,2,3];
+    int[3] arr2 = [4,5,6];
+
+    foreach (index, a, b; lockstep(arr1[], arr2[]))
+    {
+        assert(arr1[index] == a);
+        assert(arr2[index] == b);
+    }
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15860: foreach_reverse on lockstep
-@system unittest
+pure @safe unittest
 {
     auto arr1 = [0, 1, 2, 3];
     auto arr2 = [4, 5, 6, 7];
 
-    size_t n = arr1.length -1;
+    size_t n = arr1.length - 1;
     foreach_reverse (index, a, b; lockstep(arr1, arr2, StoppingPolicy.requireSameLength))
     {
         assert(n == index);
@@ -5710,7 +6327,7 @@ if (allSatisfy!(isInputRange, Ranges))
     }
 }
 
-@system unittest
+pure @safe unittest
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
@@ -5807,7 +6424,7 @@ if (allSatisfy!(isInputRange, Ranges))
     foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
 }
 
-@system unittest
+pure @safe unittest
 {
     struct RvalueRange
     {
@@ -5863,11 +6480,11 @@ private string lockstepReverseFailMixin(Ranges...)(bool withIndex)
 
     return format(
     q{
-        int opApplyReverse()(scope int delegate(%s) dg)
+        int opApplyReverse%sFail()(scope int delegate(%s) dg)
         {
             static assert(false, "%s");
         }
-    }, params.join(", "), message);
+    }, withIndex ? "Idx" : "" , params.join(", "), message);
 }
 
 // For generic programming, make sure Lockstep!(Range) is well defined for a
@@ -6856,6 +7473,7 @@ if (!isIntegral!(CommonType!(B, E)) &&
             assert(!empty);
             ++current;
         }
+        @property auto save() { return this; }
     }
     return Result(begin, end);
 }
@@ -6874,7 +7492,8 @@ if (!isIntegral!(CommonType!(B, E)) &&
 
         bool opEquals(Cyclic c) const { return current == c.current; }
         bool opEquals(int i) const { return current == i; }
-        void opUnary(string op)() if (op == "++")
+        void opUnary(string op)()
+        if (op == "++")
         {
             current = (current + 1) % wrapAround;
         }
@@ -6888,6 +7507,13 @@ if (!isIntegral!(CommonType!(B, E)) &&
     // Wraparound case
     auto i2 = iota(Cycle5(3), Cycle5(2));
     assert(i2.equal([3, 4, 0, 1 ]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23453
+@safe unittest
+{
+    auto r = iota('a', 'z');
+    static assert(isForwardRange!(typeof(r)));
 }
 
 /**
@@ -7031,7 +7657,10 @@ struct FrontTransversal(Ror,
     {
         @property void front(ElementType val)
         {
-            _input.front.front = val;
+            import core.lifetime : forward;
+
+            // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+            _input.front.front = __ctfe ? val : forward!val;
         }
     }
 
@@ -7088,7 +7717,10 @@ struct FrontTransversal(Ror,
         {
             @property void back(ElementType val)
             {
-                _input.back.front = val;
+                import core.lifetime : forward;
+
+                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                _input.back.front = __ctfe ? val : forward!val;
             }
         }
     }
@@ -7121,7 +7753,10 @@ struct FrontTransversal(Ror,
         {
             void opIndexAssign(ElementType val, size_t n)
             {
-                _input[n].front = val;
+                import core.lifetime : forward;
+
+                // __ctfe check is workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                _input[n].front = __ctfe ? val : forward!val;
             }
         }
         mixin ImplementLength!_input;
@@ -7260,6 +7895,50 @@ pure @safe unittest
 
     auto ft = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
     assert(ft.empty);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24481
+@safe unittest
+{
+    bool called;
+    struct Handle
+    {
+        int entry;
+        void opAssign()(auto ref const(typeof(this)) that) const { called = true; }
+    }
+
+    const(Handle)[][] arr = [[Handle(0), Handle(10)],
+                             [Handle(1), Handle(11)],
+                             [Handle(2), Handle(12)],
+                             [Handle(3), Handle(13)],
+                             [Handle(4), Handle(14)]];
+
+    {
+        auto range = arr.frontTransversal();
+
+        called = false;
+        range.front = Handle(42);
+        assert(called == true);
+
+        called = false;
+        range.back = Handle(42);
+        assert(called == true);
+    }
+    {
+        auto range = arr.frontTransversal!(TransverseOptions.assumeNotJagged)();
+
+        called = false;
+        range.front = Handle(42);
+        assert(called == true);
+
+        called = false;
+        range.back = Handle(42);
+        assert(called == true);
+
+        called = false;
+        range[0] = Handle(42);
+        assert(called == true);
+    }
 }
 
 /**
@@ -8763,7 +9442,8 @@ public:
         {
             // `nextSource` is used to "look one step into the future" and check for the end
             // this means `nextSource` is advanced by `stepSize` on every `popFront`
-            nextSource = source.save.drop(windowSize);
+            nextSource = source.save;
+            auto poppedElems = nextSource.popFrontN(windowSize);
         }
 
         if (source.empty)
@@ -8784,14 +9464,13 @@ public:
                 if (source.length <= windowSize)
                     hasShownPartialBefore = true;
             }
-
         }
         else
         {
             // empty source range is needed, s.t. length, slicing etc. works properly
             static if (needsEndTracker)
             {
-                if (nextSource.empty)
+                if (poppedElems < windowSize)
                      _empty = true;
             }
             else
@@ -9748,12 +10427,38 @@ public:
     assert([1].map!(x => x).slide(2).equal!equal([[1]]));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19642
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
+
+    assert("ab cd".splitter(' ').slide!(No.withPartial)(2).equal!equal([["ab", "cd"]]));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23976
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
+
+    assert("1<2".splitter('<').slide(2).equal!equal([["1", "2"]]));
+}
+
 private struct OnlyResult(Values...)
 if (Values.length > 1)
 {
+    import std.meta : ApplyRight;
+    import std.traits : isAssignable;
+
     private enum arity = Values.length;
 
     private alias UnqualValues = staticMap!(Unqual, Values);
+
+    private enum canAssignElements = allSatisfy!(
+        ApplyRight!(isAssignable, CommonType!Values),
+        Values
+    );
 
     private this(return scope ref Values values)
     {
@@ -9779,6 +10484,15 @@ if (Values.length > 1)
         return this[0];
     }
 
+    static if (canAssignElements)
+    {
+        void front(CommonType!Values value) @property
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            this[0] = value;
+        }
+    }
+
     void popFront()
     {
         assert(!empty, "Attempting to popFront an empty Only range");
@@ -9789,6 +10503,15 @@ if (Values.length > 1)
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
         return this[$ - 1];
+    }
+
+    static if (canAssignElements)
+    {
+        void back(CommonType!Values value) @property
+        {
+            assert(!empty, "Attempting to assign the back of an empty Only range");
+            this[$ - 1] = value;
+        }
     }
 
     void popBack()
@@ -9818,6 +10541,18 @@ if (Values.length > 1)
             static foreach (i, T; Values)
             case i:
                 return cast(T) values[i];
+    }
+
+    static if (canAssignElements)
+    {
+        void opIndexAssign(CommonType!Values value, size_t idx)
+        {
+            assert(idx < length, "Attempting to assign to an out of bounds index of an Only range");
+            final switch (frontIndex + idx)
+                static foreach (i; 0 .. Values.length)
+                case i:
+                    values[i] = value;
+        }
     }
 
     OnlyResult opSlice()
@@ -9863,15 +10598,33 @@ if (Values.length > 1)
 // Specialize for single-element results
 private struct OnlyResult(T)
 {
+    import std.traits : isAssignable;
+
     @property T front()
     {
         assert(!empty, "Attempting to fetch the front of an empty Only range");
         return fetchFront();
     }
+    static if (isAssignable!T)
+    {
+        @property void front(T value)
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            assignFront(value);
+        }
+    }
     @property T back()
     {
         assert(!empty, "Attempting to fetch the back of an empty Only range");
         return fetchFront();
+    }
+    static if (isAssignable!T)
+    {
+        @property void back(T value)
+        {
+            assert(!empty, "Attempting to assign the front of an empty Only range");
+            assignFront(value);
+        }
     }
     @property bool empty() const { return _empty; }
     @property size_t length() const { return !_empty; }
@@ -9888,6 +10641,14 @@ private struct OnlyResult(T)
     }
     alias opDollar = length;
 
+    // FIXME Workaround for https://issues.dlang.org/show_bug.cgi?id=24415
+    import std.traits : hasElaborateCopyConstructor;
+    static if (hasElaborateCopyConstructor!T)
+    {
+        private static struct WorkaroundBugzilla24415 {}
+        public this()(WorkaroundBugzilla24415) {}
+    }
+
     private this()(return scope auto ref T value)
     {
         ref @trusted unqual(ref T x){return cast() x;}
@@ -9901,6 +10662,15 @@ private struct OnlyResult(T)
     {
         assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
         return fetchFront();
+    }
+
+    static if (isAssignable!T)
+    {
+        void opIndexAssign(T value, size_t i)
+        {
+            assert(!_empty && i == 0, "Attempting to assign an out of bounds index of an Only range");
+            assignFront(value);
+        }
     }
 
     OnlyResult opSlice()
@@ -9932,6 +10702,13 @@ private struct OnlyResult(T)
     {
         return *cast(T*)&_value;
     }
+    static if (isAssignable!T)
+    {
+        private @trusted void assignFront(T newValue)
+        {
+            *cast(T*) &_value = newValue;
+        }
+    }
 }
 
 /**
@@ -9952,6 +10729,9 @@ Params:
 Returns:
     A `RandomAccessRange` of the assembled values.
 
+    The returned range can be sliced. Its elements can be assigned to if every
+    type in `Values` supports assignment from the range's element type.
+
 See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(return scope Values values)
@@ -9963,7 +10743,7 @@ if (!is(CommonType!Values == void))
 /// ditto
 auto only()()
 {
-    // cannot use noreturn due to issue 22383
+    // cannot use noreturn due to https://issues.dlang.org/show_bug.cgi?id=22383
     struct EmptyElementType {}
     EmptyElementType[] result;
     return result;
@@ -10211,6 +10991,32 @@ auto only()()
     immutable S x;
     immutable(S)[] arr;
     auto r1 = arr.chain(x.only, only(x, x));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24382
+@safe unittest
+{
+    auto r1 = only(123);
+    r1.front = 456;
+    r1.back = 456;
+    r1[0] = 456;
+
+    auto r2 = only(123, 456);
+    r2.front = 789;
+    r2.back = 789;
+    r2[0] = 789;
+
+    auto r3 = only(1.23, 456);
+    // Can't assign double to int
+    static assert(!__traits(compiles, r3.front = 7.89));
+    static assert(!__traits(compiles, r3.back = 7.89));
+    // Workaround https://issues.dlang.org/show_bug.cgi?id=24383
+    static assert(!__traits(compiles, () { r3[0] = 7.89; }));
+    // Can't assign type other than element type (even if compatible)
+    static assert(!__traits(compiles, r3.front = 789));
+    static assert(!__traits(compiles, r3.back = 789));
+    // Workaround https://issues.dlang.org/show_bug.cgi?id=24383
+    static assert(!__traits(compiles, () { r3[0] = 789; }));
 }
 
 /**
@@ -11641,7 +12447,7 @@ public:
             return (*_range).front;
         }
 
-        static if (is(typeof((*(cast(const R*)_range)).front))) @property auto front() const
+        static if (is(typeof(((const R* r) => (*r).front)(null)))) @property auto front() const
         {
             return (*_range).front;
         }
@@ -11667,7 +12473,7 @@ public:
             return (*_range).empty;
         }
 
-        static if (is(typeof((*cast(const R*)_range).empty))) @property bool empty() const
+        static if (is(typeof(((const R* r) => (*r).empty)(null)))) @property bool empty() const
         {
             return (*_range).empty;
         }
@@ -11697,10 +12503,11 @@ public:
     else static if (isForwardRange!R)
     {
         import std.traits : isSafe;
-        private alias S = typeof((*_range).save);
+        private alias S = typeof((() => (*_range).save)());
 
-        static if (is(typeof((*cast(const R*)_range).save)))
-            private alias CS = typeof((*cast(const R*)_range).save);
+        static if (is(typeof(((const R* r) => (*r).save)(null))))
+            private alias CS = typeof(((const R* r) => (*r).save)(null));
+
 
         static if (isSafe!((R* r) => (*r).save))
         {
@@ -11709,7 +12516,7 @@ public:
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() @trusted const
+            static if (is(typeof(((const R* r) => (*r).save)(null)))) @property RefRange!CS save() @trusted const
             {
                 mixin(_genSave());
             }
@@ -11721,7 +12528,7 @@ public:
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() const
+            static if (is(typeof(((const R* r) => (*r).save)(null)))) @property RefRange!CS save() const
             {
                 mixin(_genSave());
             }
@@ -11740,7 +12547,7 @@ public:
         private static string _genSave() @safe pure nothrow
         {
             return `import core.lifetime : emplace;` ~
-                   `alias S = typeof((*_range).save);` ~
+                   `alias S = typeof((() => (*_range).save)());` ~
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range).save);` ~
@@ -11769,7 +12576,7 @@ public:
             return (*_range).back;
         }
 
-        static if (is(typeof((*(cast(const R*)_range)).back))) @property auto back() const
+        static if (is(typeof(((const R* r) => (*r).back)(null)))) @property auto back() const
         {
             return (*_range).back;
         }
@@ -11801,13 +12608,13 @@ public:
     else static if (isRandomAccessRange!R)
     {
         auto ref opIndex(IndexType)(IndexType index)
-            if (is(typeof((*_range)[index])))
+        if (is(typeof((*_range)[index])))
         {
             return (*_range)[index];
         }
 
         auto ref opIndex(IndexType)(IndexType index) const
-            if (is(typeof((*cast(const R*)_range)[index])))
+        if (is(typeof((*cast(const R*)_range)[index])))
         {
             return (*_range)[index];
         }
@@ -11859,7 +12666,7 @@ public:
         {
             return (*_range).length;
         }
-        static if (is(typeof((*cast(const R*)_range).length))) @property auto length() const
+        static if (is(typeof(((const R* r) => (*r).length)(null)))) @property auto length() const
         {
             return (*_range).length;
         }
@@ -11889,14 +12696,14 @@ public:
 
         RefRange!T opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end)
-            if (is(typeof((*_range)[begin .. end])))
+        if (is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
         RefRange!CT opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const
-            if (is(typeof((*cast(const R*)_range)[begin .. end])))
+        if (is(typeof((*cast(const R*)_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
@@ -12300,6 +13107,44 @@ private:
     static assert(isBidirectionalRange!R2);
     R2 r2;
     auto rr2 = refRange(&r2);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24801
+@safe unittest
+{
+
+    {
+        static struct R
+        {
+            int front() => 0;
+            void popFront() {}
+            bool empty() => false;
+        }
+        R range;
+        auto r = RefRange!R(&range);
+    }
+
+    {
+        static struct R
+        {
+            size_t start, end;
+            size_t length() => end - start;
+            int opIndex(size_t i) => 0;
+
+
+            int front() => this[0];
+            int back() => this[length-1];
+            void popFront() { start++; }
+            void popBack() { end--; }
+            bool empty() => length == 0;
+            R save() const => R();
+        }
+
+        R range;
+        auto r = RefRange!R(&range);
+    }
+
+
 }
 
 /// ditto
@@ -12778,10 +13623,10 @@ if (isInputRange!R && isIntegral!(ElementType!R))
     {
         size_t bitsNum = IntegralType.sizeof * 8;
 
-        auto first = cast(IntegralType)(1);
+        auto first = IntegralType(1);
 
         // 2 ^ (bitsNum - 1)
-        auto second = cast(IntegralType)(cast(IntegralType)(1) << (bitsNum - 2));
+        auto second = cast(IntegralType)(IntegralType(1) << (bitsNum - 2));
 
         IntegralType[] a = [first, second];
         auto bw = Bitwise!(IntegralType[])(a);
@@ -12810,7 +13655,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 
         auto bw2 = bw[0 .. $ - 5];
         auto bw3 = bw2[];
-        assert(bw2.length == (bw.length - 5));
+        assert(bw2.length == bw.length - 5);
         assert(bw2.length == bw3.length);
         bw2.popFront();
         assert(bw2.length != bw3.length);

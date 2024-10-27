@@ -48,6 +48,9 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
+    $(TR $(TD $(LREF bind))
+        $(TD Passes the fields of a struct as arguments to a function.
+    ))
 ))
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
@@ -442,7 +445,7 @@ if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
     import std.traits : isIntegral;
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
-        if (isIntegral!ElementType1 && isIntegral!ElementType2)
+    if (isIntegral!ElementType1 && isIntegral!ElementType2)
     {
         import std.traits : CommonType;
         alias T = CommonType!(ElementType1, ElementType2);

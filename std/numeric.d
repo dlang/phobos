@@ -436,7 +436,7 @@ public:
     static @property size_t dig()
     {
         auto shiftcnt = precision - ((flags&Flags.storeNormalized) == 0);
-        return shiftcnt == 64 ? 19 : cast(size_t) log10(1uL << shiftcnt);
+        return shiftcnt == 64 ? 19 : cast(size_t) log10(real(1uL << shiftcnt));
     }
 
     /// Returns: smallest increment to the value 1
@@ -496,7 +496,8 @@ public:
     static @property CustomFloat im() { return CustomFloat(0.0f); }
 
     /// Initialize from any `real` compatible type.
-    this(F)(F input) if (__traits(compiles, cast(real) input ))
+    this(F)(F input)
+    if (__traits(compiles, cast(real) input ))
     {
         this = input;
     }
@@ -512,7 +513,7 @@ public:
 
     /// Assigns from any `real` compatible type.
     void opAssign(F)(F input)
-        if (__traits(compiles, cast(real) input))
+    if (__traits(compiles, cast(real) input))
     {
         import std.conv : text;
 
@@ -546,7 +547,7 @@ public:
 
     /// Fetches the stored value either as a `float`, `double` or `real`.
     @property F get(F)()
-        if (staticIndexOf!(immutable F, immutable float, immutable double, immutable real) >= 0)
+    if (staticIndexOf!(immutable F, immutable float, immutable double, immutable real) >= 0)
     {
         import std.conv : text;
 
@@ -574,7 +575,7 @@ public:
 
     /// Convert the CustomFloat to a real and perform the relevant operator on the result
     real opUnary(string op)()
-        if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
+    if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
     {
         static if (op=="++" || op=="--")
         {
@@ -591,31 +592,31 @@ public:
     // do not match equally, which is disallowed by the spec:
     // https://dlang.org/spec/operatoroverloading.html#binary
     real opBinary(string op,T)(T b)
-         if (__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
-     {
-         return mixin(`get!real`~op~`b.get!real`);
-     }
+    if (__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
+    {
+        return mixin(`get!real`~op~`b.get!real`);
+    }
 
     /// ditto
     real opBinary(string op,T)(T b)
-        if ( __traits(compiles, mixin(`get!real`~op~`b`)) &&
-            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
+    if ( __traits(compiles, mixin(`get!real`~op~`b`)) &&
+        !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`get!real`~op~`b`);
     }
 
     /// ditto
     real opBinaryRight(string op,T)(T a)
-        if ( __traits(compiles, mixin(`a`~op~`get!real`)) &&
-            !__traits(compiles, mixin(`get!real`~op~`b`)) &&
-            !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
+    if ( __traits(compiles, mixin(`a`~op~`get!real`)) &&
+        !__traits(compiles, mixin(`get!real`~op~`b`)) &&
+        !__traits(compiles, mixin(`get!real`~op~`b.get!real`)))
     {
         return mixin(`a`~op~`get!real`);
     }
 
     /// ditto
     int opCmp(T)(auto ref T b)
-        if (__traits(compiles, cast(real) b))
+    if (__traits(compiles, cast(real) b))
     {
         auto x = get!real;
         auto y = cast(real) b;
@@ -624,7 +625,7 @@ public:
 
     /// ditto
     void opOpAssign(string op, T)(auto ref T b)
-        if (__traits(compiles, mixin(`get!real`~op~`cast(real) b`)))
+    if (__traits(compiles, mixin(`get!real`~op~`cast(real) b`)))
     {
         return mixin(`this = this `~op~` cast(real) b`);
     }
@@ -3405,7 +3406,7 @@ private:
 
     // This algorithm works by performing the even and odd parts of our FFT
     // using the "two for the price of one" method mentioned at
-    // http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
+    // https://web.archive.org/web/20180312110051/http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
     // by making the odd terms into the imaginary components of our new FFT,
     // and then using symmetry to recombine them.
     void fftImplPureReal(Ret, R)(R range, Ret buf) const
@@ -3687,7 +3688,7 @@ public:
      *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
      */
     Complex!F[] fft(F = double, R)(R range) const
-        if (isFloatingPoint!F && isRandomAccessRange!R)
+    if (isFloatingPoint!F && isRandomAccessRange!R)
     {
         enforceSize(range);
         Complex!F[] ret;
@@ -3710,7 +3711,7 @@ public:
      * property that can be both read and written and are floating point numbers.
      */
     void fft(Ret, R)(R range, Ret buf) const
-        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
         assert(buf.length == range.length);
         enforceSize(range);
@@ -3759,7 +3760,7 @@ public:
      *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
      */
     Complex!F[] inverseFft(F = double, R)(R range) const
-        if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
+    if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
     {
         enforceSize(range);
         Complex!F[] ret;
@@ -3781,7 +3782,7 @@ public:
      * must be some complex-like type.
      */
     void inverseFft(Ret, R)(R range, Ret buf) const
-        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
         enforceSize(range);
 

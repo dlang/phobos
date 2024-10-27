@@ -416,13 +416,16 @@ void assertThrown(T : Throwable = Exception, E)
     Returns: `value`, if `cast(bool) value` is true. Otherwise,
     depending on the chosen overload, `new Exception(msg)`, `dg()` or `ex` is thrown.
 
-    Note:
-        `enforce` is used to throw exceptions and is therefore intended to
+        $(PANEL
+        $(NOTE `enforce` is used to throw exceptions and is therefore intended to
         aid in error handling. It is $(I not) intended for verifying the logic
-        of your program. That is what `assert` is for. Also, do not use
+        of your program - that is what `assert` is for.)
+
+        Do not use
         `enforce` inside of contracts (i.e. inside of `in` and `out`
         blocks and `invariant`s), because contracts are compiled out when
         compiling with $(I -release).
+        )
 
         If a delegate is passed, the safety and purity of this function are inferred
         from `Dg`'s safety and purity.
@@ -799,108 +802,109 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
 }
 
 /**
- * Casts a mutable array to an immutable array in an idiomatic
- * manner. Technically, `assumeUnique` just inserts a cast,
- * but its name documents assumptions on the part of the
- * caller. `assumeUnique(arr)` should only be called when
- * there are no more active mutable aliases to elements of $(D
- * arr). To strengthen this assumption, `assumeUnique(arr)`
- * also clears `arr` before returning. Essentially $(D
- * assumeUnique(arr)) indicates commitment from the caller that there
- * is no more mutable access to any of `arr`'s elements
- * (transitively), and that all future accesses will be done through
- * the immutable array returned by `assumeUnique`.
- *
- * Typically, `assumeUnique` is used to return arrays from
- * functions that have allocated and built them.
- *
- * Params:
- *  array = The array to cast to immutable.
- *
- * Returns: The immutable array.
- *
- * Example:
- *
- * $(RUNNABLE_EXAMPLE
- * ----
- * string letters()
- * {
- *   char[] result = new char['z' - 'a' + 1];
- *   foreach (i, ref e; result)
- *   {
- *     e = cast(char)('a' + i);
- *   }
- *   return assumeUnique(result);
- * }
- * ----
- * )
- *
- * The use in the example above is correct because `result`
- * was private to `letters` and is inaccessible in writing
- * after the function returns. The following example shows an
- * incorrect use of `assumeUnique`.
- *
- * Bad:
- *
- * $(RUNNABLE_EXAMPLE
- * ----
- * private char[] buffer;
- * string letters(char first, char last)
- * {
- *   if (first >= last) return null; // fine
- *   auto sneaky = buffer;
- *   sneaky.length = last - first + 1;
- *   foreach (i, ref e; sneaky)
- *   {
- *     e = cast(char)('a' + i);
- *   }
- *   return assumeUnique(sneaky); // BAD
- * }
- * ----
- * )
- *
- * The example above wreaks havoc on client code because it is
- * modifying arrays that callers considered immutable. To obtain an
- * immutable array from the writable array `buffer`, replace
- * the last line with:
- *
- * ----
- * return to!(string)(sneaky); // not that sneaky anymore
- * ----
- *
- * The call will duplicate the array appropriately.
- *
- * Note that checking for uniqueness during compilation is
- * possible in certain cases, especially when a function is
- * marked as a pure function. The following example does not
- * need to call assumeUnique because the compiler can infer the
- * uniqueness of the array in the pure function:
- *
- * $(RUNNABLE_EXAMPLE
- * ----
- * string letters() pure
- * {
- *   char[] result = new char['z' - 'a' + 1];
- *   foreach (i, ref e; result)
- *   {
- *     e = cast(char)('a' + i);
- *   }
- *   return result;
- * }
- * ----
- * )
- *
- * For more on infering uniqueness see the $(B unique) and
- * $(B lent) keywords in the
- * $(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
- * language.
- *
- * The downside of using `assumeUnique`'s
- * convention-based usage is that at this time there is no
- * formal checking of the correctness of the assumption;
- * on the upside, the idiomatic use of `assumeUnique` is
- * simple and rare enough to be tolerable.
- *
+Casts a mutable array to an immutable array in an idiomatic
+manner. Technically, `assumeUnique` just inserts a cast,
+but its name documents assumptions on the part of the
+caller. `assumeUnique(arr)` should only be called when
+there are no more active mutable aliases to elements of $(D
+arr). To strengthen this assumption, `assumeUnique(arr)`
+also clears `arr` before returning. Essentially $(D
+assumeUnique(arr)) indicates commitment from the caller that there
+is no more mutable access to any of `arr`'s elements
+(transitively), and that all future accesses will be done through
+the immutable array returned by `assumeUnique`.
+
+Typically, `assumeUnique` is used to return arrays from
+functions that have allocated and built them.
+
+Params:
+ array = The array to cast to immutable.
+
+Returns: The immutable array.
+
+Example:
+
+$(RUNNABLE_EXAMPLE
+----
+string letters()
+{
+  char[] result = new char['z' - 'a' + 1];
+  foreach (i, ref e; result)
+  {
+    e = cast(char)('a' + i);
+  }
+  return assumeUnique(result);
+}
+----
+)
+
+The use in the example above is correct because `result`
+was private to `letters` and the memory it referenced can no longer be written to
+after the function returns. The following example shows an
+incorrect use of `assumeUnique`.
+
+Bad:
+
+$(RUNNABLE_EXAMPLE
+----
+char[] buffer;
+string letters(char first, char last)
+{
+  if (first >= last) return null; // fine
+  auto sneaky = buffer;
+  sneaky.length = last - first + 1;
+  foreach (i, ref e; sneaky)
+  {
+    e = cast(char)('a' + i);
+  }
+  return assumeUnique(sneaky); // BAD
+}
+----
+)
+
+The example above wreaks havoc on client code because it modifies the
+returned array that the previous caller considered immutable. To obtain an
+immutable array from the writable array `buffer`, replace
+the last line with:
+
+----
+return to!(string)(sneaky); // not that sneaky anymore
+----
+
+The `to` call will duplicate the array appropriately.
+
+$(PANEL
+$(NOTE Checking for uniqueness during compilation is
+possible in certain cases, especially when a function is
+marked (or inferred) as `pure`. The following example does not
+need to call `assumeUnique` because the compiler can infer the
+uniqueness of the array in the pure function:)
+
+$(RUNNABLE_EXAMPLE
+----
+static string letters() pure
+{
+  char[] result = new char['z' - 'a' + 1];
+  foreach (i, ref e; result)
+  {
+    e = cast(char)('a' + i);
+  }
+  return result;
+}
+----
+)
+
+For more on infering uniqueness see the $(B unique) and
+$(B lent) keywords in the
+$(HTTP www.cs.cmu.edu/~aldrich/papers/aldrich-dissertation.pdf, ArchJava)
+language.
+)
+
+The downside of using `assumeUnique`'s
+convention-based usage is that at this time there is no
+formal checking of the correctness of the assumption;
+on the upside, the idiomatic use of `assumeUnique` is
+simple and rare enough to be tolerable.
  */
 immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
 {
@@ -1036,7 +1040,7 @@ Params:
 
 Bugs:
     The function is explicitly annotated `@nogc` because inference could fail,
-    see $(LINK2 https://issues.dlang.org/show_bug.cgi?id=17084, issue 17084).
+    see $(LINK2 https://issues.dlang.org/show_bug.cgi?id=17084, Bugzilla issue 17084).
 
 Returns: `true` if `source`'s representation embeds a pointer
 that points to `target`'s representation or somewhere inside
@@ -1070,9 +1074,9 @@ as the language is free to assume objects don't have internal pointers
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @nogc @trusted pure nothrow
 if (__traits(isRef, source) || isDynamicArray!S ||
-    isPointer!S || is(S == class))
+    is(S == U*, U) || is(S == class))
 {
-    static if (isPointer!S || is(S == class) || is(S == interface))
+    static if (is(S == U*, U) || is(S == class) || is(S == interface))
     {
         const m = *cast(void**) &source;
         const b = cast(void*) &target;
@@ -1116,9 +1120,9 @@ bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target
 /// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
 if (__traits(isRef, source) || isDynamicArray!S ||
-    isPointer!S || is(S == class))
+    is(S == U*, U) || is(S == class))
 {
-    static if (isPointer!S || is(S == class) || is(S == interface))
+    static if (is(S == U*, U) || is(S == class) || is(S == interface))
     {
         const m = *cast(void**) &source;
         const b = cast(void*) &target;
@@ -1534,26 +1538,11 @@ version (StdUnittest)
     assert( doesPointTo(cast(int*) s, i));
     assert(!doesPointTo(cast(int*) s, j));
 }
-@safe unittest //more alias this opCast
-{
-    void* p;
-    class A
-    {
-        void* opCast(T)() if (is(T == void*))
-        {
-            return p;
-        }
-        alias foo = opCast!(void*);
-        alias foo this;
-    }
-    assert(!doesPointTo(A.init, p));
-    assert(!mayPointTo(A.init, p));
-}
 
 /+
-Returns true if the field at index `i` in ($D T) shares its address with another field.
+Returns true if the field at index `i` in $(D T) shares its address with another field.
 
-Note: This does not merelly check if the field is a member of an union, but also that
+Note: This does not merely check if the field is a member of an union, but also that
 it is not a single child.
 +/
 package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
@@ -1643,6 +1632,9 @@ class ErrnoException : Exception
     /// Operating system error code.
     final @property uint errno() nothrow pure scope @nogc @safe { return _errno; }
     private uint _errno;
+    /// Localized error message generated through $(REF strerror_r, core,stdc,string) or $(REF strerror, core,stdc,string).
+    final @property string errnoMsg() nothrow pure scope @nogc @safe { return _errnoMsg; }
+    private string _errnoMsg;
     /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @safe
     {
@@ -1653,7 +1645,8 @@ class ErrnoException : Exception
     this(string msg, int errno, string file = null, size_t line = 0) @safe
     {
         _errno = errno;
-        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
+        _errnoMsg = errnoString(errno);
+        super(msg ~ " (" ~ errnoMsg ~ ")", file, line);
     }
 }
 
@@ -1808,7 +1801,7 @@ expression.
 @system unittest
 {
     import std.format : format;
-    assert("%s".format.ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
+    assert("%s".format.ifThrown!Exception(e => typeid(e).name) == "std.format.FormatException");
 }
 
 //Verify Examples
@@ -1841,7 +1834,7 @@ expression.
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
 
     //Use a lambda to get the thrown object.
-    assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
+    assert("%s".format().ifThrown(e => typeid(e).name) == "std.format.FormatException");
 }
 
 @system unittest
