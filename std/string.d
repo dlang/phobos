@@ -2116,8 +2116,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Searches the string `haystack` for characters that are not in `needles`
-    starting at index `stardIdx`. If `startIdx` is not given, it defaults to 0.
+    Searches `haystack` for a character not in `needles`.
 
     Params:
         haystack = string to search for needles in
