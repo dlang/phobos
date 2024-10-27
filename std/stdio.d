@@ -4683,7 +4683,7 @@ private void _rawWrite(T)(FILE* handle, in T[] buffer, string name = null)
         if (.ferror(handle) && errno != EAGAIN)
             break;
     }
-    while(result < buffer.length);
+    while (result < buffer.length);
 
     if (result == result.max) result = 0;
     errnoEnforce(result == buffer.length,
