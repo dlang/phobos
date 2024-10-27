@@ -1156,8 +1156,7 @@ unittest
 }
 
 /++
-    Searches for the last occurrence of character `c` in string `s` starting at
-    `startIdx`. If `startIdx` is not given, it defaults to 0.
+    Searches for the last occurrence of a character in a string.
 
     Params:
         s = string to search for `c` in
