@@ -695,25 +695,15 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     import std.conv : to;
     import std.traits : hasMember;
     import std.typecons : Ternary;
+    import core.thread.types : isStackGrowingDown;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size >= minAlign);
 
-    version (X86) enum growDownwards = Yes.growDownwards;
-    else version (X86_64) enum growDownwards = Yes.growDownwards;
-    else version (ARM) enum growDownwards = Yes.growDownwards;
-    else version (AArch64) enum growDownwards = Yes.growDownwards;
-    else version (HPPA) enum growDownwards = No.growDownwards;
-    else version (PPC) enum growDownwards = Yes.growDownwards;
-    else version (PPC64) enum growDownwards = Yes.growDownwards;
-    else version (RISCV32) enum growDownwards = Yes.growDownwards;
-    else version (RISCV64) enum growDownwards = Yes.growDownwards;
-    else version (MIPS32) enum growDownwards = Yes.growDownwards;
-    else version (MIPS64) enum growDownwards = Yes.growDownwards;
-    else version (SPARC) enum growDownwards = Yes.growDownwards;
-    else version (SPARC64) enum growDownwards = Yes.growDownwards;
-    else version (SystemZ) enum growDownwards = Yes.growDownwards;
-    else static assert(0, "Dunno how the stack grows on this architecture.");
+    static if (isStackGrowingDown)
+        enum growDownwards = Yes.growDownwards;
+    else
+        enum growDownwards = No.growDownwards;
 
     @disable this(this);
 
@@ -914,7 +904,7 @@ version (DragonFlyBSD)
 {
     // sbrk is deprecated in favor of mmap   (we could implement a mmap + MAP_NORESERVE + PROT_NONE version)
     // brk has been removed
-    // https://www.dragonflydigest.com/2019/02/22/22586.html
+    // https://web.archive.org/web/20221006070113/https://www.dragonflydigest.com/2019/02/22/22586.html
     // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/dc676eaefa61b0f47bbea1c53eab86fd5ccd78c6
     // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/4b5665564ef37dc939a3a9ffbafaab9894c18885
     // http://gitweb.dragonflybsd.org/dragonfly.git/commitdiff/8618d94a0e2ff8303ad93c123a3fa598c26a116e
@@ -978,7 +968,7 @@ version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
         // Assume sbrk returns the old break. Most online documentation confirms
-        // that, except for http://www.inf.udec.cl/~leo/Malloc_tutorial.pdf,
+        // that, except for https://web.archive.org/web/20171014020821/http://www.inf.udec.cl/~leo/Malloc_tutorial.pdf,
         // which claims the returned value is not portable.
         auto p = sbrk(rounded);
         if (p == cast(void*) -1)

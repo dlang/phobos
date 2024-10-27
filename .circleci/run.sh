@@ -96,17 +96,17 @@ setup_repos()
 # run unittest with coverage
 coverage()
 {
-    make -f posix.mak clean
+    make clean
     # remove all existing coverage files (just in case)
     find . -name "*.lst" -type f -delete
 
     # Coverage information of the test runner can be missing for some template instatiations.
     # https://issues.dlang.org/show_bug.cgi?id=16397
-    # ENABLE_COVERAGE="1" make -j"$N" -f posix.mak MODEL=$MODEL unittest-debug
+    # ENABLE_COVERAGE="1" make -j"$N" MODEL=$MODEL unittest-debug
 
     # So instead we run all tests individually (hoping that that doesn't break any tests).
     # -cov is enabled by the %.test target itself
-    make -j"$N" -f posix.mak BUILD=$BUILD $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
+    make -j"$N" BUILD=$BUILD $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
@@ -124,12 +124,12 @@ publictests()
 {
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
-    make -f posix.mak -j"$N" publictests DUB="$DUB" BUILD=$BUILD
-    make -f posix.mak -j"$N" publictests DUB="$DUB" BUILD=$BUILD NO_BOUNDSCHECKS=1
+    make -j"$N" publictests DUB="$DUB" BUILD=$BUILD
+    make -j"$N" publictests DUB="$DUB" BUILD=$BUILD NO_BOUNDSCHECKS=1
 
     # run -betterC tests
-    make -f posix.mak test_extractor # build in single-threaded mode
-    make -f posix.mak -j"$N" betterc
+    make test_extractor # build in single-threaded mode
+    make -j"$N" betterc
 }
 
 # test stdx dub package

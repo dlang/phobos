@@ -310,6 +310,8 @@ Params:
 Returns: Untyped array of bytes _read.
 
 Throws: $(LREF FileException) on error.
+
+See_Also: $(REF readText, std,file) for reading and validating a text file.
  */
 
 void[] read(R)(R name, size_t upTo = size_t.max)
@@ -497,6 +499,8 @@ version (linux) @safe unittest
 
     Throws: $(LREF FileException) if there is an error reading the file,
             $(REF UTFException, std, utf) on UTF decoding error.
+
+    See_Also: $(REF read, std,file) for reading a binary file.
 +/
 S readText(S = string, R)(auto ref R name)
 if (isSomeString!S && (isSomeFiniteCharInputRange!R || is(StringTypeOf!R)))
@@ -1079,6 +1083,7 @@ private void removeImpl(scope const(char)[] name, scope const(FSChar)* namez) @t
 @safe unittest
 {
     import std.exception : collectExceptionMsg, assertThrown;
+    import std.algorithm.searching : startsWith;
 
     string filename = null; // e.g. as returned by File.tmpfile.name
 
@@ -1086,12 +1091,10 @@ private void removeImpl(scope const(char)[] name, scope const(FSChar)* namez) @t
     {
         // exact exception message is OS-dependent
         auto msg = filename.remove.collectExceptionMsg!FileException;
-        assert("Failed to remove file (null): Bad address" == msg, msg);
+        assert(msg.startsWith("Failed to remove file (null):"), msg);
     }
     else version (Windows)
     {
-        import std.algorithm.searching : startsWith;
-
         // don't test exact message on windows, it's language dependent
         auto msg = filename.remove.collectExceptionMsg!FileException;
         assert(msg.startsWith("(null):"), msg);
@@ -1575,7 +1578,7 @@ private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
-            AliasSeq!(GENERIC_WRITE,
+            AliasSeq!(FILE_WRITE_ATTRIBUTES,
                       0,
                       null,
                       OPEN_EXISTING,
@@ -1662,6 +1665,16 @@ private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
         testTimes(123_456_7);
 
     rmdirRecurse(newdir);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=23683
+@safe unittest
+{
+    scope(exit) deleteme.remove;
+    import std.stdio : File;
+    auto f = File(deleteme, "wb");
+    SysTime time = SysTime(DateTime(2018, 10, 4, 0, 0, 30));
+    setTimes(deleteme, time, time);
 }
 
 /++
@@ -4040,12 +4053,10 @@ else version (Posix)
          +/
         void _ensureStatDone() @trusted scope
         {
-            import std.exception : enforce;
-
             if (_didStat)
                 return;
 
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
+            cenforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -4082,13 +4093,11 @@ else version (Posix)
          +/
         void _ensureLStatDone() @trusted scope
         {
-            import std.exception : enforce;
-
             if (_didLStat)
                 return;
 
             stat_t statbuf = void;
-            enforce(lstat(_name.tempCString(), &statbuf) == 0,
+            cenforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
@@ -4170,12 +4179,12 @@ else version (Posix)
                 assert(!de.isFile);
                 assert(!de.isDir);
                 assert(de.isSymlink);
-                assertThrown(de.size);
-                assertThrown(de.timeStatusChanged);
-                assertThrown(de.timeLastAccessed);
-                assertThrown(de.timeLastModified);
-                assertThrown(de.attributes);
-                assertThrown(de.statBuf);
+                assertThrown!FileException(de.size);
+                assertThrown!FileException(de.timeStatusChanged);
+                assertThrown!FileException(de.timeLastAccessed);
+                assertThrown!FileException(de.timeLastModified);
+                assertThrown!FileException(de.attributes);
+                assertThrown!FileException(de.statBuf);
                 assert(symfile.exists);
                 symfile.remove();
             }
@@ -4930,7 +4939,10 @@ alias DirIterator = _DirIterator!dip1000Enabled;
         $(LREF DirEntry).
 
     Throws:
-        $(LREF FileException) if the directory does not exist.
+        $(UL
+        $(LI $(LREF FileException) if the $(B path) directory does not exist or read permission is denied.)
+        $(LI $(LREF FileException) if $(B mode) is not `shallow` and a subdirectory cannot be read.)
+        )
 
 Example:
 --------------------
@@ -4971,7 +4983,25 @@ auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
 foreach (d; dFiles)
     writeln(d.name);
 --------------------
- +/
+To handle subdirectories with denied read permission, use `SpanMode.shallow`:
+---
+void scan(string path)
+{
+    foreach (DirEntry entry; dirEntries(path, SpanMode.shallow))
+    {
+        try
+        {
+            writeln(entry.name);
+            if (entry.isDir)
+                scan(entry.name);
+        }
+        catch (FileException fe) { continue; } // ignore
+    }
+}
+
+scan("");
+---
++/
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
@@ -4986,21 +5016,20 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 {
     string[] listdir(string pathname)
     {
-        import std.algorithm;
-        import std.array;
-        import std.file;
-        import std.path;
+        import std.algorithm.iteration : map, filter;
+        import std.array : array;
+        import std.path : baseName;
 
-        return std.file.dirEntries(pathname, SpanMode.shallow)
+        return dirEntries(pathname, SpanMode.shallow)
             .filter!(a => a.isFile)
-            .map!((return a) => std.path.baseName(a.name))
+            .map!((return a) => baseName(a.name))
             .array;
     }
 
     // Can be safe only with -preview=dip1000
     @safe void main(string[] args)
     {
-        import std.stdio;
+        import std.stdio : writefln;
 
         string[] files = listdir(args[1]);
         writefln("%s", files);

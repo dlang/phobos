@@ -436,7 +436,7 @@ public:
     static @property size_t dig()
     {
         auto shiftcnt = precision - ((flags&Flags.storeNormalized) == 0);
-        return shiftcnt == 64 ? 19 : cast(size_t) log10(1uL << shiftcnt);
+        return shiftcnt == 64 ? 19 : cast(size_t) log10(real(1uL << shiftcnt));
     }
 
     /// Returns: smallest increment to the value 1
@@ -3405,7 +3405,7 @@ private:
 
     // This algorithm works by performing the even and odd parts of our FFT
     // using the "two for the price of one" method mentioned at
-    // http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
+    // https://web.archive.org/web/20180312110051/http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
     // by making the odd terms into the imaginary components of our new FFT,
     // and then using symmetry to recombine them.
     void fftImplPureReal(Ret, R)(R range, Ret buf) const

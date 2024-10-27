@@ -630,36 +630,36 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         import core.atomic : atomicLoad, MemoryOrder;
         static if (is(typeof(this.payload.atomicLoad!(MemoryOrder.acq)) P))
         {
-            auto payload = __ctfe ? cast(P) this.payload
+            auto localPayload = __ctfe ? cast(P) this.payload
                                   : this.payload.atomicLoad!(MemoryOrder.acq);
         }
         else
         {
-            alias payload = this.payload;
+            alias localPayload = this.payload;
         }
 
         static if (hasMember!(Hook, "hookToHash"))
         {
-            return hook.hookToHash(payload);
+            return hook.hookToHash(localPayload);
         }
         else static if (stateSize!Hook > 0)
         {
-            static if (hasMember!(typeof(payload), "toHash"))
+            static if (hasMember!(typeof(localPayload), "toHash"))
             {
-                return payload.toHash() ^ hashOf(hook);
+                return localPayload.toHash() ^ hashOf(hook);
             }
             else
             {
-                return hashOf(payload) ^ hashOf(hook);
+                return hashOf(localPayload) ^ hashOf(hook);
             }
         }
-        else static if (hasMember!(typeof(payload), "toHash"))
+        else static if (hasMember!(typeof(localPayload), "toHash"))
         {
-            return payload.toHash();
+            return localPayload.toHash();
         }
         else
         {
-            return .hashOf(payload);
+            return .hashOf(localPayload);
         }
     }
 
@@ -2129,16 +2129,16 @@ static:
         {
             // Not value convertible, only viable option is rhs fits within the
             // bounds of Lhs
-            static if (ProperCompare.hookOpCmp(Rhs.min, Lhs.min) < 0)
+            static if (ProperCompare.hookOpCmp!(Rhs, Lhs)(lhs: Rhs.min, rhs: Lhs.min) < 0)
             {
                 // Example: hookOpCast!short(int(42)), hookOpCast!uint(int(42))
-                if (ProperCompare.hookOpCmp(rhs, Lhs.min) < 0)
+                if (ProperCompare.hookOpCmp!(Rhs, Lhs)(lhs: rhs, rhs: Lhs.min) < 0)
                     return defaultValue!Lhs;
             }
-            static if (ProperCompare.hookOpCmp(Rhs.max, Lhs.max) > 0)
+            static if (ProperCompare.hookOpCmp!(Rhs, Lhs)(lhs: Rhs.max, rhs: Lhs.max) > 0)
             {
                 // Example: hookOpCast!int(uint(42))
-                if (ProperCompare.hookOpCmp(rhs, Lhs.max) > 0)
+                if (ProperCompare.hookOpCmp!(Rhs, Lhs)(lhs: rhs, rhs: Lhs.max) > 0)
                     return defaultValue!Lhs;
             }
             return cast(Lhs) rhs;

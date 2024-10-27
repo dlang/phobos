@@ -52,7 +52,7 @@ struct Mallocator
         import core.memory : pureRealloc;
         if (!s)
         {
-            // fuzzy area in the C standard, see http://goo.gl/ZpWeSE
+            // fuzzy area in the C standard, see https://stackoverflow.com/questions/6502077/malloc-and-realloc-functions
             // so just deallocate and nullify the pointer
             deallocate(b);
             b = null;
@@ -116,93 +116,11 @@ struct Mallocator
     test!Mallocator();
 }
 
-version (Windows)
+version (CRuntime_Microsoft)
 {
-    // DMD Win 32 bit, DigitalMars C standard library misses the _aligned_xxx
-    // functions family (snn.lib)
-    version (CRuntime_DigitalMars)
-    {
-        // Helper to cast the infos written before the aligned pointer
-        // this header keeps track of the size (required to realloc) and of
-        // the base ptr (required to free).
-        private struct AlignInfo
-        {
-            void* basePtr;
-            size_t size;
-
-            @nogc nothrow
-            static AlignInfo* opCall(void* ptr)
-            {
-                return cast(AlignInfo*) (ptr - AlignInfo.sizeof);
-            }
-        }
-
-        @nogc nothrow pure
-        private void* _aligned_malloc(size_t size, size_t alignment)
-        {
-            import core.memory : pureMalloc;
-            size_t offset = alignment + size_t.sizeof * 2 - 1;
-
-            // unaligned chunk
-            void* basePtr = pureMalloc(size + offset);
-            if (!basePtr) return null;
-
-            // get aligned location within the chunk
-            void* alignedPtr = cast(void**)((cast(size_t)(basePtr) + offset)
-                & ~(alignment - 1));
-
-            // write the header before the aligned pointer
-            AlignInfo* head = AlignInfo(alignedPtr);
-            head.basePtr = basePtr;
-            head.size = size;
-
-            return alignedPtr;
-        }
-
-        @nogc nothrow pure
-        private void* _aligned_realloc(void* ptr, size_t size, size_t alignment)
-        {
-            import core.memory : pureFree;
-            import core.stdc.string : memcpy;
-
-            if (!ptr) return _aligned_malloc(size, alignment);
-
-            // gets the header from the exising pointer
-            AlignInfo* head = AlignInfo(ptr);
-
-            // gets a new aligned pointer
-            void* alignedPtr = _aligned_malloc(size, alignment);
-            if (!alignedPtr)
-            {
-                //to https://msdn.microsoft.com/en-us/library/ms235462.aspx
-                //see Return value: in this case the original block is unchanged
-                return null;
-            }
-
-            // copy exising data
-            memcpy(alignedPtr, ptr, head.size);
-            pureFree(head.basePtr);
-
-            return alignedPtr;
-        }
-
-        @nogc nothrow pure
-        private void _aligned_free(void *ptr)
-        {
-            import core.memory : pureFree;
-            if (!ptr) return;
-            AlignInfo* head = AlignInfo(ptr);
-            pureFree(head.basePtr);
-        }
-
-    }
-    // DMD Win 64 bit, uses microsoft standard C library which implements them
-    else
-    {
-        @nogc nothrow pure private extern(C) void* _aligned_malloc(size_t, size_t);
-        @nogc nothrow pure private extern(C) void _aligned_free(void *memblock);
-        @nogc nothrow pure private extern(C) void* _aligned_realloc(void *, size_t, size_t);
-    }
+    @nogc nothrow pure private extern(C) void* _aligned_malloc(size_t, size_t);
+    @nogc nothrow pure private extern(C) void _aligned_free(void *memblock);
+    @nogc nothrow pure private extern(C) void* _aligned_realloc(void *, size_t, size_t);
 }
 
 /**
@@ -376,17 +294,17 @@ pure @nogc @system nothrow unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=16398
     // test the "pseudo" alignedReallocate for Posix
-    void[] s = AlignedMallocator.instance.alignedAllocate(16, 32);
-    (cast(ubyte[]) s)[] = ubyte(1);
-    AlignedMallocator.instance.alignedReallocate(s, 32, 32);
+    void[] b = AlignedMallocator.instance.alignedAllocate(16, 32);
+    (cast(ubyte[]) b)[] = ubyte(1);
+    AlignedMallocator.instance.alignedReallocate(b, 32, 32);
     ubyte[16] o;
     o[] = 1;
-    assert((cast(ubyte[]) s)[0 .. 16] == o);
-    AlignedMallocator.instance.alignedReallocate(s, 4, 32);
-    assert((cast(ubyte[]) s)[0 .. 3] == o[0 .. 3]);
-    AlignedMallocator.instance.alignedReallocate(s, 128, 32);
-    assert((cast(ubyte[]) s)[0 .. 3] == o[0 .. 3]);
-    AlignedMallocator.instance.deallocate(s);
+    assert((cast(ubyte[]) b)[0 .. 16] == o);
+    AlignedMallocator.instance.alignedReallocate(b, 4, 32);
+    assert((cast(ubyte[]) b)[0 .. 3] == o[0 .. 3]);
+    AlignedMallocator.instance.alignedReallocate(b, 128, 32);
+    assert((cast(ubyte[]) b)[0 .. 3] == o[0 .. 3]);
+    AlignedMallocator.instance.deallocate(b);
 
     void[] c;
     AlignedMallocator.instance.alignedReallocate(c, 32, 32);
@@ -398,51 +316,4 @@ pure @nogc @system nothrow unittest
                                        * $(LINK: https://github.com/dlang/druntime/pull/1999#discussion_r157536030, PR Discussion) */
     assert(!AlignedMallocator.instance.alignedReallocate(c, size_t.max, 4096));
     AlignedMallocator.instance.deallocate(c);
-}
-
-version (CRuntime_DigitalMars)
-pure @nogc @system nothrow unittest
-{
-    void* m;
-
-    size_t m_addr() { return cast(size_t) m; }
-
-    m = _aligned_malloc(16, 0x10);
-    if (m)
-    {
-        assert((m_addr & 0xF) == 0);
-        _aligned_free(m);
-    }
-
-    m = _aligned_malloc(16, 0x100);
-    if (m)
-    {
-        assert((m_addr & 0xFF) == 0);
-        _aligned_free(m);
-    }
-
-    m = _aligned_malloc(16, 0x1000);
-    if (m)
-    {
-        assert((m_addr & 0xFFF) == 0);
-        _aligned_free(m);
-    }
-
-    m = _aligned_malloc(16, 0x10);
-    if (m)
-    {
-        assert((cast(size_t) m & 0xF) == 0);
-        m = _aligned_realloc(m, 32, 0x10000);
-        if (m) assert((m_addr & 0xFFFF) == 0);
-        _aligned_free(m);
-    }
-
-    m = _aligned_malloc(8, 0x10);
-    if (m)
-    {
-        *cast(ulong*) m = 0X01234567_89ABCDEF;
-        m = _aligned_realloc(m, 0x800, 0x1000);
-        if (m) assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
-        _aligned_free(m);
-    }
 }

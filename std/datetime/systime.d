@@ -2,7 +2,6 @@
 
 /++
 
-$(SCRIPT inhibitQuickIndex = 1;)
 $(DIVC quickindex,
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
@@ -468,30 +467,38 @@ private:
     `SysTime` (though for local time applications, time zones can be ignored
     and it will work, since it defaults to using the local time zone). It holds
     its internal time in std time (hnsecs since midnight, January 1st, 1 A.D.
-    UTC), so it interfaces well with the system time. However, that means that,
-    unlike $(REF DateTime,std,datetime,date), it is not optimized for
-    calendar-based operations, and getting individual units from it such as
-    years or days is going to involve conversions and be less efficient.
+    UTC), so it interfaces well with the system time.
 
     An $(I hnsec) (hecto-nanosecond) is 100 nanoseconds. There are 10,000,000 hnsecs in a second.
 
-    For calendar-based operations that don't
-    care about time zones, then $(REF DateTime,std,datetime,date) would be
-    the type to use. For system time, use `SysTime`.
+$(PANEL
+    Unlike $(REF_SHORT DateTime,std,datetime,date), `SysTime` is not optimized for
+    calendar-based operations, and getting individual units from it such as
+    years or days is going to involve conversions and be less efficient.
 
-    $(LREF Clock.currTime) will return the current time as a `SysTime`.
-    To convert a `SysTime` to a $(REF Date,std,datetime,date) or
-    $(REF DateTime,std,datetime,date), simply cast it. To convert a
-    $(REF Date,std,datetime,date) or $(REF DateTime,std,datetime,date) to a
+    For calendar-based operations that don't
+    care about time zones, then $(REF_SHORT DateTime,std,datetime,date) would be
+    the type to use. For system time, use `SysTime`.
+)
+$(P
+    Casting a `SysTime` to one of the following types will perform a conversion:
+)
+    * $(REF Date,std,datetime,date)
+    * $(REF_SHORT DateTime,std,datetime,date)
+    * $(REF_SHORT TimeOfDay,std,datetime,date)
+$(P
+    To convert a
+    $(REF_SHORT Date,std,datetime,date) or $(REF_SHORT DateTime,std,datetime,date) to a
     `SysTime`, use `SysTime`'s constructor, and pass in the intended time
     zone with it (or don't pass in a $(REF TimeZone,std,datetime,timezone), and
     the local time zone will be used). Be aware, however, that converting from a
-    $(REF DateTime,std,datetime,date) to a `SysTime` will not necessarily
+    $(REF_SHORT DateTime,std,datetime,date) to a `SysTime` will not necessarily
     be 100% accurate due to DST (one hour of the year doesn't exist and another
     occurs twice). To not risk any conversion errors, keep times as
     `SysTime`s. Aside from DST though, there shouldn't be any conversion
     problems.
-
+)
+$(PANEL
     For using time zones other than local time or UTC, use
     $(REF PosixTimeZone,std,datetime,timezone) on Posix systems (or on Windows,
     if providing the TZ Database files), and use
@@ -499,16 +506,20 @@ private:
     `SysTime` is kept internally in hnsecs from midnight, January 1st, 1 A.D.
     UTC. Conversion error cannot happen when changing the time zone of a
     `SysTime`. $(REF LocalTime,std,datetime,timezone) is the
-    $(REF TimeZone,std,datetime,timezone) class which represents the local time,
-    and `UTC` is the $(REF TimeZone,std,datetime,timezone) class which
-    represents UTC. `SysTime` uses $(REF LocalTime,std,datetime,timezone) if
-    no $(REF TimeZone,std,datetime,timezone) is provided. For more details on
-    time zones, see the documentation for $(REF TimeZone,std,datetime,timezone),
-    $(REF PosixTimeZone,std,datetime,timezone), and
-    $(REF WindowsTimeZone,std,datetime,timezone).
-
+    $(REF_SHORT TimeZone,std,datetime,timezone) class which represents the local time,
+    and `UTC` is the $(REF_SHORT TimeZone,std,datetime,timezone) class which
+    represents UTC. `SysTime` uses $(REF_SHORT LocalTime,std,datetime,timezone) if
+    no $(REF_SHORT TimeZone,std,datetime,timezone) is provided. For more details on
+    time zones, see the documentation for $(REF_SHORT TimeZone,std,datetime,timezone),
+    $(REF_SHORT PosixTimeZone,std,datetime,timezone), and
+    $(REF_SHORT WindowsTimeZone,std,datetime,timezone).
+)
+$(P
     `SysTime`'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
+)
+See_Also:
+    $(RELATIVE_LINK2 .Clock.currTime, `Clock.currTime`) will return the current time as a `SysTime`.
   +/
 struct SysTime
 {
@@ -8868,7 +8879,7 @@ public:
             return retval;
         }
         catch (DateTimeException dte)
-            throw new DateTimeException(format("Invalid ISO String: %s", isoString));
+            throw new DateTimeException(format("Invalid format for SysTime.fromISOString: %s", isoString));
     }
 
     ///
@@ -9098,7 +9109,8 @@ public:
         auto str = strip(isoExtString);
 
         auto tIndex = str.indexOf('T');
-        enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce!DateTimeException(tIndex != -1,
+                                  format("Invalid format for SysTime.fromISOExtString: %s", isoExtString));
 
         auto found = str[tIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
@@ -9146,7 +9158,7 @@ public:
             return retval;
         }
         catch (DateTimeException dte)
-            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+            throw new DateTimeException(format("Invalid format for SysTime.fromISOExtString: %s", isoExtString));
     }
 
     ///
@@ -9348,7 +9360,8 @@ public:
         auto str = strip(simpleString);
 
         auto spaceIndex = str.indexOf(' ');
-        enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
+        enforce!DateTimeException(spaceIndex != -1,
+                                  format("Invalid format for SysTime.fromSimpleString: %s", simpleString));
 
         auto found = str[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = str[0 .. $ - found[0].length];
@@ -9396,7 +9409,7 @@ public:
             return retval;
         }
         catch (DateTimeException dte)
-            throw new DateTimeException(format("Invalid Simple String: %s", simpleString));
+            throw new DateTimeException(format("Invalid format for SysTime.fromSimpleString: %s", simpleString));
     }
 
     ///
@@ -9674,16 +9687,25 @@ private:
 @safe unittest
 {
     import core.time : days, hours, seconds;
-    import std.datetime.date : DateTime;
+    import std.datetime.date : Date, DateTime;
     import std.datetime.timezone : SimpleTimeZone, UTC;
 
+    const dt = DateTime(2018, 1, 1, 10, 30, 0);
     // make a specific point in time in the UTC timezone
-    auto st = SysTime(DateTime(2018, 1, 1, 10, 30, 0), UTC());
+    auto st = SysTime(dt, UTC());
+    assert(st.year == 2018);
+    assert(st.hour == 10);
+
+    // cast to convert
+    assert(cast(DateTime) st == dt);
+    assert(cast(Date) st == Date(2018, 1, 1));
+
     // make a specific point in time in the New York timezone
-    auto ny = SysTime(
-        DateTime(2018, 1, 1, 10, 30, 0),
+    const ny = SysTime(dt,
         new immutable SimpleTimeZone(-5.hours, "America/New_York")
     );
+    assert(ny != st);
+    assert(ny.hour == 10);
 
     // ISO standard time strings
     assert(st.toISOString() == "20180101T103000Z");
@@ -9775,7 +9797,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow @nogc
 
     "std time"'s epoch is based on the Proleptic Gregorian Calendar per ISO
     8601 and is what $(LREF SysTime) uses internally. However, holding the time
-    as an integer in hnescs since that epoch technically isn't actually part of
+    as an integer in hnsecs since that epoch technically isn't actually part of
     the standard, much as it's based on it, so the name "std time" isn't
     particularly good, but there isn't an official name for it. C# uses "ticks"
     for the same thing, but they aren't actually clock ticks, and the term
@@ -10095,7 +10117,7 @@ else version (Windows)
 
         static void testScope(scope ref SysTime st) @safe
         {
-            auto result = SysTimeToSYSTEMTIME(st);
+            auto localResult = SysTimeToSYSTEMTIME(st);
         }
     }
 
@@ -10178,7 +10200,7 @@ else version (Windows)
 
         static void testScope(scope ref SysTime st) @safe
         {
-            auto result = SysTimeToFILETIME(st);
+            auto local_result = SysTimeToFILETIME(st);
         }
     }
 }
@@ -11150,6 +11172,7 @@ if (isSomeString!S)
     import std.algorithm.searching : all;
     import std.ascii : isDigit;
     import std.conv : to;
+    import std.format : format;
     import std.string : representation;
 
     if (isoString.empty)
@@ -11157,10 +11180,11 @@ if (isSomeString!S)
 
     auto str = isoString.representation;
 
-    enforce(str[0] == '.', new DateTimeException("Invalid ISO String"));
+    enforce!DateTimeException(str[0] == '.', format("Invalid format for fracSecsFromISOString: %s", isoString));
     str.popFront();
 
-    enforce(!str.empty && all!isDigit(str), new DateTimeException("Invalid ISO String"));
+    enforce!DateTimeException(!str.empty && all!isDigit(str),
+                              format("Invalid format for fracSecsFromISOString: %s", isoString));
 
     dchar[7] fullISOString = void;
     foreach (i, ref dchar c; fullISOString)

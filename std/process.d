@@ -127,26 +127,19 @@ else version (WatchOS)
     version = iOSDerived;
 }
 
-// When the DMC runtime is used, we have to use some custom functions
-// to convert between Windows file handles and FILE*s.
-version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
-
 
 // Some of the following should be moved to druntime.
 private
 {
     // Microsoft Visual C Runtime (MSVCRT) declarations.
-    version (Windows)
+    version (CRuntime_Microsoft)
     {
-        version (DMC_RUNTIME) { } else
+        import core.stdc.stdint;
+        enum
         {
-            import core.stdc.stdint;
-            enum
-            {
-                STDIN_FILENO  = 0,
-                STDOUT_FILENO = 1,
-                STDERR_FILENO = 2,
-            }
+            STDIN_FILENO  = 0,
+            STDOUT_FILENO = 1,
+            STDERR_FILENO = 2,
         }
     }
 
@@ -350,6 +343,8 @@ static:
     */
     bool opBinaryRight(string op : "in")(scope const(char)[] name) @trusted
     {
+        if (name is null)
+            return false;
         version (Posix)
             return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
         else version (Windows)
@@ -451,6 +446,10 @@ private:
     // doesn't exist.
     void getImpl(scope const(char)[] name, scope void delegate(const(OSChar)[]) @safe sink) @trusted
     {
+        // fix issue https://issues.dlang.org/show_bug.cgi?id=24549
+        if (name is null)
+            return sink(null);
+
         version (Windows)
         {
             // first we ask windows how long the environment variable is,
@@ -598,6 +597,15 @@ private:
     // Setting null must have the same effect as remove
     environment["std_process"] = null;
     assert("std_process" !in environment);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=24549
+@safe unittest
+{
+    import std.exception : assertThrown;
+    assert(environment.get(null) is null);
+    assertThrown(environment[null]);
+    assert(!(null in environment));
 }
 
 // =============================================================================
@@ -872,6 +880,7 @@ version (Posix) private enum InternalError : ubyte
     doubleFork,
     malloc,
     preExec,
+    closefds_dup2,
 }
 
 /*
@@ -1000,7 +1009,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         if (config.flags & Config.Flags.detached)
             close(pidPipe[0]);
         close(forkPipe[0]);
-        immutable forkPipeOut = forkPipe[1];
+        auto forkPipeOut = forkPipe[1];
         immutable pidPipeOut = pidPipe[1];
 
         // Set the working directory.
@@ -1034,56 +1043,106 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
             if (!(config.flags & Config.Flags.inheritFDs))
             {
-                // NOTE: malloc() and getrlimit() are not on the POSIX async
-                // signal safe functions list, but practically this should
-                // not be a problem. Java VM and CPython also use malloc()
-                // in its own implementation via opendir().
-                import core.stdc.stdlib : malloc;
-                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+                version (FreeBSD)
+                    import core.sys.freebsd.unistd : closefrom;
+                else version (OpenBSD)
+                    import core.sys.openbsd.unistd : closefrom;
 
-                // Get the maximum number of file descriptors that could be open.
-                rlimit r;
-                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                static if (!__traits(compiles, closefrom))
                 {
-                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
-                }
-                immutable maxDescriptors = cast(int) r.rlim_cur;
+                    // FIXME: This implementation crashes the system when RLIMIT_NOFILE
+                    // has a big value. For a possible solution see:
+                    // https://github.com/dlang/phobos/pull/8990
+                    void fallback (int lowfd) {
+                        // NOTE: malloc() and getrlimit() are not on the POSIX async
+                        // signal safe functions list, but practically this should
+                        // not be a problem. Java VM and CPython also use malloc()
+                        // in its own implementation via opendir().
+                        import core.stdc.stdlib : malloc;
+                        import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+                        import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
-                // The above, less stdin, stdout, and stderr
-                immutable maxToClose = maxDescriptors - 3;
+                        // Get the maximum number of file descriptors that could be open.
+                        rlimit r;
+                        if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                        {
+                            abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+                        }
+                        immutable maxDescriptors = cast(int) r.rlim_cur;
 
-                // Call poll() to see which ones are actually open:
-                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-                if (pfds is null)
-                {
-                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
-                }
-                foreach (i; 0 .. maxToClose)
-                {
-                    pfds[i].fd = i + 3;
-                    pfds[i].events = 0;
-                    pfds[i].revents = 0;
-                }
-                if (poll(pfds, maxToClose, 0) >= 0)
-                {
-                    foreach (i; 0 .. maxToClose)
-                    {
-                        // don't close pipe write end
-                        if (pfds[i].fd == forkPipeOut) continue;
-                        // POLLNVAL will be set if the file descriptor is invalid.
-                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                        immutable maxToClose = maxDescriptors - lowfd;
+
+                        // Call poll() to see which ones are actually open:
+                        auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                        if (pfds is null)
+                        {
+                            abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                        }
+                        foreach (i; 0 .. maxToClose)
+                        {
+                            pfds[i].fd = i + lowfd;
+                            pfds[i].events = 0;
+                            pfds[i].revents = 0;
+                        }
+                        if (poll(pfds, maxToClose, 0) >= 0)
+                        {
+                            foreach (i; 0 .. maxToClose)
+                            {
+                                // POLLNVAL will be set if the file descriptor is invalid.
+                                if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                            }
+                        }
+                        else
+                        {
+                            // Fall back to closing everything.
+                            foreach (i; lowfd .. maxDescriptors)
+                            {
+                                close(i);
+                            }
+                        }
                     }
+
+                    // closefrom may not be available on the version of glibc we build against.
+                    // Until we find a way to perform this check we will try to use dlsym to
+                    // check for the function. See: https://github.com/dlang/phobos/pull/9048
+                    version (CRuntime_Glibc)
+                        void closefrom (int lowfd) {
+                            static bool tryGlibcClosefrom (int lowfd) {
+                                import core.sys.posix.dlfcn : dlopen, dlclose, dlsym, dlerror, RTLD_LAZY;
+
+                                void *handle = dlopen("libc.so.6", RTLD_LAZY);
+                                if (!handle)
+                                    return false;
+                                scope(exit) dlclose(handle);
+
+                                // Clear errors
+                                dlerror();
+                                alias closefromT = extern(C) void function(int) @nogc @system nothrow;
+                                auto closefrom = cast(closefromT) dlsym(handle, "closefrom");
+                                if (dlerror())
+                                    return false;
+
+                                closefrom(lowfd);
+                                return true;
+                            }
+
+                            if (!tryGlibcClosefrom(lowfd))
+                                fallback(lowfd);
+                        }
+                    else
+                        alias closefrom = fallback;
                 }
-                else
-                {
-                    // Fall back to closing everything.
-                    foreach (i; 3 .. maxDescriptors)
-                    {
-                        if (i == forkPipeOut) continue;
-                        close(i);
-                    }
-                }
+
+                // We need to close all open file descriptors excluding std{in,out,err}
+                // and forkPipeOut because we still need it.
+                // Since the various libc's provide us with `closefrom` move forkPipeOut
+                // to position 3, right after STDERR_FILENO, and close all FDs following that.
+                if (dup2(forkPipeOut, 3) == -1)
+                    abortOnError(forkPipeOut, InternalError.closefds_dup2, .errno);
+                forkPipeOut = 3;
+                // forkPipeOut needs to be closed after we call `exec`.
+                setCLOEXEC(forkPipeOut, true);
+                closefrom(forkPipeOut + 1);
             }
             else // This is already done if we don't inherit descriptors.
             {
@@ -1097,6 +1156,14 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             if (config.preExecFunction !is null)
             {
                 if (config.preExecFunction() != true)
+                {
+                    abortOnError(forkPipeOut, InternalError.preExec, .errno);
+                }
+            }
+
+            if (config.preExecDelegate !is null)
+            {
+                if (config.preExecDelegate() != true)
                 {
                     abortOnError(forkPipeOut, InternalError.preExec, .errno);
                 }
@@ -1187,7 +1254,11 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     errorMsg = "Failed to allocate memory";
                     break;
                 case InternalError.preExec:
-                    errorMsg = "Failed to execute preExecFunction";
+                    errorMsg = "Failed to execute preExecFunction or preExecDelegate";
+                    break;
+                case InternalError.closefds_dup2:
+                    assert(!(config.flags & Config.Flags.inheritFDs));
+                    errorMsg = "Failed to close inherited file descriptors";
                     break;
                 case InternalError.noerror:
                     assert(false);
@@ -1269,6 +1340,29 @@ version (Posix)
 
     auto received = receiveTimeout(3.seconds, (int) {});
     assert(received);
+}
+
+version (Posix)
+@system unittest
+{
+    __gshared int j;
+    foreach (i; 0 .. 3)
+    {
+        auto config = Config(
+            preExecFunction: function() @trusted {
+                j = 1;
+                return true;
+            },
+            preExecDelegate: delegate() @trusted {
+                // j should now be 1, as preExecFunction is called before
+                // preExecDelegate is.
+                _Exit(i + j);
+                return true;
+            },
+        );
+        auto pid = spawnProcess(["false"], config: config);
+        assert(wait(pid) == i + 1);
+    }
 }
 
 /*
@@ -1428,7 +1522,7 @@ version (Posix) @system unittest
     for (; environ[i] != null; ++i)
     {
         assert(e2[i] != null);
-        import core.stdc.string;
+        import core.stdc.string : strcmp;
         assert(strcmp(e2[i], environ[i]) == 0);
     }
     assert(e2[i] == null);
@@ -1732,7 +1826,9 @@ version (Posix) @system unittest
     // Pipes
     void testPipes(Config config)
     {
-        import std.file, std.uuid, core.thread, std.exception;
+        import std.file : tempDir, exists, remove;
+        import std.uuid : randomUUID;
+        import std.exception : collectException;
         auto pipei = pipe();
         auto pipeo = pipe();
         auto pipee = pipe();
@@ -1753,11 +1849,14 @@ version (Posix) @system unittest
     // Files
     void testFiles(Config config)
     {
-        import std.ascii, std.file, std.uuid, core.thread, std.exception;
+        import std.ascii : newline;
+        import std.file : tempDir, exists, remove, readText, write;
+        import std.uuid : randomUUID;
+        import std.exception : collectException;
         auto pathi = buildPath(tempDir(), randomUUID().toString());
         auto patho = buildPath(tempDir(), randomUUID().toString());
         auto pathe = buildPath(tempDir(), randomUUID().toString());
-        std.file.write(pathi, "INPUT"~std.ascii.newline);
+        write(pathi, "INPUT" ~ newline);
         auto filei = File(pathi, "r");
         auto fileo = File(patho, "w");
         auto filee = File(pathe, "w");
@@ -2181,13 +2280,30 @@ struct Config
             Please note that the code in this function must only use
             async-signal-safe functions.)
 
+        If $(LREF preExecDelegate) is also set, it is called last.
+
         On Windows, this member is not available.
         */
         bool function() nothrow @nogc @safe preExecFunction;
+
+        /**
+        A delegate that is called before `exec` in $(LREF spawnProcess).
+        It returns `true` if succeeded and otherwise returns `false`.
+
+        $(RED Warning:
+            Please note that the code in this function must only use
+            async-signal-safe functions.)
+
+        If $(LREF preExecFunction) is also set, it is called first.
+
+        On Windows, this member is not available.
+        */
+        bool delegate() nothrow @nogc @safe preExecDelegate;
     }
     else version (Posix)
     {
         bool function() nothrow @nogc @safe preExecFunction;
+        bool delegate() nothrow @nogc @safe preExecDelegate;
     }
 }
 
@@ -2500,7 +2616,7 @@ version (Windows)
     import std.exception : collectException;
     import std.typecons : tuple;
 
-    TestScript prog = ":Loop\ngoto Loop;";
+    TestScript prog = ":Loop\r\n" ~ "goto Loop";
     auto pid = spawnProcess(prog.path);
 
     // Doesn't block longer than one second
@@ -3653,7 +3769,7 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
         {
             args    : ["foo bar", "hello"],
             windows : `"foo bar" hello`,
-            posix   : `'foo bar' 'hello'`
+            posix   : `'foo bar' hello`
         },
         {
             args    : ["foo bar", "hello world"],
@@ -3663,20 +3779,34 @@ string escapeShellCommand(scope const(char[])[] args...) @safe pure
         {
             args    : ["foo bar", "hello", "world"],
             windows : `"foo bar" hello world`,
-            posix   : `'foo bar' 'hello' 'world'`
+            posix   : `'foo bar' hello world`
         },
         {
             args    : ["foo bar", `'"^\`],
             windows : `"foo bar" ^"'\^"^^\\^"`,
             posix   : `'foo bar' ''\''"^\'`
         },
+        {
+            args    : ["foo bar", ""],
+            windows : `"foo bar" ^"^"`,
+            posix   : `'foo bar' ''`
+        },
+        {
+            args    : ["foo bar", "2"],
+            windows : `"foo bar" ^"2^"`,
+            posix   : `'foo bar' '2'`
+        },
     ];
 
     foreach (test; tests)
+    {
+        auto actual = escapeShellCommand(test.args);
         version (Windows)
-            assert(escapeShellCommand(test.args) == test.windows);
+            string expected = test.windows;
         else
-            assert(escapeShellCommand(test.args) == test.posix  );
+            string expected = test.posix;
+        assert(actual == expected, "\nExpected: " ~ expected ~ "\nGot: " ~ actual);
+    }
 }
 
 private string escapeShellCommandString(return scope string command) @safe pure
@@ -3917,6 +4047,37 @@ private char[] escapePosixArgumentImpl(alias allocator)(scope const(char)[] arg)
     @safe nothrow
 if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
+    bool needQuoting = {
+        import std.ascii : isAlphaNum, isDigit;
+        import std.algorithm.comparison : among;
+
+        // Empty arguments need to be specified as ''
+        if (arg.length == 0)
+            return true;
+        // Arguments ending with digits need to be escaped,
+        // to disambiguate with 1>file redirection syntax
+        if (isDigit(arg[$-1]))
+            return true;
+
+        // Obtained using:
+        // for n in $(seq 1 255) ; do
+        //     c=$(printf \\$(printf "%o" $n))
+        //     q=$(/bin/printf '%q' "$c")
+        //     if [[ "$q" == "$c" ]] ; then printf "%s, " "'$c'" ; fi
+        // done
+        // printf '\n'
+        foreach (char c; arg)
+            if (!isAlphaNum(c) && !c.among('%', '+', ',', '-', '.', '/', ':', '@', ']', '_'))
+                return true;
+        return false;
+    }();
+    if (!needQuoting)
+    {
+        auto buf = allocator(arg.length);
+        buf[] = arg;
+        return buf;
+    }
+
     // '\'' means: close quoted part of argument, append an escaped
     // single quote, and reopen quotes
 
@@ -3989,6 +4150,11 @@ version (unittest_burnin)
     // import std.stdio, std.array; void main(string[] args) { write(args.join("\0")); }
     // Then, test this module with:
     // rdmd --main -unittest -version=unittest_burnin process.d
+
+    import std.file : readText, remove;
+    import std.format : format;
+    import std.path : absolutePath;
+    import std.random : uniform;
 
     auto helper = absolutePath("std_process_unittest_helper");
     assert(executeShell(helper ~ " hello").output.split("\0")[1..$] == ["hello"], "Helper malfunction");

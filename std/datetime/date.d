@@ -3161,10 +3161,10 @@ public:
 
         auto str = strip(isoString);
 
-        enforce(str.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce!DateTimeException(str.length >= 15, format("Invalid format for DateTime.fromISOString %s", isoString));
         auto t = str.byCodeUnit.countUntil('T');
 
-        enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce!DateTimeException(t != -1, format("Invalid format for DateTime.fromISOString: %s", isoString));
 
         immutable date = Date.fromISOString(str[0 .. t]);
         immutable tod = TimeOfDay.fromISOString(str[t+1 .. $]);
@@ -3262,10 +3262,11 @@ public:
 
         auto str = strip(isoExtString);
 
-        enforce(str.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce!DateTimeException(str.length >= 15,
+                                  format("Invalid format for DateTime.fromISOExtString: %s", isoExtString));
         auto t = str.byCodeUnit.countUntil('T');
 
-        enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce!DateTimeException(t != -1, format("Invalid format for DateTime.fromISOExtString: %s", isoExtString));
 
         immutable date = Date.fromISOExtString(str[0 .. t]);
         immutable tod = TimeOfDay.fromISOExtString(str[t+1 .. $]);
@@ -3362,10 +3363,11 @@ public:
 
         auto str = strip(simpleString);
 
-        enforce(str.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce!DateTimeException(str.length >= 15,
+                                  format("Invalid format for DateTime.fromSimpleString: %s", simpleString));
         auto t = str.byCodeUnit.countUntil(' ');
 
-        enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce!DateTimeException(t != -1, format("Invalid format for DateTime.fromSimpleString: %s", simpleString));
 
         immutable date = Date.fromSimpleString(str[0 .. t]);
         immutable tod = TimeOfDay.fromISOExtString(str[t+1 .. $]);
@@ -3776,7 +3778,7 @@ public:
         enforceValid!"months"(cast(Month) month);
         enforceValid!"days"(year, cast(Month) month, day);
 
-        _year  = cast(short) year;
+        _year  = year.castToYear;
         _month = cast(Month) month;
         _day   = cast(ubyte) day;
     }
@@ -3814,6 +3816,7 @@ public:
         assertThrown!DateTimeException(Date(1999, 10, 32));
         assertThrown!DateTimeException(Date(1999, 11, 31));
         assertThrown!DateTimeException(Date(1999, 12, 32));
+        assertThrown!DateTimeException(Date(short.max+1, 1, 1));
 
         assertNotThrown!DateTimeException(Date(1999, 1, 31));
         assertNotThrown!DateTimeException(Date(1999, 2, 28));
@@ -3839,6 +3842,7 @@ public:
         assertThrown!DateTimeException(Date(-1, 2, 29));
         assertThrown!DateTimeException(Date(-2, 2, 29));
         assertThrown!DateTimeException(Date(-3, 2, 29));
+        assertThrown!DateTimeException(Date(short.min-1, 1, 1));
     }
 
 
@@ -4128,7 +4132,7 @@ public:
     @property void year(int year) @safe pure
     {
         enforceValid!"days"(year, _month, _day);
-        _year = cast(short) year;
+        _year = year.castToYear;
     }
 
     ///
@@ -4215,7 +4219,7 @@ public:
     {
         if (year <= 0)
             throw new DateTimeException("The given year is not a year B.C.");
-        _year = cast(short)((year - 1) * -1);
+        _year = castToYear((year - 1) * -1);
     }
 
     ///
@@ -7626,7 +7630,7 @@ public:
 
         auto str = isoString.strip;
 
-        enforce!DateTimeException(str.length >= 8, text("Invalid ISO String: ", isoString));
+        enforce!DateTimeException(str.length >= 8, text("Invalid format for Date.fromISOString: ", isoString));
 
         int day, month, year;
         auto yearStr = str[0 .. $ - 4];
@@ -7641,7 +7645,7 @@ public:
             if (yearStr.length > 4)
             {
                 enforce!DateTimeException(yearStr.startsWith('-', '+'),
-                        text("Invalid ISO String: ", isoString));
+                        text("Invalid format for Date.fromISOString: ", isoString));
                 year = to!int(yearStr);
             }
             else
@@ -7651,7 +7655,7 @@ public:
         }
         catch (ConvException)
         {
-            throw new DateTimeException(text("Invalid ISO String: ", isoString));
+            throw new DateTimeException(text("Invalid format for Date.fromISOString: ", isoString));
         }
 
         return Date(year, month, day);
@@ -7772,13 +7776,13 @@ public:
         ubyte month, day;
 
         if (str.length < 10 || str[$-3] != '-' || str[$-6] != '-')
-            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+            throw new DateTimeException(format("Invalid format for Date.fromISOExtString: %s", isoExtString));
 
         auto yearStr = str[0 .. $-6];
         auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
         if ((yearStr.length > 4) != signAtBegining)
         {
-            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+            throw new DateTimeException(format("Invalid format for Date.fromISOExtString: %s", isoExtString));
         }
 
         try
@@ -7789,7 +7793,7 @@ public:
         }
         catch (ConvException)
         {
-            throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+            throw new DateTimeException(format("Invalid format for Date.fromISOExtString: %s", isoExtString));
         }
 
         return Date(year, month, day);
@@ -7908,7 +7912,7 @@ public:
         auto str = strip(simpleString);
 
         if (str.length < 11 || str[$-3] != '-' || str[$-7] != '-')
-            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
+            throw new DateTimeException(format!"Invalid format for Date.fromSimpleString: %s"(simpleString));
 
         int year;
         uint day;
@@ -7917,7 +7921,7 @@ public:
         auto signAtBegining = cast(bool) yearStr.startsWith('-', '+');
         if ((yearStr.length > 4) != signAtBegining)
         {
-            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
+            throw new DateTimeException(format!"Invalid format for Date.fromSimpleString: %s"(simpleString));
         }
 
         try
@@ -7927,7 +7931,7 @@ public:
         }
         catch (ConvException)
         {
-            throw new DateTimeException(format!"Invalid string format: %s"(simpleString));
+            throw new DateTimeException(format!"Invalid format for Date.fromSimpleString: %s"(simpleString));
         }
 
         return Date(year, month, day);
@@ -9206,7 +9210,7 @@ public:
         int hours, minutes, seconds;
         auto str = strip(isoString);
 
-        enforce!DateTimeException(str.length == 6, text("Invalid ISO String: ", isoString));
+        enforce!DateTimeException(str.length == 6, text("Invalid format for TimeOfDay.fromISOString: ", isoString));
 
         try
         {
@@ -9218,7 +9222,7 @@ public:
         }
         catch (ConvException)
         {
-            throw new DateTimeException(text("Invalid ISO String: ", isoString));
+            throw new DateTimeException(text("Invalid format for TimeOfDay.fromISOString: ", isoString));
         }
 
         return TimeOfDay(hours, minutes, seconds);
@@ -9331,7 +9335,7 @@ public:
         int hours, minutes, seconds;
 
         if (str.length != 8 || str[2] != ':' || str[5] != ':')
-            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
+            throw new DateTimeException(text("Invalid format for TimeOfDay.fromISOExtString: ", isoExtString));
 
         try
         {
@@ -9343,7 +9347,7 @@ public:
         }
         catch (ConvException)
         {
-            throw new DateTimeException(text("Invalid ISO Extended String: ", isoExtString));
+            throw new DateTimeException(text("Invalid format for TimeOfDay.fromISOExtString: ", isoExtString));
         }
 
         return TimeOfDay(hours, minutes, seconds);
@@ -9689,6 +9693,16 @@ if (units == "days")
     assert(!valid!"days"(2017, 2, 29));
 }
 
+private short castToYear(int year, string file = __FILE__, size_t line = __LINE__) @safe pure
+{
+    import std.conv : to, ConvOverflowException;
+    import std.format : format;
+
+    try
+        return year.to!short;
+    catch (ConvOverflowException)
+        throw new DateTimeException(format("year %s doesn't fit to Date.", year), file, line);
+}
 
 /++
     Params:

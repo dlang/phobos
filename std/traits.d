@@ -10,6 +10,7 @@
  * $(TR $(TH Category) $(TH Templates))
  * $(TR $(TD Symbol Name traits) $(TD
  *           $(LREF fullyQualifiedName)
+ *           $(LREF mangledName)
  *           $(LREF moduleName)
  *           $(LREF packageName)
  * ))
@@ -66,10 +67,9 @@
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
+ *           $(LREF isQualifierConvertible)
  * ))
- * $(TR $(TD SomethingTypeOf) $(TD
- *           $(LREF rvalueOf)
- *           $(LREF lvalueOf)
+ * $(TR $(TD Type Constructors) $(TD
  *           $(LREF InoutOf)
  *           $(LREF ConstOf)
  *           $(LREF SharedOf)
@@ -132,13 +132,15 @@
  *           $(LREF PointerTarget)
  *           $(LREF Signed)
  *           $(LREF Unconst)
+ *           $(LREF Unshared)
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
  *           $(LREF Promoted)
  * ))
  * $(TR $(TD Misc) $(TD
- *           $(LREF mangledName)
+ *           $(LREF lvalueOf)
+ *           $(LREF rvalueOf)
  *           $(LREF Select)
  *           $(LREF select)
  * ))
@@ -889,10 +891,10 @@ private template fqnType(T,
             );
         }
     }
-    else static if (isPointer!T)
+    else static if (is(T == U*, U))
     {
         enum fqnType = chain!(
-            fqnType!(PointerTarget!T, qualifiers) ~ "*"
+            fqnType!(U, qualifiers) ~ "*"
         );
     }
     else static if (is(T : __vector(V[N]), V, size_t N))
@@ -986,6 +988,10 @@ private template fqnType(T,
  * or a class with an `opCall`. Please note that $(D_KEYWORD ref)
  * is not part of a type, but the attribute of the function
  * (see template $(LREF functionAttributes)).
+ *
+ * $(NOTE To reduce template instantiations, consider instead using
+ * $(D typeof(() { return func(args); } ())) if the argument types are known or
+ * $(D static if (is(typeof(func) Ret == return))) if only that basic test is needed.)
  */
 template ReturnType(alias func)
 if (isCallable!func)
@@ -1121,7 +1127,7 @@ if (isCallable!func && variadicFunctionStyle!func == Variadic.no)
 }
 
 /**
-Get tuple, one per function parameter, of the storage classes of the parameters.
+Get a tuple of the storage classes of a function's parameters.
 Params:
     func = function symbol or type of function, delegate, or pointer to function
 Returns:
@@ -1150,22 +1156,16 @@ if (isCallable!func)
 
     static if (is(Func PT == __parameters))
     {
-        template StorageClass(size_t i)
+        alias ParameterStorageClassTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
-            static if (i < PT.length)
-            {
-                alias StorageClass = AliasSeq!(
-                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)),
-                        StorageClass!(i + 1));
-            }
-            else
-                alias StorageClass = AliasSeq!();
+            ParameterStorageClassTuple = AliasSeq!(ParameterStorageClassTuple,
+                extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)));
         }
-        alias ParameterStorageClassTuple = StorageClass!0;
     }
     else
     {
-        static assert(0, func[0].stringof ~ " is not a function");
+        static assert(0, func.stringof, " is not a function");
         alias ParameterStorageClassTuple = AliasSeq!();
     }
 }
@@ -1194,7 +1194,7 @@ if (isCallable!func)
 }
 
 /**
-Convert the result of `__traits(getParameterStorageClasses)`
+Convert the result of $(DDSUBLINK spec/traits, getParameterStorageClasses, `__traits(getParameterStorageClasses)`)
 to $(LREF ParameterStorageClass) `enum`s.
 
 Params:
@@ -1313,7 +1313,8 @@ if (isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
-        template Get(size_t i)
+        alias ParameterIdentifierTuple = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
@@ -1321,32 +1322,21 @@ if (isCallable!func)
                        // Filter out unnamed args, which look like (Type) instead of (Type name).
                        && PT[i].stringof != PT[i .. i+1].stringof[1..$-1])
             {
-                enum Get = __traits(identifier, PT[i .. i+1]);
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple,
+                    __traits(identifier, PT[i .. i+1]));
             }
             else
             {
-                enum Get = "";
+                ParameterIdentifierTuple = AliasSeq!(ParameterIdentifierTuple, "");
             }
         }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterIdentifierTuple = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterIdentifierTuple = Impl!();
 }
 
 ///
@@ -1404,7 +1394,7 @@ if (isCallable!func)
 
 
 /**
-Get, as a tuple, the default value of the parameters to a function symbol.
+Get, as a tuple, the default values of the parameters to a function symbol.
 If a parameter doesn't have the default value, `void` is returned instead.
  */
 template ParameterDefaults(alias func)
@@ -1422,48 +1412,36 @@ if (isCallable!func)
             enum args = "args" ~ (name == "args" ? "_" : "");
             enum val = "val" ~ (name == "val" ? "_" : "");
             enum ptr = "ptr" ~ (name == "ptr" ? "_" : "");
-            mixin("
-                enum hasDefaultArg = (PT[i .. i+1] " ~ args ~ ") { return true; };
-            ");
+            enum hasDefaultArg = mixin("(PT[i .. i+1] ", args, ") => true");
             static if (is(typeof(hasDefaultArg())))
             {
-                mixin("
-                // workaround scope escape check, see
-                // https://issues.dlang.org/show_bug.cgi?id=16582
-                // should use return scope once available
-                enum get = (PT[i .. i+1] " ~ args ~ ") @trusted
+                enum get = mixin("(return scope PT[i .. i+1] ", args, ")
                 {
                     // If the parameter is lazy, we force it to be evaluated
                     // like this.
-                    auto " ~ val ~ " = " ~ args ~ "[0];
-                    auto " ~ ptr ~ " = &" ~ val ~ ";
-                    return *" ~ ptr ~ ";
-                };");
+                    auto ", val, " = ", args, "[0];
+                    auto ", ptr, " = &", val, ";
+                    return *", ptr, ";
+                }");
                 enum Get = get();
             }
             else
                 alias Get = void;
                 // If default arg doesn't exist, returns void instead.
         }
+        alias ParameterDefaults = AliasSeq!();
+        static foreach (i; 0 .. PT.length)
+        {
+            ParameterDefaults = AliasSeq!(ParameterDefaults,
+                Get!i);
+        }
     }
     else
     {
         static assert(0, func.stringof ~ " is not a function");
-
-        // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
-        alias PT = AliasSeq!();
+        // avoid pointless errors
+        alias ParameterDefaults = AliasSeq!();
     }
-
-    template Impl(size_t i = 0)
-    {
-        static if (i == PT.length)
-            alias Impl = AliasSeq!();
-        else
-            alias Impl = AliasSeq!(Get!i, Impl!(i+1));
-    }
-
-    alias ParameterDefaults = Impl!();
 }
 
 ///
@@ -2180,7 +2158,7 @@ if (isCallable!func)
     void func() {}
     static assert(variadicFunctionStyle!func == Variadic.no);
 
-    extern(C) int printf(in char*, ...);
+    extern(C) int printf(const char*, ...);
     static assert(variadicFunctionStyle!printf == Variadic.c);
 }
 
@@ -2203,7 +2181,7 @@ if (isCallable!func)
 
 
 /**
-Get the function type from a callable object `func`.
+Get the function type from a callable object `func`, or from a function pointer/delegate type.
 
 Using builtin `typeof` on a property function yields the types of the
 property value, not of the property function itself.  Still,
@@ -2251,10 +2229,17 @@ if (isCallable!func)
 {
     class C
     {
-        int value() @property { return 0; }
+        int value() @property => 0;
+        static string opCall() => "hi";
     }
     static assert(is( typeof(C.value) == int ));
     static assert(is( FunctionTypeOf!(C.value) == function ));
+    static assert(is( FunctionTypeOf!C == typeof(C.opCall) ));
+
+    int function() fp;
+    alias IntFn = int();
+    static assert(is( typeof(fp) == IntFn* ));
+    static assert(is( FunctionTypeOf!fp == IntFn ));
 }
 
 @system unittest
@@ -2302,7 +2287,7 @@ if (isCallable!func)
         int  test(int);
         int  test() @property;
     }
-    alias ov = __traits(getVirtualFunctions, Overloads, "test");
+    alias ov = __traits(getVirtualMethods, Overloads, "test");
     alias F_ov0 = FunctionTypeOf!(ov[0]);
     alias F_ov1 = FunctionTypeOf!(ov[1]);
     alias F_ov2 = FunctionTypeOf!(ov[2]);
@@ -2568,6 +2553,8 @@ if (is(T == class))
 /**
 Determines whether `T` has its own context pointer.
 `T` must be either `class`, `struct`, or `union`.
+
+See also: $(DDSUBLINK spec/traits, isNested, `__traits(isNested, T)`)
 */
 template isNested(T)
 if (is(T == class) || is(T == struct) || is(T == union))
@@ -3853,6 +3840,8 @@ package alias Identity(alias A) = A;
 /**
    Yields `true` if and only if `T` is an aggregate that defines
    a symbol called `name`.
+
+   See also: $(DDSUBLINK spec/traits, hasMember, `__traits(hasMember, T, name)`)
  */
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
@@ -3925,8 +3914,8 @@ template hasStaticMember(T, string member)
 {
     static if (__traits(hasMember, T, member))
     {
-        static if (isPointer!T)
-            alias U = PointerTarget!T;
+        static if (is(T == V*, V))
+            alias U = V;
         else
             alias U = T;
 
@@ -4529,7 +4518,7 @@ if (is(C == class) || is(C == interface))
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias inSight = __traits(getVirtualFunctions, Node, name);
+                alias inSight = __traits(getVirtualMethods, Node, name);
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
@@ -4835,6 +4824,8 @@ package enum maxAlignment(U...) =
 
 /**
 Returns class instance alignment.
+
+See also: $(DDSUBLINK spec/traits, classInstanceAlignment, `__traits(classInstanceAlignment, T)`)
  */
 template classInstanceAlignment(T)
 if (is(T == class))
@@ -5185,6 +5176,62 @@ enum bool isImplicitlyConvertible(From, To) = is(From : To);
 }
 
 /**
+Is `From` $(DDSUBLINK spec/const3, implicit_qualifier_conversions, qualifier-convertible) to `To`?
+*/
+enum bool isQualifierConvertible(From, To) =
+    is(immutable From == immutable To) && is(From* : To*);
+
+///
+@safe unittest
+{
+    // Mutable and immmutable both convert to const...
+    static assert( isQualifierConvertible!(char, const(char)));
+    static assert( isQualifierConvertible!(immutable(char), const(char)));
+    // ...but const does not convert back to mutable or immutable
+    static assert(!isQualifierConvertible!(const(char), char));
+    static assert(!isQualifierConvertible!(const(char), immutable(char)));
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    alias Ts = AliasSeq!(int, const int, shared int, inout int, const shared int,
+        const inout int, inout shared int, const inout shared int, immutable int);
+
+    // https://dlang.org/spec/const3.html#implicit_qualifier_conversions
+    enum _ = 0;
+    static immutable bool[Ts.length][Ts.length] conversions = [
+    //   m   c   s   i   cs  ci  is  cis im
+        [1,  1,  _,  _,  _,  _,  _,  _,  _],  // mutable
+        [_,  1,  _,  _,  _,  _,  _,  _,  _],  // const
+        [_,  _,  1,  _,  1,  _,  _,  _,  _],  // shared
+        [_,  1,  _,  1,  _,  1,  _,  _,  _],  // inout
+        [_,  _,  _,  _,  1,  _,  _,  _,  _],  // const shared
+        [_,  1,  _,  _,  _,  1,  _,  _,  _],  // const inout
+        [_,  _,  _,  _,  1,  _,  1,  1,  _],  // inout shared
+        [_,  _,  _,  _,  1,  _,  _,  1,  _],  // const inout shared
+        [_,  1,  _,  _,  1,  1,  _,  1,  1],  // immutable
+    ];
+
+    static foreach (i, From; Ts)
+    {
+        static foreach (j, To; Ts)
+        {
+            static assert(isQualifierConvertible!(From, To) == conversions[i][j],
+                "`isQualifierConvertible!(" ~ From.stringof ~ ", " ~ To.stringof ~ ")`"
+                ~ " should be `" ~ (conversions[i][j] ? "true" : "false") ~ "`");
+        }
+    }
+}
+
+@safe unittest
+{
+    // int* -> void* is not a qualifier conversion
+    static assert(!isQualifierConvertible!(int, void));
+}
+
+/**
 Returns `true` iff a value of type `Rhs` can be assigned to a variable of
 type `Lhs`.
 
@@ -5297,7 +5344,8 @@ enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lv
     static assert(!isAssignable!S5);
 
     // `-preview=in` is enabled
-    static if (!is(typeof(mixin(q{(in ref int a) => a}))))
+    alias DScannerBug895 = int[256];
+    static if (((in DScannerBug895 a) { return __traits(isRef, a); })(DScannerBug895.init))
     {
         struct S6 { void opAssign(in S5); }
 
@@ -5308,7 +5356,7 @@ enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, { lvalueOf!Lhs = lv
     }
     else
     {
-        mixin(q{ struct S6 { void opAssign(in ref S5); } });
+        mixin(q{ struct S6 { void opAssign(scope const ref S5); } });
 
         static assert(!isRvalueAssignable!(S6, S5));
         static assert( isLvalueAssignable!(S6, S5));
@@ -5326,7 +5374,7 @@ package template isBlitAssignable(T)
         enum isBlitAssignable = isBlitAssignable!(OriginalType!T);
     }
     else static if (isStaticArray!T && is(T == E[n], E, size_t n))
-    // Workaround for issue 11499 : isStaticArray!T should not be necessary.
+    // Workaround for https://issues.dlang.org/show_bug.cgi?id=11499 : isStaticArray!T should not be necessary.
     {
         enum isBlitAssignable = isBlitAssignable!E;
     }
@@ -5446,8 +5494,8 @@ private template isStorageClassImplicitlyConvertible(From, To)
 {
     alias Pointify(T) = void*;
 
-    enum isStorageClassImplicitlyConvertible = isImplicitlyConvertible!(
-            ModifyTypePreservingTQ!(Pointify, From),
+    enum isStorageClassImplicitlyConvertible = is(
+            ModifyTypePreservingTQ!(Pointify, From) :
             ModifyTypePreservingTQ!(Pointify,   To) );
 }
 
@@ -5675,7 +5723,7 @@ private struct __InoutWorkaroundStruct{}
 
 /**
 Creates an lvalue or rvalue of type `T` for `typeof(...)` and
-`__traits(compiles, ...)` purposes. No actual value is returned.
+$(DDSUBLINK spec/traits, compiles, `__traits(compiles, ...)`) purposes. No actual value is returned.
 
 Params:
     T = The type to transform
@@ -6066,7 +6114,7 @@ template StringTypeOf(T)
                 static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
 
                 alias Str = Q!T[];
-                class C(S) { S val;  alias val this; }
+                struct C(S) { S val;  alias val this; }
                 static assert(is(StringTypeOf!(C!Str) == Str));
             }}
         }
@@ -6161,7 +6209,7 @@ template BuiltinTypeOf(T)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
- * Detect whether `T` is a built-in boolean type.
+ * Detect whether `T` is a built-in boolean type or enum of boolean base type.
  */
 enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 
@@ -6191,8 +6239,15 @@ enum bool isBoolean(T) = __traits(isUnsigned, T) && is(T : bool);
 }
 
 /**
- * Detect whether `T` is a built-in integral type. Types `bool`,
- * `char`, `wchar`, and `dchar` are not considered integral.
+ * Detect whether `T` is a built-in integral type.
+ * Integral types are `byte`, `ubyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `cent`, `ucent`,
+ * and enums with an integral type as its base type.
+ * Params:
+ *      T = type to test
+ * Returns:
+ *      `true` if `T` is an integral type
+ * Note:
+ *      this is not the same as $(LINK2 https://dlang.org/spec/traits.html#isIntegral, `__traits(isIntegral)`)
  */
 template isIntegral(T)
 {
@@ -6255,7 +6310,10 @@ template isIntegral(T)
 
 /**
  * Detect whether `T` is a built-in floating point type.
+ *
+ * See also: $(DDSUBLINK spec/traits, isFloating, `__traits(isFloating, T)`)
  */
+// is(T : real) to discount complex types
 enum bool isFloatingPoint(T) = __traits(isFloating, T) && is(T : real);
 
 ///
@@ -6393,7 +6451,10 @@ template isNumeric(T)
 /**
  * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
+ *
+ * See also: $(DDSUBLINK spec/traits, isScalar, `__traits(isScalar, T)`)
  */
+// is(T : real) to discount complex types
 enum bool isScalarType(T) = __traits(isScalar, T) && is(T : real);
 
 ///
@@ -6922,6 +6983,8 @@ template isAutodecodableString(T)
 
 /**
  * Detect whether type `T` is a static array.
+ *
+ * See also: $(DDSUBLINK spec/traits, isStaticArray, `__traits(isStaticArray, T)`)
  */
 enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
@@ -7051,6 +7114,8 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
 /**
  * Detect whether `T` is an associative array type
+ *
+ * See also: $(DDSUBLINK spec/traits, isAssociativeArray, `__traits(isAssociativeArray, T)`)
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
@@ -7138,7 +7203,7 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 /**
  * Detect whether type `T` is a pointer.
  */
-enum bool isPointer(T) = is(T == U*, U) && __traits(isScalar, T);
+enum bool isPointer(T) = is(T == U*, U);
 
 ///
 @safe unittest
@@ -7481,24 +7546,10 @@ Params:
 Returns:
     A `bool`
  */
-template isSomeFunction(alias T)
-{
-    static if (is(typeof(& T) U : U*) && is(U == function) || is(typeof(& T) U == delegate))
-    {
-        // T is a (nested) function symbol.
-        enum bool isSomeFunction = true;
-    }
-    else static if (is(T W) || is(typeof(T) W))
-    {
-        // T is an expression or a type.  Take the type of it and examine.
-        static if (is(W F : F*) && is(F == function))
-            enum bool isSomeFunction = true; // function pointer
-        else
-            enum bool isSomeFunction = is(W == function) || is(W == delegate);
-    }
-    else
-        enum bool isSomeFunction = false;
-}
+enum bool isSomeFunction(alias T) =
+    is(T == return) ||
+    is(typeof(T) == return) ||
+    is(typeof(&T) == return); // @property
 
 ///
 @safe unittest
@@ -7513,17 +7564,16 @@ template isSomeFunction(alias T)
     auto c = new C;
     auto fp = &func;
     auto dg = &c.method;
-    real val;
 
     static assert( isSomeFunction!func);
     static assert( isSomeFunction!prop);
     static assert( isSomeFunction!(C.method));
     static assert( isSomeFunction!(C.prop));
     static assert( isSomeFunction!(c.prop));
-    static assert( isSomeFunction!(c.prop));
     static assert( isSomeFunction!fp);
     static assert( isSomeFunction!dg);
 
+    real val;
     static assert(!isSomeFunction!int);
     static assert(!isSomeFunction!val);
 }
@@ -7552,14 +7602,12 @@ template isCallable(alias callable)
     else static if (is(typeof(&callable.opCall) V : V*) && is(V == function))
         // T is a type which has a static member function opCall().
         enum bool isCallable = true;
-    else static if (is(typeof(&callable.opCall!())))
+    else static if (is(typeof(&callable.opCall!()) TemplateInstanceType))
     {
-        alias TemplateInstanceType = typeof(&callable.opCall!());
         enum bool isCallable = isCallable!TemplateInstanceType;
     }
-    else static if (is(typeof(&callable!())))
+    else static if (is(typeof(&callable!()) TemplateInstanceType))
     {
-        alias TemplateInstanceType = typeof(&callable!());
         enum bool isCallable = isCallable!TemplateInstanceType;
     }
     else
@@ -7623,14 +7671,15 @@ template isCallable(alias callable)
 
 
 /**
-Detect whether `T` is an abstract function.
+Detect whether `S` is an abstract function.
 
+See also: $(DDSUBLINK spec/traits, isAbstractFunction, `__traits(isAbstractFunction, S)`)
 Params:
-    T = The type to check
+    S = The symbol to check
 Returns:
     A `bool`
  */
-enum isAbstractFunction(alias T) = __traits(isAbstractFunction, T);
+enum isAbstractFunction(alias S) = __traits(isAbstractFunction, S);
 
 ///
 @safe unittest
@@ -7645,9 +7694,11 @@ enum isAbstractFunction(alias T) = __traits(isAbstractFunction, T);
 }
 
 /**
- * Detect whether `T` is a final function.
+ * Detect whether `S` is a final function.
+ *
+ * See also: $(DDSUBLINK spec/traits, isFinalFunction, `__traits(isFinalFunction, S)`)
  */
-enum isFinalFunction(alias T) = __traits(isFinalFunction, T);
+enum isFinalFunction(alias S) = __traits(isFinalFunction, S);
 
 ///
 @safe unittest
@@ -7713,9 +7764,11 @@ template isNestedFunction(alias f)
 }
 
 /**
- * Detect whether `T` is an abstract class.
+ * Detect whether `S` is an abstract class.
+ *
+ * See also: $(DDSUBLINK spec/traits, isAbstractClass, `__traits(isAbstractClass, S)`)
  */
-enum isAbstractClass(alias T) = __traits(isAbstractClass, T);
+enum isAbstractClass(alias S) = __traits(isAbstractClass, S);
 
 ///
 @safe unittest
@@ -7733,9 +7786,11 @@ enum isAbstractClass(alias T) = __traits(isAbstractClass, T);
 }
 
 /**
- * Detect whether `T` is a final class.
+ * Detect whether `S` is a final class.
+ *
+ * See also: $(DDSUBLINK spec/traits, isFinalClass, `__traits(isFinalClass, S)`)
  */
-enum isFinalClass(alias T) = __traits(isFinalClass, T);
+enum isFinalClass(alias S) = __traits(isFinalClass, S);
 
 ///
 @safe unittest
@@ -7799,6 +7854,46 @@ else
 
     alias ImmIntArr = immutable(int[]);
     static assert(is(Unconst!ImmIntArr == immutable(int)[]));
+}
+
+/++
+    Removes `shared` qualifier, if any, from type `T`.
+
+    Note that while `immutable` is implicitly `shared`, it is unaffected by
+    Unshared. Only explict `shared` is removed.
+  +/
+template Unshared(T)
+{
+    static if (is(T == shared U, U))
+        alias Unshared = U;
+    else
+        alias Unshared = T;
+}
+
+///
+@safe unittest
+{
+    static assert(is(Unshared!int == int));
+    static assert(is(Unshared!(const int) == const int));
+    static assert(is(Unshared!(immutable int) == immutable int));
+
+    static assert(is(Unshared!(shared int) == int));
+    static assert(is(Unshared!(shared(const int)) == const int));
+
+    static assert(is(Unshared!(shared(int[])) == shared(int)[]));
+}
+
+@safe unittest
+{
+    static assert(is(Unshared!(                   int) == int));
+    static assert(is(Unshared!(             const int) == const int));
+    static assert(is(Unshared!(       inout       int) == inout int));
+    static assert(is(Unshared!(       inout const int) == inout const int));
+    static assert(is(Unshared!(shared             int) == int));
+    static assert(is(Unshared!(shared       const int) == const int));
+    static assert(is(Unshared!(shared inout       int) == inout int));
+    static assert(is(Unshared!(shared inout const int) == inout const int));
+    static assert(is(Unshared!(         immutable int) == immutable int));
 }
 
 version (StdDdoc)
@@ -7969,7 +8064,7 @@ has both opApply and a range interface.
 */
 template ForeachType(T)
 {
-    alias ForeachType = ReturnType!(typeof(
+    alias ForeachType = typeof(
     (inout int x = 0)
     {
         foreach (elem; T.init)
@@ -7977,7 +8072,7 @@ template ForeachType(T)
             return elem;
         }
         assert(0);
-    }));
+    }());
 }
 
 ///
@@ -8822,6 +8917,30 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(is(getSymbolsByUDA!(X, X) == AliasSeq!()));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=23776
+@safe pure nothrow @nogc unittest
+{
+    struct T
+    {
+        struct Tag {}
+        @Tag struct MyStructA {}
+        @Tag struct MyStructB {}
+        @Tag struct MyStructC {}
+    }
+    alias tcomponents = getSymbolsByUDA!(T, T.Tag);
+    static assert(tcomponents.length > 0);
+
+    struct X
+    {
+        struct Tag {}
+        @Tag enum MyEnumA;
+        @Tag enum MyEnumB;
+        @Tag enum MyEnumC;
+    }
+    alias xcomponents = getSymbolsByUDA!(X, X.Tag);
+    static assert(xcomponents.length > 0);
+}
+
 // getSymbolsByUDA produces wrong result if one of the symbols having the UDA is a function
 // https://issues.dlang.org/show_bug.cgi?id=18624
 @safe unittest
@@ -8835,7 +8954,9 @@ template getSymbolsByUDA(alias symbol, alias attribute)
         @Attr void c();
     }
 
-    static assert(getSymbolsByUDA!(A, Attr).stringof == "tuple(a, a, c)");
+    alias ola = __traits(getOverloads, A, "a");
+    static assert(__traits(isSame, getSymbolsByUDA!(A, Attr),
+        AliasSeq!(ola[0], ola[1], A.c)));
 }
 
 // getSymbolsByUDA no longer works on modules
@@ -8845,6 +8966,14 @@ version (StdUnittest)
     @("Issue20054")
     void issue20054() {}
     static assert(__traits(compiles, getSymbolsByUDA!(mixin(__MODULE__), "Issue20054")));
+}
+
+private template isAliasSeq(Args...)
+{
+    static if (Args.length != 1)
+        enum isAliasSeq = true;
+    else
+        enum isAliasSeq = false;
 }
 
 private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
@@ -8868,12 +8997,13 @@ private template getSymbolsByUDAImpl(alias symbol, alias attribute, names...)
             alias member = __traits(getMember, symbol, names[0]);
 
             // Filtering not compiled members such as alias of basic types.
-            static if (!__traits(compiles, hasUDA!(member, attribute)))
+            static if (isAliasSeq!member ||
+                       (isType!member && !isAggregateType!member && !is(member == enum)))
             {
                 alias getSymbolsByUDAImpl = tail;
             }
-            // Get overloads for functions, in case different overloads have different sets of UDAs.
-            else static if (isFunction!member)
+            // If a symbol is overloaded, get UDAs for each overload (including templated overlaods).
+            else static if (__traits(getOverloads, symbol, names[0], true).length > 0)
             {
                 enum hasSpecificUDA(alias member) = hasUDA!(member, attribute);
                 alias overloadsWithUDA = Filter!(hasSpecificUDA, __traits(getOverloads, symbol, names[0]));
@@ -9069,12 +9199,13 @@ template isFinal(alias X)
  + If a type cannot be copied, then code such as `MyStruct x; auto y = x;` will fail to compile.
  + Copying for structs can be disabled by using `@disable this(this)`.
  +
+ + See also: $(DDSUBLINK spec/traits, isCopyable, `__traits(isCopyable, S)`)
  + Params:
  +  S = The type to check.
  +
  + Returns:
  +  `true` if `S` can be copied. `false` otherwise.
- + ++/
+ +/
 enum isCopyable(S) = __traits(isCopyable, S);
 
 ///
