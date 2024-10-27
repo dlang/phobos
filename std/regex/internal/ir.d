@@ -318,7 +318,7 @@ struct Bytecode
     @property bool backreference() const
     {
         assert(code == IR.GroupStart || code == IR.GroupEnd);
-        return cast(bool)(raw & 1 << 23);
+        return (raw & 1 << 23) != 0;
     }
 
     //mark as local reference (for backrefs in lookarounds)
@@ -332,7 +332,7 @@ struct Bytecode
     @property bool localRef() const
     {
         assert(code == IR.Backref);
-        return cast(bool)(raw & 1 << 23);
+        return (raw & 1 << 23) != 0;
     }
 
     //human readable name of instruction
@@ -403,7 +403,7 @@ struct Group(DataIndex)
 }
 
 //debugging tool, prints out instruction along with opcodes
-@trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
+debug(std_regex_parser) @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
     import std.array : appender;
     import std.format.write : formattedWrite;
@@ -467,7 +467,7 @@ struct Group(DataIndex)
 }
 
 //disassemble the whole chunk
-@trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
+debug(std_regex_parser) @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
     import std.stdio : writeln;
     for (uint pc=0; pc<slice.length; pc += slice[pc].length)

@@ -16,6 +16,7 @@ $(TR $(TD Decode) $(TD
     $(LREF byGrapheme)
     $(LREF decodeGrapheme)
     $(LREF graphemeStride)
+    $(LREF popGrapheme)
 ))
 $(TR $(TD Comparison) $(TD
     $(LREF icmp)
@@ -708,8 +709,8 @@ import std.meta : AliasSeq;
 import std.range.primitives : back, ElementEncodingType, ElementType, empty,
     front, hasLength, hasSlicing, isForwardRange, isInputRange,
     isRandomAccessRange, popFront, put, save;
-import std.traits : isConvertibleToString, isIntegral, isSomeChar,
-    isSomeString, Unqual, isDynamicArray;
+import std.traits : isAutodecodableString, isConvertibleToString, isIntegral,
+    isSomeChar, isSomeString, Unqual, isDynamicArray;
 // debug = std_uni;
 
 import std.internal.unicode_tables; // generated file
@@ -3349,7 +3350,7 @@ struct CowArray(SP=GcPolicy)
         data[$-val.length-1 .. $-1] = val[];
     }
 
-    bool opEquals()(auto const ref CowArray rhs)const
+    bool opEquals()(auto ref const CowArray rhs) const
     {
         if (empty ^ rhs.empty)
             return false; // one is empty and the other isn't
@@ -7005,7 +7006,7 @@ private enum TransformRes
 // Note, getting GB1 (break at start of text, unless text is empty) right
 // relies on the user starting grapheme walking from beginning of the text, and
 // not attempting to walk an empty text.
-private enum TransformRes
+private immutable TransformRes
     function(ref GraphemeState, dchar) @safe pure nothrow @nogc [] graphemeTransforms =
 [
     GraphemeState.Start: (ref state, ch)
@@ -7148,17 +7149,25 @@ private enum TransformRes
             TransformRes.goOn
 ];
 
-template genericDecodeGrapheme(bool getValue)
-{
-    static if (getValue)
+enum GraphemeRet { none, step, value }
+
+template genericDecodeGrapheme(GraphemeRet retType)
+{   alias Ret = GraphemeRet;
+
+    static if (retType == Ret.value)
         alias Value = Grapheme;
-    else
+    else static if (retType == Ret.step)
+        alias Value = size_t;
+    else static if (retType == Ret.none)
         alias Value = void;
 
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
-        static if (getValue)
-            Grapheme grapheme;
+        static if (retType == Ret.value)
+            Grapheme result;
+        else static if (retType == Ret.step)
+            size_t result = 0;
+
         auto state = GraphemeState.Start;
         dchar ch;
 
@@ -7173,8 +7182,10 @@ template genericDecodeGrapheme(bool getValue)
                 with(TransformRes)
             {
             case goOn:
-                static if (getValue)
-                    grapheme ~= ch;
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
                 range.popFront();
                 continue;
 
@@ -7182,8 +7193,10 @@ template genericDecodeGrapheme(bool getValue)
                 goto rerun;
 
             case retInclude:
-                static if (getValue)
-                    grapheme ~= ch;
+                static if (retType == Ret.value)
+                    result ~= ch;
+                else static if (retType == Ret.step)
+                    result++;
                 range.popFront();
                 break outer;
 
@@ -7192,8 +7205,8 @@ template genericDecodeGrapheme(bool getValue)
             }
         }
 
-        static if (getValue)
-            return grapheme;
+        static if (retType != Ret.none)
+            return result;
     }
 }
 
@@ -7217,7 +7230,7 @@ if (is(C : dchar))
 {
     auto src = input[index..$];
     auto n = src.length;
-    genericDecodeGrapheme!(false)(src);
+    genericDecodeGrapheme!(GraphemeRet.none)(src);
     return n - src.length;
 }
 
@@ -7243,9 +7256,7 @@ if (is(C : dchar))
     static assert(c2 == 3); // \u0301 has 2 UTF-8 code units
 }
 
-// TODO: make this @nogc. Probably no big deal since the state machine is
-// already GC-free.
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     // grinning face ~ emoji modifier fitzpatrick type-5 ~ grinning face
     assert(graphemeStride("\U0001F600\U0001f3FE\U0001F600"d, 0) == 2);
@@ -7281,7 +7292,7 @@ if (is(C : dchar))
 Grapheme decodeGrapheme(Input)(ref Input inp)
 if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
 {
-    return genericDecodeGrapheme!true(inp);
+    return genericDecodeGrapheme!(GraphemeRet.value)(inp);
 }
 
 @safe unittest
@@ -7304,6 +7315,73 @@ if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
     // Two Union Jacks of the Great Britain
     s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
     assert(equal(decodeGrapheme(s)[], "\U0001F1EC\U0001F1E7"));
+}
+
+/++
+    Reads one full grapheme cluster from an
+    $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of dchar `inp`,
+    but doesn't return it. Instead returns the number of code units read.
+    This differs from number of code points read only if `input` is an
+    autodecodable string.
+
+    Note:
+    This function modifies `inp` and thus `inp`
+    must be an L-value.
++/
+size_t popGrapheme(Input)(ref Input inp)
+if (isInputRange!Input && is(immutable ElementType!Input == immutable dchar))
+{
+    static if (isAutodecodableString!Input || hasLength!Input)
+    {
+        // Why count each step in the decoder when you can just
+        // measure the grapheme in one go?
+        auto n = inp.length;
+        genericDecodeGrapheme!(GraphemeRet.none)(inp);
+        return n - inp.length;
+    }
+    else return genericDecodeGrapheme!(GraphemeRet.step)(inp);
+}
+
+///
+@safe pure unittest
+{
+    // Two Union Jacks of the Great Britain in each
+    string s = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    wstring ws = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+    dstring ds = "\U0001F1EC\U0001F1E7\U0001F1EC\U0001F1E7";
+
+    // String pop length in code units, not points.
+    assert(s.popGrapheme() == 8);
+    assert(ws.popGrapheme() == 4);
+    assert(ds.popGrapheme() == 2);
+
+    assert(s == "\U0001F1EC\U0001F1E7");
+    assert(ws == "\U0001F1EC\U0001F1E7");
+    assert(ds == "\U0001F1EC\U0001F1E7");
+
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
+
+    // Also works for non-random access ranges as long as the
+    // character type is 32-bit.
+    auto testPiece = "\r\nhello!"d.filter!(x => !x.isAlpha);
+    // Windows-style line ending is two code points in a single grapheme.
+    assert(testPiece.popGrapheme() == 2);
+    assert(testPiece.equal("!"d));
+}
+
+// Attribute compliance test. Should be nothrow `@nogc` when
+// no autodecoding needed.
+@safe pure nothrow @nogc unittest
+{
+    import std.algorithm.iteration : filter;
+
+    auto str = "abcdef"d;
+    assert(str.popGrapheme() == 1);
+
+    // also test with non-random access
+    auto filtered = "abcdef"d.filter!(x => x%2);
+    assert(filtered.popGrapheme() == 1);
 }
 
 /++
@@ -7724,7 +7802,7 @@ public:
     @property bool valid()() /*const*/
     {
         auto r = this[];
-        genericDecodeGrapheme!false(r);
+        genericDecodeGrapheme!(GraphemeRet.none)(r);
         return r.length == 0;
     }
 
@@ -8016,19 +8094,19 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
             if (idx2 != EMPTY_CASE_TRIE)
             {// both cased chars
                 // adjust idx --> start of bucket
-                idx = idx - sTable[idx].n;
-                idx2 = idx2 - sTable[idx2].n;
+                idx = idx - sTable(idx).n;
+                idx2 = idx2 - sTable(idx2).n;
                 if (idx == idx2)// one bucket, equivalent chars
                     continue;
                 else//  not the same bucket
-                    diff = sTable[idx].ch - sTable[idx2].ch;
+                    diff = sTable(idx).ch - sTable(idx2).ch;
             }
             else
-                diff = sTable[idx - sTable[idx].n].ch - rhs;
+                diff = sTable(idx - sTable(idx).n).ch - rhs;
         }
         else if (idx2 != EMPTY_CASE_TRIE)
         {
-            diff = lhs - sTable[idx2 - sTable[idx2].n].ch;
+            diff = lhs - sTable(idx2 - sTable(idx2).n).ch;
         }
         // one of chars is not cased at all
         return diff;
@@ -8073,22 +8151,23 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     // fullCaseTrie is packed index table
     if (idx == EMPTY_CASE_TRIE)
         return lhs;
-    immutable start = idx - fTable[idx].n;
-    immutable end = fTable[idx].size + start;
-    assert(fTable[start].entry_len == 1);
+    immutable start = idx - fTable(idx).n;
+    immutable end = fTable(idx).size + start;
+    assert(fTable(start).entry_len == 1);
     for (idx=start; idx<end; idx++)
     {
-        auto entryLen = fTable[idx].entry_len;
+        const entryLen = fTable(idx).entry_len;
         if (entryLen == 1)
         {
-            if (fTable[idx].seq[0] == rhs)
+            if (fTable(idx).seq[0] == rhs)
             {
                 return 0;
             }
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq[0 .. entryLen];
+            dchar[3] arr = fTable(idx).seq;
+            const dchar[] seq = arr[0 .. entryLen];
             if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -8098,7 +8177,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
             }
         }
     }
-    return fTable[start].seq[0]; // new remapped character for accurate diffs
+    return fTable(start).seq[0]; // new remapped character for accurate diffs
 }
 
 /++
@@ -8330,7 +8409,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
             {
                 return c;
             }
-            auto ch = sTable[idx].ch;
+            auto ch = sTable(idx).ch;
             return ch;
         }
 
@@ -8366,7 +8445,7 @@ package(std) auto simpleCaseFoldings(dchar ch) @safe
     immutable idx = simpleCaseTrie[ch];
     if (idx == EMPTY_CASE_TRIE)
         return Range(ch);
-    auto entry = sTable[idx];
+    auto entry = sTable(idx);
     immutable start = idx - entry.n;
     return Range(start, entry.size);
 }
@@ -8457,21 +8536,21 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
-    import std.range : assumeSorted;
+    import std.range : assumeSorted, stride;
     immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
     immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
-    auto r = compositionTable[idx .. idx+cnt].map!"a.rhs"().assumeSorted();
+    auto r = compositionTable.stride(2)[idx .. idx+cnt].assumeSorted();
     immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
-    immutable entry = compositionTable[idx+target];
-    if (entry.rhs != second)
+    immutable entry = compositionTable[(idx+target)*2];
+    if (entry != second)
         return dchar.init;
-    return entry.composed;
+    return compositionTable[(idx+target)*2 + 1];
 }
 
 ///

@@ -308,7 +308,7 @@ if (isFloatingPoint!T)
     // If both are huge, avoid overflow by scaling by 2^^-N.
     // If both are tiny, avoid underflow by scaling by 2^^N.
     import core.math : fabs, sqrt;
-    import std.math : floatTraits, RealFormat;
+    import std.math.traits : floatTraits, RealFormat;
 
     alias F = floatTraits!T;
 
@@ -974,9 +974,9 @@ private T powIntegralImpl(PowType type, T)(T val)
     else
     {
         static if (isSigned!T)
-            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(0 - val) + type) : T(1) << bsr(val) + type);
+            return cast() cast(T) (val < 0 ? -(T(1) << bsr(0 - val) + type) : T(1) << bsr(val) + type);
         else
-            return cast(Unqual!T) (T(1) << bsr(val) + type);
+            return cast() cast(T) (T(1) << bsr(val) + type);
     }
 }
 

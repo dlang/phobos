@@ -295,6 +295,19 @@ if (is(Range == U*, U) && isIterable!U && !isAutodecodableString!Range && !isInf
     R().array;
 }
 
+// Test that `array(scope InputRange r)` returns a non-scope array
+// https://issues.dlang.org/show_bug.cgi?id=23300
+@safe pure nothrow unittest
+{
+    @safe int[] fun()
+    {
+        import std.algorithm.iteration : map;
+        int[3] arr = [1, 2, 3];
+        scope r = arr[].map!(x => x + 3);
+        return r.array;
+    }
+}
+
 /**
 Convert a narrow autodecoding string to an array type that fully supports
 random access.  This is handled as a special case and always returns an array
@@ -650,6 +663,8 @@ if (isInputRange!Values && isInputRange!Keys)
                 alias ValueElement = ElementType!Values;
                 static if (hasElaborateDestructor!ValueElement)
                     ValueElement.init.__xdtor();
+
+                aa[key] = values.front;
             })))
             {
                 () @trusted {
@@ -788,6 +803,20 @@ if (isInputRange!Values && isInputRange!Keys)
     }
     static assert(!__traits(compiles, () @safe { assocArray(1.iota, [UnsafeElement()]);}));
     assert(assocArray(1.iota, [UnsafeElement()]) == [0: UnsafeElement()]);
+}
+
+@safe unittest
+{
+    struct ValueRange
+    {
+        string front() const @system;
+        @safe:
+        void popFront() {}
+        bool empty() const { return false; }
+    }
+    int[] keys;
+    ValueRange values;
+    static assert(!__traits(compiles, assocArray(keys, values)));
 }
 
 /**
@@ -3557,11 +3586,14 @@ if (isDynamicArray!A)
         return _data ? _data.capacity : 0;
     }
 
+    /// Returns: The number of elements appended.
+    @property size_t length() const => _data ? _data.arr.length : 0;
+
     /**
      * Use opSlice() from now on.
      * Returns: The managed array.
      */
-    @property inout(T)[] data() inout @trusted
+    @property inout(T)[] data() inout
     {
         return this[];
     }
@@ -3892,6 +3924,7 @@ if (isDynamicArray!A)
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
     app2.put(3);
+    assert(app2.length == 3);
     app2.put([ 4, 5, 6 ]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
 }
@@ -4105,6 +4138,9 @@ if (isDynamicArray!A)
         return impl.capacity;
     }
 
+    /// Returns: The number of elements appended.
+    @property size_t length() const => impl.length;
+
     /* Use opSlice() instead.
      * Returns: the managed array.
      */
@@ -4131,6 +4167,7 @@ unittest
     assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
+    assert(app2.length == 3);
     app2 ~= [4, 5, 6];
     assert(app2[] == [1, 2, 3, 4, 5, 6]);
     assert(a == [1, 2, 3, 4, 5, 6]);

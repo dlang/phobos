@@ -1540,9 +1540,9 @@ version (StdUnittest)
 }
 
 /+
-Returns true if the field at index `i` in ($D T) shares its address with another field.
+Returns true if the field at index `i` in $(D T) shares its address with another field.
 
-Note: This does not merelly check if the field is a member of an union, but also that
+Note: This does not merely check if the field is a member of an union, but also that
 it is not a single child.
 +/
 package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
@@ -1632,6 +1632,9 @@ class ErrnoException : Exception
     /// Operating system error code.
     final @property uint errno() nothrow pure scope @nogc @safe { return _errno; }
     private uint _errno;
+    /// Localized error message generated through $(REF strerror_r, core,stdc,string) or $(REF strerror, core,stdc,string).
+    final @property string errnoMsg() nothrow pure scope @nogc @safe { return _errnoMsg; }
+    private string _errnoMsg;
     /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @safe
     {
@@ -1642,7 +1645,8 @@ class ErrnoException : Exception
     this(string msg, int errno, string file = null, size_t line = 0) @safe
     {
         _errno = errno;
-        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
+        _errnoMsg = errnoString(errno);
+        super(msg ~ " (" ~ errnoMsg ~ ")", file, line);
     }
 }
 
@@ -1797,7 +1801,7 @@ expression.
 @system unittest
 {
     import std.format : format;
-    assert("%s".format.ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
+    assert("%s".format.ifThrown!Exception(e => typeid(e).name) == "std.format.FormatException");
 }
 
 //Verify Examples
@@ -1830,7 +1834,7 @@ expression.
     static assert(!__traits(compiles, (new Object()).ifThrown(1)));
 
     //Use a lambda to get the thrown object.
-    assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
+    assert("%s".format().ifThrown(e => typeid(e).name) == "std.format.FormatException");
 }
 
 @system unittest

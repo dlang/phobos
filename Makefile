@@ -15,6 +15,9 @@
 # make BUILD=debug => makes debug build of the library
 #
 # make unittest => builds all unittests (for debug AND release) and runs them
+# make std/somemodule.test => only builds and unittests std.somemodule
+# make std/somepackage.test => only builds and unittests modules in std.somepackage
+# make unittest/std/somemodule.run => run std.somemodule unittest
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
@@ -24,8 +27,6 @@
 # make build-html => makes html documentation
 #
 # make install => copies library to /usr/lib
-#
-# make std/somemodule.test => only builds and unittests std.somemodule
 #
 ################################################################################
 # Configurable stuff, usually from the command line
@@ -78,6 +79,15 @@ else
     override PIC:=
 endif
 
+# default to compiling the C parts (zlib) with DMD via importC; override with USE_IMPORTC=1/0
+USE_IMPORTC:=1
+
+# FreeBSD 14 can't use importC for zlib thanks to asm in stdlib.h, which dmd can't handle.
+# https://issues.dlang.org/show_bug.cgi?id=24389
+ifeq (freebsd,$(OS))
+	USE_IMPORTC=0
+endif
+
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
 DRUNTIME_PATH = $(DMD_DIR)/druntime
@@ -110,25 +120,41 @@ else
 	RUN =
 endif
 
-# Set extra CFLAGS (for DMD - the zlib .c files are compiled via importC)
-NODEFAULTLIB=-defaultlib= -debuglib=
-CFLAGS=-P=-Ietc/c/zlib
+# Set NODEFAULTLIB and CPPFLAGS (for the C preprocessor)
+NODEFAULTLIB:=-defaultlib= -debuglib=
+CPPFLAGS:=
 ifeq (,$(findstring win,$(OS)))
-	CFLAGS += -P=-DHAVE_UNISTD_H
+	CPPFLAGS := -DHAVE_UNISTD_H
 # Bundled with the system library on OSX, and doesn't work with >= MacOS 11
 	ifneq (osx,$(OS))
 		NODEFAULTLIB += -L-lpthread -L-lm
 	endif
-else
-	ifeq ($(MODEL),32omf)
-		CFLAGS += -P=-DNO_snprintf
+endif
+
+# Set CC, CC_OUTFILEFLAG and CFLAGS unless using importC
+ifneq ($(USE_IMPORTC),1)
+	CC := cc
+	CC_OUTFILEFLAG := -o
+
+	ifeq ($(OS),win32wine)
+		CC := wine dmc.exe
+		CFLAGS := $(if $(findstring $(BUILD),debug),-g,-O)
+	else ifeq ($(OS),windows)
+		CC := cl
+		CC_OUTFILEFLAG := /Fo
+		CFLAGS := /nologo /Zl /GS- $(if $(findstring $(BUILD),debug),/Z7,/O2)
+	else # Posix
+		CFLAGS := $(MODEL_FLAG) -fPIC -std=c11 $(if $(findstring $(BUILD),debug),-g,-O3)
+		ifeq (osx64,$(OS)$(MODEL))
+			CFLAGS += --target=x86_64-darwin-apple  # ARM cpu is not supported by dmd
+		endif
 	endif
 endif
 
 
 # Set DFLAGS
 DFLAGS=
-override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -preview=dip1000 -preview=dtorfields -preview=fieldwise $(MODEL_FLAG) $(PIC)
+override DFLAGS+=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -preview=dip1000 -preview=dtorfields -preview=fieldwise $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 override DFLAGS += -g -debug
 else
@@ -170,9 +196,7 @@ ifeq (,$(findstring win,$(OS)))
 	SONAME:=libphobos2.so.$(MAJOR).$(MINOR)
 	LIBSO:=$(ROOT)/$(SONAME).$(PATCH)
 else
-	ifeq ($(MODEL),32omf)
-		LIB:=phobos.lib
-	else ifeq ($(MODEL),32)
+	ifeq ($(MODEL),32)
 		LIB:=phobos32mscoff.lib
 	else
 		LIB:=phobos$(MODEL).lib
@@ -249,6 +273,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
+		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 		windows/advapi32 \
 	) \
@@ -268,10 +293,15 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
   $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_INTERNAL))
 
 # C files to be part of the build
-C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
+C_MODULES := $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
+C_FILES := $(addsuffix .c, $(C_MODULES))
 
-OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
+ifeq ($(USE_IMPORTC),1)
+    C_OBJS := $(ROOT)/zlib$(DOTOBJ)
+else
+    C_OBJS := $(addprefix $(ROOT)/, $(addsuffix $(DOTOBJ), $(C_MODULES)))
+endif
 
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
@@ -317,12 +347,18 @@ endif
 lib: $(LIB)
 dll: $(ROOT)/libphobos2.so
 
-# compile zlib .c files via importC; the druntime dependency makes sure DMD has been built
-$(ROOT)/%$(DOTOBJ): %.c $(DRUNTIME)
-	$(DMD) -c $(DFLAGS) $(CFLAGS) -of$@ $<
+ifeq ($(USE_IMPORTC),1)
+# the druntime dependency makes sure DMD has been built
+$(ROOT)/zlib$(DOTOBJ): $(C_FILES) $(DRUNTIME)
+	$(DMD) -c $(DFLAGS) $(addprefix -P=,$(CPPFLAGS) -Ietc/c/zlib) -of$@ $(C_FILES)
+else
+$(ROOT)/%$(DOTOBJ): %.c
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< $(CC_OUTFILEFLAG)$@
+endif
 
-$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+$(LIB): $(C_OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(C_OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -331,8 +367,8 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
-$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared $(NODEFAULTLIB) -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
+$(LIBSO): $(C_OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared $(NODEFAULTLIB) -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(C_OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
@@ -373,8 +409,8 @@ ifneq (1,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
-$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) $(NODEFAULTLIB)
+$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(C_OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) $(UDFLAGS) -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(C_OBJS) $(DRUNTIME) $(LINKDL) $(NODEFAULTLIB)
 
 else
 
@@ -383,8 +419,8 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(NODEFAULTLIB)
+$(UT_LIBSO): $(UT_D_OBJS) $(C_OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(C_OBJS) $(DRUNTIMESO) $(LINKDL) $(NODEFAULTLIB)
 
 $(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) $(NODEFAULTLIB)
