@@ -919,7 +919,7 @@ if (!is(S : T) &&
     {
         string name(TypeInfo ti) @trusted
         {
-            if (auto tc = (cast(TypeInfo_Const)ti))
+            while (auto tc = (cast(TypeInfo_Const) ti))
             {
                 ti = tc.base;
             }
