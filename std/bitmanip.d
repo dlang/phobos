@@ -2945,58 +2945,6 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
 }
 
 
-private union EndianSwapper(T)
-if (canSwapEndianness!T)
-{
-    T value;
-    ubyte[T.sizeof] array;
-
-    static if (is(immutable FloatingPointTypeOf!(T) == immutable float))
-        uint  intValue;
-    else static if (is(immutable FloatingPointTypeOf!(T) == immutable double))
-        ulong intValue;
-
-}
-
-// Can't use EndianSwapper union during CTFE.
-private auto ctfeRead(T)(const ubyte[T.sizeof] array)
-if (__traits(isIntegral, T))
-{
-    Unqual!T result;
-    version (LittleEndian)
-        foreach_reverse (b; array)
-            result = cast() cast(T) ((result << 8) | b);
-    else
-        foreach (b; array)
-            result = cast() cast(T) ((result << 8) | b);
-    return cast(T) result;
-}
-
-// Can't use EndianSwapper union during CTFE.
-private auto ctfeBytes(T)(const T value)
-if (__traits(isIntegral, T))
-{
-    ubyte[T.sizeof] result;
-    Unqual!T tmp = value;
-    version (LittleEndian)
-    {
-        foreach (i; 0 .. T.sizeof)
-        {
-            result[i] = cast(ubyte) tmp;
-            tmp = cast() cast(T) (tmp >>> 8);
-        }
-    }
-    else
-    {
-        foreach_reverse (i; 0 .. T.sizeof)
-        {
-            result[i] = cast(ubyte) tmp;
-            tmp = cast()(T) (tmp >>> 8);
-        }
-    }
-    return result;
-}
-
 /++
     Converts the given value from the native endianness to big endian and
     returns it as a `ubyte[n]` where `n` is the size of the given type.
@@ -3010,13 +2958,21 @@ if (__traits(isIntegral, T))
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
-auto nativeToBigEndian(T)(const T val) @safe pure nothrow @nogc
+auto nativeToBigEndian(T)(const T val) @trusted pure nothrow @nogc
 if (canSwapEndianness!T)
 {
-    version (LittleEndian)
-        return nativeToEndianImpl!true(val);
+    static if (isFloatOrDouble!T)
+        return nativeToBigEndian(*cast(const UnsignedOfSize!(T.sizeof)*) &val);
     else
-        return nativeToEndianImpl!false(val);
+    {
+        enum len = T.sizeof;
+        ubyte[len] retval;
+
+        static foreach (i; 0 .. len)
+            retval[i] = cast(ubyte)(val >> (len - i - 1) * 8);
+
+        return retval;
+    }
 }
 
 ///
@@ -3041,26 +2997,6 @@ if (canSwapEndianness!T)
     const double cd = 123.45;
     ubyte[8] swappedCD = nativeToBigEndian(cd);
     assert(cd == bigEndianToNative!double(swappedCD));
-}
-
-private auto nativeToEndianImpl(bool swap, T)(const T val) @safe pure nothrow @nogc
-if (__traits(isIntegral, T))
-{
-    if (!__ctfe)
-    {
-        static if (swap)
-            return EndianSwapper!T(swapEndian(val)).array;
-        else
-            return EndianSwapper!T(val).array;
-    }
-    else
-    {
-        // Can't use EndianSwapper in CTFE.
-        static if (swap)
-            return ctfeBytes(swapEndian(val));
-        else
-            return ctfeBytes(val);
-    }
 }
 
 @safe unittest
@@ -3149,13 +3085,25 @@ if (__traits(isIntegral, T))
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
   +/
-T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
+T bigEndianToNative(T, size_t n)(ubyte[n] val) @trusted pure nothrow @nogc
 if (canSwapEndianness!T && n == T.sizeof)
 {
-    version (LittleEndian)
-        return endianToNativeImpl!(true, T, n)(val);
+    static if (isFloatOrDouble!T)
+    {
+        auto retval = bigEndianToNative!(UnsignedOfSize!(T.sizeof))(val);
+        return *cast(const T*) &retval;
+    }
     else
-        return endianToNativeImpl!(false, T, n)(val);
+    {
+        enum len = T.sizeof;
+        alias U = UnsignedOfSize!len;
+        U retval;
+
+        static foreach (i; 0 .. len)
+            retval |= (cast(U) val[i]) << (len - i - 1) * 8;
+
+        return cast(T) retval;
+    }
 }
 
 ///
@@ -3179,13 +3127,21 @@ if (canSwapEndianness!T && n == T.sizeof)
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
   +/
-auto nativeToLittleEndian(T)(const T val) @safe pure nothrow @nogc
+auto nativeToLittleEndian(T)(const T val) @trusted pure nothrow @nogc
 if (canSwapEndianness!T)
 {
-    version (BigEndian)
-        return nativeToEndianImpl!true(val);
+    static if (isFloatOrDouble!T)
+        return nativeToLittleEndian(*cast(const UnsignedOfSize!(T.sizeof)*)&val);
     else
-        return nativeToEndianImpl!false(val);
+    {
+        enum len = T.sizeof;
+        ubyte[len] retval;
+
+        static foreach (i; 0 .. len)
+            retval[i] = cast(ubyte)(val >> i * 8);
+
+        return retval;
+    }
 }
 
 ///
@@ -3259,13 +3215,25 @@ if (canSwapEndianness!T)
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
   +/
-T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
+T littleEndianToNative(T, size_t n)(ubyte[n] val) @trusted pure nothrow @nogc
 if (canSwapEndianness!T && n == T.sizeof)
 {
-    version (BigEndian)
-        return endianToNativeImpl!(true, T, n)(val);
+    static if (isFloatOrDouble!T)
+    {
+        auto retval = littleEndianToNative!(UnsignedOfSize!(T.sizeof))(val);
+        return *cast(const T*) &retval;
+    }
     else
-        return endianToNativeImpl!(false, T, n)(val);
+    {
+        enum len = T.sizeof;
+        alias U = UnsignedOfSize!len;
+        U retval;
+
+        static foreach (i; 0 .. len)
+            retval |= (cast(U) val[i]) << i * 8;
+
+        return cast(T) retval;
+    }
 }
 
 ///
@@ -3278,70 +3246,6 @@ if (canSwapEndianness!T && n == T.sizeof)
     dchar c = 'D';
     ubyte[4] swappedC = nativeToLittleEndian(c);
     assert(c == littleEndianToNative!dchar(swappedC));
-}
-
-private T endianToNativeImpl(bool swap, T, size_t n)(ubyte[n] val) @nogc nothrow pure @trusted
-if (__traits(isIntegral, T) && n == T.sizeof)
-{
-    if (!__ctfe)
-    {
-        EndianSwapper!T es = { array: val };
-        static if (swap)
-            return swapEndian(es.value);
-        else
-            return es.value;
-    }
-    else
-    {
-        static if (swap)
-            return swapEndian(ctfeRead!T(val));
-        else
-            return ctfeRead!T(val);
-    }
-}
-
-private auto nativeToEndianImpl(bool swap, T)(const T val) @trusted pure nothrow @nogc
-if (isFloatOrDouble!T)
-{
-    if (!__ctfe)
-    {
-        EndianSwapper!T es = EndianSwapper!T(val);
-        static if (swap)
-            es.intValue = swapEndian(es.intValue);
-        return es.array;
-    }
-    else
-    {
-        static if (T.sizeof == 4)
-            uint intValue = *cast(const uint*) &val;
-        else static if (T.sizeof == 8)
-            ulong intValue = *cast(const ulong*) & val;
-        static if (swap)
-            intValue = swapEndian(intValue);
-        return ctfeBytes(intValue);
-    }
-}
-
-private auto endianToNativeImpl(bool swap, T, size_t n)(ubyte[n] val) @trusted pure nothrow @nogc
-if (isFloatOrDouble!T && n == T.sizeof)
-{
-    if (!__ctfe)
-    {
-        EndianSwapper!T es = { array: val };
-        static if (swap)
-            es.intValue = swapEndian(es.intValue);
-        return es.value;
-    }
-    else
-    {
-        static if (n == 4)
-            uint x = ctfeRead!uint(val);
-        else static if (n == 8)
-            ulong x = ctfeRead!ulong(val);
-        static if (swap)
-            x = swapEndian(x);
-        return *cast(T*) &x;
-    }
 }
 
 private template isFloatOrDouble(T)
@@ -3403,6 +3307,42 @@ private template canSwapEndianness(T)
         static assert(!canSwapEndianness!(shared(const T)));
         static assert(!canSwapEndianness!(shared(immutable T)));
     }
+}
+
+private template UnsignedOfSize(size_t n)
+{
+    static if (n == 8)
+        alias UnsignedOfSize = ulong;
+    else static if (n == 4)
+        alias UnsignedOfSize = uint;
+    else static if (n == 2)
+        alias UnsignedOfSize = ushort;
+    else static if (n == 1)
+        alias UnsignedOfSize = ubyte;
+    else
+        alias UnsignedOfSize = void;
+}
+
+@safe unittest
+{
+    static assert(is(UnsignedOfSize!(byte.sizeof) == ubyte));
+    static assert(is(UnsignedOfSize!(ubyte.sizeof) == ubyte));
+    static assert(is(UnsignedOfSize!(short.sizeof) == ushort));
+    static assert(is(UnsignedOfSize!(ushort.sizeof) == ushort));
+    static assert(is(UnsignedOfSize!(int.sizeof) == uint));
+    static assert(is(UnsignedOfSize!(uint.sizeof) == uint));
+    static assert(is(UnsignedOfSize!(long.sizeof) == ulong));
+    static assert(is(UnsignedOfSize!(ulong.sizeof) == ulong));
+
+    static assert(is(UnsignedOfSize!(bool.sizeof) == ubyte));
+    static assert(is(UnsignedOfSize!(char.sizeof) == ubyte));
+    static assert(is(UnsignedOfSize!(wchar.sizeof) == ushort));
+    static assert(is(UnsignedOfSize!(dchar.sizeof) == uint));
+
+    static assert(is(UnsignedOfSize!(float.sizeof) == uint));
+    static assert(is(UnsignedOfSize!(double.sizeof) == ulong));
+
+    static assert(is(UnsignedOfSize!10 == void));
 }
 
 /++
