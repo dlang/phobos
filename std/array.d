@@ -295,6 +295,19 @@ if (is(Range == U*, U) && isIterable!U && !isAutodecodableString!Range && !isInf
     R().array;
 }
 
+// Test that `array(scope InputRange r)` returns a non-scope array
+// https://issues.dlang.org/show_bug.cgi?id=23300
+@safe pure nothrow unittest
+{
+    @safe int[] fun()
+    {
+        import std.algorithm.iteration : map;
+        int[3] arr = [1, 2, 3];
+        scope r = arr[].map!(x => x + 3);
+        return r.array;
+    }
+}
+
 /**
 Convert a narrow autodecoding string to an array type that fully supports
 random access.  This is handled as a special case and always returns an array
@@ -650,6 +663,8 @@ if (isInputRange!Values && isInputRange!Keys)
                 alias ValueElement = ElementType!Values;
                 static if (hasElaborateDestructor!ValueElement)
                     ValueElement.init.__xdtor();
+
+                aa[key] = values.front;
             })))
             {
                 () @trusted {
@@ -788,6 +803,20 @@ if (isInputRange!Values && isInputRange!Keys)
     }
     static assert(!__traits(compiles, () @safe { assocArray(1.iota, [UnsafeElement()]);}));
     assert(assocArray(1.iota, [UnsafeElement()]) == [0: UnsafeElement()]);
+}
+
+@safe unittest
+{
+    struct ValueRange
+    {
+        string front() const @system;
+        @safe:
+        void popFront() {}
+        bool empty() const { return false; }
+    }
+    int[] keys;
+    ValueRange values;
+    static assert(!__traits(compiles, assocArray(keys, values)));
 }
 
 /**
@@ -1201,7 +1230,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     auto a2 = minimallyInitializedArray!(S2[][])(2, 2);
     assert(a2);
     enum b2 = minimallyInitializedArray!(S2[][])(2, 2);
-    assert(b2);
+    assert(b2 !is null);
     static struct S3
     {
         //this() @disable;
@@ -1210,7 +1239,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     auto a3 = minimallyInitializedArray!(S3[][])(2, 2);
     assert(a3);
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
-    assert(b3);
+    assert(b3 !is null);
 }
 
 /++
@@ -3536,6 +3565,9 @@ if (isDynamicArray!A)
         return impl ? impl.capacity : 0;
     }
 
+    /// Returns: The number of elements appended.
+    @property size_t length() const => _data ? _data.arr.length : 0;
+
     /**
      * Use opSlice() from now on.
      * Returns: The managed array.
@@ -3997,6 +4029,22 @@ if (isDynamicArray!A)
         put(w, ')');
     }
 }
+///
+@safe pure nothrow unittest
+{
+    auto app = appender!string();
+    string b = "abcdefg";
+    foreach (char c; b)
+        app.put(c);
+    assert(app[] == "abcdefg");
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(a);
+    app2.put(3);
+    assert(app2.length == 3);
+    app2.put([ 4, 5, 6 ]);
+    assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
+}
 
 @safe pure unittest
 {
@@ -4217,6 +4265,9 @@ if (isDynamicArray!A)
         return impl.capacity;
     }
 
+    /// Returns: The number of elements appended.
+    @property size_t length() const => impl.length;
+
     /* Use opSlice() instead.
      * Returns: the managed array.
      */
@@ -4243,6 +4294,7 @@ unittest
     assert(app2[] == [1, 2]);
     assert(a == [1, 2]);
     app2 ~= 3;
+    assert(app2.length == 3);
     app2 ~= [4, 5, 6];
     assert(app2[] == [1, 2, 3, 4, 5, 6]);
     assert(a == [1, 2, 3, 4, 5, 6]);
@@ -4830,24 +4882,16 @@ unittest
 }
 
 /++
-Constructs a static array from `a`.
-The type of elements can be specified implicitly so that $(D [1, 2].staticArray) results in `int[2]`,
-or explicitly, e.g. $(D [1, 2].staticArray!float) returns `float[2]`.
-When `a` is a range whose length is not known at compile time, the number of elements must be
-given as template argument (e.g. `myrange.staticArray!2`).
-Size and type can be combined, if the source range elements are implicitly
-convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
-When the range `a` is known at compile time, it can also be specified as a
-template argument to avoid having to specify the number of elements
-(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
+Constructs a static array from a dynamic array whose length is known at compile-time.
+The element type can be inferred or specified explicitly:
+
+* $(D [1, 2].staticArray) returns `int[2]`
+* $(D [1, 2].staticArray!float) returns `float[2]`
 
 Note: `staticArray` returns by value, so expressions involving large arrays may be inefficient.
 
 Params:
-    a = The input elements. If there are less elements than the specified length of the static array,
-    the rest of it is default-initialized. If there are more than specified, the first elements
-    up to the specified length are used.
-    rangeLength = outputs the number of elements used from `a` to it. Optional.
+    a = The input array.
 
 Returns: A static array constructed from `a`.
 +/
@@ -4904,7 +4948,23 @@ nothrow pure @safe @nogc unittest
     [cast(byte) 1, cast(byte) 129].staticArray.checkStaticArray!byte([1, -127]);
 }
 
-/// ditto
+/**
+Constructs a static array from a range.
+When `a.length` is not known at compile time, the number of elements must be
+given as a template argument (e.g. `myrange.staticArray!2`).
+Size and type can be combined, if the source range elements are implicitly
+convertible to the requested element type (eg: `2.iota.staticArray!(long[2])`).
+
+When the range `a` is known at compile time, it can be given as a
+template argument to avoid having to specify the number of elements
+(e.g.: `staticArray!(2.iota)` or `staticArray!(double, 2.iota)`).
+
+Params:
+    a = The input range. If there are less elements than the specified length of the static array,
+    the rest of it is default-initialized. If there are more than specified, the first elements
+    up to the specified length are used.
+    rangeLength = Output for the number of elements used from `a`. Optional.
+*/
 auto staticArray(size_t n, T)(scope T a)
 if (isInputRange!T)
 {

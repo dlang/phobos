@@ -164,8 +164,7 @@ private template createStorageAndFields(Ts...)
         alias StoreType = ulong;
     else
     {
-        import std.conv : to;
-        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ to!string(Size));
+        static assert(false, "Field widths must sum to 8, 16, 32, or 64, not " ~ Size.stringof);
         alias StoreType = ulong; // just to avoid another error msg
     }
 
@@ -263,9 +262,9 @@ Implementation_details: `Bitfields` are internally stored in an
 `ubyte`, `ushort`, `uint` or `ulong` depending on the number of bits
 used. The bits are filled in the order given by the parameters,
 starting with the lowest significant bit. The name of the (private)
-variable used for saving the `bitfield` is created by a prefix `_bf`
-and concatenating all of the variable names, each preceded by an
-underscore.
+variable used for saving the `bitfield` is created by concatenating
+all of the variable names, each preceded by an underscore, and
+a suffix `_bf`.
 
 Params: T = A list of template parameters divided into chunks of 3
             items. Each chunk consists (in this order) of a type, a
@@ -279,10 +278,8 @@ See_Also: $(REF BitFlags, std,typecons)
 */
 string bitfields(T...)()
 {
-    import std.conv : to;
-
     static assert(T.length % 3 == 0,
-                  "Wrong number of arguments (" ~ to!string(T.length) ~ "): Must be a multiple of 3");
+                  "Wrong number of arguments (" ~ T.length.stringof ~ "): Must be a multiple of 3");
 
     static foreach (i, ARG; T)
     {
@@ -808,6 +805,7 @@ private struct FloatingPointRepresentation(T)
    Allows manipulating the fraction, exponent, and sign parts of a
    `float` separately. The definition is:
 
+$(RUNNABLE_EXAMPLE
 ----
 struct FloatRep
 {
@@ -822,6 +820,7 @@ struct FloatRep
     enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
 ----
+)
 */
 alias FloatRep = FloatingPointRepresentation!float;
 
@@ -877,6 +876,7 @@ alias FloatRep = FloatingPointRepresentation!float;
    Allows manipulating the fraction, exponent, and sign parts of a
    `double` separately. The definition is:
 
+$(RUNNABLE_EXAMPLE
 ----
 struct DoubleRep
 {
@@ -891,6 +891,7 @@ struct DoubleRep
     enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 ----
+)
 */
 alias DoubleRep = FloatingPointRepresentation!double;
 
@@ -1053,6 +1054,8 @@ public:
     of a type different than `size_t`, firstly because its length should
     be a multiple of `size_t.sizeof`, and secondly because how the bits
     are mapped:
+
+    $(RUNNABLE_EXAMPLE
     ---
     size_t[] source = [1, 2, 3, 3424234, 724398, 230947, 389492];
     enum sbits = size_t.sizeof * 8;
@@ -1063,6 +1066,7 @@ public:
         assert(ba[n] == nth_bit);
     }
     ---
+    )
     The least significant bit in any `size_t` unit is the starting bit of this
     unit, and the most significant bit is the last bit of this unit. Therefore,
     passing e.g. an array of `int`s may result in a different `BitArray`
@@ -1302,7 +1306,7 @@ public:
 
     /**
       Sets the bits of a slice of `BitArray` starting
-      at index `start` and ends at index ($D end - 1)
+      at index `start` and ends at index $(D end - 1)
       with the values specified by `val`.
      */
     void opSliceAssign(bool val, size_t start, size_t end) @nogc pure nothrow
@@ -2961,10 +2965,10 @@ if (__traits(isIntegral, T))
     Unqual!T result;
     version (LittleEndian)
         foreach_reverse (b; array)
-            result = cast(Unqual!T) ((result << 8) | b);
+            result = cast() cast(T) ((result << 8) | b);
     else
         foreach (b; array)
-            result = cast(Unqual!T) ((result << 8) | b);
+            result = cast() cast(T) ((result << 8) | b);
     return cast(T) result;
 }
 
@@ -2979,7 +2983,7 @@ if (__traits(isIntegral, T))
         foreach (i; 0 .. T.sizeof)
         {
             result[i] = cast(ubyte) tmp;
-            tmp = cast(Unqual!T) (tmp >>> 8);
+            tmp = cast() cast(T) (tmp >>> 8);
         }
     }
     else
@@ -2987,7 +2991,7 @@ if (__traits(isIntegral, T))
         foreach_reverse (i; 0 .. T.sizeof)
         {
             result[i] = cast(ubyte) tmp;
-            tmp = cast(Unqual!T) (tmp >>> 8);
+            tmp = cast()(T) (tmp >>> 8);
         }
     }
     return result;
@@ -3276,7 +3280,7 @@ if (canSwapEndianness!T && n == T.sizeof)
     assert(c == littleEndianToNative!dchar(swappedC));
 }
 
-private T endianToNativeImpl(bool swap, T, size_t n)(ubyte[n] val) @nogc nothrow pure @safe
+private T endianToNativeImpl(bool swap, T, size_t n)(ubyte[n] val) @nogc nothrow pure @trusted
 if (__traits(isIntegral, T) && n == T.sizeof)
 {
     if (!__ctfe)

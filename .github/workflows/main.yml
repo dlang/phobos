@@ -1,0 +1,205 @@
+# very similar to the DMD script: https://github.com/dlang/dmd/blob/master/.github/workflows/main.yml
+
+name: Main
+on:
+  - pull_request # without merge conflicts
+  - push # branch or tag
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - job_name: Ubuntu 22.04 x64
+            os: ubuntu-22.04
+          - job_name: Ubuntu 22.04 x86
+            os: ubuntu-22.04
+            model: 32
+          # macOS
+          - job_name: macOS 13 x64
+            os: macos-13
+          - job_name: macOS 12 x64
+            os: macos-12
+          # Windows
+          - job_name: Windows x64
+            os: windows-2022
+          - job_name: Windows x86
+            os: windows-2022
+            model: 32
+    name: ${{ matrix.job_name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    env:
+      # for ci/run.sh:
+      OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || (startsWith(matrix.os, 'windows') && 'windows' || '')) }}
+      MODEL: ${{ matrix.model || '64' }}
+      HOST_DMD: dmd
+      # N is set dynamically below
+      FULL_BUILD: false
+      # work around https://issues.dlang.org/show_bug.cgi?id=23517
+      MACOSX_DEPLOYMENT_TARGET: '11'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+      - name: Clone DMD
+        run: |
+          set -uexo pipefail
+
+          ref='${{ github.ref }}'
+          if [[ "$ref" =~ ^refs/pull/ ]]; then
+            # PR: clone the DMD head with the same name as this Phobos PR's target branch
+            # e.g., DMD stable when targeting Phobos stable
+            REPO_BRANCH="$GITHUB_BASE_REF"
+          elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
+            # no PR: clone the DMD head with the same name as this Phobos head
+            # e.g., DMD stable for a push to Phobos stable, or DMD v2.105.2 for Phobos tag v2.105.2
+            REPO_BRANCH="${BASH_REMATCH[2]}"
+          else
+            echo "Error: unexpected GitHub ref '$ref'" >&2
+            exit 1
+          fi
+
+          git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
+
+      - name: Set environment variable N (parallelism)
+        run: echo "N=$(${{ runner.os == 'macOS' && 'sysctl -n hw.logicalcpu' || 'nproc' }})" >> $GITHUB_ENV
+
+      - name: 'Posix: Install prerequisites'
+        if: runner.os != 'Windows'
+        run: cd ../dmd && ${{ runner.os == 'macOS' && 'ci/cirrusci.sh' || 'sudo -E ci/cirrusci.sh' }}
+      - name: 'Windows: Set up MSVC environment'
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-vsdevenv@v4
+        with:
+          arch: ${{ env.MODEL == '64' && 'x64' || 'x86' }}
+
+      # NOTE: Linker ICEs with Xcode 15.0.1 (default version on macos-13)
+      # * https://issues.dlang.org/show_bug.cgi?id=24407
+      # Remove this step if the default gets changed to 15.1 in actions/runner-images.
+      - name: 'macOS 13: Switch to Xcode v15.1'
+        if: matrix.os == 'macos-13'
+        run: sudo xcode-select -switch /Applications/Xcode_15.1.app
+
+      - name: 'Posix: Install host compiler'
+        if: runner.os != 'Windows'
+        run: cd ../dmd && ci/run.sh install_host_compiler
+      - name: 'Windows: Install host compiler'
+        if: runner.os == 'Windows'
+        uses: dlang-community/setup-dlang@v1.3.0
+        with:
+          compiler: ldc-latest
+
+      - name: Build
+        run: cd ../dmd && ci/run.sh build
+        env:
+          # on Windows, `ci/run.sh build` expects the DMD env var to be set to the DMD-CLI-compatible host compiler
+          DMD: ${{ runner.os == 'Windows' && 'ldmd2' || '' }}
+          # work around the LDC host compiler on Windows assuming the first link.exe in PATH is the MSVC one
+          # (VSINSTALLDIR is set, but GHA uses Git's bin\bash.exe for `shell: bash`, which prepends Git's usr\bin to PATH, with GNU link.exe)
+          LDC_VSDIR_FORCE: ${{ runner.os == 'Windows' && '1' || '' }}
+      - name: Test dmd
+        run: cd ../dmd && ci/run.sh test_dmd
+      - name: Test druntime
+        run: cd ../dmd && ci/run.sh test_druntime
+      - name: 'Windows x86: Add 32-bit libcurl.dll to PATH (required for Phobos unittests)'
+        if: runner.os == 'Windows' && env.MODEL == '32'
+        run: echo "$(dirname "$(which $DC)")/../lib32" >> $GITHUB_PATH
+      - name: Test phobos
+        run: cd ../dmd && ci/run.sh test_phobos
+
+  freebsd-vm:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job_name: FreeBSD 13.2 x64
+            freebsd_version: '13.2'
+    name: ${{ matrix.job_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+      - name: Run in VM
+        uses: cross-platform-actions/action@v0.23.0
+        with:
+          operating_system: freebsd
+          hypervisor: qemu
+          memory: 12G
+          cpu_count: 4
+          sync_files: runner-to-vm
+          version: ${{ matrix.freebsd_version }}
+          shell: bash
+          run: |
+            set -uexo pipefail
+
+            freebsd_version='${{ matrix.freebsd_version }}'
+            freebsd_major="${freebsd_version:0:2}"
+
+            export OS_NAME=freebsd
+            export MODEL=64
+            export HOST_DMD=dmd
+            export N="$(nproc)"
+            export FULL_BUILD=false
+            export CI_DFLAGS="-version=TARGET_FREEBSD${freebsd_major}"
+
+            #if [[ "$freebsd_major" == 12 ]]; then
+            #  sudo sed -i '' -e 's|pkg.FreeBSD.org|mirrors.xtom.com/freebsd-pkg|' /etc/pkg/FreeBSD.conf
+            #fi
+
+            bash --version
+
+            echo '::group::Install git'
+            sudo pkg install -y git
+            echo '::endgroup::'
+
+            echo '::group::Clone DMD'
+            ref='${{ github.ref }}'
+            if [[ "$ref" =~ ^refs/pull/ ]]; then
+              REPO_BRANCH="$GITHUB_BASE_REF"
+            elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
+              REPO_BRANCH="${BASH_REMATCH[2]}"
+            else
+              echo "Error: unexpected GitHub ref '$ref'" >&2
+              exit 1
+            fi
+
+            git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
+            echo '::endgroup::'
+
+            cd ../dmd
+
+            echo '::group::Install prerequisites'
+            sudo -E ci/cirrusci.sh
+            echo '::endgroup::'
+
+            echo '::group::Install host compiler'
+            ci/run.sh install_host_compiler
+            echo '::endgroup::'
+
+            echo '::group::Build'
+            ci/run.sh build
+            echo '::endgroup::'
+
+            echo '::group::Test dmd'
+            ci/run.sh test_dmd
+            echo '::endgroup::'
+
+            echo '::group::Test druntime'
+            ci/run.sh test_druntime
+            echo '::endgroup::'
+
+            echo '::group::Test phobos'
+            ci/run.sh test_phobos
+            echo '::endgroup::'

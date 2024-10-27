@@ -3,10 +3,10 @@
 /phobos.json
 
 generated
+generated-lib
 GNUmakefile
 .DS_Store
 .*.sw*
-Makefile
 *.lst
 
 temp/
@@ -19,9 +19,18 @@ obj/
 
 # Rule for VS Code config folder
 .vscode
-
+dub.selections.json
 *.html
 
 .dub/
 libphobos_*
 source/
+
+tools/ucd*
+
+# Build specific exclusions
+*.o
+*.a
+*.obj
+*.exe
+unittest

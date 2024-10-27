@@ -190,8 +190,9 @@ Conversions from string _to numeric types differ from the C equivalents
 `atoi()` and `atol()` by checking for overflow and not allowing whitespace.
 
 For conversion of strings _to signed types, the grammar recognized is:
-$(PRE $(I Integer): $(I Sign UnsignedInteger)
-$(I UnsignedInteger)
+$(PRE $(I Integer):
+    $(I Sign UnsignedInteger)
+    $(I UnsignedInteger)
 $(I Sign):
     $(B +)
     $(B -))
@@ -260,7 +261,7 @@ template to(T)
 }
 
 /**
- * When converting strings _to numeric types, note that the D hexadecimal and binary
+ * When converting strings _to numeric types, note that D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
  * horizontal bar used _to separate groups of digits are recognized. This also
  * applies to the suffixes that indicate the type.
@@ -397,7 +398,7 @@ template to(T)
  *   $(LI Pointer to string conversions convert the pointer to a `size_t` value.
  *        If pointer is `char*`, treat it as C-style strings.
  *        In that case, this function is `@system`.))
- * See $(REF formatValue, std,format) on how toString should be defined.
+ * See $(REF formatValue, std,format) on how `toString` should be defined.
  */
 @system pure unittest // @system due to cast and ptr
 {
@@ -1803,7 +1804,7 @@ if (!is(S : T) && isAssociativeArray!S &&
     }
     static void testFloatingToIntegral(Floating, Integral)()
     {
-        import std.math : floatTraits, RealFormat;
+        import std.math.traits : floatTraits, RealFormat;
 
         bool convFails(Source, Target, E)(Source src)
         {
@@ -2263,19 +2264,21 @@ template roundTo(Target)
 }
 
 /**
-The `parse` family of functions works quite like the `to`
+$(PANEL
+The `parse` family of functions works quite like the $(LREF to)
 family, except that:
 $(OL
     $(LI It only works with character ranges as input.)
-    $(LI It takes the input by reference. (This means that rvalues - such
-    as string literals - are not accepted: use `to` instead.))
+    $(LI It takes the input by reference. This means that rvalues (such
+    as string literals) are not accepted: use `to` instead.)
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
+)
 
-This overload converts a character input range to a `bool`.
+This overload parses a `bool` from a character input range.
 
 Params:
-    Target = the type to convert to
+    Target = the boolean type to convert to
     source = the lvalue of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     doCount = the flag for deciding to report the number of consumed characters
 
@@ -2292,9 +2295,9 @@ Note:
     to `parse` and do not require lvalues.
 */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source)
-if (isInputRange!Source &&
-    isSomeChar!(ElementType!Source) &&
-    is(immutable Target == immutable bool))
+if (is(immutable Target == immutable bool) &&
+    isInputRange!Source &&
+    isSomeChar!(ElementType!Source))
 {
     import std.ascii : toLower;
 
@@ -2393,8 +2396,7 @@ Lerr:
 }
 
 /**
-Parses a character $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-to an integral value.
+Parses an integer from a character $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 
 Params:
     Target = the integral type to convert to
@@ -2411,8 +2413,8 @@ Throws:
     if no character of the input was meaningfully converted.
 */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref scope Source s)
-if (isSomeChar!(ElementType!Source) &&
-    isIntegral!Target && !is(Target == enum))
+if (isIntegral!Target && !is(Target == enum) &&
+    isSomeChar!(ElementType!Source))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -2833,8 +2835,8 @@ Lerr:
 
 /// ditto
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source, uint radix)
-if (isSomeChar!(ElementType!Source) &&
-    isIntegral!Target && !is(Target == enum))
+if (isIntegral!Target && !is(Target == enum) &&
+    isSomeChar!(ElementType!Source))
 in
 {
     assert(radix >= 2 && radix <= 36, "radix must be in range [2,36]");
@@ -2985,7 +2987,7 @@ do
 }
 
 /**
- * Takes a string representing an `enum` type and returns that type.
+ * Parses an `enum` type from a string representing an enum member name.
  *
  * Params:
  *     Target = the `enum` type to convert to
@@ -3002,8 +3004,7 @@ do
  *     represented by `s`.
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s)
-if (isSomeString!Source && !is(Source == enum) &&
-    is(Target == enum))
+if (is(Target == enum) && isSomeString!Source && !is(Source == enum))
 {
     import std.algorithm.searching : startsWith;
     import std.traits : Unqual, EnumMembers;
@@ -3095,7 +3096,7 @@ if (isSomeString!Source && !is(Source == enum) &&
 }
 
 /**
- * Parses a character range to a floating point number.
+ * Parses a floating point number from a character range.
  *
  * Params:
  *     Target = a floating point type
@@ -3113,8 +3114,8 @@ if (isSomeString!Source && !is(Source == enum) &&
  *     parsed, or if an overflow occurred.
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source source)
-if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-    isFloatingPoint!Target && !is(Target == enum))
+if (isFloatingPoint!Target && !is(Target == enum) &&
+    isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum))
 {
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
@@ -3429,7 +3430,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     Target result = cast(Target) (sign ? -ldval : ldval);
 
     // if overflow occurred
-    import std.math : isFinite;
+    import std.math.traits : isFinite;
     enforce(isFinite(result), new ConvException("Range error"));
 
     advanceSource();
@@ -3597,7 +3598,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @system unittest
 {
     // @system because strtod is not @safe.
-    import std.math : floatTraits, RealFormat;
+    import std.math.traits : floatTraits, RealFormat;
 
     static if (floatTraits!real.realFormat == RealFormat.ieeeDouble)
     {
@@ -3681,7 +3682,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 {
     import core.stdc.errno;
     import core.stdc.stdlib;
-    import std.math : floatTraits, RealFormat;
+    import std.math.traits : floatTraits, RealFormat;
 
     errno = 0;  // In case it was set by another unittest in a different module.
     struct longdouble
@@ -3806,7 +3807,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 }
 
 /**
-Parsing one character off a range returns the first element and calls `popFront`.
+Parses one character from a character range.
 
 Params:
     Target = the type to convert to
@@ -3822,8 +3823,8 @@ Throws:
     A $(LREF ConvException) if the range is empty.
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s)
-if (isSomeString!Source && !is(Source == enum) &&
-    staticIndexOf!(immutable Target, immutable dchar, immutable ElementEncodingType!Source) >= 0)
+if (staticIndexOf!(immutable Target, immutable dchar, immutable ElementEncodingType!Source) >= 0 &&
+    isSomeString!Source && !is(Source == enum))
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -3879,8 +3880,8 @@ if (isSomeString!Source && !is(Source == enum) &&
 
 /// ditto
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s)
-if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
-    isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
+if (isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum) &&
+    !isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -3947,7 +3948,7 @@ if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Sourc
 }
 
 /**
-Parsing a character range to `typeof(null)` returns `null` if the range
+Parses `typeof(null)` from a character range if the range
 spells `"null"`. This function is case insensitive.
 
 Params:
@@ -3964,9 +3965,9 @@ Throws:
     A $(LREF ConvException) if the range doesn't represent `null`.
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s)
-if (isInputRange!Source &&
-    isSomeChar!(ElementType!Source) &&
-    is(immutable Target == immutable typeof(null)))
+if (is(immutable Target == immutable typeof(null)) &&
+    isInputRange!Source &&
+    isSomeChar!(ElementType!Source))
 {
     import std.ascii : toLower;
     foreach (c; "null")
@@ -4078,8 +4079,8 @@ package auto skipWS(R, Flag!"doCount" doCount = No.doCount)(ref R r)
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s, dchar lbracket = '[',
     dchar rbracket = ']', dchar comma = ',')
-if (isSomeString!Source && !is(Source == enum) &&
-    isDynamicArray!Target && !is(Target == enum))
+if (isDynamicArray!Target && !is(Target == enum) &&
+    isSomeString!Source && !is(Source == enum))
 {
     import std.array : appender;
 
@@ -4265,8 +4266,8 @@ if (isSomeString!Source && !is(Source == enum) &&
 /// ditto
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s, dchar lbracket = '[',
     dchar rbracket = ']', dchar comma = ',')
-if (isExactSomeString!Source &&
-    isStaticArray!Target && !is(Target == enum))
+if (isStaticArray!Target && !is(Target == enum) &&
+    isExactSomeString!Source)
 {
     static if (hasIndirections!Target)
         Target result = Target.init[0].init;
@@ -4374,8 +4375,8 @@ Lfewerr:
  */
 auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s, dchar lbracket = '[',
                              dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-if (isSomeString!Source && !is(Source == enum) &&
-    isAssociativeArray!Target && !is(Target == enum))
+if (isAssociativeArray!Target && !is(Target == enum) &&
+    isSomeString!Source && !is(Source == enum))
 {
     alias KeyType = typeof(Target.init.keys[0]);
     alias ValType = typeof(Target.init.values[0]);
@@ -4847,8 +4848,9 @@ private S textImpl(S, U...)(U args)
         static foreach (arg; args)
         {
             static if (
-                isSomeChar!(typeof(arg)) || isSomeString!(typeof(arg)) ||
-                ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
+                isSomeChar!(typeof(arg))
+                || isSomeString!(typeof(arg))
+                || ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
             )
                 app.put(arg);
             else static if (
@@ -5248,7 +5250,7 @@ if (isIntegral!T && isOutputRange!(W, char))
 auto unsigned(T)(T x)
 if (isIntegral!T)
 {
-    return cast(Unqual!(Unsigned!T))x;
+    return cast() cast(Unsigned!T) x;
 }
 
 ///
@@ -5269,7 +5271,7 @@ if (isSomeChar!T)
 {
     // All characters are unsigned
     static assert(T.min == 0, T.stringof ~ ".min must be zero");
-    return cast(Unqual!T) x;
+    return cast() x;
 }
 
 @safe unittest
@@ -5326,7 +5328,7 @@ if (isSomeChar!T)
 auto signed(T)(T x)
 if (isIntegral!T)
 {
-    return cast(Unqual!(Signed!T))x;
+    return cast() cast(Signed!T) x;
 }
 
 ///
@@ -5710,8 +5712,8 @@ private auto hexStrLiteral(String)(scope String hexData)
  *      radix = 2, 8, 10, 16
  *      Char = character type for output
  *      letterCase = lower for deadbeef, upper for DEADBEEF
- *      value = integer to convert. Can be uint or ulong. If radix is 10, can also be
- *              int or long.
+ *      value = integer to convert. Can be ubyte, ushort, uint or ulong. If radix
+ *              is 10, can also be byte, short, int or long.
  * Returns:
  *      Random access range with slicing and everything
  */
@@ -5719,8 +5721,7 @@ private auto hexStrLiteral(String)(scope String hexData)
 auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
     pure nothrow @nogc @safe
 if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
-    (is(immutable T == immutable uint) || is(immutable T == immutable ulong) ||
-    radix == 10 && (is(immutable T == immutable int) || is(immutable T == immutable long))))
+        isIntegral!T && (radix == 10 || isUnsigned!T))
 {
     alias UT = Unqual!T;
 
@@ -5868,8 +5869,12 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
     assert(toChars(123) == toChars(123));
 
     {
+        assert(toChars!2(ubyte(0)).array == "0");
+        assert(toChars!2(ushort(0)).array == "0");
         assert(toChars!2(0u).array == "0");
         assert(toChars!2(0Lu).array == "0");
+        assert(toChars!2(ubyte(1)).array == "1");
+        assert(toChars!2(ushort(1)).array == "1");
         assert(toChars!2(1u).array == "1");
         assert(toChars!2(1Lu).array == "1");
 
@@ -5882,10 +5887,14 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
+        assert(toChars!8(ubyte(0)).array == "0");
+        assert(toChars!8(ushort(0)).array == "0");
         assert(toChars!8(0u).array == "0");
         assert(toChars!8(0Lu).array == "0");
         assert(toChars!8(1u).array == "1");
         assert(toChars!8(1234567Lu).array == "4553207");
+        assert(toChars!8(ubyte.max).array == "377");
+        assert(toChars!8(ushort.max).array == "177777");
 
         auto r = toChars!8(8u);
         assert(r.length == 2);
@@ -5896,10 +5905,14 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(s.retro.array == "01");
     }
     {
+        assert(toChars!10(ubyte(0)).array == "0");
+        assert(toChars!10(ushort(0)).array == "0");
         assert(toChars!10(0u).array == "0");
         assert(toChars!10(0Lu).array == "0");
         assert(toChars!10(1u).array == "1");
         assert(toChars!10(1234567Lu).array == "1234567");
+        assert(toChars!10(ubyte.max).array == "255");
+        assert(toChars!10(ushort.max).array == "65535");
         assert(toChars!10(uint.max).array == "4294967295");
         assert(toChars!10(ulong.max).array == "18446744073709551615");
 
@@ -5916,10 +5929,16 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(toChars!10(0L).array == "0");
         assert(toChars!10(1).array == "1");
         assert(toChars!10(1234567L).array == "1234567");
+        assert(toChars!10(byte.max).array == "127");
+        assert(toChars!10(short.max).array == "32767");
         assert(toChars!10(int.max).array == "2147483647");
         assert(toChars!10(long.max).array == "9223372036854775807");
+        assert(toChars!10(-byte.max).array == "-127");
+        assert(toChars!10(-short.max).array == "-32767");
         assert(toChars!10(-int.max).array == "-2147483647");
         assert(toChars!10(-long.max).array == "-9223372036854775807");
+        assert(toChars!10(byte.min).array == "-128");
+        assert(toChars!10(short.min).array == "-32768");
         assert(toChars!10(int.min).array == "-2147483648");
         assert(toChars!10(long.min).array == "-9223372036854775808");
 
@@ -5936,6 +5955,10 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(toChars!(16)(0Lu).array == "0");
         assert(toChars!(16)(10u).array == "a");
         assert(toChars!(16, char, LetterCase.upper)(0x12AF34567Lu).array == "12AF34567");
+        assert(toChars!(16)(ubyte(0)).array == "0");
+        assert(toChars!(16)(ushort(0)).array == "0");
+        assert(toChars!(16)(ubyte.max).array == "ff");
+        assert(toChars!(16)(ushort.max).array == "ffff");
 
         auto r = toChars!(16)(16u);
         assert(r.length == 2);

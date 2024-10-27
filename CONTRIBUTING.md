@@ -12,5 +12,5 @@ More Links
 * Use our [Bugzilla bug tracker](https://issues.dlang.org)
 * Follow the [D style](http://dlang.org/dstyle.html)
 * Participate in [our forum](http://forum.dlang.org/)
-* Ask questions on our `#d` IRC channel on freenode.org ([web interface](https://kiwiirc.com/client/irc.freenode.net/d))
+* Ask questions on our `#d` IRC channel on libera.chat ([web interface](https://kiwiirc.com/client/irc.libera.chat/d))
 * Review Phobos additions in the [Review Queue](http://wiki.dlang.org/Review_Queue).

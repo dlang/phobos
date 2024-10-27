@@ -418,8 +418,8 @@ Bugs:  Changes to `ref` and `out` arguments are not propagated to the
 */
 struct Task(alias fun, Args...)
 {
-    AbstractTask base = {runTask : &impl};
-    alias base this;
+    private AbstractTask base = {runTask : &impl};
+    private alias base this;
 
     private @property AbstractTask* basePtr()
     {
@@ -884,9 +884,24 @@ identical to the non-@safe case, but safety introduces some restrictions:
 
 */
 @trusted auto task(F, Args...)(F fun, Args args)
-if (is(typeof(fun(args))) && isSafeTask!F)
+if (__traits(compiles, () @safe => fun(args)) && isSafeTask!F)
 {
     return new Task!(run, F, Args)(fun, args);
+}
+
+@safe unittest
+{
+    static struct Oops {
+        int convert() {
+            *cast(int*) 0xcafebabe = 0xdeadbeef;
+            return 0;
+        }
+        alias convert this;
+    }
+    static void foo(int) @safe {}
+
+    static assert(!__traits(compiles, task(&foo, Oops.init)));
+    static assert(!__traits(compiles, scopedTask(&foo, Oops.init)));
 }
 
 /**
@@ -928,7 +943,7 @@ if (is(typeof(delegateOrFp(args))) && !isSafeTask!F)
 
 /// Ditto
 @trusted auto scopedTask(F, Args...)(F fun, Args args)
-if (is(typeof(fun(args))) && isSafeTask!F)
+if (__traits(compiles, () @safe => fun(args)) && isSafeTask!F)
 {
     auto ret = Task!(run, F, Args)(fun, args);
     ret.isScoped = true;
@@ -1581,7 +1596,7 @@ public:
     auto logs = new double[10_000_000];
 
     // Parallel foreach works with or without an index
-    // variable.  It can be iterate by ref if range.front
+    // variable.  It can iterate by ref if range.front
     // returns by ref.
 
     // Iterate over logs using work units of size 100.
