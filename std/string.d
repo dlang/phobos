@@ -457,8 +457,7 @@ pure nothrow @system unittest // https://issues.dlang.org/show_bug.cgi?id=15136
 alias CaseSensitive = Flag!"caseSensitive";
 
 /++
-    Searches for character `c` in string or range `s` starting at index
-    `startIdx`. If `startIdx` is not given, it defaults to 0.
+    Searches for a character in a string or range.
 
     Params:
         s = string or InputRange of characters to search for `c` in
