@@ -1933,7 +1933,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Searches the string `haystack` for the last occurrence of any of the
+    Searches `haystack` for the last occurrence of any of the
     characters in `needles`.
 
     Params:
