@@ -5471,15 +5471,17 @@ nothrow pure @safe unittest
     }
 }
 
-// / ditto
+/// ditto
 class NotImplementedError : Error
 {
+    ///
     this(string method) nothrow pure @safe
     {
         super(method ~ " is not implemented");
     }
 }
 
+///
 @system unittest
 {
     import std.exception : assertThrown;
@@ -9798,6 +9800,7 @@ Flag!"encryption".no).
 */
 struct Yes
 {
+    ///
     template opDispatch(string name)
     {
         enum opDispatch = Flag!name.yes;
@@ -9808,6 +9811,7 @@ struct Yes
 /// Ditto
 struct No
 {
+    ///
     template opDispatch(string name)
     {
         enum opDispatch = Flag!name.no;
