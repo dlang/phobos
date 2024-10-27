@@ -901,8 +901,7 @@ private template _indexOfStr(CaseSensitive cs)
 }
 
 /++
-    Searches for substring `sub` in string or range `s` starting at index
-    `startIdx`. If `startIdx` is not given, it defaults to 0.
+    Searches for a substring in a string or range.
 
     Params:
         s = string or ForwardRange of characters to search for `sub` in
