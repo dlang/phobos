@@ -2295,7 +2295,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
             defaults to `haystack.length`
         cs = specifies whether comparisons are case-sensitive
             (`Yes.caseSensitive`) or not (`No.caseSensitive`)
-    
+
     Returns:
         The index of the last character in `haystack` that is not an element of
         `needles`. If all characters of `haystack` are in `needles` or `stopIdx`
