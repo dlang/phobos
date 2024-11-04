@@ -1330,11 +1330,11 @@ if (isSomeString!String)
 {
     // This function is trivial, yet necessary for consistency.
     // It provides a similar API to its `toHexString` counterpart.
-    import std.array : array;
-    import std.conv : text;
 
     if (!hex.isHexString)
     {
+        import std.conv : text;
+
         throw new Exception(
             "The provided character sequence `"
                 ~ hex.text
@@ -1342,7 +1342,20 @@ if (isSomeString!String)
         );
     }
 
-    return HexStringDecoder!String(hex).array;
+    if ((hex.length >= 2) && (hex[0 .. 2] == "0x"))
+    {
+        hex = hex[2 .. $];
+    }
+
+    auto decoder = HexStringDecoder!String(hex);
+    auto result = new ubyte[](decoder.length);
+
+    size_t idx = 0;
+    foreach (b; decoder)
+    {
+        result[idx++] = b;
+    }
+    return result;
 }
 
 ///
@@ -1479,32 +1492,49 @@ if (isSomeString!String)
     {
         return this;
     }
+
+    size_t length() const
+    {
+        if (this.empty)
+        {
+            return 0;
+        }
+
+        // current front + remainder
+        return 1 + (hex.length >> 1);
+    }
 }
 
 @safe unittest
 {
     auto decoder = HexStringDecoder!string("");
     assert(decoder.empty);
+    assert(decoder.length == 0);
 
     decoder = HexStringDecoder!string("0x");
     assert(decoder.empty);
+    assert(decoder.length == 0);
 }
 
 @safe unittest
 {
     auto decoder = HexStringDecoder!string("0x0077FF");
     assert(!decoder.empty);
+    assert(decoder.length == 3);
     assert(decoder.front == 0x00);
 
     decoder.popFront();
     assert(!decoder.empty);
+    assert(decoder.length == 2);
     assert(decoder.front == 0x77);
 
     decoder.popFront();
     assert(!decoder.empty);
+    assert(decoder.length == 1);
     assert(decoder.front == 0xFF);
 
     decoder.popFront();
+    assert(decoder.length == 0);
     assert(decoder.empty);
 }
 
@@ -1512,12 +1542,15 @@ if (isSomeString!String)
 {
     auto decoder = HexStringDecoder!string("0x7FF");
     assert(!decoder.empty);
+    assert(decoder.length == 2);
     assert(decoder.front == 0x07);
 
     decoder.popFront();
     assert(!decoder.empty);
+    assert(decoder.length == 1);
     assert(decoder.front == 0xFF);
 
     decoder.popFront();
+    assert(decoder.length == 0);
     assert(decoder.empty);
 }
