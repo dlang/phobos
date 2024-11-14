@@ -3607,6 +3607,7 @@ if (isDynamicArray!A)
         }
         else
         {
+            import core.stdc.string : memcpy, memset;
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
@@ -3618,6 +3619,15 @@ if (isDynamicArray!A)
                 if (u)
                 {
                     // extend worked, update the capacity
+                    // if the type has indirections, we need to zero any new
+                    // data that we requested, as the existing data may point
+                    // at large unused blocks.
+                    static if (hasIndirections!T)
+                    {
+                        immutable addedSize = u - (_data.capacity * T.sizeof);
+                        () @trusted { memset(_data.arr.ptr + _data.capacity, 0, addedSize); }();
+                    }
+
                     _data.capacity = u / T.sizeof;
                     return;
                 }
@@ -3633,10 +3643,20 @@ if (isDynamicArray!A)
 
             auto bi = (() @trusted => GC.qalloc(nbytes, blockAttribute!T))();
             _data.capacity = bi.size / T.sizeof;
-            import core.stdc.string : memcpy;
             if (len)
                 () @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
+
             _data.arr = (() @trusted => (cast(Unqual!T*) bi.base)[0 .. len])();
+
+            // we requested new bytes that are not in the existing
+            // data. If T has pointers, then this new data could point at stale
+            // objects from the last time this block was allocated. Zero that
+            // new data out, it may point at large unused blocks!
+            static if (hasIndirections!T)
+                () @trusted {
+                    memset(bi.base + (len * T.sizeof), 0, (newlen - len) * T.sizeof);
+                }();
+
             _data.tryExtendBlock = true;
             // leave the old data, for safety reasons
         }
