@@ -4031,6 +4031,43 @@ if (isDynamicArray!A)
     app2.toString();
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=24856
+@system unittest
+{
+    import core.memory : GC;
+    import std.stdio : writeln;
+    import std.algorithm.searching : canFind;
+    GC.disable();
+    scope(exit) GC.enable();
+    void*[] freeme;
+    // generate some poison blocks to allocate from.
+    auto poison = cast(void*) 0xdeadbeef;
+    foreach (i; 0 .. 10)
+    {
+        auto blk = new void*[7];
+        blk[] = poison;
+        freeme ~= blk.ptr;
+    }
+
+    foreach (p; freeme)
+        GC.free(p);
+
+    int tests = 0;
+    foreach (i; 0 .. 10)
+    {
+        Appender!(void*[]) app;
+        app.put(null);
+        // if not a realloc of one of the deadbeef pointers, continue
+        if (!freeme.canFind(app.data.ptr))
+            continue;
+        ++tests;
+        assert(!app.data.ptr[0 .. app.capacity].canFind(poison), "Appender not zeroing data!");
+    }
+    // just notify in the log whether this test actually could be done.
+    if (tests == 0)
+        writeln("WARNING: test of Appender zeroing did not occur");
+}
+
 //Calculates an efficient growth scheme based on the old capacity
 //of data, and the minimum requested capacity.
 //arg curLen: The current length
