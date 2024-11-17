@@ -9238,12 +9238,16 @@ enum isCopyable(S) = __traits(isCopyable, S);
  * is the same as `T`. For pointer and slice types, it is `T` with the
  * outer-most layer of qualifiers dropped.
  */
-package(std) template DeducedParameterType(T)
+package(std) alias DeducedParameterType(T) = DeducedParameterTypeImpl!T;
+/// ditto
+package(std) alias DeducedParameterType(alias T) = DeducedParameterTypeImpl!T;
+
+private template DeducedParameterTypeImpl(T)
 {
     static if (is(T == U*, U) || is(T == U[], U))
-        alias DeducedParameterType = Unqual!T;
+        alias DeducedParameterTypeImpl = Unqual!T;
     else
-        alias DeducedParameterType = T;
+        alias DeducedParameterTypeImpl = T;
 }
 
 @safe unittest
@@ -9263,6 +9267,7 @@ package(std) template DeducedParameterType(T)
     }
 
     static assert(is(DeducedParameterType!NoCopy == NoCopy));
+    static assert(is(DeducedParameterType!(inout(NoCopy)) == inout(NoCopy)));
 }
 
 @safe unittest
