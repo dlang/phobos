@@ -1865,45 +1865,59 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
     auto ref matchImpl(SumTypes...)(auto ref SumTypes args)
     if (allSatisfy!(isSumType, SumTypes) && args.length > 0)
     {
-        alias typeCounts = Map!(typeCount, SumTypes);
-        alias stride(size_t i) = .stride!(i, typeCounts);
-        alias TagTuple = .TagTuple!typeCounts;
-
-        alias handlerArgs(size_t caseId) = .handlerArgs!(caseId, typeCounts);
-
-        /* An AliasSeq of the types of the member values in the argument list
-         * returned by `handlerArgs!caseId`.
-         *
-         * Note that these are the actual (that is, qualified) types of the
-         * member values, which may not be the same as the types listed in
-         * the arguments' `.Types` properties.
-         */
-        template valueTypes(size_t caseId)
+        // Single dispatch (fast path)
+        static if (args.length == 1)
         {
-            enum tags = TagTuple.fromCaseId(caseId);
+            /* When there's only one argument, the caseId is just that
+             * argument's tag, so there's no need for TagTuple.
+             */
+            enum handlerArgs(size_t caseId) =
+                "args[0].get!(SumTypes[0].Types[" ~ toCtString!caseId ~ "])()";
 
-            template getType(size_t i)
+            alias valueTypes(size_t caseId) =
+                typeof(args[0].get!(SumTypes[0].Types[caseId])());
+
+            enum numCases = SumTypes[0].Types.length;
+        }
+        // Multiple dispatch (slow path)
+        else
+        {
+            alias typeCounts = Map!(typeCount, SumTypes);
+            alias stride(size_t i) = .stride!(i, typeCounts);
+            alias TagTuple = .TagTuple!typeCounts;
+
+            alias handlerArgs(size_t caseId) = .handlerArgs!(caseId, typeCounts);
+
+            /* An AliasSeq of the types of the member values in the argument list
+             * returned by `handlerArgs!caseId`.
+             *
+             * Note that these are the actual (that is, qualified) types of the
+             * member values, which may not be the same as the types listed in
+             * the arguments' `.Types` properties.
+             */
+            template valueTypes(size_t caseId)
             {
-                enum tid = tags[i];
-                alias T = SumTypes[i].Types[tid];
-                alias getType = typeof(args[i].get!T());
+                enum tags = TagTuple.fromCaseId(caseId);
+
+                template getType(size_t i)
+                {
+                    enum tid = tags[i];
+                    alias T = SumTypes[i].Types[tid];
+                    alias getType = typeof(args[i].get!T());
+                }
+
+                alias valueTypes = Map!(getType, Iota!(tags.length));
             }
 
-            alias valueTypes = Map!(getType, Iota!(tags.length));
+            /* The total number of cases is
+             *
+             *   Π SumTypes[i].Types.length for 0 ≤ i < SumTypes.length
+             *
+             * Conveniently, this is equal to stride!(SumTypes.length), so we can
+             * use that function to compute it.
+             */
+            enum numCases = stride!(SumTypes.length);
         }
-
-        /* The total number of cases is
-         *
-         *   Π SumTypes[i].Types.length for 0 ≤ i < SumTypes.length
-         *
-         * Or, equivalently,
-         *
-         *   ubyte[SumTypes[0].Types.length]...[SumTypes[$-1].Types.length].sizeof
-         *
-         * Conveniently, this is equal to stride!(SumTypes.length), so we can
-         * use that function to compute it.
-         */
-        enum numCases = stride!(SumTypes.length);
 
         /* Guaranteed to never be a valid handler index, since
          * handlers.length <= size_t.max.
@@ -1961,7 +1975,12 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             mixin("alias ", handlerName!hid, " = handler;");
         }
 
-        immutable argsId = TagTuple(args).toCaseId;
+        // Single dispatch (fast path)
+        static if (args.length == 1)
+            immutable argsId = args[0].tag;
+        // Multiple dispatch (slow path)
+        else
+            immutable argsId = TagTuple(args).toCaseId;
 
         final switch (argsId)
         {
