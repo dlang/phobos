@@ -118,10 +118,18 @@ module phobos.sys.traits;
 
 /++
     Whether the given type is an "aggregate type" - i.e. a struct, class,
-    interface, or union.
+    interface, or union. Enum types whose base type is an aggregate type are
+    also considered aggregate types.
   +/
-enum isAggregateType(T) = is(T == struct) || is(T == class) || is(T == interface) || is(T == union);
+template isAggregateType(T)
+{
+    static if (is(T == enum))
+        enum isAggregateType = isAggregateType!(OriginalType!T);
+    else
+        enum isAggregateType = is(T == struct) || is(T == class) || is(T == interface) || is(T == union);
+}
 
+///
 @safe unittest
 {
     struct S {}
@@ -141,6 +149,18 @@ enum isAggregateType(T) = is(T == struct) || is(T == class) || is(T == interface
     static assert(!isAggregateType!(S*));
     static assert(!isAggregateType!(C[]));
     static assert(!isAggregateType!(I[string]));
+
+    enum ES : S { a = S.init }
+    enum EC : C { a = C.init }
+    enum EI : I { a = I.init }
+    enum EU : U { a = U.init }
+
+    static assert( isAggregateType!ES);
+    static assert( isAggregateType!EC);
+    static assert( isAggregateType!EI);
+    static assert( isAggregateType!EU);
+    static assert( isAggregateType!(const ES));
+    static assert( isAggregateType!(const EC));
 }
 
 /++
