@@ -78,6 +78,9 @@
               $(LREF FieldNames)
               $(LREF FieldSymbols)
               $(LREF FieldTypes)
+              $(LREF hasComplexAssignment)
+              $(LREF hasComplexCopying)
+              $(LREF hasComplexDestruction)
     ))
     $(TR $(TD General Types) $(TD
               $(LREF KeyType)
@@ -3282,6 +3285,1132 @@ if (isAggregateType!T)
         static assert(is(FieldTypes!(const S) == AliasSeq!(const(int[]), const int, const string)));
         static assert(is(FieldTypes!(S.Inner1) == AliasSeq!int));
         static assert(is(FieldTypes!(S.Inner2) == AliasSeq!long));
+    }
+}
+
+/++
+    Whether assigning to a variable of the given type involves either a
+    user-defined $(D opAssign) or a compiler-generated $(D opAssign) rather than
+    using the default assignment behavior (which would use $(D memcpy)). The
+    $(D opAssign) must accept the same type (with compatible qualifiers) as the
+    type which the $(D opAssign) is declared on for it to count for
+    hasComplexAssignment.
+
+    The compiler will generate an $(D opAssign) for a struct when a member
+    variable of that struct defines an $(D opAssign). It will also generate one
+    when the struct has a postblit constructor or destructor (and those can be
+    either user-defined or compiler-generated).
+
+    However, due to $(BUGZILLA 24834), the compiler does not currently generate
+    an $(D opAssign) for structs that define a copy constructor, and so
+    hasComplexAssignment is $(D false) for such types unless they have an
+    explicit $(D opAssign), or the compiler generates one due to a member
+    variable having an $(D opAssign).
+
+    Note that hasComplexAssignment is also $(D true) for static arrays whose
+    element type has an $(D opAssign), since while the static array itself does
+    not have an $(D opAssign), the compiler must use the $(D opAssign) of the
+    elements when assigning to the static array.
+
+    Due to $(BUGZILLA 24833), enums never have complex assignment even if their
+    base type does. Their $(D opAssign) is never called, resulting in incorrect
+    behavior for such enums. So, because the compiler does not treat them as
+    having complex assignment, hasComplexAssignment is $(D false) for them.
+
+    No other types (including class references, pointers, and unions)
+    ever have an $(D opAssign) and thus hasComplexAssignment is never $(D true)
+    for them. It is particularly important to note that unions never have an
+    $(D opAssign), so if a struct contains a union which contains one or more
+    members which have an $(D opAssign), that struct will have to have a
+    user-defined $(D opAssign) which explicitly assigns to the correct member
+    of the union if you don't want the current value of the union to simply be
+    memcopied when assigning to the struct.
+
+    One big reason that code would need to worry about hasComplexAssignment is
+    if void initialization is used anywhere. While it might be okay to assign
+    to uninitialized memory for a type where assignment does a memcopy,
+    assigning to uninitialized memory will cause serious issues with any
+    $(D opAssign) which looks at the object before assigning to it (e.g.
+    because the type uses reference counting). In such cases,
+    $(REF copyEmplace, core, sys, lifetime) needs to be used instead of
+    assignment.
+
+    See_Also:
+        $(LREF hasComplexCopying)
+        $(LREF hasComplexDestruction)
+        $(DDSUBLINK spec/operatoroverloading, assignment,
+                    The language spec for overloading assignment)
+        $(DDSUBLINK spec/struct, assign-overload,
+                    The language spec for $(D opAssign) on structs)
+  +/
+template hasComplexAssignment(T)
+{
+    import core.internal.traits : hasElaborateAssign;
+    alias hasComplexAssignment = hasElaborateAssign!T;
+}
+
+///
+@safe unittest
+{
+    static assert(!hasComplexAssignment!int);
+    static assert(!hasComplexAssignment!real);
+    static assert(!hasComplexAssignment!string);
+    static assert(!hasComplexAssignment!(int[]));
+    static assert(!hasComplexAssignment!(int[42]));
+    static assert(!hasComplexAssignment!(int[string]));
+    static assert(!hasComplexAssignment!Object);
+
+    static struct NoOpAssign
+    {
+        int i;
+    }
+    static assert(!hasComplexAssignment!NoOpAssign);
+
+    // For complex assignment, the parameter type must match the type of the
+    // struct (with compatible qualifiers), but refness does not matter (though
+    // it will obviously affect whether rvalues will be accepted as well as
+    // whether non-copyable types will be accepted).
+    static struct HasOpAssign
+    {
+        void opAssign(HasOpAssign) {}
+    }
+    static assert( hasComplexAssignment!HasOpAssign);
+    static assert(!hasComplexAssignment!(const(HasOpAssign)));
+
+    static struct HasOpAssignRef
+    {
+        void opAssign(ref HasOpAssignRef) {}
+    }
+    static assert( hasComplexAssignment!HasOpAssignRef);
+    static assert(!hasComplexAssignment!(const(HasOpAssignRef)));
+
+    static struct HasOpAssignAutoRef
+    {
+        void opAssign()(auto ref HasOpAssignAutoRef) {}
+    }
+    static assert( hasComplexAssignment!HasOpAssignAutoRef);
+    static assert(!hasComplexAssignment!(const(HasOpAssignAutoRef)));
+
+    // Assigning a mutable value works when opAssign takes const, because
+    // mutable implicitly converts to const, but assigning to a const variable
+    // does not work, so normally, a const object is not considered to have
+    // complex assignment.
+    static struct HasOpAssignC
+    {
+        void opAssign(const HasOpAssignC) {}
+    }
+    static assert( hasComplexAssignment!HasOpAssignC);
+    static assert(!hasComplexAssignment!(const(HasOpAssignC)));
+
+    // If opAssign is const, then assigning to a const variable will work, and a
+    // const object will have complex assignment. However, such a type would
+    // not normally make sense, since it can't actually be mutated by opAssign.
+    static struct HasConstOpAssignC
+    {
+        void opAssign(const HasConstOpAssignC) const {}
+    }
+    static assert( hasComplexAssignment!HasConstOpAssignC);
+    static assert( hasComplexAssignment!(const(HasConstOpAssignC)));
+
+    // For a type to have complex assignment, the types must match aside from
+    // the qualifiers. So, an opAssign which takes another type does not count
+    // as complex assignment.
+    static struct OtherOpAssign
+    {
+        void opAssign(int) {}
+    }
+    static assert(!hasComplexAssignment!OtherOpAssign);
+
+    // The return type doesn't matter for complex assignment, though normally,
+    // opAssign should either return a reference to the this reference (so that
+    // assignments can be chained) or void.
+    static struct HasOpAssignWeirdRet
+    {
+        int opAssign(HasOpAssignWeirdRet) { return 42; }
+    }
+    static assert( hasComplexAssignment!HasOpAssignWeirdRet);
+
+    // The compiler will generate an assignment operator if a member variable
+    // has one.
+    static struct HasMemberWithOpAssign
+    {
+        HasOpAssign s;
+    }
+    static assert( hasComplexAssignment!HasMemberWithOpAssign);
+
+    // The compiler will generate an assignment operator if the type has a
+    // postblit constructor or a destructor.
+    static struct HasDtor
+    {
+        ~this() {}
+    }
+    static assert( hasComplexAssignment!HasDtor);
+
+    // If a struct has @disabled opAssign (and thus assigning to a variable of
+    // that type will result in a compilation error), then
+    // hasComplexAssignment is false.
+    // Code that wants to check whether assignment works will need to test that
+    // assigning to a variable of that type compiles (which could need to test
+    // both an lvalue and an rvalue depending on the exact sort of assignment
+    // the code is actually going to do).
+    static struct DisabledOpAssign
+    {
+        @disable void opAssign(DisabledOpAssign);
+    }
+    static assert(!hasComplexAssignment!DisabledOpAssign);
+    static assert(!__traits(compiles, { DisabledOpAssign s;
+                                        s = rvalueOf!DisabledOpAssign;
+                                        s = lvalueOf!DisabledOpAssign; }));
+    static assert(!is(typeof({ DisabledOpAssign s;
+                               s = rvalueOf!DisabledOpAssign;
+                               s = lvalueOf!DisabledOpAssign; })));
+
+    // Static arrays have complex assignment if their elements do.
+    static assert( hasComplexAssignment!(HasOpAssign[1]));
+
+    // Static arrays with no elements do not have complex assignment, because
+    // there's nothing to assign to.
+    static assert(!hasComplexAssignment!(HasOpAssign[0]));
+
+    // Dynamic arrays do not have complex assignment, because assigning to them
+    // just slices them rather than assigning to their elements. Assigning to
+    // an array with a slice operation - e.g. arr[0 .. 5] = other[0 .. 5]; -
+    // does use opAssign if the elements have it, but since assigning to the
+    // array itself does not, hasComplexAssignment is false for dynamic arrays.
+    static assert(!hasComplexAssignment!(HasOpAssign[]));
+
+    // Classes and unions do not have complex assignment even if they have
+    // members which do.
+    class C
+    {
+        HasOpAssign s;
+    }
+    static assert(!hasComplexAssignment!C);
+
+    union U
+    {
+        HasOpAssign s;
+    }
+    static assert(!hasComplexAssignment!U);
+
+    // https://issues.dlang.org/show_bug.cgi?id=24833
+    // This static assertion fails, because the compiler
+    // currently ignores assignment operators for enum types.
+    enum E : HasOpAssign { a = HasOpAssign.init }
+    //static assert( hasComplexAssignment!E);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        struct S1 { int i; }
+        struct S2 { real r; }
+        struct S3 { string s; }
+        struct S4 { int[] arr; }
+        struct S5 { int[0] arr; }
+        struct S6 { int[42] arr; }
+        struct S7 { int[string] aa; }
+
+        static foreach (T; AliasSeq!(S1, S2, S3, S4, S5, S6, S7))
+        {
+            static assert(!hasComplexAssignment!T);
+            static assert(!hasComplexAssignment!(T[0]));
+            static assert(!hasComplexAssignment!(T[42]));
+            static assert(!hasComplexAssignment!(T[]));
+        }
+    }
+
+    // Basic variations of opAssign.
+    {
+        static struct S { void opAssign(S) {} }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { void opAssign(ref S) {} }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { void opAssign()(auto ref S) {} }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { ref opAssign(S) { return this; } }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { ref opAssign(ref S) { return this; } }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { ref opAssign()(auto ref S) { return this; } }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S { ref opAssign(T)(auto ref T) { return this; } }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+
+    // Non-complex opAssign.
+    {
+        static struct S { ref opAssign(int) { return this; } }
+        static assert(!hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        struct Other {}
+        static struct S { ref opAssign(Other) { return this; } }
+        static assert(!hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+
+    // Multiple opAssigns.
+    {
+        static struct S
+        {
+            void opAssign(S) {}
+            void opAssign(int) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        // This just flips the order of the previous test to catch potential
+        // bugs related to the order of declaration, since that's occasionally
+        // popped up in the compiler in other contexts.
+        static struct S
+        {
+            void opAssign(int) {}
+            void opAssign(S) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            void opAssign(S) {}
+            void opAssign(ref S) {}
+            void opAssign(const ref S) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+
+    // Make sure that @disabled alternate opAssigns don't cause issues.
+    {
+        static struct S
+        {
+            void opAssign(S) {}
+            @disable void opAssign(ref S) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        // See https://issues.dlang.org/show_bug.cgi?id=24854
+        // The compiler won't generate any opAssign (even if it theoretically
+        // can) if the member variable has an @disabled opAssign which counts as
+        // complex assignment.
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            void opAssign(T)(T) {}
+            @disable void opAssign(T)(ref T) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            @disable void opAssign(S) {}
+            void opAssign(ref S) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            @disable void opAssign(T)(T) {}
+            void opAssign(T)(ref T) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            void opAssign(S) {}
+            @disable void opAssign(int) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    {
+        // The same as the previous test but in reverse order just to catch
+        // compiler bugs related to the order of declaration.
+        static struct S
+        {
+            @disable void opAssign(int) {}
+            void opAssign(S) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+
+    // Generated opAssign due to other functions.
+    {
+        static struct S { this(this) {} }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    // https://issues.dlang.org/show_bug.cgi?id=24834
+    /+
+    {
+        static struct S { this(ref S) {} }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+    +/
+    {
+        static struct S { ~this() {}  }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+
+    {
+        static struct S
+        {
+            this(this) {}
+            @disable void opAssign()(auto ref S) {}
+        }
+        static assert(!hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexAssignment!S2);
+    }
+    {
+        static struct S
+        {
+            this(this) {}
+            void opAssign()(auto ref S) {}
+            @disable void opAssign(int) {}
+        }
+        static assert( hasComplexAssignment!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexAssignment!S2);
+    }
+
+    // Static arrays
+    {
+        static struct S { void opAssign(S) {} }
+        static assert( hasComplexAssignment!S);
+
+        static assert(!hasComplexAssignment!(S[0]));
+        static assert( hasComplexAssignment!(S[12]));
+        static assert(!hasComplexAssignment!(S[]));
+
+        static struct S2 { S[42] s; }
+        static assert( hasComplexAssignment!S2);
+    }
+}
+
+/++
+    Whether copying an object of the given type involves either a user-defined
+    copy / postblit constructor or a compiler-generated copy / postblit
+    constructor rather than using the default copying behavior (which would use
+    $(D memcpy)).
+
+    The compiler will generate a copy / postblit constructor for a struct when
+    a member variable of that struct defines a copy / postblit constructor.
+
+    Note that hasComplexCopying is also $(D true) for static arrays whose
+    element type has a copy constructor or postblit constructor, since while
+    the static array itself does not have a copy constructor or postblit
+    constructor, the compiler must use the copy / postblit constructor of the
+    elements when copying the static array.
+
+    Due to $(BUGZILLA 24833), enums never have complex copying even if their
+    base type does. Their copy / postblit constructor is never called,
+    resulting in incorrect behavior for such enums. So, because the compiler
+    does not treat them as having complex copying, hasComplexCopying is
+    $(D false) for them.
+
+    No other types (including class references, pointers, and unions) ever have
+    a copy constructor or postblit constructor and thus hasComplexCopying is
+    never $(D true) for them. It is particularly important to note that unions
+    never have a copy constructor or postblit constructor, so if a struct
+    contains a union which contains one or more members which have a copy
+    constructor or postblit constructor, that struct will have to have a
+    user-defined copy constructor or posthblit constructor which explicitly
+    copies the correct member of the union if you don't want the current value
+    of the union to simply be memcopied when copying the struct.
+
+    If a particular piece of code cares about the existence of a copy
+    constructor or postblit constructor specifically rather than if a type has
+    one or the other, the traits
+    $(DDSUBLINK spec/traits, hasCopyConstructor, $(D __traits(hasCopyConstructor, T)))
+    and
+    $(DDSUBLINK spec/traits, hasPostblit, $(D __traits(hasPostblit, T))) can
+    be used, though note that they will not be true for static arrays.
+
+    See_Also:
+        $(LREF hasComplexAssignment)
+        $(LREF hasComplexDestruction)
+        $(DDSUBLINK spec/traits, hasCopyConstructor, $(D __traits(hasCopyConstructor, T)))
+        $(DDSUBLINK spec/traits, hasPostblit, $(D __traits(hasPostblit, T)))
+        $(DDSUBLINK spec/traits, isCopyable, $(D __traits(isCopyable, T)))
+        $(DDSUBLINK spec/structs, struct-copy-constructor, The language spec for copy constructors)
+        $(DDSUBLINK spec/structs, struct-postblit, The language spec for postblit constructors)
+  +/
+template hasComplexCopying(T)
+{
+    import core.internal.traits : hasElaborateCopyConstructor;
+    alias hasComplexCopying = hasElaborateCopyConstructor!T;
+}
+
+///
+@safe unittest
+{
+    static assert(!hasComplexCopying!int);
+    static assert(!hasComplexCopying!real);
+    static assert(!hasComplexCopying!string);
+    static assert(!hasComplexCopying!(int[]));
+    static assert(!hasComplexCopying!(int[42]));
+    static assert(!hasComplexCopying!(int[string]));
+    static assert(!hasComplexCopying!Object);
+
+    static struct NoCopyCtor1
+    {
+        int i;
+    }
+    static assert(!hasComplexCopying!NoCopyCtor1);
+    static assert(!__traits(hasCopyConstructor, NoCopyCtor1));
+    static assert(!__traits(hasPostblit, NoCopyCtor1));
+
+    static struct NoCopyCtor2
+    {
+        int i;
+
+        this(int i)
+        {
+            this.i = i;
+        }
+    }
+    static assert(!hasComplexCopying!NoCopyCtor2);
+    static assert(!__traits(hasCopyConstructor, NoCopyCtor2));
+    static assert(!__traits(hasPostblit, NoCopyCtor2));
+
+    struct HasCopyCtor
+    {
+        this(ref HasCopyCtor)
+        {
+        }
+    }
+    static assert( hasComplexCopying!HasCopyCtor);
+    static assert( __traits(hasCopyConstructor, HasCopyCtor));
+    static assert(!__traits(hasPostblit, HasCopyCtor));
+
+    // hasComplexCopying does not take constness into account.
+    // Code that wants to check whether copying works will need to test
+    // __traits(isCopyable, T) or test that copying compiles.
+    static assert( hasComplexCopying!(const HasCopyCtor));
+    static assert( __traits(hasCopyConstructor, const HasCopyCtor));
+    static assert(!__traits(hasPostblit, const HasCopyCtor));
+    static assert(!__traits(isCopyable, const HasCopyCtor));
+    static assert(!__traits(compiles, { const HasCopyCtor h;
+                                        auto h2 = h; }));
+    static assert(!is(typeof({ const HasCopyCtor h1;
+                               auto h2 = h1; })));
+
+    // An rvalue constructor is not a copy constructor.
+    struct HasRValueCtor
+    {
+        this(HasRValueCtor)
+        {
+        }
+    }
+    static assert(!hasComplexCopying!HasRValueCtor);
+    static assert(!__traits(hasCopyConstructor, HasRValueCtor));
+    static assert(!__traits(hasPostblit, HasRValueCtor));
+
+    struct HasPostblit
+    {
+        this(this)
+        {
+        }
+    }
+    static assert( hasComplexCopying!HasPostblit);
+    static assert(!__traits(hasCopyConstructor, HasPostblit));
+    static assert( __traits(hasPostblit, HasPostblit));
+
+    // The compiler will generate a copy constructor if a member variable
+    // has one.
+    static struct HasMemberWithCopyCtor
+    {
+        HasCopyCtor s;
+    }
+    static assert( hasComplexCopying!HasMemberWithCopyCtor);
+
+    // The compiler will generate a postblit constructor if a member variable
+    // has one.
+    static struct HasMemberWithPostblit
+    {
+        HasPostblit s;
+    }
+    static assert( hasComplexCopying!HasMemberWithPostblit);
+
+    // If a struct has @disabled copying, hasComplexCopying is still true.
+    // Code that wants to check whether copying works will need to test
+    // __traits(isCopyable, T) or test that copying compiles.
+    static struct DisabledCopying
+    {
+        @disable this(this);
+        @disable this(ref DisabledCopying);
+    }
+    static assert( hasComplexCopying!DisabledCopying);
+    static assert(!__traits(isCopyable, DisabledCopying));
+    static assert(!__traits(compiles, { DisabledCopying dc1;
+                                        auto dc2 = dc1; }));
+    static assert(!is(typeof({ DisabledCopying dc1;
+                               auto dc2 = dc1; })));
+
+    // Static arrays have complex copying if their elements do.
+    static assert( hasComplexCopying!(HasCopyCtor[1]));
+    static assert( hasComplexCopying!(HasPostblit[1]));
+
+    // Static arrays with no elements do not have complex copying, because
+    // there's nothing to copy.
+    static assert(!hasComplexCopying!(HasCopyCtor[0]));
+    static assert(!hasComplexCopying!(HasPostblit[0]));
+
+    // Dynamic arrays do not have complex copying, because copying them
+    // just slices them rather than copying their elements.
+    static assert(!hasComplexCopying!(HasCopyCtor[]));
+    static assert(!hasComplexCopying!(HasPostblit[]));
+
+    // Classes and unions do not have complex copying even if they have
+    // members which do.
+    class C
+    {
+        HasCopyCtor s;
+    }
+    static assert(!hasComplexCopying!C);
+
+    union U
+    {
+        HasCopyCtor s;
+    }
+    static assert(!hasComplexCopying!U);
+
+    // https://issues.dlang.org/show_bug.cgi?id=24833
+    // This static assertion fails, because the compiler
+    // currently ignores assignment operators for enum types.
+    enum E : HasCopyCtor { a = HasCopyCtor.init }
+    //static assert( hasComplexCopying!E);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        struct S1 { int i; }
+        struct S2 { real r; }
+        struct S3 { string s; }
+        struct S4 { int[] arr; }
+        struct S5 { int[0] arr; }
+        struct S6 { int[42] arr; }
+        struct S7 { int[string] aa; }
+
+        static foreach (T; AliasSeq!(S1, S2, S3, S4, S5, S6, S7))
+        {
+            static assert(!hasComplexCopying!T);
+            static assert(!hasComplexCopying!(T[0]));
+            static assert(!hasComplexCopying!(T[42]));
+            static assert(!hasComplexCopying!(T[]));
+        }
+    }
+
+    // Basic variations of copy constructors.
+    {
+        static struct S { this(ref S) {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(const ref S) const {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S
+        {
+            this(ref S) {}
+            this(const ref S) const {}
+        }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(inout ref S) inout {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(scope ref S) {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(scope ref S) scope {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(ref S) @safe {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(ref S) nothrow {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(scope inout ref S) inout scope @safe pure nothrow @nogc {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+
+    // Basic variations of postblit constructors.
+    {
+        static struct S { this(this) {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(this) scope @safe pure nothrow @nogc {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+
+    // Rvalue constructors.
+    {
+        static struct S { this(S) {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(const S) const {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S
+        {
+            this(S) {}
+            this(const S) const {}
+        }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(inout S) inout {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(S) @safe {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(S) nothrow {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(inout S) inout @safe pure nothrow @nogc {} }
+        static assert(!hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert(!hasComplexCopying!S2);
+    }
+
+    // @disabled copy constructors.
+    {
+        static struct S { @disable this(ref S) {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { @disable this(const ref S) const {} }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S
+        {
+            @disable this(ref S) {}
+            this(const ref S) const {}
+        }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S
+        {
+            this(ref S) {}
+            @disable this(const ref S) const {}
+        }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S
+        {
+            @disable this(ref S) {}
+            @disable this(const ref S) const {}
+        }
+        static assert( hasComplexCopying!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexCopying!S2);
+    }
+
+    // Static arrays
+    {
+        static struct S { this(ref S) {} }
+        static assert( hasComplexCopying!S);
+
+        static assert(!hasComplexCopying!(S[0]));
+        static assert( hasComplexCopying!(S[12]));
+        static assert(!hasComplexCopying!(S[]));
+
+        static struct S2 { S[42] s; }
+        static assert( hasComplexCopying!S2);
+    }
+    {
+        static struct S { this(this) {} }
+        static assert( hasComplexCopying!S);
+
+        static assert(!hasComplexCopying!(S[0]));
+        static assert( hasComplexCopying!(S[12]));
+        static assert(!hasComplexCopying!(S[]));
+
+        static struct S2 { S[42] s; }
+        static assert( hasComplexCopying!S2);
+    }
+}
+
+/++
+    Whether the given type has either a user-defined destructor or a
+    compiler-generated destructor.
+
+    The compiler will generate a destructor for a struct when a member variable
+    of that struct defines a destructor.
+
+    Note that hasComplexDestruction is also $(D true) for static arrays whose
+    element type has a destructor, since while the static array itself does not
+    have a destructor, the compiler must use the destructor of the elements
+    when destroying the static array.
+
+    Due to $(BUGZILLA 24833), enums never have complex destruction even if their
+    base type does. Their destructor is never called, resulting in incorrect
+    behavior for such enums. So, because the compiler does not treat them as
+    having complex destruction, hasComplexDestruction is $(D false) for them.
+
+    Note that while the $(DDSUBLINK spec/class, destructors, language spec)
+    currently refers to $(D ~this()) on classes as destructors (whereas the
+    runtime refers to them as finalizers, and they're arguably finalizers
+    rather than destructors given how they work), classes are not considered to
+    have complex destruction. Under normal circumstances, it's just the GC or
+    $(REF1 destroy, object) which calls the destructor / finalizer on a class
+    (and it's not guaranteed that a class destructor / finalizer will even ever
+    be called), which is in stark contrast to structs, which normally live on
+    the stack and need to be destroyed when they leave scope. So,
+    hasComplexDestruction is concerned with whether that type will have a
+    destructor that's run when it leaves scope and not with what happens when
+    the GC destroys an object prior to freeing its memory.
+
+    No other types (including pointers and unions) ever have a destructor and
+    thus hasComplexDestruction is never $(D true) for them. It is particularly
+    important to note that unions never have a destructor, so if a struct
+    contains a union which contains one or more members which have a
+    destructor, that struct will have to have a user-defined destructor which
+    explicitly calls $(REF1 destroy, object) on the correct member of the
+    union if you want the object in question to be destroyed properly.
+
+    See_Also:
+        $(LREF hasComplexAssignment)
+        $(LREF hasComplexCopying)
+        $(REF destroy, object)
+        $(DDSUBLINK spec/structs, struct-destructor, The language spec for destructors)
+        $(DDSUBLINK spec/class, destructors, The language spec for class finalizers)
+  +/
+template hasComplexDestruction(T)
+{
+    import core.internal.traits : hasElaborateDestructor;
+    alias hasComplexDestruction = hasElaborateDestructor!T;
+}
+
+///
+@safe unittest
+{
+    static assert(!hasComplexDestruction!int);
+    static assert(!hasComplexDestruction!real);
+    static assert(!hasComplexDestruction!string);
+    static assert(!hasComplexDestruction!(int[]));
+    static assert(!hasComplexDestruction!(int[42]));
+    static assert(!hasComplexDestruction!(int[string]));
+    static assert(!hasComplexDestruction!Object);
+
+    static struct NoDtor
+    {
+        int i;
+    }
+    static assert(!hasComplexDestruction!NoDtor);
+
+    struct HasDtor
+    {
+        ~this() {}
+    }
+    static assert( hasComplexDestruction!HasDtor);
+
+    // The compiler will generate a destructor if a member variable has one.
+    static struct HasMemberWithDtor
+    {
+        HasDtor s;
+    }
+    static assert( hasComplexDestruction!HasMemberWithDtor);
+
+    // If a struct has @disabled destruction, hasComplexDestruction is still
+    // true. Code that wants to check whether destruction works can either
+    // test for whether the __xdtor member is disabled, or it can test whether
+    // code that will destroy the object compiles. That being said, a disabled
+    // destructor probably isn't very common in practice, because about all that
+    // such a type is good for is being allocated on the heap.
+    static struct DisabledDtor
+    {
+        @disable ~this() {}
+    }
+    static assert( hasComplexDestruction!DisabledDtor);
+    static assert( __traits(isDisabled,
+                            __traits(getMember, DisabledDtor, "__xdtor")));
+
+    // A type with a disabled destructor cannot be created on the stack or used
+    // in any way that would ever trigger a destructor, making it pretty much
+    // useless outside of providing a way to force a struct to be allocated on
+    // the heap - though that could be useful in some situations, since it
+    // it makes it possible to have a type that has to be a reference type but
+    // which doesn't have the overhead of a class.
+    static assert(!__traits(compiles, { DisabledDtor d; }));
+    static assert( __traits(compiles, { auto d = new DisabledDtor; }));
+
+    // Static arrays have complex destruction if their elements do.
+    static assert( hasComplexDestruction!(HasDtor[1]));
+
+    // Static arrays with no elements do not have complex destruction, because
+    // there's nothing to destroy.
+    static assert(!hasComplexDestruction!(HasDtor[0]));
+
+    // Dynamic arrays do not have complex destruction, because their elements
+    // are contained in the memory that the dynamic array is a slice of and not
+    // in the dynamic array itself, so there's nothing to destroy when a
+    // dynamic array leaves scope.
+    static assert(!hasComplexDestruction!(HasDtor[]));
+
+    // Classes and unions do not have complex copying even if they have
+    // members which do.
+    class C
+    {
+        HasDtor s;
+    }
+    static assert(!hasComplexDestruction!C);
+
+    union U
+    {
+        HasDtor s;
+    }
+    static assert(!hasComplexDestruction!U);
+
+    // https://issues.dlang.org/show_bug.cgi?id=24833
+    // This static assertion fails, because the compiler
+    // currently ignores assignment operators for enum types.
+    enum E : HasDtor { a = HasDtor.init }
+    //static assert( hasComplexDestruction!E);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    {
+        struct S1 { int i; }
+        struct S2 { real r; }
+        struct S3 { string s; }
+        struct S4 { int[] arr; }
+        struct S5 { int[0] arr; }
+        struct S6 { int[42] arr; }
+        struct S7 { int[string] aa; }
+
+        static foreach (T; AliasSeq!(S1, S2, S3, S4, S5, S6, S7))
+        {
+            static assert(!hasComplexDestruction!T);
+            static assert(!hasComplexDestruction!(T[0]));
+            static assert(!hasComplexDestruction!(T[42]));
+            static assert(!hasComplexDestruction!(T[]));
+        }
+    }
+
+    // Basic variations of destructors.
+    {
+        static struct S { ~this() {} }
+        static assert( hasComplexDestruction!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexDestruction!S2);
+    }
+    {
+        static struct S { ~this() const {} }
+        static assert( hasComplexDestruction!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexDestruction!S2);
+    }
+    {
+        static struct S { ~this() @safe {} }
+        static assert( hasComplexDestruction!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexDestruction!S2);
+    }
+    {
+        static struct S { ~this() @safe pure nothrow @nogc {} }
+        static assert( hasComplexDestruction!S);
+
+        static struct S2 { S s; }
+        static assert( hasComplexDestruction!S2);
+    }
+
+    // @disabled destructors.
+    {
+        static struct S { @disable ~this() {} }
+        static assert( __traits(isDisabled,
+                                __traits(getMember, S, "__xdtor")));
+
+        static struct S2 { S s; }
+        static assert( hasComplexDestruction!S2);
+        static assert( __traits(isDisabled,
+                                __traits(getMember, S2, "__xdtor")));
+    }
+
+    // Static arrays
+    {
+        static struct S { ~this() {} }
+        static assert( hasComplexDestruction!S);
+
+        static assert(!hasComplexDestruction!(S[0]));
+        static assert( hasComplexDestruction!(S[12]));
+        static assert(!hasComplexDestruction!(S[]));
+
+        static struct S2 { S[42] s; }
+        static assert( hasComplexDestruction!S2);
     }
 }
 
