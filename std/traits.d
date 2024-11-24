@@ -7251,16 +7251,21 @@ alias PointerTarget(T : T*) = T;
 /**
  * Detect whether type `T` is an aggregate type.
  */
-enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
-                               is(T == class) || is(T == interface);
+template isAggregateType(T)
+{
+    static if (is(T == enum))
+        enum isAggregateType = isAggregateType!(OriginalType!T);
+    else
+        enum isAggregateType = is(T == struct) || is(T == class) || is(T == interface) || is(T == union);
+}
 
 ///
 @safe unittest
 {
-    class C;
-    union U;
-    struct S;
-    interface I;
+    class C {}
+    union U {}
+    struct S {}
+    interface I {}
 
     static assert( isAggregateType!C);
     static assert( isAggregateType!U);
@@ -7271,6 +7276,16 @@ enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
     static assert(!isAggregateType!(int[]));
     static assert(!isAggregateType!(C[string]));
     static assert(!isAggregateType!(void delegate(int)));
+
+    enum ES : S { a = S.init }
+    enum EC : C { a = C.init }
+    enum EI : I { a = I.init }
+    enum EU : U { a = U.init }
+
+    static assert( isAggregateType!ES);
+    static assert( isAggregateType!EC);
+    static assert( isAggregateType!EI);
+    static assert( isAggregateType!EU);
 }
 
 /**
