@@ -4820,16 +4820,24 @@ template Unshared(T)
     testing for, then that's what Unqualified is for. It's just that it's best
     practice to use $(LREF Unconst) when it's not clear that $(D shared) should
     be removed as well.
+
+    Also, note that $(D is(immutable T == immutable U))) is equivalent to
+    $(D is(Unqualified!T == Unqualified!U)) (using $(D immutable) converts
+    $(D const), $(D inout), and $(D shared) to $(D immutable), whereas using
+    Unqualified strips off all type qualifiers, but the resulting comparison is
+    the same as long as $(D immutable) is used on both sides or Unqualified is
+    used on both sides)). So, in cases where code needs to compare two types to
+    see whether they're the same while ignoring all qualifiers, it's generally
+    better to use $(D immutable) on both types rather than using Unqualfied on
+    both types, since that avoids needing to instantiate a template, and those
+    instantiations can really add up when a project has a lot of templates
+    with template constraints, $(D static if)s, and other forms of conditional
+    compilation that need to compare types.
   +/
-version (StdDdoc) template Unqualified(T)
+template Unqualified(T)
 {
     import core.internal.traits : CoreUnqualified = Unqual;
     alias Unqualified = CoreUnqualified!(T);
-}
-else
-{
-    import core.internal.traits : CoreUnqualified = Unqual;
-    alias Unqualified = CoreUnqualified;
 }
 
 ///
