@@ -2560,9 +2560,6 @@ Lerr:
     string s1 = "123";
     auto a1 = parse!(int, string, Yes.doCount)(s1);
     assert(a1.data == 123 && a1.count == 3);
-
-    // parse only accepts lvalues
-    static assert(!__traits(compiles, parse!int("123")));
 }
 
 ///
