@@ -534,8 +534,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 
     assert(test6);
     assert(test7);
-    assert(test8);
-    
+    assert(test8); 
 }
 
 @safe @nogc pure nothrow unittest
