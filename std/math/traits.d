@@ -514,7 +514,6 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 ///
 @safe @nogc pure nothrow unittest
 {
-
     // We're forcing the CTFE to run by assigning the result of the function to an enum
     enum test1 = isIdentical(1.0,1.0);
     enum test2 = isIdentical(real.nan,real.nan);
@@ -534,7 +533,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 
     assert(test6);
     assert(test7);
-    assert(test8); 
+    assert(test8);
 }
 
 @safe @nogc pure nothrow unittest
