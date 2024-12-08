@@ -17,7 +17,7 @@ The easiest way to create a log message is to write:
 import std.logger;
 
 void main() {
-    log("Hello World");
+    logf("Hello World");
 }
 -------------
 This will print a message to the `stderr` device. The message will contain
