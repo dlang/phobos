@@ -2856,7 +2856,7 @@ void kill(Pid pid, int codeOrSignal)
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert(s.status == 123);
     else version (Posix) assert(s.status == -SIGKILL);
-    assertThrown!ProcessException(kill(pid));
+    assert(pid.processID == Pid.terminated);
 }
 
 @system unittest // wait() and kill() detached process
