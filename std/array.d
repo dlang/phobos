@@ -1300,6 +1300,7 @@ if (is(typeof(a.ptr < b.ptr) == bool))
 ///
 @safe pure nothrow unittest
 {
+    import std.meta : AliasSeq;
 
     // can be used as an alternative implementation of overlap that returns
     // `true` or `false` instead of a slice of the overlap
