@@ -1292,8 +1292,8 @@ alias pipe(fun...) = compose!(Reverse!(fun));
 private template getOverloads(alias fun)
 {
     import std.meta : AliasSeq;
-    static if (__traits(compiles, __traits(getOverloads, __traits(parent, fun), __traits(identifier, fun))))
-        alias getOverloads = __traits(getOverloads, __traits(parent, fun), __traits(identifier, fun));
+    static if (__traits(compiles, __traits(getOverloads, __traits(parent, fun), __traits(identifier, fun), true)))
+        alias getOverloads = __traits(getOverloads, __traits(parent, fun), __traits(identifier, fun), true);
     else
         alias getOverloads = AliasSeq!fun;
 }
