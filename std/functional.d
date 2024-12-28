@@ -1367,7 +1367,8 @@ template memoize(alias fun)
         }
         else
         {
-            static typeof(fun(args)) result = fun(args);
+            static typeof(fun(args)) result;
+            result = fun(args);
             return result;
         }
     }
@@ -1453,7 +1454,8 @@ template memoize(alias fun, uint maxSize)
         }
         else
         {
-            static typeof(fun(args)) result = fun(args);
+            static typeof(fun(args)) result;
+            result = fun(args);
             return result;
         }
     }
