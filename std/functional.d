@@ -1710,6 +1710,19 @@ unittest
     }}
 }
 
+// memoize should continue to work with functions that cannot be evaluated at compile time
+@system unittest
+{
+    __gshared string[string] glob;
+
+    static bool foo()
+    {
+        return (":-)" in glob) is null;
+    }
+
+    assert(memoize!foo);
+}
+
 private struct DelegateFaker(F)
 {
     import std.typecons : FuncInfo, MemberFunctionGenerator;
