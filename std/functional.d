@@ -1815,7 +1815,7 @@ if (isCallable!(F))
     }
     else static if (is(F Func == Func*) && is(Func == function) && is(Func Params == __parameters))
     {
-        // https://issues.dlang.org/show_bug.cgi?id=24007 - cannot specify linkage on function literal:
+        // <https://github.com/dlang/dmd/issues/20304> - cannot specify linkage on function literal:
         //alias dg = delegate(Params params) const => F.init(params);
         //typeof(dg) result;
 		// Workaround:
