@@ -1814,6 +1814,13 @@ if (isCallable!(F))
     {
         return fp;
     }
+    else static if (is(F Func == Func*) && is(Func == function))
+    {
+        return function(ref F fp) @trusted
+        {
+            return buildDelegate(fp);
+        }(fp);
+    }
     else static if (is(typeof(&F.opCall) == delegate)
                 || (is(typeof(&F.opCall) V : V*) && is(V == function)))
     {
@@ -1825,6 +1832,27 @@ if (isCallable!(F))
     }
     else
     {
+        static assert(false, "Unsupported type of callable, please open an issue.");
+    }
+}
+
+///
+@safe unittest
+{
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
+}
+
+private template buildDelegate(F)
+{
+    auto buildDelegate(auto ref F fp) {
         alias DelType = typeof(&(new DelegateFaker!(F)).doIt);
 
         static struct DelegateFields {
@@ -1854,21 +1882,22 @@ if (isCallable!(F))
     }
 }
 
-///
-@system unittest
+@safe unittest
 {
     static int inc(ref uint num) {
         num++;
         return 8675309;
     }
 
-    uint myNum = 0;
-    auto incMyNumDel = toDelegate(&inc);
-    auto returnVal = incMyNumDel(myNum);
-    assert(myNum == 1);
+    uint myNum = 0x1337;
+    struct S1 { int opCall() { inc(myNum); return myNum; } }
+    static assert(!is(typeof(&s1.opCall) == delegate));
+    S1 s1;
+    auto getvals1 = toDelegate(s1);
+    assert(getvals1() == 0x1338);
 }
 
-@system unittest // not @safe due to toDelegate
+@system unittest
 {
     static int inc(ref uint num) {
         num++;
@@ -1954,7 +1983,7 @@ if (isCallable!(F))
 }
 
 
-@system unittest
+@safe unittest
 {
     static struct S1 { static void opCall()() { } }
     static struct S2 { static T opCall(T = int)(T x) {return x; } }
@@ -1965,6 +1994,22 @@ if (isCallable!(F))
 
     S2 i2;
     assert(toDelegate(i2)(0xBED) == 0xBED);
+}
+
+@safe unittest
+{
+    static void fun() @system pure nothrow @nogc
+    {
+        return;
+    }
+
+    auto fn = &fun;
+    static assert( is(typeof(fn) == void function() @system pure nothrow @nogc));
+    static assert(!is(typeof(fn) == void function() @safe   pure nothrow @nogc));
+
+    auto dg = fn.toDelegate();
+    static assert( is(typeof(dg) == void delegate() @system pure nothrow @nogc));
+    static assert(!is(typeof(dg) == void delegate() @safe   pure nothrow @nogc));
 }
 
 /**
