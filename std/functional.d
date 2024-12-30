@@ -1819,6 +1819,10 @@ if (isCallable!(F))
     {
         return toDelegate(&fp.opCall);
     }
+    else static if (is(typeof(&fp.opCall!())))
+    {
+        return toDelegate(&fp.opCall!());
+    }
     else
     {
         alias DelType = typeof(&(new DelegateFaker!(F)).doIt);
@@ -1947,6 +1951,20 @@ if (isCallable!(F))
         auto dg_xtrnD = toDelegate(&S.xtrnD);
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
+}
+
+
+@system unittest
+{
+    static struct S1 { static void opCall()() { } }
+    static struct S2 { static T opCall(T = int)(T x) {return x; } }
+
+    S1 i1;
+    const dg1 = toDelegate(i1);
+    dg1();
+
+    S2 i2;
+    assert(toDelegate(i2)(0xBED) == 0xBED);
 }
 
 /**
