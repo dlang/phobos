@@ -1185,7 +1185,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 
         static if (is(typeof(alloc.alignedAllocate(size_t.max, uint.max))))
         {
-            static if(is(T == class))
+            static if (is(T == class))
             {
                 import std.traits : classInstanceAlignment;
                 auto m = alloc.alignedAllocate(max(stateSize!T, 1), classInstanceAlignment!T);
