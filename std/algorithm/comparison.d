@@ -578,12 +578,12 @@ Returns:
 */
 T1 clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 {
-    static assert(is(T2 : T1), "T2 of type '", T2.stringof
-            , "' must be implicitly convertible to type of T1 '"
-            , T1.stringof, "'");
-    static assert(is(T3 : T1), "T3 of type '", T3.stringof
-            , "' must be implicitly convertible to type of T1 '"
-            , T1.stringof, "'");
+    static assert(is(T2 : T1), "T2 of type '" ~ T2.stringof
+            ~ "' must be implicitly convertible to type of T1 '"
+            ~ T1.stringof ~ "'");
+    static assert(is(T3 : T1), "T3 of type '" ~ T3.stringof
+            ~ "' must be implicitly convertible to type of T1 '"
+            ~ T1.stringof ~ "'");
 
     assert(!lower.greaterThan(upper), "Lower can't be greater than upper.");
 
