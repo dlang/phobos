@@ -146,8 +146,7 @@ private
     // POSIX API declarations.
     version (Posix)
     {
-        static import core.sys.posix.unistd;
-        private alias getEnvironPtr = core.sys.posix.unistd.environ;
+        import core.sys.posix.unistd : getEnvironPtr = environ;
 
         @system unittest
         {
