@@ -146,23 +146,7 @@ private
     // POSIX API declarations.
     version (Posix)
     {
-        version (Darwin)
-        {
-            extern(C) char*** _NSGetEnviron() nothrow;
-            const(char**) getEnvironPtr() @trusted
-            {
-                return *_NSGetEnviron;
-            }
-        }
-        else
-        {
-            // Made available by the C runtime:
-            extern(C) extern __gshared const char** environ;
-            const(char**) getEnvironPtr() @trusted
-            {
-                return environ;
-            }
-        }
+        import core.sys.posix.unistd : getEnvironPtr = environ;
 
         @system unittest
         {
