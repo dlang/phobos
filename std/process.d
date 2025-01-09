@@ -1205,7 +1205,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             }
 
             // Execute program.
-            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
+            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz is null ? getEnvironPtr : envz);
 
             // If execution fails, exit as quickly as possible.
             abortOnError(forkPipeOut, InternalError.exec, .errno);
@@ -1511,7 +1511,7 @@ private Pid spawnProcessWin(scope const(char)[] commandLine,
 // on the form "name=value", optionally adding those of the current process'
 // environment strings that are not present in childEnv.  If the parent's
 // environment should be inherited without modification, this function
-// returns environ directly.
+// returns null.
 version (Posix)
 private const(char*)* createEnv(const string[string] childEnv,
                                 bool mergeWithParentEnv)
@@ -1521,7 +1521,7 @@ private const(char*)* createEnv(const string[string] childEnv,
     auto environ = getEnvironPtr;
     if (mergeWithParentEnv)
     {
-        if (childEnv.length == 0) return environ;
+        if (childEnv.length == 0) return null;
         while (environ[parentEnvLength] != null) ++parentEnvLength;
     }
 
@@ -1551,16 +1551,7 @@ version (Posix) @system unittest
     assert(e1 != null && *e1 == null);
 
     auto e2 = createEnv(null, true);
-    assert(e2 != null);
-    int i = 0;
-    auto environ = getEnvironPtr;
-    for (; environ[i] != null; ++i)
-    {
-        assert(e2[i] != null);
-        import core.stdc.string : strcmp;
-        assert(strcmp(e2[i], environ[i]) == 0);
-    }
-    assert(e2[i] == null);
+    assert(e2 == null);
 
     auto e3 = createEnv(["foo" : "bar", "hello" : "world"], false);
     assert(e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
