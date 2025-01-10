@@ -736,7 +736,7 @@ struct JSONValue
      * Unlike `emptyObject`, the order of inserted keys is preserved.
      */
     enum emptyOrderedObject = {
-        JSONValue v;
+        JSONValue v = void;
         v.orderedObject = null;
         return v;
     }();
