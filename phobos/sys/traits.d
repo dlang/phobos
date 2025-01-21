@@ -81,6 +81,7 @@
               $(LREF hasComplexAssignment)
               $(LREF hasComplexCopying)
               $(LREF hasComplexDestruction)
+              $(LREF hasIndirections)
     ))
     $(TR $(TD General Types) $(TD
               $(LREF KeyType)
@@ -4415,6 +4416,1026 @@ template hasComplexDestruction(T)
 }
 
 /++
+    Evaluates to $(D true) if the given type is one or more of the following,
+    or if it's a struct, union, or static array which contains one or more of
+    the following:
+
+    $(OL $(LI A raw pointer)
+         $(LI A class reference)
+         $(LI An interface reference)
+         $(LI A dynamic array)
+         $(LI An associative array)
+         $(LI A delegate)
+         $(LI A struct with a
+              $(DDSUBLINK spec/traits, isNested, $(D context pointer)).))
+
+    Note that function pointers are not considered to have indirections, because
+    they do not point to any data (whereas a delegate has a context pointer
+    and therefore has data that it points to).
+
+    Also, while static arrays do not have indirections unless their element
+    type has indirections, static arrays with an element type of $(D void) are
+    considered to have indirections by hasIndirections, because it's unknown
+    what type their elements actually are, so they $(I might) have
+    indirections, and thus, the conservative approach is to assume that they do
+    have indirections.
+
+    Static arrays with length 0 do not have indirections no matter what their
+    element type is, since they don't actually have any elements.
+  +/
+version (StdDdoc) template hasIndirections(T)
+{
+    import core.internal.traits : _hasIndirections = hasIndirections;
+    alias hasIndirections = _hasIndirections!T;
+}
+else
+{
+    import core.internal.traits : _hasIndirections = hasIndirections;
+    alias hasIndirections = _hasIndirections;
+}
+
+///
+@safe unittest
+{
+    static class C {}
+    static interface I {}
+
+    static assert( hasIndirections!(int*));
+    static assert( hasIndirections!C);
+    static assert( hasIndirections!I);
+    static assert( hasIndirections!(int[]));
+    static assert( hasIndirections!(int[string]));
+    static assert( hasIndirections!(void delegate()));
+    static assert( hasIndirections!(string delegate(int)));
+
+    static assert(!hasIndirections!(void function()));
+    static assert(!hasIndirections!int);
+
+    static assert(!hasIndirections!(ubyte[9]));
+    static assert( hasIndirections!(ubyte[9]*));
+    static assert( hasIndirections!(ubyte*[9]));
+    static assert(!hasIndirections!(ubyte*[0]));
+    static assert( hasIndirections!(ubyte[]));
+
+    static assert( hasIndirections!(void[]));
+    static assert( hasIndirections!(void[42]));
+
+    static struct NoContext
+    {
+        int i;
+    }
+
+    int local;
+
+    struct HasContext
+    {
+        int foo() { return local; }
+    }
+
+    struct HasMembersWithIndirections
+    {
+        int* ptr;
+    }
+
+    static assert(!hasIndirections!NoContext);
+    static assert( hasIndirections!HasContext);
+    static assert( hasIndirections!HasMembersWithIndirections);
+
+    union U1
+    {
+        int i;
+        float f;
+    }
+    static assert(!hasIndirections!U1);
+
+    union U2
+    {
+        int i;
+        int[] arr;
+    }
+    static assert( hasIndirections!U2);
+}
+
+// hasIndirections with types which aren't aggregate types.
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias testWithQualifiers = assertWithQualifiers!hasIndirections;
+
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          float, double, real, char, wchar, dchar, int function(string), void))
+    {
+        mixin testWithQualifiers!(T, false);
+        mixin testWithQualifiers!(T*, true);
+        mixin testWithQualifiers!(T[], true);
+
+        mixin testWithQualifiers!(T[42], is(T == void));
+        mixin testWithQualifiers!(T[0], false);
+
+        mixin testWithQualifiers!(T*[42], true);
+        mixin testWithQualifiers!(T*[0], false);
+
+        mixin testWithQualifiers!(T[][42], true);
+        mixin testWithQualifiers!(T[][0], false);
+    }
+
+    foreach (T; AliasSeq!(int[int], int delegate(string)))
+    {
+        mixin testWithQualifiers!(T, true);
+        mixin testWithQualifiers!(T*, true);
+        mixin testWithQualifiers!(T[], true);
+
+        mixin testWithQualifiers!(T[42], true);
+        mixin testWithQualifiers!(T[0], false);
+
+        mixin testWithQualifiers!(T*[42], true);
+        mixin testWithQualifiers!(T*[0], false);
+
+        mixin testWithQualifiers!(T[][42], true);
+        mixin testWithQualifiers!(T[][0], false);
+    }
+}
+
+// hasIndirections with structs.
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias testWithQualifiers = assertWithQualifiers!hasIndirections;
+
+    {
+        struct S {}
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S {}
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        struct S { void foo() {} }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { void foo() {} }
+        mixin testWithQualifiers!(S, false);
+    }
+
+    // Structs with members which aren't aggregate types and don't have indirections.
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          float, double, real, char, wchar, dchar, int function(string)))
+    {
+        // No indirections.
+        {
+            struct S { T member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const T member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { immutable T member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { shared T member; }
+            mixin testWithQualifiers!(S, false);
+        }
+
+        {
+            static struct S { T member; void foo() {} }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            static struct S { const T member; void foo() {} }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            static struct S { immutable T member; void foo() {} }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            static struct S { shared T member; void foo() {} }
+            mixin testWithQualifiers!(S, false);
+        }
+
+        // Has context pointer.
+        {
+            struct S { T member; void foo() {} }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const T member; void foo() {} }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { immutable T member; void foo() {} }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { shared T member; void foo() {} }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        {
+            T local;
+            struct S { void foo() { auto v = local; } }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            const T local;
+            struct S { void foo() { auto v = local; } }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            immutable T local;
+            struct S { void foo() { auto v = local; } }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            shared T local;
+            struct S { void foo() @trusted { auto v = cast() local; } }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        // Pointers.
+        {
+            struct S { T* member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T)* member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const T* member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { immutable T* member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { shared T* member; }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        // Dynamic arrays.
+        {
+            struct S { T[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T)[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const T[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { immutable T[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { shared T[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        // Static arrays.
+        {
+            struct S { T[1] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const(T)[1] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const T[1] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { immutable T[1] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { shared T[1] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+
+        // Static arrays of pointers.
+        {
+            struct S { T*[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T)*[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T*)[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const T*[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { immutable T*[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { shared T*[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        {
+            struct S { T*[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const(T)*[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const(T*)[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const T*[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { immutable T*[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { shared T*[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+
+        // Static arrays of dynamic arrays.
+        {
+            struct S { T[][1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T)[][1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const(T[])[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { const T[][1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { immutable T[][1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            struct S { shared T[][1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+
+        {
+            struct S { T[][0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const(T)[][0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const(T[])[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { const T[][0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { immutable T[][0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+        {
+            struct S { shared T[][0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+    }
+
+    // Structs with arrays of void.
+    {
+        {
+            static struct S { void[] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            static struct S { void[1] member; }
+            mixin testWithQualifiers!(S, true);
+        }
+        {
+            static struct S { void[0] member; }
+            mixin testWithQualifiers!(S, false);
+        }
+    }
+
+    // Structs with multiple members, testing pointer types.
+    {
+        static struct S { int i; bool b; }
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S { int* i; bool b; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int i; bool* b; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int* i; bool* b; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs with multiple members, testing dynamic arrays.
+    {
+        static struct S { int[] arr; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int i; int[] arr; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int[] arr; int i; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs with multiple members, testing static arrays.
+    {
+        static struct S { int[1] arr; }
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S { int i; int[1] arr; }
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S { int[1] arr; int i; }
+        mixin testWithQualifiers!(S, false);
+    }
+
+    {
+        static struct S { int*[0] arr; }
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S { int i; int*[0] arr; }
+        mixin testWithQualifiers!(S, false);
+    }
+    {
+        static struct S { int*[0] arr; int i; }
+        mixin testWithQualifiers!(S, false);
+    }
+
+    {
+        static struct S { string[42] arr; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int i; string[42] arr; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { string[42] arr; int i; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs with associative arrays.
+    {
+        static struct S { int[string] aa; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int i; int[string] aa; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int[string] aa; int i; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    {
+        static struct S { int[42][int] aa; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        static struct S { int[0][int] aa; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs with classes.
+    {
+        class C {}
+        struct S { C c; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        interface I {}
+        struct S { I i; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs with delegates.
+    {
+        struct S { void delegate() d; }
+        mixin testWithQualifiers!(S, true);
+    }
+    {
+        struct S { int delegate(int) d; }
+        mixin testWithQualifiers!(S, true);
+    }
+
+    // Structs multiple layers deep.
+    {
+        struct S1 { int i; }
+        struct S2 { S1 s; }
+        struct S3 { S2 s; }
+        struct S4 { S3 s; }
+        struct S5 { S4 s; }
+        struct S6 { S5 s; }
+        struct S7 { S6[0] s; }
+        struct S8 { S7 s; }
+        struct S9 { S8 s; }
+        struct S10 { S9 s; }
+        mixin testWithQualifiers!(S1, false);
+        mixin testWithQualifiers!(S2, false);
+        mixin testWithQualifiers!(S3, false);
+        mixin testWithQualifiers!(S4, false);
+        mixin testWithQualifiers!(S5, false);
+        mixin testWithQualifiers!(S6, false);
+        mixin testWithQualifiers!(S7, false);
+        mixin testWithQualifiers!(S8, false);
+        mixin testWithQualifiers!(S9, false);
+        mixin testWithQualifiers!(S10, false);
+    }
+    {
+        struct S1 { int* i; }
+        struct S2 { S1 s; }
+        struct S3 { S2 s; }
+        struct S4 { S3 s; }
+        struct S5 { S4 s; }
+        struct S6 { S5 s; }
+        struct S7 { S6[0] s; }
+        struct S8 { S7 s; }
+        struct S9 { S8 s; }
+        struct S10 { S9 s; }
+        mixin testWithQualifiers!(S1, true);
+        mixin testWithQualifiers!(S2, true);
+        mixin testWithQualifiers!(S3, true);
+        mixin testWithQualifiers!(S4, true);
+        mixin testWithQualifiers!(S5, true);
+        mixin testWithQualifiers!(S6, true);
+        mixin testWithQualifiers!(S7, false);
+        mixin testWithQualifiers!(S8, false);
+        mixin testWithQualifiers!(S9, false);
+        mixin testWithQualifiers!(S10, false);
+    }
+}
+
+// hasIndirections with unions.
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias testWithQualifiers = assertWithQualifiers!hasIndirections;
+
+    {
+        union U {}
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U {}
+        mixin testWithQualifiers!(U, false);
+    }
+
+    // Unions with members which aren't aggregate types and don't have indirections.
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          float, double, real, char, wchar, dchar, int function(string)))
+    {
+        // No indirections.
+        {
+            union U { T member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const T member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { immutable T member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { shared T member; }
+            mixin testWithQualifiers!(U, false);
+        }
+
+        // Pointers.
+        {
+            union U { T* member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T)* member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const T* member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { immutable T* member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { shared T* member; }
+            mixin testWithQualifiers!(U, true);
+        }
+
+        // Dynamic arrays.
+        {
+            union U { T[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T)[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const T[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { immutable T[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { shared T[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+
+        // Static arrays.
+        {
+            union U { T[1] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const(T)[1] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const T[1] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { immutable T[1] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { shared T[1] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+
+        // Static arrays of pointers.
+        {
+            union U { T*[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T)*[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T*)[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const T*[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { immutable T*[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { shared T*[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+
+        {
+            union U { T*[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const(T)*[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const(T*)[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const T*[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { immutable T*[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { shared T*[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+
+        // Static arrays of dynamic arrays.
+        {
+            union U { T[][1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T)[][1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const(T[])[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { const T[][1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { immutable T[][1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            union U { shared T[][1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+
+        {
+            union U { T[][0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const(T)[][0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const(T[])[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { const T[][0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { immutable T[][0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+        {
+            union U { shared T[][0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+    }
+
+    // Unions with arrays of void.
+    {
+        {
+            static union U { void[] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            static union U { void[1] member; }
+            mixin testWithQualifiers!(U, true);
+        }
+        {
+            static union U { void[0] member; }
+            mixin testWithQualifiers!(U, false);
+        }
+    }
+
+    // Unions with multiple members, testing pointer types.
+    {
+        static union U { int i; bool b; }
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U { int* i; bool b; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int i; bool* b; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int* i; bool* b; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions with multiple members, testing dynamic arrays.
+    {
+        static union U { int[] arr; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int i; int[] arr; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int[] arr; int i; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions with multiple members, testing static arrays.
+    {
+        static union U { int[1] arr; }
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U { int i; int[1] arr; }
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U { int[1] arr; int i; }
+        mixin testWithQualifiers!(U, false);
+    }
+
+    {
+        static union U { int*[0] arr; }
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U { int i; int*[0] arr; }
+        mixin testWithQualifiers!(U, false);
+    }
+    {
+        static union U { int*[0] arr; int i; }
+        mixin testWithQualifiers!(U, false);
+    }
+
+    {
+        static union U { string[42] arr; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int i; string[42] arr; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { string[42] arr; int i; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions with associative arrays.
+    {
+        static union U { int[string] aa; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int i; int[string] aa; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int[string] aa; int i; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    {
+        static union U { int[42][int] aa; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        static union U { int[0][int] aa; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions with classes.
+    {
+        class C {}
+        union U { C c; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        interface I {}
+        union U { I i; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions with delegates.
+    {
+        union U { void delegate() d; }
+        mixin testWithQualifiers!(U, true);
+    }
+    {
+        union U { int delegate(int) d; }
+        mixin testWithQualifiers!(U, true);
+    }
+
+    // Unions multiple layers deep.
+    {
+        union U1 { int i; }
+        union U2 { U1 s; }
+        union U3 { U2 s; }
+        union U4 { U3 s; }
+        union U5 { U4 s; }
+        union U6 { U5 s; }
+        union U7 { U6[0] s; }
+        union U8 { U7 s; }
+        union U9 { U8 s; }
+        union U10 { U9 s; }
+        mixin testWithQualifiers!(U1, false);
+        mixin testWithQualifiers!(U2, false);
+        mixin testWithQualifiers!(U3, false);
+        mixin testWithQualifiers!(U4, false);
+        mixin testWithQualifiers!(U5, false);
+        mixin testWithQualifiers!(U6, false);
+        mixin testWithQualifiers!(U7, false);
+        mixin testWithQualifiers!(U8, false);
+        mixin testWithQualifiers!(U9, false);
+        mixin testWithQualifiers!(U10, false);
+    }
+    {
+        union U1 { int* i; }
+        union U2 { U1 s; }
+        union U3 { U2 s; }
+        union U4 { U3 s; }
+        union U5 { U4 s; }
+        union U6 { U5 s; }
+        union U7 { U6[0] s; }
+        union U8 { U7 s; }
+        union U9 { U8 s; }
+        union U10 { U9 s; }
+        mixin testWithQualifiers!(U1, true);
+        mixin testWithQualifiers!(U2, true);
+        mixin testWithQualifiers!(U3, true);
+        mixin testWithQualifiers!(U4, true);
+        mixin testWithQualifiers!(U5, true);
+        mixin testWithQualifiers!(U6, true);
+        mixin testWithQualifiers!(U7, false);
+        mixin testWithQualifiers!(U8, false);
+        mixin testWithQualifiers!(U9, false);
+        mixin testWithQualifiers!(U10, false);
+    }
+}
+
+// hasIndirections with classes and interfaces
+@safe unittest
+{
+    import phobos.sys.meta : AliasSeq;
+
+    alias testWithQualifiers = assertWithQualifiers!hasIndirections;
+
+    {
+        class C {}
+        mixin testWithQualifiers!(C, true);
+    }
+
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                          float, double, real, char, wchar, dchar, int function(string),
+                          int[int], string delegate(int)))
+    {
+        {
+            class C { T member; }
+            mixin testWithQualifiers!(C, true);
+        }
+        {
+            class C { const T member; }
+            mixin testWithQualifiers!(C, true);
+        }
+        {
+            class C { immutable T member; }
+            mixin testWithQualifiers!(C, true);
+        }
+        {
+            class C { shared T member; }
+            mixin testWithQualifiers!(C, true);
+        }
+    }
+
+    {
+        interface I {}
+        mixin testWithQualifiers!(I, true);
+    }
+}
+
+/++
     Takes a type which is an associative array and evaluates to the type of the
     keys in that associative array.
 
@@ -5156,4 +6177,52 @@ private struct __InoutWorkaroundStruct {}
     static assert(!__traits(compiles, rvalueOf!int = 1));
     static assert( __traits(compiles, lvalueOf!byte = 127));
     static assert(!__traits(compiles, lvalueOf!byte = 128));
+}
+
+// We may want to add this as some sort of public test helper in the future in
+// whatever module would be appropriate for that.
+private template assertWithQualifiers(alias Pred, T, bool expected)
+{
+    static assert(Pred!T == expected);
+    static assert(Pred!(const T) == expected);
+    static assert(Pred!(inout T) == expected);
+    static assert(Pred!(immutable T) == expected);
+    static assert(Pred!(shared T) == expected);
+
+    static if (is(T == U*, U))
+    {
+        static assert(Pred!(const(U)*) == expected);
+        static assert(Pred!(inout(U)*) == expected);
+        static assert(Pred!(immutable(U)*) == expected);
+        static assert(Pred!(shared(U)*) == expected);
+    }
+    else static if (is(T == U[], U))
+    {
+        static assert(Pred!(const(U)[]) == expected);
+        static assert(Pred!(inout(U)[]) == expected);
+        static assert(Pred!(immutable(U)[]) == expected);
+        static assert(Pred!(shared(U)[]) == expected);
+    }
+    else static if (is(T == U[n], U, size_t n))
+    {
+        static assert(Pred!(const(U)[n]) == expected);
+        static assert(Pred!(inout(U)[n]) == expected);
+        static assert(Pred!(immutable(U)[n]) == expected);
+        static assert(Pred!(shared(U)[n]) == expected);
+    }
+}
+
+private template assertWithQualifiers(alias Pred)
+{
+    alias assertWithQualifiers(T, bool expected) = .assertWithQualifiers!(Pred, T, expected);
+}
+
+@safe unittest
+{
+    mixin assertWithQualifiers!(isPointer, int*, true);
+    mixin assertWithQualifiers!(isPointer, int, false);
+
+    alias test = assertWithQualifiers!isPointer;
+    mixin test!(int*, true);
+    mixin test!(int, false);
 }
