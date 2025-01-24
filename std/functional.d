@@ -1886,16 +1886,21 @@ private template buildDelegate(F)
 
 @safe unittest
 {
-    static int inc(ref uint num) {
+    static int inc(ref int num) {
         num++;
         return 8675309;
     }
 
-    uint myNum = 0x1337;
-    struct S1 { int opCall() { inc(myNum); return myNum; } }
-    static assert(!is(typeof(&s1.opCall) == delegate));
+    struct S1
+    {
+        static int myNum = 0x1337;
+        static int opCall() { inc(myNum); return myNum; }
+    }
+
     S1 s1;
     auto getvals1 = toDelegate(s1);
+    static assert(!is(typeof(&s1.opCall)     == delegate));
+    static assert( is(typeof(toDelegate(s1)) == delegate));
     assert(getvals1() == 0x1338);
 }
 
@@ -1924,15 +1929,18 @@ private template buildDelegate(F)
     assert(getvali() == 3);
 
     struct S1 { int opCall() { inc(myNum); return myNum; } }
-    static assert(!is(typeof(&s1.opCall) == delegate));
     S1 s1;
     auto getvals1 = toDelegate(s1);
+    static assert(is(typeof(&s1.opCall) == delegate));
+    static assert(is(typeof(getvals1)   == delegate));
+    assert(&s1.opCall is getvals1);
     assert(getvals1() == 4);
 
     struct S2 { static int opCall() { return 123456; } }
-    static assert(!is(typeof(&S2.opCall) == delegate));
     S2 s2;
-    auto getvals2 =&S2.opCall;
+    auto getvals2 = toDelegate(s2);
+    static assert(!is(typeof(&S2.opCall) == delegate));
+    static assert( is(typeof(getvals2)   == delegate));
     assert(getvals2() == 123456);
 
     /* test for attributes */
