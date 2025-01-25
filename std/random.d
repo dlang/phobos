@@ -1790,6 +1790,27 @@ version (linux)
     }
 }
 
+version (Windows)
+{
+    pragma(lib, "Bcrypt.lib");
+
+    private bool bcryptGenRandom(T)(out T result) @trusted
+    {
+        import core.sys.windows.windef : PUCHAR, ULONG;
+        import core.sys.windows.ntdef : NT_SUCCESS;
+        import core.sys.windows.bcrypt : BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG;
+
+        const gotRandom = BCryptGenRandom(
+            null,
+            cast(PUCHAR) &result,
+            ULONG(T.sizeof),
+            BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+        );
+
+        return NT_SUCCESS(gotRandom);
+    }
+}
+
 /**
 A "good" seed for initializing random number engines. Initializing
 with $(D_PARAM unpredictableSeed) makes engines generate different
@@ -1798,8 +1819,8 @@ random number sequences every run.
 This function utilizes the system $(I cryptographically-secure pseudo-random
 number generator (CSPRNG)) or $(I pseudo-random number generator (PRNG))
 where available and implemented (currently `arc4random` on applicable BSD
-systems or `getrandom` on Linux) to generate “high quality” pseudo-random
-numbers – if possible.
+systems, `getrandom` on Linux or `BCryptGenRandom` on Windows) to generate
+“high quality” pseudo-random numbers – if possible.
 As a consequence, calling it may block under certain circumstances (typically
 during early boot when the system's entropy pool has not yet been
 initialized).
@@ -1847,6 +1868,18 @@ how excellent the source of entropy is.
         assert(status == buffer.sizeof);
 
         return buffer;
+    }
+    else version (Windows)
+    {
+        uint result;
+        if (!bcryptGenRandom!uint(result))
+        {
+            version (none)
+                return fallbackSeed();
+            else
+                assert(false, "BCryptGenRandom() failed.");
+        }
+        return result;
     }
     else version (AnyARC4Random)
     {
@@ -1914,6 +1947,18 @@ if (isUnsigned!UIntType)
                 assert(status == buffer.sizeof);
 
                 return buffer;
+            }
+            else version (Windows)
+            {
+                UIntType result;
+                if (!bcryptGenRandom!UIntType(result))
+                {
+                    version (none)
+                        return fallbackSeed();
+                    else
+                        assert(false, "BCryptGenRandom() failed.");
+                }
+                return result;
             }
             else version (AnyARC4Random)
             {
