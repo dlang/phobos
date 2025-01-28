@@ -21,6 +21,10 @@ jobs:
           - job_name: Ubuntu 22.04 x86
             os: ubuntu-22.04
             model: 32
+          - job_name: Alpine 3.21 x64
+            os: ubuntu-latest
+            container_image: alpine:3.21
+            host_dmd: ldmd2
           # macOS
           - job_name: macOS 13 x64
             os: macos-13
@@ -32,12 +36,13 @@ jobs:
             model: 32
     name: ${{ matrix.job_name }}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container_image }}
     timeout-minutes: 40
     env:
       # for ci/run.sh:
       OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || (startsWith(matrix.os, 'windows') && 'windows' || '')) }}
       MODEL: ${{ matrix.model || '64' }}
-      HOST_DMD: dmd
+      HOST_DMD: ${{ matrix.host_dmd || 'dmd' }}
       # N is set dynamically below
       FULL_BUILD: false
       # work around https://issues.dlang.org/show_bug.cgi?id=23517
@@ -46,6 +51,10 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: 'Alpine container: Pre-install bash, git and sudo'
+        if: startsWith(matrix.container_image, 'alpine')
+        shell: sh
+        run: apk add bash git sudo
       - uses: actions/checkout@v4
         with:
           fetch-depth: 50
