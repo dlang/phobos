@@ -254,6 +254,8 @@ private enum hasPostblit(T) = __traits(hasPostblit, T);
 
 private enum isInout(T) = is(T == inout);
 
+private enum memberName(size_t tid) = "values_" ~ toCtString!tid;
+
 /**
  * A [tagged union](https://en.wikipedia.org/wiki/Tagged_union) that can hold a
  * single value from any of a specified set of types.
@@ -290,45 +292,42 @@ private:
 
     union Storage
     {
-        // Workaround for https://issues.dlang.org/show_bug.cgi?id=20068
-        template memberName(T)
-        if (IndexOf!(T, Types) >= 0)
-        {
-            enum tid = IndexOf!(T, Types);
-            mixin("enum memberName = `values_", toCtString!tid, "`;");
-        }
 
-        static foreach (T; Types)
+        static foreach (tid, T; Types)
         {
-            mixin("T ", memberName!T, ";");
+            /+
+            Giving these fields individual names makes it possible to use brace
+            initialization for Storage.
+            +/
+            mixin("T ", memberName!tid, ";");
         }
     }
 
     Storage storage;
     Tag tag;
 
-    /* Accesses the value stored in a SumType.
+    /* Accesses the value stored in a SumType by its index.
      *
      * This method is memory-safe, provided that:
      *
      *   1. A SumType's tag is always accurate.
-     *   2. A SumType cannot be assigned to in @safe code if that assignment
-     *      could cause unsafe aliasing.
+     *   2. A SumType's value cannot be unsafely aliased in @safe code.
      *
      * All code that accesses a SumType's tag or storage directly, including
      * @safe code in this module, must be manually checked to ensure that it
      * does not violate either of the above requirements.
      */
     @trusted
-    ref inout(T) get(T)() inout
-    if (IndexOf!(T, Types) >= 0)
+    // Explicit return type omitted
+    // Workaround for https://github.com/dlang/dmd/issues/20549
+    ref get(size_t tid)() inout
+    if (tid < Types.length)
     {
-        enum tid = IndexOf!(T, Types);
         assert(tag == tid,
-            "This `" ~ SumType.stringof ~
-            "` does not contain a(n) `" ~ T.stringof ~ "`"
+            "This `" ~ SumType.stringof ~ "`" ~
+            "does not contain a(n) `" ~ Types[tid].stringof ~ "`"
         );
-        return __traits(getMember, storage, Storage.memberName!T);
+        return storage.tupleof[tid];
     }
 
 public:
@@ -363,11 +362,11 @@ public:
             static if (isCopyable!T)
             {
                 // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                __traits(getMember, storage, Storage.memberName!T) = __ctfe ? value : forward!value;
+                storage.tupleof[tid] = __ctfe ? value : forward!value;
             }
             else
             {
-                __traits(getMember, storage, Storage.memberName!T) = forward!value;
+                storage.tupleof[tid] = forward!value;
             }
 
             tag = tid;
@@ -380,7 +379,7 @@ public:
                 /// ditto
                 this(const(T) value) const
                 {
-                    __traits(getMember, storage, Storage.memberName!T) = value;
+                    storage.tupleof[tid] = value;
                     tag = tid;
                 }
             }
@@ -397,7 +396,7 @@ public:
                 /// ditto
                 this(immutable(T) value) immutable
                 {
-                    __traits(getMember, storage, Storage.memberName!T) = value;
+                    storage.tupleof[tid] = value;
                     tag = tid;
                 }
             }
@@ -415,7 +414,7 @@ public:
                 this(Value)(Value value) inout
                 if (is(Value == DeducedParameterType!(inout(T))))
                 {
-                    __traits(getMember, storage, Storage.memberName!T) = value;
+                    storage.tupleof[tid] = value;
                     tag = tid;
                 }
             }
@@ -442,10 +441,9 @@ public:
                 storage = other.match!((ref value) {
                     alias OtherTypes = Map!(InoutOf, Types);
                     enum tid = IndexOf!(typeof(value), OtherTypes);
-                    alias T = Types[tid];
 
                     mixin("inout(Storage) newStorage = { ",
-                        Storage.memberName!T, ": value",
+                        memberName!tid, ": value",
                     " };");
 
                     return newStorage;
@@ -462,10 +460,10 @@ public:
                 this(ref SumType other)
                 {
                     storage = other.match!((ref value) {
-                        alias T = typeof(value);
+                        enum tid = IndexOf!(typeof(value), Types);
 
                         mixin("Storage newStorage = { ",
-                            Storage.memberName!T, ": value",
+                            memberName!tid, ": value",
                         " };");
 
                         return newStorage;
@@ -487,10 +485,9 @@ public:
                     storage = other.match!((ref value) {
                         alias OtherTypes = Map!(ConstOf, Types);
                         enum tid = IndexOf!(typeof(value), OtherTypes);
-                        alias T = Types[tid];
 
                         mixin("const(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
+                            memberName!tid, ": value",
                         " };");
 
                         return newStorage;
@@ -512,10 +509,9 @@ public:
                     storage = other.match!((ref value) {
                         alias OtherTypes = Map!(ImmutableOf, Types);
                         enum tid = IndexOf!(typeof(value), OtherTypes);
-                        alias T = Types[tid];
 
                         mixin("immutable(Storage) newStorage = { ",
-                            Storage.memberName!T, ": value",
+                            memberName!tid, ": value",
                         " };");
 
                         return newStorage;
@@ -637,13 +633,13 @@ public:
                 {
                     // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
                     mixin("Storage newStorage = { ",
-                        Storage.memberName!T, ": __ctfe ? rhs : forward!rhs",
+                        memberName!tid, ": __ctfe ? rhs : forward!rhs",
                     " };");
                 }
                 else
                 {
                     mixin("Storage newStorage = { ",
-                        Storage.memberName!T, ": forward!rhs",
+                        memberName!tid, ": forward!rhs",
                     " };");
                 }
 
@@ -1146,7 +1142,7 @@ version (D_BetterC) {} else
     alias MySum = SumType!(ubyte, void*[2]);
 
     MySum x = [null, cast(void*) 0x12345678];
-    void** p = &x.get!(void*[2])[1];
+    void** p = &x.get!1[1];
     x = ubyte(123);
 
     assert(*p != cast(void*) 0x12345678);
@@ -1178,8 +1174,8 @@ version (D_BetterC) {} else
     catch (Exception e) {}
 
     assert(
-        (x.tag == 0 && x.get!A.value == 123) ||
-        (x.tag == 1 && x.get!B.value == 456)
+        (x.tag == 0 && x.get!0.value == 123) ||
+        (x.tag == 1 && x.get!1.value == 456)
     );
 }
 
@@ -1238,8 +1234,8 @@ version (D_BetterC) {} else
     SumType!(S[1]) x = [S(0)];
     SumType!(S[1]) y = x;
 
-    auto xval = x.get!(S[1])[0].n;
-    auto yval = y.get!(S[1])[0].n;
+    auto xval = x.get!0[0].n;
+    auto yval = y.get!0[0].n;
 
     assert(xval != yval);
 }
@@ -1324,8 +1320,8 @@ version (D_BetterC) {} else
     SumType!S y;
     y = x;
 
-    auto xval = x.get!S.n;
-    auto yval = y.get!S.n;
+    auto xval = x.get!0.n;
+    auto yval = y.get!0.n;
 
     assert(xval != yval);
 }
@@ -1399,8 +1395,8 @@ version (D_BetterC) {} else
     SumType!S x = S();
     SumType!S y = x;
 
-    auto xval = x.get!S.n;
-    auto yval = y.get!S.n;
+    auto xval = x.get!0.n;
+    auto yval = y.get!0.n;
 
     assert(xval != yval);
 }
@@ -1872,10 +1868,10 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
              * argument's tag, so there's no need for TagTuple.
              */
             enum handlerArgs(size_t caseId) =
-                "args[0].get!(SumTypes[0].Types[" ~ toCtString!caseId ~ "])()";
+                "args[0].get!(" ~ toCtString!caseId ~ ")()";
 
             alias valueTypes(size_t caseId) =
-                typeof(args[0].get!(SumTypes[0].Types[caseId])());
+                typeof(args[0].get!(caseId)());
 
             enum numCases = SumTypes[0].Types.length;
         }
@@ -1901,9 +1897,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 
                 template getType(size_t i)
                 {
-                    enum tid = tags[i];
-                    alias T = SumTypes[i].Types[tid];
-                    alias getType = typeof(args[i].get!T());
+                    alias getType = typeof(args[i].get!(tags[i])());
                 }
 
                 alias valueTypes = Map!(getType, Iota!(tags.length));
@@ -2128,8 +2122,7 @@ private template handlerArgs(size_t caseId, typeCounts...)
     {
         handlerArgs = AliasSeq!(
             handlerArgs,
-            "args[" ~ toCtString!i ~ "].get!(SumTypes[" ~ toCtString!i ~ "]" ~
-            ".Types[" ~ toCtString!(tags[i]) ~ "])(), "
+            "args[" ~ toCtString!i ~ "].get!(" ~ toCtString!(tags[i]) ~ ")(), "
         );
     }
 }
@@ -2393,7 +2386,7 @@ version (D_Exceptions)
         (ref double d) { d *= 2; }
     );
 
-    assert(value.get!double.isClose(6.28));
+    assert(value.get!1.isClose(6.28));
 }
 
 // Unreachable handlers
