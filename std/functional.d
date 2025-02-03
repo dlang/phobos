@@ -52,7 +52,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Passes the fields of a struct as arguments to a function.
     ))
     $(TR $(TD $(LREF ctEval))
-        $(TD Enforces the execution of a function during compile-time.
+        $(TD Enforces the evaluation of an expression during compile-time.
     ))
 ))
 
@@ -2172,20 +2172,20 @@ template bind(alias fun)
 }
 
 /**
- * Enforces the execution of a function during compile-time.
+ * Enforces the evaluation of an expression during compile-time.
  *
- * Computes the return value of a function call during compilation (CTFE).
+ * Computes the value of an expression during compilation (CTFE).
  *
  * This is useful for call chains in functional programming
- * where no explicit `enum` can be placed inline and would require splitting
+ * where declaring an `enum` constant would require splitting
  * the pipeline.
  *
  * Params:
- *   fun = callable to evaluate
+ *   expr = expression to evaluate
  * See_also:
  *   $(LINK https://dlang.org/spec/function.html#interpretation)
  */
-enum ctEval(alias fun) = fun;
+enum ctEval(alias expr) = expr;
 
 ///
 @safe unittest
