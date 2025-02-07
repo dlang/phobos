@@ -51,6 +51,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF bind))
         $(TD Passes the fields of a struct as arguments to a function.
     ))
+    $(TR $(TD $(LREF ctEval))
+        $(TD Enforces the evaluation of an expression during compile-time.
+    ))
 ))
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
@@ -2174,4 +2177,51 @@ template bind(alias fun)
     tuple(123).bind!((auto ref x) {
         static assert(!__traits(isRef, x));
     });
+}
+
+/**
+ * Enforces the evaluation of an expression during compile-time.
+ *
+ * Computes the value of an expression during compilation (CTFE).
+ *
+ * This is useful for call chains in functional programming
+ * where declaring an `enum` constant would require splitting
+ * the pipeline.
+ *
+ * Params:
+ *   expr = expression to evaluate
+ * See_also:
+ *   $(LINK https://dlang.org/spec/function.html#interpretation)
+ */
+enum ctEval(alias expr) = expr;
+
+///
+@safe unittest
+{
+    import std.math : abs;
+
+    // No explicit `enum` needed.
+    float result = ctEval!(abs(-3));
+    assert(result == 3);
+
+    // Can be statically asserted.
+    static assert(ctEval!(abs(-4)) == 4);
+    static assert(ctEval!(abs( 9)) == 9);
+}
+
+///
+@safe unittest
+{
+    import core.stdc.math : round;
+    import std.conv : to;
+    import std.math : abs, PI, sin;
+
+    // `round` from the C standard library cannot be interpreted at compile
+    // time, because it has no available source code. However the function
+    // calls preceding `round` can be evaluated during compile time.
+    int result = ctEval!(abs(sin(1.0)) * 180 / PI)
+        .round()
+        .to!int();
+
+    assert(result == 48);
 }
