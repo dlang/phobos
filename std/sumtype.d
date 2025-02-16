@@ -2642,6 +2642,109 @@ version (D_Exceptions)
     }));
 }
 
+/**
+ * Checks whether a `SumType` contains a value of a given type.
+ *
+ * The types must match exactly, without implicit conversions.
+ *
+ * Params:
+ *   T = the type to check for.
+ */
+template has(T)
+{
+    /**
+     * The actual `has` function.
+     *
+     * Params:
+     *   self = the `SumType` to check.
+     *
+     * Returns: true if `self` contains a `T`, otherwise false.
+     */
+    bool has(Self)(auto ref Self self)
+    if (isSumType!Self)
+    {
+        return self.match!checkType;
+    }
+
+    // Helper to avoid redundant template instantiations
+    bool checkType(Value)(ref Value value)
+    {
+        return is(Value == T);
+    }
+}
+
+/// Basic usage
+@safe unittest
+{
+    SumType!(string, double) example = "hello";
+
+    assert( example.has!string);
+    assert(!example.has!double);
+
+    // If T isn't part of the SumType, has!T will always return false.
+    assert(!example.has!int);
+}
+
+/// With type qualifiers
+@safe unittest
+{
+    alias Example = SumType!(string, double);
+
+    Example m = "mutable";
+    const Example c = "const";
+    immutable Example i = "immutable";
+
+    assert( m.has!string);
+    assert(!m.has!(const(string)));
+    assert(!m.has!(immutable(string)));
+
+    assert(!c.has!string);
+    assert( c.has!(const(string)));
+    assert(!c.has!(immutable(string)));
+
+    assert(!i.has!string);
+    assert(!i.has!(const(string)));
+    assert( i.has!(immutable(string)));
+}
+
+/// As a predicate
+version (D_BetterC) {} else
+@safe unittest
+{
+    import std.algorithm.iteration : filter;
+    import std.algorithm.comparison : equal;
+
+    alias Example = SumType!(string, double);
+
+    auto arr = [
+        Example("foo"),
+        Example(0),
+        Example("bar"),
+        Example(1),
+        Example(2),
+        Example("baz")
+    ];
+
+    auto strings = arr.filter!(has!string);
+    auto nums = arr.filter!(has!double);
+
+    assert(strings.equal([Example("foo"), Example("bar"), Example("baz")]));
+    assert(nums.equal([Example(0), Example(1), Example(2)]));
+}
+
+// Non-copyable types
+@safe unittest
+{
+    static struct NoCopy
+    {
+        @disable this(this);
+    }
+
+    SumType!NoCopy x;
+
+    assert(x.has!NoCopy);
+}
+
 private void destroyIfOwner(T)(ref T value)
 {
     static if (hasElaborateDestructor!T)
