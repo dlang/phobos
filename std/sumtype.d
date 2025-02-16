@@ -323,7 +323,7 @@ private:
     @trusted
     // Explicit return type omitted
     // Workaround for https://github.com/dlang/dmd/issues/20549
-    ref get(size_t tid)() inout
+    ref getByIndex(size_t tid)() inout
     if (tid < Types.length)
     {
         assert(tag == tid,
@@ -1154,7 +1154,7 @@ version (D_BetterC) {} else
     alias MySum = SumType!(ubyte, void*[2]);
 
     MySum x = [null, cast(void*) 0x12345678];
-    void** p = &x.get!1[1];
+    void** p = &x.getByIndex!1[1];
     x = ubyte(123);
 
     assert(*p != cast(void*) 0x12345678);
@@ -1186,8 +1186,8 @@ version (D_BetterC) {} else
     catch (Exception e) {}
 
     assert(
-        (x.tag == 0 && x.get!0.value == 123) ||
-        (x.tag == 1 && x.get!1.value == 456)
+        (x.tag == 0 && x.getByIndex!0.value == 123) ||
+        (x.tag == 1 && x.getByIndex!1.value == 456)
     );
 }
 
@@ -1246,8 +1246,8 @@ version (D_BetterC) {} else
     SumType!(S[1]) x = [S(0)];
     SumType!(S[1]) y = x;
 
-    auto xval = x.get!0[0].n;
-    auto yval = y.get!0[0].n;
+    auto xval = x.getByIndex!0[0].n;
+    auto yval = y.getByIndex!0[0].n;
 
     assert(xval != yval);
 }
@@ -1332,8 +1332,8 @@ version (D_BetterC) {} else
     SumType!S y;
     y = x;
 
-    auto xval = x.get!0.n;
-    auto yval = y.get!0.n;
+    auto xval = x.getByIndex!0.n;
+    auto yval = y.getByIndex!0.n;
 
     assert(xval != yval);
 }
@@ -1407,8 +1407,8 @@ version (D_BetterC) {} else
     SumType!S x = S();
     SumType!S y = x;
 
-    auto xval = x.get!0.n;
-    auto yval = y.get!0.n;
+    auto xval = x.getByIndex!0.n;
+    auto yval = y.getByIndex!0.n;
 
     assert(xval != yval);
 }
@@ -1902,10 +1902,10 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
              * argument's tag, so there's no need for TagTuple.
              */
             enum handlerArgs(size_t caseId) =
-                "args[0].get!(" ~ toCtString!caseId ~ ")()";
+                "args[0].getByIndex!(" ~ toCtString!caseId ~ ")()";
 
             alias valueTypes(size_t caseId) =
-                typeof(args[0].get!(caseId)());
+                typeof(args[0].getByIndex!(caseId)());
 
             enum numCases = SumTypes[0].Types.length;
         }
@@ -1931,7 +1931,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 
                 template getType(size_t i)
                 {
-                    alias getType = typeof(args[i].get!(tags[i])());
+                    alias getType = typeof(args[i].getByIndex!(tags[i])());
                 }
 
                 alias valueTypes = Map!(getType, Iota!(tags.length));
@@ -2156,7 +2156,7 @@ private template handlerArgs(size_t caseId, typeCounts...)
     {
         handlerArgs = AliasSeq!(
             handlerArgs,
-            "args[" ~ toCtString!i ~ "].get!(" ~ toCtString!(tags[i]) ~ ")(), "
+            "args[" ~ toCtString!i ~ "].getByIndex!(" ~ toCtString!(tags[i]) ~ ")(), "
         );
     }
 }
@@ -2420,7 +2420,7 @@ version (D_Exceptions)
         (ref double d) { d *= 2; }
     );
 
-    assert(value.get!1.isClose(6.28));
+    assert(value.getByIndex!1.isClose(6.28));
 }
 
 // Unreachable handlers
