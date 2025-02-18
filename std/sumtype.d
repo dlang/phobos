@@ -1570,6 +1570,13 @@ version (D_BetterC) {} else
     enum result = test();
 }
 
+// https://github.com/dlang/phobos/issues/10563
+// Do not waste space for tag if sumtype has only single type
+unittest
+{
+    static assert(SumType!int.sizeof == 4);
+}
+
 /// True if `T` is an instance of the `SumType` template, otherwise false.
 private enum bool isSumTypeInstance(T) = is(T == SumType!Args, Args...);
 
@@ -2626,11 +2633,4 @@ private void destroyIfOwner(T)(ref T value)
     {
         destroy(value);
     }
-}
-
-// https://github.com/dlang/phobos/issues/10563
-// Do not waste space for tag if sumtype has only single type
-unittest
-{
-    static assert(SumType!int.sizeof == 4);
 }
