@@ -1572,9 +1572,9 @@ version (D_BetterC) {} else
 
 // https://github.com/dlang/phobos/issues/10563
 // Do not waste space for tag if sumtype has only single type
-unittest
+@safe unittest
 {
-    static assert(SumType!int.sizeof == 4);
+    static assert(SumType!int.sizeof == int.sizeof);
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
