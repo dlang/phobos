@@ -304,7 +304,10 @@ private:
     }
 
     Storage storage;
-    Tag tag;
+    static if (Types.length > 1)
+        Tag tag;
+    else
+        enum Tag tag = 0;
 
     /* Accesses the value stored in a SumType by its index.
      *
@@ -369,7 +372,8 @@ public:
                 storage.tupleof[tid] = forward!value;
             }
 
-            tag = tid;
+            static if (Types.length > 1)
+                tag = tid;
         }
 
         static if (isCopyable!(const(T)))
@@ -380,7 +384,8 @@ public:
                 this(const(T) value) const
                 {
                     storage.tupleof[tid] = value;
-                    tag = tid;
+                    static if (Types.length > 1)
+                        tag = tid;
                 }
             }
         }
@@ -397,7 +402,8 @@ public:
                 this(immutable(T) value) immutable
                 {
                     storage.tupleof[tid] = value;
-                    tag = tid;
+                    static if (Types.length > 1)
+                        tag = tid;
                 }
             }
         }
@@ -415,7 +421,8 @@ public:
                 if (is(Value == DeducedParameterType!(inout(T))))
                 {
                     storage.tupleof[tid] = value;
-                    tag = tid;
+                    static if (Types.length > 1)
+                        tag = tid;
                 }
             }
         }
@@ -449,7 +456,8 @@ public:
                     return newStorage;
                 });
 
-                tag = other.tag;
+                static if (Types.length > 1)
+                    tag = other.tag;
             }
         }
         else
@@ -469,7 +477,8 @@ public:
                         return newStorage;
                     });
 
-                    tag = other.tag;
+                    static if (Types.length > 1)
+                        tag = other.tag;
                 }
             }
             else
@@ -493,7 +502,8 @@ public:
                         return newStorage;
                     });
 
-                    tag = other.tag;
+                    static if (Types.length > 1)
+                        tag = other.tag;
                 }
             }
             else
@@ -517,7 +527,8 @@ public:
                         return newStorage;
                     });
 
-                    tag = other.tag;
+                    static if (Types.length > 1)
+                        tag = other.tag;
                 }
             }
             else
@@ -644,7 +655,8 @@ public:
                 }
 
                 storage = newStorage;
-                tag = tid;
+                static if (Types.length > 1)
+                    tag = tid;
 
                 return this;
             }
@@ -1556,6 +1568,13 @@ version (D_BetterC) {} else
 
     // Force CTFE
     enum result = test();
+}
+
+// https://github.com/dlang/phobos/issues/10563
+// Do not waste space for tag if sumtype has only single type
+@safe unittest
+{
+    static assert(SumType!int.sizeof == int.sizeof);
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
