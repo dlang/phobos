@@ -1390,7 +1390,7 @@ if (distinctFieldNames!(Specs))
                     }
                     else
                     {
-                        sink(format!("%(%s%)")(only(field[i])));
+                        sink.formattedWrite!("%(%s%)")(only(field[i]));
                     }
                 }
                 sink(footer);
