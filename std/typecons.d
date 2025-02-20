@@ -1362,6 +1362,7 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
+                    // Among other things, using "only" causes string-fields to be inside quotes in the result
                     sink.formattedWrite!("%(%s%)")(only(field[i]));
                 }
                 sink(footer);
