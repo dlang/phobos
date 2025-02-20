@@ -1803,6 +1803,7 @@ private template ReverseTupleSpecs(T...)
         // Currently contains the mangled type name
         // 5, const(std.typecons.__unittest_L1750_C7.A)
         // This assert is not necessarily to prescribe this behaviour, only to signal if there is a breaking change.
+        // See https://github.com/dlang/phobos/issues/9811
         auto s = f();
         assert(s.canFind("__unittest_L"));
         assert(s.endsWith(".A)"));
