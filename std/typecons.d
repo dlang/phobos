@@ -1355,15 +1355,7 @@ if (distinctFieldNames!(Specs))
                         {
                             sink(fmt.sep);
                         }
-                        // TODO: Change this once formattedWrite() works for shared objects.
-                        static if (is(Type == class) && is(Type == shared))
-                        {
-                            sink(Type.stringof);
-                        }
-                        else
-                        {
-                            formattedWrite(sink, fmt.nested, this.field[i]);
-                        }
+                        formattedWrite(sink, fmt.nested, this.field[i]);
                     }
                 }
                 else
@@ -1383,15 +1375,7 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
-                    // TODO: Change this once format() works for shared objects.
-                    static if (is(Type == class) && is(Type == shared))
-                    {
-                        sink(Type.stringof);
-                    }
-                    else
-                    {
-                        sink.formattedWrite!("%(%s%)")(only(field[i]));
-                    }
+                    sink.formattedWrite!("%(%s%)")(only(field[i]));
                 }
                 sink(footer);
             }
@@ -1812,7 +1796,15 @@ private template ReverseTupleSpecs(T...)
         Tuple!(int, shared A) nosh;
         nosh[0] = 5;
         assert(nosh[0] == 5 && nosh[1] is null);
-        assert(nosh.to!string == "Tuple!(int, shared(A))(5, shared(A))");
+
+        assert(nosh.to!string == "Tuple!(int, shared(A))(5, null)");
+    }
+    {
+        static struct A {}
+        Tuple!(int, shared A*) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5 && nosh[1] is null);
+        assert(nosh.to!string == "Tuple!(int, shared(A*))(5, null)");
     }
     {
         Tuple!(int, string) t;
