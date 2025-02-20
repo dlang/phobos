@@ -447,19 +447,6 @@ private:
     assert(ptr.bar.val == 7);
 }
 
-// Used in Tuple.toString
-private template sharedToString(alias field)
-if (is(typeof(field) == shared))
-{
-    static immutable sharedToString = typeof(field).stringof;
-}
-
-private template sharedToString(alias field)
-if (!is(typeof(field) == shared))
-{
-    alias sharedToString = field;
-}
-
 private enum bool distinctFieldNames(names...) = __traits(compiles,
 {
     static foreach (__name; names)
@@ -1355,20 +1342,12 @@ if (distinctFieldNames!(Specs))
                         {
                             sink(fmt.sep);
                         }
-                        // TODO: Change this once formattedWrite() works for shared objects.
-                        static if (is(Type == class) && is(Type == shared))
-                        {
-                            sink(Type.stringof);
-                        }
-                        else
-                        {
-                            formattedWrite(sink, fmt.nested, this.field[i]);
-                        }
+                        formattedWrite(sink, fmt.nested, this.field[i]);
                     }
                 }
                 else
                 {
-                    formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
+                    formattedWrite(sink, fmt.nested, this.expand);
                 }
             }
             else if (fmt.spec == 's')
@@ -1383,15 +1362,8 @@ if (distinctFieldNames!(Specs))
                     {
                         sink(separator);
                     }
-                    // TODO: Change this once format() works for shared objects.
-                    static if (is(Type == class) && is(Type == shared))
-                    {
-                        sink(Type.stringof);
-                    }
-                    else
-                    {
-                        sink(format!("%(%s%)")(only(field[i])));
-                    }
+                    // Among other things, using "only" causes string-fields to be inside quotes in the result
+                    sink.formattedWrite!("%(%s%)")(only(field[i]));
                 }
                 sink(footer);
             }
@@ -1812,7 +1784,36 @@ private template ReverseTupleSpecs(T...)
         Tuple!(int, shared A) nosh;
         nosh[0] = 5;
         assert(nosh[0] == 5 && nosh[1] is null);
-        assert(nosh.to!string == "Tuple!(int, shared(A))(5, shared(A))");
+
+        assert(nosh.to!string == "Tuple!(int, shared(A))(5, null)");
+    }
+    {
+        // Shared, without fmt.sep
+        import std.format;
+        import std.algorithm.searching;
+        static class A {int i = 1;}
+        Tuple!(int, shared A) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5 && nosh[1] is null);
+
+        // needs trusted, because Object.toString() isn't @safe
+        auto f = ()@trusted => format!("%(%s, %s%)")(nosh);
+        assert(f() == "5, null");
+        nosh[1] = new shared A();
+        // Currently contains the mangled type name
+        // 5, const(std.typecons.__unittest_L1750_C7.A)
+        // This assert is not necessarily to prescribe this behaviour, only to signal if there is a breaking change.
+        // See https://github.com/dlang/phobos/issues/9811
+        auto s = f();
+        assert(s.canFind("__unittest_L"));
+        assert(s.endsWith(".A)"));
+    }
+    {
+        static struct A {}
+        Tuple!(int, shared A*) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5 && nosh[1] is null);
+        assert(nosh.to!string == "Tuple!(int, shared(A*))(5, null)");
     }
     {
         Tuple!(int, string) t;
