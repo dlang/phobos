@@ -1294,11 +1294,11 @@ if (distinctFieldNames!(Specs))
          * Returns:
          *     The string representation of this `Tuple`.
          */
-        string toString()() const
+        string toString()()
         {
             import std.array : appender;
             auto app = appender!string();
-            this.toString((const(char)[] chunk) => app ~= chunk);
+            toString((const(char)[] chunk) => app ~= chunk);
             return app.data;
         }
 
@@ -1320,14 +1320,14 @@ if (distinctFieldNames!(Specs))
          *     sink = A `char` accepting delegate
          *     fmt = A $(REF FormatSpec, std,format)
          */
-        void toString(DG)(scope DG sink) const
+        void toString(DG)(scope DG sink)
         {
             auto f = FormatSpec!char();
             toString(sink, f);
         }
 
         /// ditto
-        void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt) const
+        void toString(DG, Char)(scope DG sink, scope const ref FormatSpec!Char fmt)
         {
             import std.format : format, FormatException;
             import std.format.write : formattedWrite;
@@ -1821,6 +1821,40 @@ private template ReverseTupleSpecs(T...)
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
         assert(t.to!string == `Tuple!(int, string)(10, "str")`, t.to!string);
+    }
+    /* https://github.com/dlang/phobos/issues/9811
+    * Note: This is just documenting current behaviour, dependent on `std.format` implementation
+    * details. None of this is defined in a spec or should be regarded as rigid.
+    */
+    {
+        static struct X
+        {
+            /** Usually, toString() should be const where possible.
+             * But as long as the tuple is also non-const, this will work
+             */
+            string toString()
+            {
+                return "toString non-const";
+            }
+        }
+        assert(tuple(X()).to!string == "Tuple!(X)(toString non-const)");
+        const t = tuple(X());
+        // This is an implementation detail of `format`
+        // if the tuple is const, than non-const toString will not be called
+        assert(t.to!string == "const(Tuple!(X))(const(X)())");
+
+        static struct X2
+        {
+            string toString() const /* const toString will work in more cases */
+            {
+                return "toString const";
+            }
+        }
+        assert(tuple(X2()).to!string == "Tuple!(X2)(toString const)");
+        const t2 = tuple(X2());
+        // This is an implementation detail of `format`
+        // if the tuple is const, than non-const toString will not be called
+        assert(t2.to!string == "const(Tuple!(X2))(toString const)");
     }
     {
         Tuple!(int, "a", double, "b") x;
