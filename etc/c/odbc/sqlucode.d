@@ -12,6 +12,8 @@ See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odb
             ODBC API Reference on MSDN)
  */
 module etc.c.odbc.sqlucode;
+deprecated("The ODBC 3.5 modules are deprecated. Please use the ODBC4 module in the etc.c.odbc package");
+deprecated:
 
 version (ANSI) {} else version = Unicode;
 
