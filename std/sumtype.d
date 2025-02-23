@@ -2745,6 +2745,154 @@ version (D_BetterC) {} else
     assert(x.has!NoCopy);
 }
 
+/**
+ * Accesses a `SumType`'s value.
+ *
+ * The value must be of the specified type. Use [has] to check.
+ *
+ * Params:
+ *   T = the type of the value being accessed.
+ */
+template get(T)
+{
+    /**
+     * The actual `get` function.
+     *
+     * Params:
+     *   self = the `SumType` whose value is being accessed.
+     *
+     * Returns: the `SumType`'s value.
+     */
+    auto ref T get(Self)(auto ref Self self)
+    if (isSumType!Self)
+    {
+        static if (__traits(isRef, self))
+            return self.match!getLvalue;
+        else
+            return self.match!getRvalue;
+    }
+
+    // Helpers to avoid redundant template instantiations
+
+    ref T getLvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            return value;
+        }
+        else
+        {
+            assert(false,
+                "Tried to get `" ~ T.stringof ~ "`" ~
+                " but found `" ~ Value.stringof ~ "`"
+            );
+        }
+    }
+
+    T getRvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            import core.lifetime : move;
+
+            // Move if possible; otherwise fall back to copy
+            static if (is(typeof(move(value))))
+            {
+                static if (isCopyable!Value)
+                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    return __ctfe ? value : move(value);
+                else
+                    return move(value);
+            }
+            else
+                return value;
+        }
+        else
+        {
+            assert(false,
+                "Tried to get `" ~ T.stringof ~ "`" ~
+                " but found `" ~ Value.stringof ~ "`"
+            );
+        }
+    }
+}
+
+/// Basic usage
+@safe unittest
+{
+    SumType!(string, double) example1 = "hello";
+    SumType!(string, double) example2 = 3.14;
+
+    assert(example1.get!string == "hello");
+    assert(example2.get!double == 3.14);
+}
+
+/// With type qualifiers
+@safe unittest
+{
+    alias Example = SumType!(string, double);
+
+    Example m = "mutable";
+    const(Example) c = "const";
+    immutable(Example) i = "immutable";
+
+    assert(m.get!string == "mutable");
+    assert(c.get!(const(string)) == "const");
+    assert(i.get!(immutable(string)) == "immutable");
+}
+
+/// As a predicate
+version (D_BetterC) {} else
+@safe unittest
+{
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
+
+    alias Example = SumType!(string, double);
+
+    auto arr = [Example(0), Example(1), Example(2)];
+    auto values = arr.map!(get!double);
+
+    assert(values.equal([0, 1, 2]));
+}
+
+// Non-copyable types
+@safe unittest
+{
+    static struct NoCopy
+    {
+        @disable this(this);
+    }
+
+    SumType!NoCopy lvalue;
+    auto rvalue() => SumType!NoCopy();
+
+    assert(lvalue.get!NoCopy == NoCopy());
+    assert(rvalue.get!NoCopy == NoCopy());
+}
+
+// Immovable rvalues
+@safe unittest
+{
+    auto rvalue() => const(SumType!string)("hello");
+
+    assert(rvalue.get!(const(string)) == "hello");
+}
+
+// Nontrivial rvalues at compile time
+@safe unittest
+{
+    static struct ElaborateCopy
+    {
+        this(this) {}
+    }
+
+    enum rvalue = SumType!ElaborateCopy();
+    enum ctResult = rvalue.get!ElaborateCopy;
+
+    assert(ctResult == ElaborateCopy());
+}
+
 private void destroyIfOwner(T)(ref T value)
 {
     static if (hasElaborateDestructor!T)
