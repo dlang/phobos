@@ -1830,7 +1830,7 @@ class MatchException : Exception
 template canMatch(alias handler, Ts...)
 if (Ts.length > 0)
 {
-    enum canMatch = is(typeof((ref Ts args) => handler(args)));
+    enum canMatch = is(typeof(auto ref (ref Ts args) => handler(args)));
 }
 
 ///
@@ -1853,6 +1853,21 @@ if (Ts.length > 0)
 
     assert(canMatch!(OverloadSet.fun, int));
     assert(canMatch!(OverloadSet.fun, double));
+}
+
+// Allows returning non-copyable types by ref
+// https://github.com/dlang/phobos/issues/10647
+@safe unittest
+{
+    static struct NoCopy
+    {
+        @disable this(this);
+    }
+
+    static NoCopy lvalue;
+    static ref handler(int _) => lvalue;
+
+    assert(canMatch!(handler, int));
 }
 
 // Like aliasSeqOf!(iota(n)), but works in BetterC
