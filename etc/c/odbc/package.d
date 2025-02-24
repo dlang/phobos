@@ -17,9 +17,12 @@ See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odb
 
 module etc.c.odbc;
 
-static if (size_t.sizeof == 8) {
+static if (size_t.sizeof == 8)
+{
     public import etc.c.odbc.odbc64;
-} else {
+}
+else
+{
     public import etc.c.odbc.odbc32;
 }
 
