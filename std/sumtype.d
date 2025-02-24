@@ -2766,54 +2766,12 @@ template get(T)
     auto ref T get(Self)(auto ref Self self)
     if (isSumType!Self)
     {
+        import std.typecons : No;
+
         static if (__traits(isRef, self))
-            return self.match!getLvalue;
+            return self.match!(getLvalue!(No.try_, T));
         else
-            return self.match!getRvalue;
-    }
-
-    // Helpers to avoid redundant template instantiations
-
-    ref T getLvalue(Value)(ref Value value)
-    {
-        static if (is(Value == T))
-        {
-            return value;
-        }
-        else
-        {
-            assert(false,
-                "Tried to get `" ~ T.stringof ~ "`" ~
-                " but found `" ~ Value.stringof ~ "`"
-            );
-        }
-    }
-
-    T getRvalue(Value)(ref Value value)
-    {
-        static if (is(Value == T))
-        {
-            import core.lifetime : move;
-
-            // Move if possible; otherwise fall back to copy
-            static if (is(typeof(move(value))))
-            {
-                static if (isCopyable!Value)
-                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                    return __ctfe ? value : move(value);
-                else
-                    return move(value);
-            }
-            else
-                return value;
-        }
-        else
-        {
-            assert(false,
-                "Tried to get `" ~ T.stringof ~ "`" ~
-                " but found `" ~ Value.stringof ~ "`"
-            );
-        }
+            return self.match!(getRvalue!(No.try_, T));
     }
 }
 
@@ -2918,54 +2876,12 @@ template tryGet(T)
     auto ref T tryGet(Self)(auto ref Self self)
     if (isSumType!Self)
     {
+        import std.typecons : Yes;
+
         static if (__traits(isRef, self))
-            return self.match!tryGetLvalue;
+            return self.match!(getLvalue!(Yes.try_, T));
         else
-            return self.match!tryGetRvalue;
-    }
-
-    // Helpers to avoid redundant template instantiations
-
-    ref T tryGetLvalue(Value)(ref Value value)
-    {
-        static if (is(Value == T))
-        {
-            return value;
-        }
-        else
-        {
-            throw new MatchException(
-                "Tried to get `" ~ T.stringof ~ "`" ~
-                " but found `" ~ Value.stringof ~ "`"
-            );
-        }
-    }
-
-    T tryGetRvalue(Value)(ref Value value)
-    {
-        static if (is(Value == T))
-        {
-            import core.lifetime : move;
-
-            // Move if possible; otherwise fall back to copy
-            static if (is(typeof(move(value))))
-            {
-                static if (isCopyable!Value)
-                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                    return __ctfe ? value : move(value);
-                else
-                    return move(value);
-            }
-            else
-                return value;
-        }
-        else
-        {
-            throw new MatchException(
-                "Tried to get `" ~ T.stringof ~ "`" ~
-                " but found `" ~ Value.stringof ~ "`"
-            );
-        }
+            return self.match!(getRvalue!(Yes.try_, T));
     }
 }
 
@@ -3069,6 +2985,58 @@ version (D_Exceptions)
     enum ctResult = rvalue.tryGet!ElaborateCopy;
 
     assert(ctResult == ElaborateCopy());
+}
+
+private enum failedGetMessage(Expected, Actual) =
+    "Tried to get `" ~ Expected.stringof ~ "`" ~
+    " but found `" ~ Actual.stringof ~ "`";
+
+private template getLvalue(Flag!"try_" try_, T)
+{
+    ref T getLvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            return value;
+        }
+        else
+        {
+            static if (try_)
+                throw new MatchException(failedGetMessage!(T, Value));
+            else
+                assert(false, failedGetMessage!(T, Value));
+        }
+    }
+}
+
+private template getRvalue(Flag!"try_" try_, T)
+{
+    T getRvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            import core.lifetime : move;
+
+            // Move if possible; otherwise fall back to copy
+            static if (is(typeof(move(value))))
+            {
+                static if (isCopyable!Value)
+                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    return __ctfe ? value : move(value);
+                else
+                    return move(value);
+            }
+            else
+                return value;
+        }
+        else
+        {
+            static if (try_)
+                throw new MatchException(failedGetMessage!(T, Value));
+            else
+                assert(false, failedGetMessage!(T, Value));
+        }
+    }
 }
 
 private void destroyIfOwner(T)(ref T value)
