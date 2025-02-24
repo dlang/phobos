@@ -9,9 +9,8 @@
 See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
             ODBC API Reference on MSDN)
  */
+deprecated ("The ODBC 3.5 modules are deprecated. Please use the ODBC4 modules in the `etc.c.odbc` package.")
 module etc.c.odbc.sqlext;
-deprecated("The ODBC 3.5 modules are deprecated. Please use the ODBC4 module in the etc.c.odbc package");
-deprecated:
 
 /* Conversion notes:
    The MinGW file was a horrible mess. All of the #defines were sorted alphabetically,

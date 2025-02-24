@@ -1,0 +1,11 @@
+ODBC Bindings in `etc.c.odbc` have been updated to ODBC 4.0.
+
+ODBC 4.0, via these new bindings, adds the following functionality:
+
+1. Support for semi-structured data, such as JSON.
+2. Collection valued columns.
+3. Web-based Authorization flows.
+
+A full list of new features can be found here: https://github.com/Microsoft/ODBC-Specification/blob/master/ODBC%204.0.md
+
+Additionally these modules add support for 64-bit ODBC interfaces.

@@ -17,52 +17,9 @@ See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odb
 
 module etc.c.odbc;
 
-//64-bit architectures
-version(X86_64) {
+static if (size_t.sizeof == 8) {
     public import etc.c.odbc.odbc64;
-}
-version(AArch64) {
-    public import etc.c.odbc.odbc64;
-}
-version(PPC64) {
-    public import etc.c.odbc.odbc64;
-}
-version(MIPS64) {
-    public import etc.c.odbc.odbc64;
-}
-version(RISCV64) {
-    public import etc.c.odbc.odbc64;
-}
-version(SPARC64) {
-    public import etc.c.odbc.odbc64;
-}
-version(HPPA64) {
-    public import etc.c.odbc.odbc64;
-}
-version(IA64) {
-    public import etc.c.odbc.odbc64;
-}
-
-//32-bit architectures
-version(X86) {
-    public import etc.c.odbc.odbc32;
-}
-version(ARM) {
-    public import etc.c.odbc.odbc32;
-}
-version(PPC32) {
-    public import etc.c.odbc.odbc32;
-}
-version(MIPS32) {
-    public import etc.c.odbc.odbc32;
-}
-version(RISCV32) {
-    public import etc.c.odbc.odbc32;
-}
-version(SPARC) {
-    public import etc.c.odbc.odbc32;
-}
-version(HPPA) {
+} else {
     public import etc.c.odbc.odbc32;
 }
 

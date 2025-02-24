@@ -11,9 +11,8 @@ Declarations for interfacing with the ODBC library.
 See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
             ODBC API Reference on MSDN)
  */
+deprecated ("The ODBC 3.5 modules are deprecated. Please use the ODBC4 modules in the `etc.c.odbc` package.")
 module etc.c.odbc.sql;
-deprecated("The ODBC 3.5 modules are deprecated. Please use the ODBC4 module in the etc.c.odbc package");
-deprecated:
 
 public import etc.c.odbc.sqltypes;
 
