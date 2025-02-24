@@ -2893,6 +2893,184 @@ version (D_BetterC) {} else
     assert(ctResult == ElaborateCopy());
 }
 
+/**
+ * Attempt to access a `SumType`'s value.
+ *
+ * If the `SumType` does not contain a value of the specified type, an
+ * exception is thrown.
+ *
+ * Params:
+ *   T = the type of the value being accessed.
+ */
+version (D_Exceptions)
+template tryGet(T)
+{
+    /**
+     * The actual `tryGet` function.
+     *
+     * Params:
+     *   self = the `SumType` whose value is being accessed.
+     *
+     * Throws: `MatchException` if the value does not have the expected type.
+     *
+     * Returns: the `SumType`'s value.
+     */
+    auto ref T tryGet(Self)(auto ref Self self)
+    if (isSumType!Self)
+    {
+        static if (__traits(isRef, self))
+            return self.match!tryGetLvalue;
+        else
+            return self.match!tryGetRvalue;
+    }
+
+    // Helpers to avoid redundant template instantiations
+
+    ref T tryGetLvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            return value;
+        }
+        else
+        {
+            throw new MatchException(
+                "Tried to get `" ~ T.stringof ~ "`" ~
+                " but found `" ~ Value.stringof ~ "`"
+            );
+        }
+    }
+
+    T tryGetRvalue(Value)(ref Value value)
+    {
+        static if (is(Value == T))
+        {
+            import core.lifetime : move;
+
+            // Move if possible; otherwise fall back to copy
+            static if (is(typeof(move(value))))
+            {
+                static if (isCopyable!Value)
+                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                    return __ctfe ? value : move(value);
+                else
+                    return move(value);
+            }
+            else
+                return value;
+        }
+        else
+        {
+            throw new MatchException(
+                "Tried to get `" ~ T.stringof ~ "`" ~
+                " but found `" ~ Value.stringof ~ "`"
+            );
+        }
+    }
+}
+
+/// Basic usage
+version (D_Exceptions)
+@safe unittest
+{
+    SumType!(string, double) example = "hello";
+
+    assert(example.tryGet!string == "hello");
+
+    double result = double.nan;
+    try
+        result = example.tryGet!double;
+    catch (MatchException e)
+        result = 0;
+
+    // Exception was thrown
+    assert(result == 0);
+}
+
+/// With type qualifiers
+version (D_Exceptions)
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    const(SumType!(string, double)) example = "const";
+
+    // Qualifier mismatch; throws exception
+    assertThrown!MatchException(example.tryGet!string);
+    // Qualifier matches; no exception
+    assert(example.tryGet!(const(string)) == "const");
+}
+
+/// As a predicate
+version (D_BetterC) {} else
+@safe unittest
+{
+    import std.algorithm.iteration : map, sum;
+    import std.functional : pipe;
+    import std.exception : assertThrown;
+
+    alias Example = SumType!(string, double);
+
+    auto arr1 = [Example(0), Example(1), Example(2)];
+    auto arr2 = [Example("foo"), Example("bar"), Example("baz")];
+
+    alias trySum = pipe!(map!(tryGet!double), sum);
+
+    assert(trySum(arr1) == 0 + 1 + 2);
+    assertThrown!MatchException(trySum(arr2));
+}
+
+// Throws if requested type is impossible
+version (D_Exceptions)
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    SumType!int x;
+
+    assertThrown!MatchException(x.tryGet!string);
+}
+
+// Non-copyable types
+version (D_Exceptions)
+@safe unittest
+{
+    static struct NoCopy
+    {
+        @disable this(this);
+    }
+
+    SumType!NoCopy lvalue;
+    auto rvalue() => SumType!NoCopy();
+
+    assert(lvalue.tryGet!NoCopy == NoCopy());
+    assert(rvalue.tryGet!NoCopy == NoCopy());
+}
+
+// Immovable rvalues
+version (D_Exceptions)
+@safe unittest
+{
+    auto rvalue() => const(SumType!string)("hello");
+
+    assert(rvalue.tryGet!(const(string)) == "hello");
+}
+
+// Nontrivial rvalues at compile time
+version (D_Exceptions)
+@safe unittest
+{
+    static struct ElaborateCopy
+    {
+        this(this) {}
+    }
+
+    enum rvalue = SumType!ElaborateCopy();
+    enum ctResult = rvalue.tryGet!ElaborateCopy;
+
+    assert(ctResult == ElaborateCopy());
+}
+
 private void destroyIfOwner(T)(ref T value)
 {
     static if (hasElaborateDestructor!T)
