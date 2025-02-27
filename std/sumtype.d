@@ -2987,9 +2987,23 @@ version (D_Exceptions)
     assert(ctResult == ElaborateCopy());
 }
 
-private enum failedGetMessage(Expected, Actual) =
-    "Tried to get `" ~ Expected.stringof ~ "`" ~
-    " but found `" ~ Actual.stringof ~ "`";
+private template failedGetMessage(Expected, Actual)
+{
+    static if (Expected.stringof == Actual.stringof)
+    {
+        enum expectedStr = __traits(fullyQualifiedName, Expected);
+        enum actualStr = __traits(fullyQualifiedName, Actual);
+    }
+    else
+    {
+        enum expectedStr = Expected.stringof;
+        enum actualStr = Actual.stringof;
+    }
+
+    enum failedGetMessage =
+        "Tried to get `" ~ expectedStr ~ "`" ~
+        " but found `" ~ actualStr ~ "`";
+}
 
 private template getLvalue(Flag!"try_" try_, T)
 {
