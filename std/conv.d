@@ -6047,3 +6047,38 @@ package enum toCtString(ulong n) = n.stringof[0 .. $ - "LU".length];
     assert(toCtString!0 == "0");
     assert(toCtString!123456 == "123456");
 }
+
+/**
+ * Takes the raw bytes of a value and reinterprets them as a value of a
+ * different type.
+ *
+ * Params:
+ *   T = the new type
+ *   value = the original value
+ *
+ * Returns: a reference to the bytes of `value` with type `T`.
+ */
+ref T typePaint(T, S)(ref S value)
+if (T.sizeof <= S.sizeof)
+{
+    return *cast(T*) &value;
+}
+
+///
+@safe unittest
+{
+    uint n = 0xDEADBEEF;
+
+    version (LittleEndian)
+        assert(n.typePaint!(ubyte[4]) == [0xEF, 0xBE, 0xAD, 0xDE]);
+    version (BigEndian)
+        assert(n.typePaint!(ubyte[4]) == [0xDE, 0xAD, 0xBE, 0xEF]);
+}
+
+// Sizes must be compatible
+@safe unittest
+{
+    uint n;
+
+    assert(!__traits(compiles, n.typePaint!ulong));
+}
