@@ -2667,7 +2667,7 @@ template has(T)
     }
 
     // Helper to avoid redundant template instantiations
-    bool checkType(Value)(ref Value value)
+    private bool checkType(Value)(ref Value value)
     {
         return is(Value == T);
     }
