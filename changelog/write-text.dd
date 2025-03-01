@@ -1,0 +1,20 @@
+Add `writeText`, `writeWText`, and `writeDText` to `std.conv`
+
+These functions are variants of the existing `text`, `wtext`, and `dtext`
+functions. Instead of returning a string, they write their output to an output
+range.
+
+Like `text`, `writeText` can accept an
+$(LINK2 $(ROOT_DIR)spec/istring.html, interpolated expression sequence) as an
+argument.
+
+Example:
+
+---
+import std.conv : writeText;
+import std.array : appender;
+
+auto output = appender!string();
+output.writeText(i"2 + 2 == $(2 + 2)");
+assert(output.data == "2 + 2 == 4");
+---
