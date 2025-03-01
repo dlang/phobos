@@ -264,18 +264,19 @@ public:
             data = BigUint.addOrSubInt!ulong(data, u, wantSub: sign == (y<0), sign);
         }
         else static if (op=="*")
-        {
-            if (y == 0)
-            {
-                sign = false;
-                data = 0UL;
-            }
-            else
-            {
-                sign = ( sign != (y<0) );
-                data = BigUint.mulInt(data, u);
-            }
-        }
+{
+    if (y == 0 || data.isZero())
+    {
+        data = 0UL;
+        sign = false;
+        return this;
+    }
+    else
+    {
+        sign = ( sign != (y<0) );
+        data = BigUint.mulInt(data, u);
+    }
+}
         else static if (op=="/")
         {
             assert(y != 0, "Division by zero");
