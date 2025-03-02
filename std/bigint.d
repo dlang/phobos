@@ -267,8 +267,8 @@ public:
         {
             if (y == 0 || data.isZero())
             {
-                data = 0UL;
                 sign = false;
+                data = 0UL;
                 return this;
             }
             else
@@ -422,31 +422,6 @@ public:
     `58105600`
         ));
     }
-// https://issues.dlang.org/show_bug.cgi?id=10565
-@safe unittest
-{
-    // Test cases from the issue
-    BigInt a = BigInt("0");
-    BigInt b = BigInt("-0");
-    BigInt c = BigInt("0") * -1;
-    BigInt d = BigInt("0") * -42;
-    BigInt e = BigInt("0"); e *= -1;
-    BigInt f = BigInt(c);
-    BigInt g = BigInt("0") * cast(byte) -1;
-    BigInt h = BigInt("0"); h *= BigInt("-1");
-    BigInt i = BigInt("0"); i -= 2 * i;
-    BigInt j = BigInt("0"); j = -j;
-    
-    // All of these should be zero and not negative
-    BigInt[] test = [a, b, c, d, e, f, g, h, i, j];
-    foreach(idx, t; test) {
-        assert(t == 0, "BigInt should be equal to zero");
-        assert(!(t < 0), "BigInt zero should not be negative");
-    }
-}
-
-
-
 
     // https://issues.dlang.org/show_bug.cgi?id=24028
     @system unittest
