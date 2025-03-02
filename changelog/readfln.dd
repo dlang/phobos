@@ -1,0 +1,6 @@
+Added `readfln` and `File.readfln` to `std.stdio`
+
+These functions read a single line of input and parse it using a format string.
+Unlike `readf`, they will not accidentally read multiple lines if the user
+forgets to include a line terminator in the format string—a common mistake for
+beginners.
