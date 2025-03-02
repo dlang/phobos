@@ -362,6 +362,29 @@ public:
         return this;
     }
 
+    // https://issues.dlang.org/show_bug.cgi?id=10565
+@safe unittest
+{
+    // Test cases from the issue
+    BigInt a = BigInt("0");
+    BigInt b = BigInt("-0");
+    BigInt c = BigInt("0") * -1;
+    BigInt d = BigInt("0") * -42;
+    BigInt e = BigInt("0"); e *= -1;
+    BigInt f = BigInt(c);
+    BigInt g = BigInt("0") * cast(byte) -1;
+    BigInt h = BigInt("0"); h *= BigInt("-1");
+    BigInt i = BigInt("0"); i -= 2 * i;
+    BigInt j = BigInt("0"); j = -j;
+    // All of these should be zero and not negative
+    auto values = [a, b, c, d, e, f, g, h, i, j];
+    foreach (val; values)
+    {
+        assert(val == 0, "BigInt value should be equal to zero");
+        assert(!(val < 0), "BigInt zero should not be negative");
+    }
+}
+
     ///
     @safe unittest
     {
