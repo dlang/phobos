@@ -160,6 +160,23 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     {
         assert(canFind(BC, tuple(n[0], n[1])));
     }
+    assert(BC.length == 9);
+}
+
+@safe unittest
+{
+    auto A = [ 1, 2, 3 ];
+    auto B = [ 4, 5, 6 ];
+    auto AB = cartesianProduct(A, B);
+    auto len = AB.length;
+
+    assert(len == 9);
+    for (auto i = 0; i < len; i++)
+    {
+        assert(AB.length == len - i);
+        AB.popFront();
+    }
+    
 }
 
 @safe unittest
@@ -250,6 +267,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     }
 
     // And therefore, by set comprehension, XY == Expected
+    assert(XY.length == Expected.length);
 }
 
 @safe unittest
@@ -344,6 +362,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     {
         assert(canFind(BC, tuple(n[0], n[1])));
     }
+    assert(BC.length == 9);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13091
@@ -371,17 +390,26 @@ if (ranges.length >= 2 &&
     {
         RR ranges;
         RR current;
-        bool empty = true;
+        size_t length = 0;
 
         this(RR _ranges)
         {
+            length = 1;
             ranges = _ranges;
-            empty = false;
             foreach (i, r; ranges)
             {
-                current[i] = r.save;
-                if (current[i].empty)
-                    empty = true;
+                current[i] = r.save;                
+                static if (__traits(hasMember, current[i], "length"))
+                {
+                    length *= current[i].length;
+                }
+                else
+                {
+                    size_t count = 0;
+                    for (auto tmp = r.save; !tmp.empty; tmp.popFront())
+                        ++count;
+                    length *= count;
+                }
             }
         }
         @property auto front()
@@ -398,11 +426,10 @@ if (ranges.length >= 2 &&
                 r.popFront();
                 if (!r.empty) break;
 
-                static if (i == 0)
-                    empty = true;
-                else
+                static if (i != 0)
                     r = ranges[i].save; // rollover
             }
+            length--;
         }
         @property Result save() return scope
         {
@@ -413,6 +440,10 @@ if (ranges.length >= 2 &&
                 copy.current[i] = current[i].save;
             }
             return copy;
+        }
+        @property bool empty() return scope
+        {
+            return length == 0;
         }
     }
     static assert(isForwardRange!Result, Result.stringof ~ " must be a forward"
@@ -428,6 +459,7 @@ if (ranges.length >= 2 &&
     int[] a, b, c, d, e;
     auto cprod = cartesianProduct(a,b,c,d,e);
     assert(cprod.empty);
+    assert(cprod.length == 0);
     foreach (_; cprod) {} // should not crash
 
     // Test case where only one of the ranges is empty: the result should still
@@ -435,6 +467,7 @@ if (ranges.length >= 2 &&
     int[] p=[1], q=[];
     auto cprod2 = cartesianProduct(p,p,p,q,p);
     assert(cprod2.empty);
+    assert(cprod2.length == 0);
     foreach (_; cprod2) {} // should not crash
 }
 
@@ -443,6 +476,7 @@ if (ranges.length >= 2 &&
     // .init value of cartesianProduct should be empty
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
     assert(!cprod.empty);
+    assert(cprod.length == 8);
     assert(cprod.init.empty);
 }
 
@@ -519,6 +553,7 @@ if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
     auto C = [ "x", "y", "z" ];
     auto ABC = cartesianProduct(A, B, C);
 
+    assert(ABC.length == 27);
     assert(ABC.equal([
         tuple(1, 'a', "x"), tuple(1, 'a', "y"), tuple(1, 'a', "z"),
         tuple(1, 'b', "x"), tuple(1, 'b', "y"), tuple(1, 'b', "z"),
@@ -584,8 +619,9 @@ pure @safe nothrow @nogc unittest
         }
     }
 
-    assert(SystemRange([1, 2]).cartesianProduct(SystemRange([3, 4]))
-        .equal([tuple(1, 3), tuple(1, 4), tuple(2, 3), tuple(2, 4)]));
+    auto cprod = SystemRange([1, 2]).cartesianProduct(SystemRange([3, 4]));
+    assert(cprod.length == 4);
+    assert(cprod.equal([tuple(1, 3), tuple(1, 4), tuple(2, 3), tuple(2, 4)]));
 }
 
 // largestPartialIntersection
