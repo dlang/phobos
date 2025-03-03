@@ -2785,6 +2785,10 @@ do
         adjustRemainder(quotient[0 .. k], u[0 .. v.length], v, k,
             scratch[0 .. 2 * k]);
     }
+    () @trusted { 
+        if (!__ctfe) 
+            GC.free(scratchbuff.ptr); 
+    } ();
 }
 
 // rem -= quot * v[0 .. k].
@@ -2842,7 +2846,10 @@ pure nothrow @safe
         m -= v.length;
     }
     recursiveDivMod(quotient[0 .. m], u[0 .. m + v.length], v, scratch);
-    () @trusted { GC.free(scratch.ptr); } ();
+    () @trusted { 
+        if (!__ctfe) 
+            GC.free(scratch.ptr); 
+    } ();
 }
 
 @system unittest
