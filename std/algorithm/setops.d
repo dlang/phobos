@@ -115,14 +115,20 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
     {
         import std.range : zip, repeat;
-        return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
-                          (range1));
+        import std.array : join;
+        auto pairs = map!((ElementType!R1 a) => zip(repeat(a), range2.save))
+                            (range1);
+        static if (!isInfinite!R1) return join(pairs);
+        else return joiner(pairs);
     }
     else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
     {
         import std.range : zip, repeat;
-        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
-                          (range2));
+        import std.array : join;
+        auto pairs = map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
+                          (range2);
+        static if (!isInfinite!R2) return join(pairs);
+        else return joiner(pairs);
     }
     else static assert(0, "cartesianProduct involving finite ranges must "~
                           "have at least one finite forward range");
@@ -176,7 +182,6 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
         assert(AB.length == len - i);
         AB.popFront();
     }
-    
 }
 
 @safe unittest
@@ -353,6 +358,32 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     assert(equal(map!"[a[0],a[1]]"(NB.take(10)), [[0, 1], [0, 2], [0, 3],
                  [1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3], [3, 1]]));
 
+    // Test fifth case: (finite) input range with finite forward range
+    static struct InpFiniteRangeWrapper
+    {
+        int[] data;
+        @property int front() { return data[0]; }
+        @property bool empty() { return data.length == 0; }
+        @property void popFront() { data = data[1 .. $]; }
+    }
+
+    auto X = InpFiniteRangeWrapper([0, 1, 2]);
+    auto XB = cartesianProduct(X, B);
+    foreach (n; [[0, 1], [0, 2], [0, 3], [1, 1],
+             [1, 2], [1, 3], [2, 1], [2, 2], [2, 3]])
+    {
+        assert(canFind(XB, tuple(n[0], n[1])));
+    }
+    assert(XB.length == 9);
+    auto Y = InpFiniteRangeWrapper([0, 1, 2]);
+    auto BY = cartesianProduct(B, Y);
+    foreach (n; [[1, 0], [2, 0], [3, 0], [1, 1],
+             [2, 1], [3, 1], [1, 2], [2, 2], [3, 2]])
+    {
+        assert(canFind(BY, tuple(n[0], n[1])));
+    }
+    assert(BY.length == 9);
+
     // General finite range case
     auto C = [ 4, 5, 6 ];
     auto BC = cartesianProduct(B, C);
@@ -398,7 +429,7 @@ if (ranges.length >= 2 &&
             ranges = _ranges;
             foreach (i, r; ranges)
             {
-                current[i] = r.save;                
+                current[i] = r.save;
                 static if (__traits(hasMember, current[i], "length"))
                 {
                     length *= current[i].length;
