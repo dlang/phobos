@@ -1493,18 +1493,21 @@ if (isInputRange!T)
         else
         {
             put(w, f.seqBefore);
+            size_t printed = 1;
+            size_t maxElements = 3; // Maximum number of elements to print
             if (!val.empty)
             {
                 formatElement(w, val.front, f);
                 val.popFront();
-                for (size_t i; !val.empty; val.popFront(), ++i)
+                for (size_t i; !val.empty && !(isInfinite!T && printed>=maxElements); val.popFront(), ++i,printed++)
                 {
                     put(w, f.seqSeparator);
                     formatElement(w, val.front, f);
                     static if (formatTestMode) break; // one is enough to test
                 }
             }
-            static if (!isInfinite!T) put(w, f.seqAfter);
+            static if (isInfinite!T)put(w,", ...");
+            put(w, f.seqAfter);
         }
     }
     else if (f.spec == 'r')
@@ -1594,6 +1597,18 @@ if (isInputRange!T)
         // test that range is not evaluated to completion at compiletime
         format!"%s"(value);
     }
+}
+
+@safe unittest
+{
+    import std.range : repeat;
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    auto infiniteRange = 42.repeat;
+    auto stream = appender!string();
+    formattedWrite(stream, "%s", infiniteRange);
+    assert(stream.data == "[42, 42, 42, ...]");
 }
 
 // character formatting with ecaping
