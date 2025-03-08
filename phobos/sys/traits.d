@@ -60,6 +60,7 @@
               $(LREF isPointer)
               $(LREF isSignedInteger)
               $(LREF isStaticArray)
+              $(LREF isType)
               $(LREF isUnsignedInteger)
     ))
     $(TR $(TD Aggregate Type traits) $(TD
@@ -1365,6 +1366,85 @@ enum isPointer(T) = is(T == U*, U);
             static assert(!isPointer!(AliasThis!(Q!T)));
         }
     }
+}
+
+/++
+    Evaluates to $(D true) if given a type and $(D false) for all other symbols.
+
+    This is equivalent to $(D is(T)), but some people may find using a named
+    trait to be clearer, and it can be used in conjunction with templates that
+    take a template predicate (such as those in phobos.sys.meta), which can't
+    be done with naked is expressions.
+
+    See_Also:
+        $(DDSUBLINK dlang.org/spec/expression.html, is-type, Spec on the related is expression)
+  +/
+enum isType(T) = true;
+
+/// Ditto
+enum isType(alias sym) = false;
+
+///
+@safe unittest
+{
+    static assert( isType!int);
+    static assert( isType!(int[]));
+    static assert( isType!string);
+    static assert( isType!(int[int]));
+    static assert( isType!(ubyte*));
+    static assert( isType!void);
+
+    int i;
+    static assert(!isType!i);
+    static assert( isType!(typeof(i)));
+
+    struct S {}
+    static assert( isType!S);
+    static assert(!isType!(S.init));
+
+    class C {}
+    static assert( isType!C);
+    static assert(!isType!(C.init));
+
+    interface I {}
+    static assert( isType!I);
+    static assert(!isType!(I.init));
+
+    union U {}
+    static assert( isType!U);
+    static assert(!isType!(U.init));
+
+    static void func() {}
+    static assert(!isType!func);
+    static assert( isType!(typeof(func)));
+
+    void funcWithContext() { ++i; }
+    static assert(!isType!funcWithContext);
+    static assert( isType!(typeof(funcWithContext)));
+
+    int function() funcPtr;
+    static assert(!isType!funcPtr);
+    static assert( isType!(typeof(funcPtr)));
+
+    int delegate() del;
+    static assert(!isType!del);
+    static assert( isType!(typeof(del)));
+
+    template Templ() {}
+    static assert(!isType!Templ);
+    static assert(!isType!(Templ!()));
+
+    template TemplWithType()
+    {
+        struct S {}
+    }
+    static assert(!isType!TemplWithType);
+    static assert(!isType!(TemplWithType!()));
+    static assert( isType!(TemplWithType!().S));
+
+    struct TemplType() {}
+    static assert(!isType!TemplType);
+    static assert( isType!(TemplType!()));
 }
 
 /++
