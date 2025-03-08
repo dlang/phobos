@@ -1013,7 +1013,17 @@ if (!(is(S : T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
     !isInfinite!S && isExactSomeString!T)
 {
-    static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
+    static if (is(typeof(T.init.toString())) && __traits(compiles, T.init.toString()) &&
+               isSomeString!(typeof(T.init.toString())))
+    {
+
+        auto toImpl(T value)
+        {
+            return value.toString();
+        }
+    }
+
+    else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
         // string-to-string with incompatible qualifier conversion
         static if (is(ElementEncodingType!T == immutable))
