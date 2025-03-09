@@ -34,6 +34,7 @@ $(T2 commonPrefix,
         `commonPrefix("parakeet", "parachute")` returns `"para"`.)
 $(T2 endsWith,
         `endsWith("rocks", "ks")` returns `true`.)
+$(T2 extrema, `extrema([2, 1, 3, 5, 4])` returns `[1, 5]`.)
 $(T2 find,
         `find("hello world", "or")` returns `"orld"` using linear search.
         (For binary search refer to $(REF SortedRange, std,range).))
@@ -792,19 +793,18 @@ if (isInputRange!R && !isInfinite!R)
     `haystack` before reaching an element for which
     `startsWith!pred(haystack, needles)` is `true`. If
     `startsWith!pred(haystack, needles)` is not `true` for any element in
-    `haystack`, then `-1` is returned. If only `pred` is provided,
-    `pred(haystack)` is tested for each element.
+    `haystack`, then `-1` is returned. If more than one needle is provided,
+    `countUntil` will wrap the result     in a tuple similar to
+    `Tuple!(ptrdiff_t, "steps", ptrdiff_t needle)`
 
     See_Also: $(REF indexOf, std,string)
   +/
-ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
+auto countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
 if (isForwardRange!R
     && Rs.length > 0
     && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
     && allSatisfy!(canTestStartsWith!(pred, R), Rs))
 {
-    typeof(return) result;
-
     static if (needles.length == 1)
     {
         static if (hasLength!R) //Note: Narrow strings don't have length.
@@ -814,14 +814,16 @@ if (isForwardRange!R
             auto len = haystack.length;
             auto r2 = find!pred(haystack, needles[0]);
             if (!r2.empty)
-              return cast(typeof(return)) (len - r2.length);
+                return ptrdiff_t(len - r2.length);
         }
         else
         {
             import std.range : dropOne;
 
             if (needles[0].empty)
-              return 0;
+                return ptrdiff_t(0);
+
+            ptrdiff_t result;
 
             //Default case, slower route doing startsWith iteration
             for ( ; !haystack.empty ; ++result )
@@ -836,21 +838,39 @@ if (isForwardRange!R
                     //haystack we pop in all paths, so we do that, and then save.
                     haystack.popFront();
                     if (startsWith!pred(haystack.save, needles[0].save.dropOne()))
-                      return result;
+                        return result;
                 }
                 else
-                  haystack.popFront();
+                {
+                    haystack.popFront();
+                }
             }
         }
+        return ptrdiff_t(-1);
     }
     else
     {
+        static struct Result
+        {
+            ptrdiff_t steps, needle; // both -1 when nothing was found
+            alias steps this; // compatible with previous ptrdiff_t return type
+            ptrdiff_t opIndex(size_t idx) // faking a tuple
+            {
+                assert(idx < 2, "Type has only two members: pos and needle");
+                return idx == 0 ? steps : needle;
+            }
+        }
+        Result result;
+
         foreach (i, Ri; Rs)
         {
             static if (isForwardRange!Ri)
             {
                 if (needles[i].empty)
-                  return 0;
+                {
+                    result.needle = i;
+                    return result;
+                }
             }
         }
         Tuple!Rs t;
@@ -861,7 +881,7 @@ if (isForwardRange!R
                 t[i] = needles[i];
             }
         }
-        for (; !haystack.empty ; ++result, haystack.popFront())
+        for (; !haystack.empty ; ++result.steps, haystack.popFront())
         {
             foreach (i, Ri; Rs)
             {
@@ -870,18 +890,18 @@ if (isForwardRange!R
                     t[i] = needles[i].save;
                 }
             }
-            if (startsWith!pred(haystack.save, t.expand))
+            if (auto needle = startsWith!pred(haystack.save, t.expand))
             {
+                result.needle = needle - 1;
                 return result;
             }
         }
-    }
 
-    // Because of https://issues.dlang.org/show_bug.cgi?id=8804
-    // Avoids both "unreachable code" or "no return statement"
-    static if (isInfinite!R) assert(false, R.stringof ~ " must not be an"
-            ~ " infinite range");
-    else return -1;
+        // no match was found
+        result.needle = -1;
+        result.steps = -1;
+        return result;
+    }
 }
 
 /// ditto
@@ -906,6 +926,16 @@ if (isInputRange!R &&
     assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
     assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+
+    // supports multiple needles
+    auto res = "...hello".countUntil("ha", "he");
+    assert(res.steps == 3);
+    assert(res.needle == 1);
+
+    // returns -1 if no needle was found
+    res = "hello".countUntil("ha", "hu");
+    assert(res.steps == -1);
+    assert(res.needle == -1);
 }
 
 @safe unittest
@@ -941,6 +971,42 @@ if (isInputRange!R &&
     assert(countUntil("hello world", "world", "ello") == 1);
     assert(countUntil("hello world", "world", "") == 0);
     assert(countUntil("hello world", "world", 'l') == 2);
+}
+
+@safe unittest
+{
+    auto res = "...hello".countUntil("hella", "hello");
+    assert(res == 3);
+    assert(res.steps == 3);
+    assert(res.needle == 1);
+    // test tuple emulation
+    assert(res[0] == 3);
+    assert(res[1] == 1);
+
+    // the first matching needle is chosen
+    res = "...hello".countUntil("hell", "hello");
+    assert(res == 3);
+    assert(res.needle == 0);
+
+    // no match
+    auto noMatch = "hello world".countUntil("ha", "hu");
+    assert(noMatch == -1);
+    assert(noMatch.steps == -1);
+    assert(noMatch.needle  == -1);
+    // test tuple emulation
+    assert(noMatch[0] == -1);
+    assert(noMatch[1] == -1);
+}
+
+// test infinite ranges
+@safe unittest
+{
+    import std.algorithm.iteration : joiner;
+    import std.range : iota, repeat;
+    import std.stdio;
+    assert(10.iota.repeat.joiner.countUntil(9) == 9);
+    assert(10.iota.repeat.joiner.countUntil(1, 2) == 1);
+    assert(10.iota.repeat.joiner.countUntil!(a => a >= 9) == 9);
 }
 
 /// ditto
@@ -3619,7 +3685,7 @@ Note:
 
 See_Also:
 
-    $(LREF maxElement), $(REF min, std,algorithm,comparison), $(LREF minCount),
+    $(LREF extrema), $(LREF maxElement), $(REF min, std,algorithm,comparison), $(LREF minCount),
     $(LREF minIndex), $(LREF minPos)
 */
 auto minElement(alias map = (a => a), Range)(Range r)
@@ -3800,7 +3866,7 @@ Note:
 
 See_Also:
 
-    $(LREF minElement), $(REF max, std,algorithm,comparison), $(LREF maxCount),
+    $(LREF extrema), $(LREF minElement), $(REF max, std,algorithm,comparison), $(LREF maxCount),
     $(LREF maxIndex), $(LREF maxPos)
 */
 auto maxElement(alias map = (a => a), Range)(Range r)
@@ -3968,6 +4034,132 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     auto arr = [S(19), S(2), S(145), S(7)];
     assert(maxElement(arr) == S(145));
+}
+
+/** Returns an array of the minimum and maximum element in `r`.
+ * Performs `< 3n/2` comparisons, unlike the naive `< 2n`.
+ * Params:
+ *  r = The range to traverse.
+ */
+// TODO alias map = a => a
+ElementType!Range[2] extrema(Range)(Range r)
+if (isInputRange!Range && !isInfinite!Range)
+in (!r.empty)
+{
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        if (r.length == 1)
+            return [r[0], r[0]];
+
+        typeof(return) result;
+        size_t i;
+        if (r.length & 1) // odd
+        {
+            result = [r[0], r[0]];
+            i = 1;
+        }
+        else
+        {
+            result = (r[0] < r[1]) ? [r[0], r[1]] : [r[1], r[0]];
+            i = 2;
+        }
+        // iterate pairs
+        const imax = r.length;
+        for (; i != imax; i += 2)
+        {
+            // save work
+            if (r[i] < r[i+1])
+            {
+                if (r[i] < result[0])
+                    result[0] = r[i];
+                if (r[i+1] > result[1])
+                    result[1] = r[i+1];
+            }
+            else
+            {
+                if (r[i+1] < result[0])
+                    result[0] = r[i+1];
+                if (r[i] > result[1])
+                    result[1] = r[i];
+            }
+        }
+        return result;
+    }
+    else
+    {
+        auto first = r.front;
+        r.popFront;
+        if (r.empty)
+            return [first, first];
+
+        typeof(return) result = (first < r.front) ? [first, r.front] : [r.front, first];
+        // iterate pairs
+        while (true)
+        {
+            r.popFront;
+            if (r.empty)
+                return result;
+            first = r.front;
+            r.popFront;
+            if (r.empty)
+            {
+                if (first < result[0])
+                    result[0] = first;
+                else if (first > result[1])
+                    result[1] = first;
+                return result;
+            }
+            // save work
+            if (first < r.front)
+            {
+                if (first < result[0])
+                    result[0] = first;
+                if (r.front > result[1])
+                    result[1] = r.front;
+            }
+            else
+            {
+                if (r.front < result[0])
+                    result[0] = r.front;
+                if (first > result[1])
+                    result[1] = first;
+            }
+        }
+    }
+}
+
+///
+@safe unittest
+{
+    assert(extrema([5,2,9,4,1]) == [1, 9]);
+}
+
+@safe unittest
+{
+    assert(extrema([8,3,7,4,9]) == [3, 9]);
+    assert(extrema([1,5,3,2]) == [1, 5]);
+    assert(extrema([2,3,3,2]) == [2, 3]);
+
+    import std.range;
+    assert(iota(2, 5).extrema == [2, 4]);
+    assert(iota(3, 7).retro.extrema == [3, 6]);
+
+    import std.internal.test.dummyrange;
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        assert(d.extrema == [1, 10]);
+    }
+
+    version (StdRandomTests)
+    foreach (i; 0 .. 1000)
+    {
+        import std.random;
+        auto arr = generate!(() => uniform(0, 100)).takeExactly(uniform(1, 10)).array;
+        auto result = arr.extrema;
+        assert(result[0] == arr.minElement);
+        assert(result[1] == arr.maxElement);
+    }
 }
 
 // minPos

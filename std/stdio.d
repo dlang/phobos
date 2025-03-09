@@ -18,6 +18,7 @@ $(TR $(TD Reading) $(TD
     $(MYREF chunks)
     $(MYREF lines)
     $(MYREF readf)
+    $(MYREF readfln)
     $(MYREF readln)
 ))
 $(TR $(TD Writing) $(TD
@@ -220,31 +221,6 @@ version (CRuntime_Microsoft)
     private alias _FGETWC = _fgetwc_nolock;
     private alias _FLOCK = _lock_file;
     private alias _FUNLOCK = _unlock_file;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = _fputc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = _fputwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = _fgetc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = _fgetwc_nolock;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = _lock_file;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = _unlock_file;
 }
 else version (CRuntime_Glibc)
 {
@@ -254,31 +230,6 @@ else version (CRuntime_Glibc)
     private alias _FGETWC = fgetwc_unlocked;
     private alias _FLOCK = core.sys.posix.stdio.flockfile;
     private alias _FUNLOCK = core.sys.posix.stdio.funlockfile;
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FLOCK = core.sys.posix.stdio.flockfile;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FUNLOCK was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FUNLOCK = core.sys.posix.stdio.funlockfile;
 }
 else version (GENERIC_IO)
 {
@@ -303,52 +254,6 @@ else version (GENERIC_IO)
     else
     {
         static assert(0, "don't know how to lock files on GENERIC_IO");
-    }
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fputc.mangleof) int fputc_unlocked(int c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fputwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fputwc.mangleof) int fputwc_unlocked(wchar_t c, _iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, fgetc.mangleof) int fgetc_unlocked(_iobuf* fp);
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal function fgetwc_unlocked was unintentionally available "
-               ~ "from std.stdio and will be removed afer 2.107")
-    extern (C) pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int fgetwc_unlocked(_iobuf* fp);
-
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTC = fputc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FPUTWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FPUTWC = fputwc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETC = fgetc_unlocked;
-    // @@@DEPRECATED_2.107@@@
-    deprecated("internal alias FGETWC was unintentionally available from "
-               ~ "std.stdio and will be removed afer 2.107")
-    alias FGETWC = fgetwc_unlocked;
-
-    version (Posix)
-    {
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FLOCK = core.sys.posix.stdio.flockfile;
-        // @@@DEPRECATED_2.107@@@
-        deprecated("internal alias FUNLOCK was unintentionally available from "
-                   ~ "std.stdio and will be removed afer 2.107")
-        alias FUNLOCK = core.sys.posix.stdio.funlockfile;
     }
 }
 else
@@ -543,7 +448,7 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name)
-        if (isSomeFiniteCharInputRange!R1)
+    if (isSomeFiniteCharInputRange!R1)
     {
         import std.conv : to;
         this(name.to!string, "rb");
@@ -551,8 +456,8 @@ Throws: `ErrnoException` if the file could not be opened.
 
     /// ditto
     this(R1, R2)(R1 name, R2 mode)
-        if (isSomeFiniteCharInputRange!R1 &&
-            isSomeFiniteCharInputRange!R2)
+    if (isSomeFiniteCharInputRange!R1 &&
+        isSomeFiniteCharInputRange!R2)
     {
         import std.conv : to;
         this(name.to!string, mode.to!string);
@@ -795,7 +700,7 @@ Throws: `ErrnoException` in case of error.
 /**
 Detaches from the current file (throwing on failure), and then runs a command
 by calling the C standard library function $(HTTP
-opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
+pubs.opengroup.org/onlinepubs/7908799/xsh/popen.html, popen).
 
 Throws: `ErrnoException` in case of error.
  */
@@ -813,8 +718,9 @@ The mode must be compatible with the mode of the file descriptor.
 Throws: `ErrnoException` in case of error.
 Params:
     fd = File descriptor to associate with this `File`.
-    stdioOpenmode = Mode to associate with this File. The mode has the same semantics
-        semantics as in the C standard library $(CSTDIO fdopen) function,
+    stdioOpenmode = Mode to associate with this File. The mode has the same
+        semantics as in the POSIX library function $(HTTP
+        pubs.opengroup.org/onlinepubs/7908799/xsh/fdopen.html, fdopen)
         and must be compatible with `fd`.
  */
     void fdopen(int fd, scope const(char)[] stdioOpenmode = "rb") @safe
@@ -1134,6 +1040,9 @@ Throws: `ErrnoException` if the file is not opened or the call to `fread` fails.
         f.close();
         assert(buf == "\r\n\n\r\n");
     }
+
+    // https://issues.dlang.org/show_bug.cgi?id=24685
+    static assert(!__traits(compiles, (File f) @safe { int*[1] bar; f.rawRead(bar[]); }));
 
     // https://issues.dlang.org/show_bug.cgi?id=21729
     @system unittest
@@ -2186,6 +2095,85 @@ $(CONSOLE
             "Unexpected '\\n' when converting from type LockingTextReader to type int");
     }
 
+    /**
+    Reads a line from the file and parses it using $(REF formattedRead, std,format,read).
+
+    Params:
+      format = The $(MREF_ALTTEXT format string, std,format). When passed as a
+      compile-time argument, the string will be statically checked against the
+      argument types passed.
+      data = Items to be read.
+
+    Returns: Same as `formattedRead`: the number of variables filled. If the
+    input ends early, this number will be less that the number of variables
+    provided.
+
+    Example:
+    ---
+    // sum_rows.d
+    void main()
+    {
+        import std.stdio;
+        auto f = File("input");
+        int a, b, c;
+        while (f.readfln("%d %d %d", a, b, c) == 3)
+        {
+            writeln(a + b + c);
+        }
+    }
+    ---
+    $(CONSOLE
+% cat << EOF > input
+1 2 3
+4 5 6
+7 8 9
+EOF
+% rdmd sum_rows.d
+6
+15
+24
+    )
+    */
+    uint readfln(alias format, Data...)(auto ref Data data)
+    if (isSomeString!(typeof(format)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(format, Data);
+        static assert(!e, e);
+        return this.readfln(format, data);
+    }
+
+    /// ditto
+    uint readfln(Data...)(scope const(char)[] format, auto ref Data data)
+    {
+        import std.format.read : formattedRead;
+        import std.string : stripRight;
+
+        string line = this.readln.stripRight("\r\n");
+        return formattedRead(line, format, data);
+    }
+
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s;
+        auto f = File(deleteme);
+        f.readfln!"%s"(s);
+        assert(s == "hello", "["~s~"]");
+        f.readfln("%s", s);
+        assert(s == "world", "["~s~"]");
+
+        bool b1, b2;
+        f.readfln("%s", b1);
+        f.readfln("%s", b2);
+        assert(b1 == true && b2 == false);
+    }
+
 /**
  Returns a temporary file by calling $(CSTDIO tmpfile).
  Note that the created file has no $(LREF name).*/
@@ -2261,13 +2249,13 @@ Allows to directly use range operations on lines of a file.
     private struct ByLineImpl(Char, Terminator)
     {
     private:
-        import std.typecons : RefCounted, RefCountedAutoInitialize;
+        import std.typecons : borrow, RefCountedAutoInitialize, SafeRefCounted;
 
         /* Ref-counting stops the source range's Impl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
          * then accessing range.front again. */
-        alias PImpl = RefCounted!(Impl, RefCountedAutoInitialize.no);
+        alias PImpl = SafeRefCounted!(Impl, RefCountedAutoInitialize.no);
         PImpl impl;
 
         static if (isScalarType!Terminator)
@@ -2282,19 +2270,24 @@ Allows to directly use range operations on lines of a file.
             impl = PImpl(f, kt, terminator);
         }
 
-        @property bool empty()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        @property bool empty() @trusted
         {
-            return impl.refCountedPayload.empty;
+            // Using `ref` is actually necessary here.
+            return impl.borrow!((ref i) => i.empty);
         }
 
-        @property Char[] front()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        @property Char[] front() @trusted
         {
-            return impl.refCountedPayload.front;
+            // Using `ref` is likely optional here.
+            return impl.borrow!((ref i) => i.front);
         }
 
-        void popFront()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        void popFront() @trusted
         {
-            impl.refCountedPayload.popFront();
+            return impl.borrow!((ref i) => i.popFront());
         }
 
     private:
@@ -2308,6 +2301,7 @@ Allows to directly use range operations on lines of a file.
             KeepTerminator keepTerminator;
             bool haveLine;
 
+        @safe:
         public:
             this(File f, KeepTerminator kt, Terminator terminator)
             {
@@ -2432,6 +2426,24 @@ void main()
 Notice that neither example accesses the line data returned by
 `front` after the corresponding `popFront` call is made (because
 the contents may well have changed).
+----
+
+Windows specific Example:
+----
+import std.stdio;
+
+version (Windows)
+void main()
+{
+
+	foreach (line; File("file.txt").byLine(No.keepTerminator, "\r\n"))
+	{
+		writeln("|"~line~"|");
+		if (line == "HelloWorld")
+		    writeln("^This Line is here.");
+	}
+
+}
 */
     auto byLine(Terminator = char, Char = char)
             (KeepTerminator keepTerminator = No.keepTerminator,
@@ -2449,7 +2461,7 @@ the contents may well have changed).
         return ByLineImpl!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -2467,7 +2479,7 @@ the contents may well have changed).
     }
 
     // https://issues.dlang.org/show_bug.cgi?id=19980
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -2483,13 +2495,13 @@ the contents may well have changed).
     private struct ByLineCopy(Char, Terminator)
     {
     private:
-        import std.typecons : RefCounted, RefCountedAutoInitialize;
+        import std.typecons : borrow, RefCountedAutoInitialize, SafeRefCounted;
 
         /* Ref-counting stops the source range's ByLineCopyImpl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
          * then accessing range.front again. */
-        alias Impl = RefCounted!(ByLineCopyImpl!(Char, Terminator),
+        alias Impl = SafeRefCounted!(ByLineCopyImpl!(Char, Terminator),
             RefCountedAutoInitialize.no);
         Impl impl;
 
@@ -2499,19 +2511,24 @@ the contents may well have changed).
             impl = Impl(f, kt, terminator);
         }
 
-        @property bool empty()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        @property bool empty() @trusted
         {
-            return impl.refCountedPayload.empty;
+            // Using `ref` is actually necessary here.
+            return impl.borrow!((ref i) => i.empty);
         }
 
-        @property Char[] front()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        @property Char[] front() @trusted
         {
-            return impl.refCountedPayload.front;
+            // Using `ref` is likely optional here.
+            return impl.borrow!((ref i) => i.front);
         }
 
-        void popFront()
+        /* Verifiably `@safe` when built with -preview=DIP1000. */
+        void popFront() @trusted
         {
-            impl.refCountedPayload.popFront();
+            impl.borrow!((ref i) => i.popFront());
         }
     }
 
@@ -2610,12 +2627,11 @@ $(REF readText, std,file)
             is(typeof(File("").byLineCopy!(char, char).front) == char[]));
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         static import std.file;
 
-        scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
         std.file.write(deleteme, "");
         scope(success) std.file.remove(deleteme);
@@ -2689,7 +2705,7 @@ $(REF readText, std,file)
         test("sue\r", ["sue\r"], kt, '\r');
     }
 
-    @system unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : drop, take;
@@ -2740,7 +2756,7 @@ $(REF readText, std,file)
         assert(!file.isOpen);
     }
 
-    @system unittest
+    @safe unittest
     {
         static import std.file;
         auto deleteme = testFilename();
@@ -3089,10 +3105,10 @@ is empty, throws an `Exception`. In case of an I/O error throws
 
         /// Range primitive implementations.
         void put(A)(scope A writeme)
-            if ((isSomeChar!(ElementType!A) ||
-                  is(ElementType!A : const(ubyte))) &&
-                isInputRange!A &&
-                !isInfinite!A)
+        if ((isSomeChar!(ElementType!A) ||
+            is(ElementType!A : const(ubyte))) &&
+            isInputRange!A &&
+            !isInfinite!A)
         {
             import std.exception : errnoEnforce;
 
@@ -3118,7 +3134,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
         }
 
         /// ditto
-        void put(C)(scope C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
+        void put(C)(scope C c) @safe
+        if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.utf : decodeFront, encode, stride;
 
@@ -4552,6 +4569,70 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
     }
 }
 
+/**
+Reads a line from `stdin` and parses it using $(REF formattedRead, std,format,read).
+
+Params:
+  format = The $(MREF_ALTTEXT format string, std,format). When passed as a
+  compile-time argument, the string will be statically checked against the
+  argument types passed.
+  data = Items to be read.
+
+Returns: Same as `formattedRead`: the number of variables filled. If the
+input ends early, this number will be less that the number of variables
+provided.
+
+Example:
+---
+// sum_rows.d
+void main()
+{
+    import std.stdio;
+    int a, b, c;
+    while (readfln("%d %d %d", a, b, c) == 3)
+    {
+        writeln(a + b + c);
+    }
+}
+---
+$(CONSOLE
+% cat << EOF > input
+1 2 3
+4 5 6
+7 8 9
+EOF
+% rdmd sum_rows.d < input
+6
+15
+24
+)
+*/
+uint readfln(alias format, Data...)(auto ref Data data)
+{
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(format, Data);
+    static assert(!e, e);
+    return .readfln(format, data);
+}
+
+/// ditto
+uint readfln(Data...)(scope const(char)[] format, auto ref Data data)
+{
+    return stdin.readfln(format, data);
+}
+
+@system unittest
+{
+    float f;
+    string s;
+    char c;
+    int n;
+    if (false) readfln("%f %s %c %d", f, s, c, n);
+    if (false) readfln!"%f %s %c %d"(f, s, c, n);
+
+}
+
 /*
  * Convenience function that forwards to `core.sys.posix.stdio.fopen`
  * (to `_wfopen` on Windows)
@@ -4576,11 +4657,11 @@ if ((isSomeFiniteCharInputRange!R1 || isSomeString!R1) &&
         {
             /*
              * The new opengroup large file support API is transparently
-             * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+             * included in the normal C bindings. https://www.opengroup.org/platform/lfs.html#1.0
              * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
              * the normal functions work fine. If not, then large file support
              * probably isn't available. Do not use the old transitional API
-             * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+             * (the native extern(C) fopen64, https://unix.org/version2/whatsnew/lfs20mar.html#3.0)
              */
             import core.sys.posix.stdio : fopen;
             return fopen(namez, modez);
@@ -4629,6 +4710,13 @@ private auto trustedFwrite(T)(FILE* f, const T[] obj) @trusted
  * Convenience function that forwards to `core.stdc.stdio.fread`
  */
 private auto trustedFread(T)(FILE* f, T[] obj) @trusted
+if (!imported!"std.traits".hasIndirections!T)
+{
+    return fread(obj.ptr, T.sizeof, obj.length, f);
+}
+
+private auto trustedFread(T)(FILE* f, T[] obj) @system
+if (imported!"std.traits".hasIndirections!T)
 {
     return fread(obj.ptr, T.sizeof, obj.length, f);
 }
@@ -4692,7 +4780,7 @@ struct lines
     f = File to read lines from.
     terminator = Line separator (`'\n'` by default).
     */
-    this(File f, dchar terminator = '\n')
+    this(File f, dchar terminator = '\n') @safe
     {
         this.f = f;
         this.terminator = terminator;
@@ -4784,6 +4872,56 @@ struct lines
         // can only reach when _FGETC returned -1
         if (!f.eof) throw new StdioException("Error in reading file"); // error occured
         return result;
+    }
+}
+
+@safe unittest
+{
+    /*
+        As pointed out in <https://github.com/dlang/phobos/issues/10605>,
+        it's a pity that `byLine()` & co. aren't @safe to use yet.
+
+        This is a first attempt at working towards that goal.
+        For now, this test doesn't do much; as there isn't much to do safely yet.
+     */
+    auto deleteMe = testFilename();
+    scope(exit) { imported!"std.file".remove(deleteMe); }
+
+    // Setup
+    {
+        auto f = File(deleteMe, "w");
+        scope(exit) { f.close(); }
+        foreach (i; 1 .. 11)
+            f.writeln(i);
+    }
+
+    // Actual tests
+    {
+        auto f = File(deleteMe, "r");
+        scope(exit) { f.close(); }
+
+        auto myLines = lines(f);
+        foreach (string line; myLines)
+            continue;
+    }
+
+
+    {
+        auto f = File(deleteMe, "r");
+        scope(exit) { f.close(); }
+
+        auto myByLineCopy = f.byLineCopy;
+        foreach (line; myByLineCopy)
+            continue;
+    }
+
+    {
+        auto f = File(deleteMe, "r");
+        scope(exit) { f.close(); }
+
+        auto myByLine = f.byLine;
+        foreach (line; myByLine)
+            continue;
     }
 }
 

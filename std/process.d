@@ -146,23 +146,7 @@ private
     // POSIX API declarations.
     version (Posix)
     {
-        version (Darwin)
-        {
-            extern(C) char*** _NSGetEnviron() @nogc nothrow;
-            const(char**) getEnvironPtr() @trusted @nogc nothrow
-            {
-                return *_NSGetEnviron;
-            }
-        }
-        else
-        {
-            // Made available by the C runtime:
-            extern(C) extern __gshared const char** environ;
-            const(char**) getEnvironPtr() @trusted @nogc nothrow
-            {
-                return environ;
-            }
-        }
+        import core.sys.posix.unistd : getEnvironPtr = environ;
 
         @system unittest
         {
@@ -880,6 +864,7 @@ version (Posix) private enum InternalError : ubyte
     doubleFork,
     malloc,
     preExec,
+    closefds_dup2,
 }
 
 /*
@@ -1008,7 +993,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         if (config.flags & Config.Flags.detached)
             close(pidPipe[0]);
         close(forkPipe[0]);
-        immutable forkPipeOut = forkPipe[1];
+        auto forkPipeOut = forkPipe[1];
         immutable pidPipeOut = pidPipe[1];
 
         // Set the working directory.
@@ -1042,56 +1027,157 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
             if (!(config.flags & Config.Flags.inheritFDs))
             {
-                // NOTE: malloc() and getrlimit() are not on the POSIX async
-                // signal safe functions list, but practically this should
-                // not be a problem. Java VM and CPython also use malloc()
-                // in its own implementation via opendir().
-                import core.stdc.stdlib : malloc;
-                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+                version (FreeBSD)
+                    import core.sys.freebsd.unistd : closefrom;
+                else version (OpenBSD)
+                    import core.sys.openbsd.unistd : closefrom;
 
-                // Get the maximum number of file descriptors that could be open.
-                rlimit r;
-                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                static if (!__traits(compiles, closefrom))
                 {
-                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
-                }
-                immutable maxDescriptors = cast(int) r.rlim_cur;
-
-                // The above, less stdin, stdout, and stderr
-                immutable maxToClose = maxDescriptors - 3;
-
-                // Call poll() to see which ones are actually open:
-                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-                if (pfds is null)
-                {
-                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
-                }
-                foreach (i; 0 .. maxToClose)
-                {
-                    pfds[i].fd = i + 3;
-                    pfds[i].events = 0;
-                    pfds[i].revents = 0;
-                }
-                if (poll(pfds, maxToClose, 0) >= 0)
-                {
-                    foreach (i; 0 .. maxToClose)
+                    void fallback (int lowfd)
                     {
-                        // don't close pipe write end
-                        if (pfds[i].fd == forkPipeOut) continue;
-                        // POLLNVAL will be set if the file descriptor is invalid.
-                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                        import core.sys.posix.dirent : dirent, opendir, readdir, closedir, DIR;
+                        import core.sys.posix.unistd : close;
+                        import core.sys.posix.stdlib : atoi, malloc, free;
+                        import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+
+                        // Get the maximum number of file descriptors that could be open.
+                        rlimit r;
+                        if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                            abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+
+                        immutable maxDescriptors = cast(int) r.rlim_cur;
+
+                        // Missing druntime declaration
+                        pragma(mangle, "dirfd")
+                        extern(C) nothrow @nogc int dirfd(DIR* dir);
+
+                        DIR* dir = null;
+
+                        // We read from /dev/fd or /proc/self/fd only if the limit is high enough
+                        if (maxDescriptors > 128*1024)
+                        {
+                            // Try to open the directory /dev/fd or /proc/self/fd
+                            dir = opendir("/dev/fd");
+                            if (dir is null) dir = opendir("/proc/self/fd");
+                        }
+
+                        // If we have a directory, close all file descriptors except stdin, stdout, and stderr
+                        if (dir)
+                        {
+                            scope(exit) closedir(dir);
+
+                            int opendirfd = dirfd(dir);
+
+                            // Iterate over all file descriptors
+                            while (true)
+                            {
+                                dirent* entry = readdir(dir);
+
+                                if (entry is null) break;
+                                if (entry.d_name[0] == '.') continue;
+
+                                int fd = atoi(cast(char*) entry.d_name);
+
+                                // Don't close stdin, stdout, stderr, or the directory file descriptor
+                                if (fd < lowfd || fd == opendirfd) continue;
+
+                                close(fd);
+                            }
+                        }
+                        else
+                        {
+                            // This is going to allocate 8 bytes for each possible file descriptor from lowfd to r.rlim_cur
+                            if (maxDescriptors <= 128*1024)
+                            {
+                                // NOTE: malloc() and getrlimit() are not on the POSIX async
+                                // signal safe functions list, but practically this should
+                                // not be a problem. Java VM and CPython also use malloc()
+                                // in its own implementation via opendir().
+                                import core.stdc.stdlib : malloc;
+                                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+
+                                immutable maxToClose = maxDescriptors - lowfd;
+
+                                // Call poll() to see which ones are actually open:
+                                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                                if (pfds is null)
+                                {
+                                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                                }
+
+                                foreach (i; 0 .. maxToClose)
+                                {
+                                    pfds[i].fd = i + lowfd;
+                                    pfds[i].events = 0;
+                                    pfds[i].revents = 0;
+                                }
+
+                                if (poll(pfds, maxToClose, 0) < 0)
+                                    // couldn't use poll, use the slow path.
+                                    goto LslowClose;
+
+                                foreach (i; 0 .. maxToClose)
+                                {
+                                    // POLLNVAL will be set if the file descriptor is invalid.
+                                    if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                                }
+                            }
+                            else
+                            {
+                            LslowClose:
+                                // Fall back to closing everything.
+                                foreach (i; lowfd .. maxDescriptors)
+                                {
+                                    close(i);
+                                }
+                            }
+                        }
                     }
-                }
-                else
-                {
-                    // Fall back to closing everything.
-                    foreach (i; 3 .. maxDescriptors)
+
+                    // closefrom may not be available on the version of glibc we build against.
+                    // Until we find a way to perform this check we will try to use dlsym to
+                    // check for the function. See: https://github.com/dlang/phobos/pull/9048
+                    version (CRuntime_Glibc)
                     {
-                        if (i == forkPipeOut) continue;
-                        close(i);
+                        void closefrom (int lowfd) {
+                            static bool tryGlibcClosefrom (int lowfd) {
+                                import core.sys.posix.dlfcn : dlopen, dlclose, dlsym, dlerror, RTLD_LAZY;
+
+                                void *handle = dlopen("libc.so.6", RTLD_LAZY);
+                                if (!handle)
+                                    return false;
+                                scope(exit) dlclose(handle);
+
+                                // Clear errors
+                                dlerror();
+                                alias closefromT = extern(C) void function(int) @nogc @system nothrow;
+                                auto closefrom = cast(closefromT) dlsym(handle, "closefrom");
+                                if (dlerror())
+                                    return false;
+
+                                closefrom(lowfd);
+                                return true;
+                            }
+
+                            if (!tryGlibcClosefrom(lowfd))
+                                fallback(lowfd);
+                        }
                     }
+                    else
+                        alias closefrom = fallback;
                 }
+
+                // We need to close all open file descriptors excluding std{in,out,err}
+                // and forkPipeOut because we still need it.
+                // Since the various libc's provide us with `closefrom` move forkPipeOut
+                // to position 3, right after STDERR_FILENO, and close all FDs following that.
+                if (dup2(forkPipeOut, 3) == -1)
+                    abortOnError(forkPipeOut, InternalError.closefds_dup2, .errno);
+                forkPipeOut = 3;
+                // forkPipeOut needs to be closed after we call `exec`.
+                setCLOEXEC(forkPipeOut, true);
+                closefrom(forkPipeOut + 1);
             }
             else // This is already done if we don't inherit descriptors.
             {
@@ -1204,6 +1290,10 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     break;
                 case InternalError.preExec:
                     errorMsg = "Failed to execute preExecFunction or preExecDelegate";
+                    break;
+                case InternalError.closefds_dup2:
+                    assert(!(config.flags & Config.Flags.inheritFDs));
+                    errorMsg = "Failed to close inherited file descriptors";
                     break;
                 case InternalError.noerror:
                     assert(false);
@@ -2700,6 +2790,10 @@ void kill(Pid pid, int codeOrSignal)
     else version (Posix)
     {
         import core.sys.posix.signal : kill;
+        if (pid.osHandle == Pid.invalid)
+            throw new ProcessException("Pid is invalid");
+        if (pid.osHandle == Pid.terminated)
+            throw new ProcessException("Pid is already terminated");
         if (kill(pid.osHandle, codeOrSignal) == -1)
             throw ProcessException.newFromErrno();
     }
@@ -2741,7 +2835,7 @@ void kill(Pid pid, int codeOrSignal)
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert(s.status == 123);
     else version (Posix) assert(s.status == -SIGKILL);
-    assertThrown!ProcessException(kill(pid));
+    assertThrown!ProcessException(kill(pid)); // Already terminated
 }
 
 @system unittest // wait() and kill() detached process
@@ -4221,14 +4315,14 @@ version (Posix)
     import core.sys.posix.stdlib;
 }
 
-private void toAStringz(in string[] a, const(char)**az)
+private const(char)** toAStringz(in string[] a)
 {
     import std.string : toStringz;
-    foreach (string s; a)
-    {
-        *az++ = toStringz(s);
-    }
-    *az = null;
+    auto p = (new const(char)*[1 + a.length]).ptr;
+    foreach (i, string s; a)
+        p[i] = toStringz(s);
+    p[a.length] = null;
+    return p;
 }
 
 
@@ -4358,45 +4452,17 @@ extern(C)
 
 private int execv_(in string pathname, in string[] argv)
 {
-    import core.exception : OutOfMemoryError;
-    import std.exception : enforce;
-    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(argv_);
-
-    toAStringz(argv, argv_);
-
-    return execv(pathname.tempCString(), argv_);
+    return execv(pathname.tempCString(), toAStringz(argv));
 }
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
-    import core.exception : OutOfMemoryError;
-    import std.exception : enforce;
-    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(argv_);
-    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
-    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(envp_);
-
-    toAStringz(argv, argv_);
-    toAStringz(envp, envp_);
-
-    return execve(pathname.tempCString(), argv_, envp_);
+    return execve(pathname.tempCString(), toAStringz(argv), toAStringz(envp));
 }
 
 private int execvp_(in string pathname, in string[] argv)
 {
-    import core.exception : OutOfMemoryError;
-    import std.exception : enforce;
-    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(argv_);
-
-    toAStringz(argv, argv_);
-
-    return execvp(pathname.tempCString(), argv_);
+    return execvp(pathname.tempCString(), toAStringz(argv));
 }
 
 private int execvpe_(in string pathname, in string[] argv, in string[] envp)
@@ -4438,19 +4504,7 @@ version (Posix)
 }
 else version (Windows)
 {
-    import core.exception : OutOfMemoryError;
-    import std.exception : enforce;
-    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
-    enforce!OutOfMemoryError(argv_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(argv_);
-    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
-    enforce!OutOfMemoryError(envp_ !is null, "Out of memory in std.process.");
-    scope(exit) core.stdc.stdlib.free(envp_);
-
-    toAStringz(argv, argv_);
-    toAStringz(envp, envp_);
-
-    return execvpe(pathname.tempCString(), argv_, envp_);
+    return execvpe(pathname.tempCString(), toAStringz(argv), toAStringz(envp));
 }
 else
 {

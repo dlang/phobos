@@ -249,7 +249,8 @@ struct DList(T)
 /**
 Constructor taking a number of nodes
      */
-    this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
+    this(U)(U[] values...)
+    if (isImplicitlyConvertible!(U, T))
     {
         insertBack(values);
     }
@@ -450,7 +451,7 @@ iterating over the container are never invalidated.
 
 Returns: The number of elements inserted
 
-Complexity: $(BIGOH log(n))
+Complexity: $(BIGOH m), where `m` is the length of `stuff`
      */
     size_t insertFront(Stuff)(Stuff stuff)
     {
