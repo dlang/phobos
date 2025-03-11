@@ -1013,6 +1013,7 @@ if (!(is(S : T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
     !isInfinite!S && isExactSomeString!T)
 {
+    // only for structs; classes need duplication as toString() is virtual.
     static if (is(typeof(S.init.toString())) &&
                is(typeof(S.init.toString()) == string) &&
                !is(S == class))
