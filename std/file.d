@@ -4638,6 +4638,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
+    string _pathPrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4695,6 +4696,7 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
+            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4711,7 +4713,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
             return true;
         }
 
@@ -4756,6 +4758,8 @@ private struct DirIteratorImpl
 
         bool next() @trusted
         {
+            import std.string : chompPrefix;
+
             if (_stack.length == 0)
                 return false;
 
@@ -4765,7 +4769,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath, fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
                     return true;
                 }
             }
@@ -4800,12 +4804,30 @@ private struct DirIteratorImpl
         _followSymlink = followSymlink;
 
         static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
-            alias pathnameStr = pathname;
+        {
+            import std.path : absolutePath, isAbsolute;
+            string pathnameStr;
+            if (pathname.isAbsolute)
+                pathnameStr = pathname;
+            else
+            {
+                pathnameStr = pathname.absolutePath;
+                const offset = (pathnameStr.length - pathname.length);
+                _pathPrefix = pathnameStr[0 .. offset];
+            }
+        }
         else
         {
+            import std.algorithm.searching : count;
             import std.array : array;
-            string pathnameStr = pathname.array;
+            import std.path : asAbsolutePath;
+            import std.utf : byChar;
+            string pathnameStr = pathname.asAbsolutePath.array;
+            const pathnameCount = pathname.byChar.count;
+            const offset = (pathnameStr.length - pathnameCount);
+            _pathPrefix = pathnameStr[0 .. offset];
         }
+
         if (stepIn(pathnameStr))
         {
             if (_mode == SpanMode.depth)
@@ -5105,6 +5127,15 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
+
+    // https://github.com/dlang/phobos/issues/9584
+    string cwd = getcwd();
+    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
+    {
+        if (entry.isDir)
+            chdir(entry);
+    }
+    chdir(cwd); // needed for the directories to be removed
 }
 
 /// Ditto
