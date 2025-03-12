@@ -1130,14 +1130,13 @@ if (!(is(S : T) &&
 @system unittest
 {
     import std.conv : to;
-    import std.exception : enforce;
 
     struct S
     {
         string toString() { return "S"; }
     }
 
-    enforce(S.init.toString().ptr == S.init.to!string.ptr);
+    assert(S.init.toString().ptr == S.init.to!string.ptr);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=14042
