@@ -3828,7 +3828,7 @@ else version (Windows)
     {
     @safe:
     public:
-        alias name this;
+        alias nameWithPrefix this;
 
         this(return scope string path)
         {
@@ -3957,7 +3957,7 @@ else version (Posix)
     {
     @safe:
     public:
-        alias name this;
+        alias nameWithPrefix this;
 
         this(return scope string path)
         {
