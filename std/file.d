@@ -5163,15 +5163,41 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
+}
 
-    // https://github.com/dlang/phobos/issues/9584
-    string cwd = getcwd();
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
-    {
-        if (entry.isDir)
-            chdir(entry);
-    }
-    chdir(cwd); // needed for the directories to be removed
+// https://github.com/dlang/phobos/issues/9584
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+	chdir(root);
+    scope(exit) chdir(origWD);
+
+    // When issue #9584 is triggered,
+    // one of the `isDir` calls fails with "No such file or directory".
+	foreach (string entry; ".".dirEntries(SpanMode.shallow))
+	{
+		if (entry.isDir)
+		{
+			foreach (string subEntry; entry.dirEntries(SpanMode.shallow))
+			{
+				if (subEntry.isDir)
+				{
+					chdir(subEntry.absolutePath);
+					assert(subEntry.absolutePath);
+				}
+			}
+		}
+	}
 }
 
 /// Ditto
