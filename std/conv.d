@@ -1014,9 +1014,13 @@ if (!(is(S : T) &&
     !isInfinite!S && isExactSomeString!T)
 {
     static if (is(typeof(S.init.toString())) &&
-               is(typeof(S.init.toString()) == string))
+               is(typeof(S.init.toString()) == T))
     {
-            return value.toString();
+        return value.toString();
+    }
+    else static if (is(typeof(S.init.toString()) : T))
+    {
+       return to!T(value.toString());
     }
     else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
