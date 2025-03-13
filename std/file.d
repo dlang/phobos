@@ -2369,7 +2369,6 @@ if (isConvertibleToString!R)
 }
 
 ///
-
 @safe unittest
 {
     import std.exception : assertThrown;
@@ -3652,13 +3651,25 @@ version (StdDdoc)
         +/
         this(return scope string path);
 
+        /++
+            Constructs a `DirEntry` for the given file (or directory).
+
+            Params:
+                path = The file (or directory) to get a DirEntry for.
+                prefix = A prefix to chomp off the path when querying the name of the DirEntry.
+
+            Throws:
+                $(LREF FileException) if the file does not exist.
+        +/
+        this(return scope string path, return scope string prefix);
+
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
+            private this(string path, in WIN32_FIND_DATAW *fd, string prefix = null);
         }
         else version (Posix)
         {
-            private this(string path, core.sys.posix.dirent.dirent* fd);
+            private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null);
         }
 
         /++
@@ -3675,6 +3686,13 @@ assert(de2.name == "/usr/share/include");
           +/
         @property string name() const return scope;
 
+        /++
+            Returns the path to the file represented by this `DirEntry`.
+
+            Unlike `name`, this property returns the internal name as-is,
+            potentially starting with an unexpected prefix.
+         +/
+        @property string nameWithPrefix() const return scope;
 
         /++
             Returns whether the file represented by this `DirEntry` is a
@@ -3810,7 +3828,7 @@ else version (Windows)
     {
     @safe:
     public:
-        alias name this;
+        alias nameWithPrefix this;
 
         this(return scope string path)
         {
@@ -3831,12 +3849,20 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        this(return scope string path, return scope string prefix)
+        {
+            _namePrefix = prefix;
+            this(path);
+        }
+
+        private this(string path, WIN32_FIND_DATAW *fd, string prefix = null) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
+
+            _namePrefix = prefix;
 
             fd.cFileName[$ - 1] = 0;
 
@@ -3851,7 +3877,18 @@ else version (Windows)
 
         @property string name() const pure nothrow return scope
         {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_namePrefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
+        {
             return _name;
+        }
+
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() const pure nothrow scope
@@ -3904,6 +3941,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -3919,7 +3957,7 @@ else version (Posix)
     {
     @safe:
     public:
-        alias name this;
+        alias nameWithPrefix this;
 
         this(return scope string path)
         {
@@ -3933,9 +3971,11 @@ else version (Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
+        private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null) @safe
         {
             import std.path : buildPath;
+
+            _namePrefix = prefix;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;
@@ -3974,7 +4014,18 @@ else version (Posix)
 
         @property string name() const pure nothrow return scope
         {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_namePrefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
+        {
             return _name;
+        }
+
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() scope
@@ -4107,6 +4158,7 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
@@ -4638,7 +4690,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+    string _namePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4696,7 +4748,6 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
-            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4713,7 +4764,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo, _namePrefix);
             return true;
         }
 
@@ -4758,8 +4809,6 @@ private struct DirIteratorImpl
 
         bool next() @trusted
         {
-            import std.string : chompPrefix;
-
             if (_stack.length == 0)
                 return false;
 
@@ -4769,7 +4818,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata, _namePrefix);
                     return true;
                 }
             }
@@ -4797,44 +4846,30 @@ private struct DirIteratorImpl
         }
     }
 
-    this(R)(R pathname, SpanMode mode, bool followSymlink)
-    if (isSomeFiniteCharInputRange!R)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
+        import std.path : absolutePath, isAbsolute;
+
         _mode = mode;
         _followSymlink = followSymlink;
 
-        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
+        if (!pathname.isAbsolute)
         {
-            import std.path : absolutePath, isAbsolute;
-            string pathnameStr;
-            if (pathname.isAbsolute)
-                pathnameStr = pathname;
-            else
-            {
-                pathnameStr = pathname.absolutePath;
-                const offset = (pathnameStr.length - pathname.length);
-                _pathPrefix = pathnameStr[0 .. offset];
-            }
-        }
-        else
-        {
-            import std.algorithm.searching : count;
-            import std.array : array;
-            import std.path : asAbsolutePath;
-            import std.utf : byChar;
-            string pathnameStr = pathname.asAbsolutePath.array;
-            const pathnameCount = pathname.byChar.count;
-            const offset = (pathnameStr.length - pathnameCount);
-            _pathPrefix = pathnameStr[0 .. offset];
+            const pathnameRel = pathname;
+            alias pathnameAbs = pathname;
+            pathname = pathname.absolutePath;
+
+            const offset = pathnameAbs.length - pathnameRel.length;
+            _namePrefix  = pathnameAbs[0 .. offset];
         }
 
-        if (stepIn(pathnameStr))
+        if (stepIn(pathname))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4864,7 +4899,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4878,7 +4913,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur.nameWithPrefix))
                     while (!empty && !next()){}
             }
             else
@@ -5127,15 +5162,41 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
+}
 
-    // https://github.com/dlang/phobos/issues/9584
-    string cwd = getcwd();
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
-    {
-        if (entry.isDir)
-            chdir(entry);
-    }
-    chdir(cwd); // needed for the directories to be removed
+// https://github.com/dlang/phobos/issues/9584
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+	chdir(root);
+    scope(exit) chdir(origWD);
+
+    // When issue #9584 is triggered,
+    // one of the `isDir` calls fails with "No such file or directory".
+	foreach (string entry; ".".dirEntries(SpanMode.shallow))
+	{
+		if (entry.isDir)
+		{
+			foreach (string subEntry; entry.dirEntries(SpanMode.shallow))
+			{
+				if (subEntry.isDir)
+				{
+					chdir(subEntry.absolutePath);
+					assert(subEntry.absolutePath);
+				}
+			}
+		}
+	}
 }
 
 /// Ditto
