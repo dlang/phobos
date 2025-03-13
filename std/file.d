@@ -4797,34 +4797,20 @@ private struct DirIteratorImpl
         }
     }
 
-    this(R)(R pathname, SpanMode mode, bool followSymlink)
-    if (isSomeFiniteCharInputRange!R)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
+        import std.path : absolutePath, isAbsolute;
+
         _mode = mode;
         _followSymlink = followSymlink;
 
-        static if (isNarrowString!R && is(immutable ElementEncodingType!R == immutable char))
-        {
-            import std.path : absolutePath, isAbsolute;
-            string pathnameStr;
-            if (pathname.isAbsolute)
-                pathnameStr = pathname;
-            else
-            {
-                pathnameStr = pathname.absolutePath;
-                const offset = (pathnameStr.length - pathname.length);
-                _pathPrefix = pathnameStr[0 .. offset];
-            }
-        }
+        string pathnameStr;
+        if (pathname.isAbsolute)
+            pathnameStr = pathname;
         else
         {
-            import std.algorithm.searching : count;
-            import std.array : array;
-            import std.path : asAbsolutePath;
-            import std.utf : byChar;
-            string pathnameStr = pathname.asAbsolutePath.array;
-            const pathnameCount = pathname.byChar.count;
-            const offset = (pathnameStr.length - pathnameCount);
+            pathnameStr = pathname.absolutePath;
+            const offset = (pathnameStr.length - pathname.length);
             _pathPrefix = pathnameStr[0 .. offset];
         }
 
