@@ -2369,7 +2369,6 @@ if (isConvertibleToString!R)
 }
 
 ///
-
 @safe unittest
 {
     import std.exception : assertThrown;
