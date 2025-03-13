@@ -3846,7 +3846,7 @@ else version (Windows)
 
         this(return scope string path, return scope string prefix)
         {
-            _prefix = prefix;
+            _namePrefix = prefix;
             this(path);
         }
 
@@ -3857,7 +3857,7 @@ else version (Windows)
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
-            _prefix = prefix;
+            _namePrefix = prefix;
 
             fd.cFileName[$ - 1] = 0;
 
@@ -3873,7 +3873,7 @@ else version (Windows)
         @property string name() const pure nothrow return scope
         {
             import std.string : chompPrefix;
-            return _name.chompPrefix(_prefix);
+            return _name.chompPrefix(_namePrefix);
         }
 
         @property string nameWithPrefix() const pure nothrow return scope
@@ -3931,7 +3931,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
-        string _prefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -3965,7 +3965,7 @@ else version (Posix)
         {
             import std.path : buildPath;
 
-            _prefix = prefix;
+            _namePrefix = prefix;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;
@@ -4005,7 +4005,7 @@ else version (Posix)
         @property string name() const pure nothrow return scope
         {
             import std.string : chompPrefix;
-            return _name.chompPrefix(_prefix);
+            return _name.chompPrefix(_namePrefix);
         }
 
         @property string nameWithPrefix() const pure nothrow return scope
@@ -4143,7 +4143,7 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
-        string _prefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
