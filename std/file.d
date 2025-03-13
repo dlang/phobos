@@ -3687,6 +3687,12 @@ assert(de2.name == "/usr/share/include");
           +/
         @property string name() const return scope;
 
+        /++
+            Returns the path to the file represented by this `DirEntry`.
+
+            Unlike `name`, this property returns the internal name as-is,
+            potentially starting with an unexpected prefix.
+         +/
         @property string nameWithPrefix() const return scope;
 
         /++
@@ -3881,6 +3887,11 @@ else version (Windows)
             return _name;
         }
 
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
+        }
+
         @property bool isDir() const pure nothrow scope
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -4011,6 +4022,11 @@ else version (Posix)
         @property string nameWithPrefix() const pure nothrow return scope
         {
             return _name;
+        }
+
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() scope
@@ -4675,7 +4691,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+    string _namePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4733,7 +4749,6 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
-            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4750,7 +4765,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo, _namePrefix);
             return true;
         }
 
@@ -4795,8 +4810,6 @@ private struct DirIteratorImpl
 
         bool next() @trusted
         {
-            import std.string : chompPrefix;
-
             if (_stack.length == 0)
                 return false;
 
@@ -4806,7 +4819,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata, _namePrefix);
                     return true;
                 }
             }
@@ -4848,7 +4861,7 @@ private struct DirIteratorImpl
             pathname = pathname.absolutePath;
 
             const offset = pathnameAbs.length - pathnameRel.length;
-            _pathPrefix  = pathnameAbs[0 .. offset];
+            _namePrefix  = pathnameAbs[0 .. offset];
         }
 
         if (stepIn(pathname))
@@ -4857,7 +4870,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4887,7 +4900,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4901,7 +4914,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur.nameWithPrefix))
                     while (!empty && !next()){}
             }
             else
