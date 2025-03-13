@@ -3652,13 +3652,25 @@ version (StdDdoc)
         +/
         this(return scope string path);
 
+        /++
+            Constructs a `DirEntry` for the given file (or directory).
+
+            Params:
+                path = The file (or directory) to get a DirEntry for.
+                prefix = A prefix to chomp off the path when querying the name of the DirEntry.
+
+            Throws:
+                $(LREF FileException) if the file does not exist.
+        +/
+        this(return scope string path, return scope string prefix);
+
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
+            private this(string path, in WIN32_FIND_DATAW *fd, string prefix = null);
         }
         else version (Posix)
         {
-            private this(string path, core.sys.posix.dirent.dirent* fd);
+            private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null);
         }
 
         /++
@@ -3675,6 +3687,7 @@ assert(de2.name == "/usr/share/include");
           +/
         @property string name() const return scope;
 
+        @property string nameWithPrefix() const return scope;
 
         /++
             Returns whether the file represented by this `DirEntry` is a
@@ -3831,12 +3844,20 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        this(return scope string path, return scope string prefix)
+        {
+            _prefix = prefix;
+            this(path);
+        }
+
+        private this(string path, WIN32_FIND_DATAW *fd, string prefix = null) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
+
+            _prefix = prefix;
 
             fd.cFileName[$ - 1] = 0;
 
@@ -3850,6 +3871,12 @@ else version (Windows)
         }
 
         @property string name() const pure nothrow return scope
+        {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_prefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
         {
             return _name;
         }
@@ -3904,6 +3931,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _prefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -3933,9 +3961,11 @@ else version (Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
+        private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null) @safe
         {
             import std.path : buildPath;
+
+            _prefix = prefix;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;
@@ -3973,6 +4003,12 @@ else version (Posix)
         }
 
         @property string name() const pure nothrow return scope
+        {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_prefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
         {
             return _name;
         }
@@ -4107,6 +4143,7 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
+        string _prefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
