@@ -75,7 +75,7 @@ module std.algorithm.iteration;
 import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-import std.typecons : Flag, Yes, No;
+import std.typecons : Flag, Yes, No, Nullable;
 
 /++
 `cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
@@ -522,7 +522,11 @@ it separately:
 private struct MapResult(alias fun, Range)
 {
     alias R = Unqual!Range;
+    alias RE = ElementType!Range;
+    static auto _dummy = RE.init;
+    alias MRE = typeof(fun(_dummy));
     R _input;
+    Nullable!(Unqual!MRE) _frontCache;
 
     static if (isBidirectionalRange!R)
     {
@@ -542,6 +546,7 @@ private struct MapResult(alias fun, Range)
     this(R input)
     {
         _input = input;
+        _frontCache = Nullable!(Unqual!MRE).init;
     }
 
     static if (isInfinite!R)
@@ -561,12 +566,17 @@ private struct MapResult(alias fun, Range)
     {
         assert(!empty, "Attempting to popFront an empty map.");
         _input.popFront();
+        _frontCache.nullify();
     }
 
-    @property auto ref front()
+    @property MRE front()
     {
         assert(!empty, "Attempting to fetch the front of an empty map.");
-        return fun(_input.front);
+        if (_frontCache.isNull)
+        {
+            _frontCache = fun(_input.front);
+        }
+        return _frontCache.get;
     }
 
     static if (isRandomAccessRange!R)
