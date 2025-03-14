@@ -1013,14 +1013,50 @@ if (!(is(S : T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
     !isInfinite!S && isExactSomeString!T)
 {
-    static if (is(typeof(S.init.toString())) &&
-               is(typeof(S.init.toString()) == T))
+    static if (is(S == class))
     {
-        return value.toString();
+        if (value is null)
+        {
+        static if (is(T == string))
+            return "null";
+        else
+            return null;
+        }
     }
-    else static if (is(typeof(S.init.toString()) : T))
+
+    static if (!is(S == class) && __traits(getAliasThis, S).length > 0)
     {
-       return to!T(value.toString());
+        enum aliasName = __traits(getAliasThis, S)[0];
+
+        static if (is(typeof(__traits(getMember, S.init, aliasName)) == class) && 
+                   __traits(compiles, __traits(getMember, S.init, aliasName).toString()))
+        {
+            auto aliasedValue = __traits(getMember, value, aliasName);
+            if (aliasedValue !is null)
+                return to!T(aliasedValue.toString());
+        }
+    }
+
+    static if (is(typeof(S.init.toString())))
+    {
+        alias ToStringReturnType = typeof(S.init.toString());
+
+        static if (is(ToStringReturnType == T))
+        {
+            return value.toString();
+        }
+        static if (is(ToStringReturnType : T))
+        {
+            return to!T(value.toString());
+        }
+        else static if (is(ToStringReturnType == int))
+        {
+            return to!T(to!string(value.toString()));
+        }
+        else static if (is(ToStringReturnType == void))
+        {
+            return to!T("void");
+        }
     }
     else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
