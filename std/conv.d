@@ -1045,7 +1045,7 @@ if (!(is(S : T) &&
         {
             return value.toString();
         }
-        static if (is(ToStringReturnType : T))
+        else static if (is(ToStringReturnType : T))
         {
             return to!T(value.toString());
         }
