@@ -1028,7 +1028,7 @@ if (!(is(S : T) &&
     {
         enum aliasName = __traits(getAliasThis, S)[0];
 
-        static if (is(typeof(__traits(getMember, S.init, aliasName)) == class) && 
+        static if (is(typeof(__traits(getMember, S.init, aliasName)) == class) &&
                    __traits(compiles, __traits(getMember, S.init, aliasName).toString()))
         {
             auto aliasedValue = __traits(getMember, value, aliasName);
