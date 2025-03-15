@@ -4835,6 +4835,156 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(dtext(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"d);
 }
 
+// Ensure that ranges are being printed as expected.
+@safe unittest
+{
+    static struct Range
+    {
+        int counter = 0;
+
+    @safe pure nothrow @nogc:
+        bool empty() const => (counter <= 0);
+        int front() const => counter;
+        void popFront() { --counter; }
+    }
+
+    auto m = Range(2);
+    assert(text(m) == "[2, 1]");
+
+    const c = Range(3);
+    assert(text(c) == "const(Range)(3)");
+}
+
+// Ensure that a usage pattern seen in libraries like "unit-threaded" works.
+@safe unittest
+{
+    static final class Foo
+    {
+        override string toString() const @safe
+        {
+            return ":-)";
+        }
+    }
+
+    const c = new Foo();
+    assert(text(c) == ":-)");
+    assert(text(c, " ") == ":-) ");
+}
+
+// Ensure that classes are printed as expected.
+@system unittest
+{
+    import std.string : endsWith, startsWith;
+
+    static final class Bar {}
+
+    // CTFE:                                                         `Bar`
+    // Runtime:                         `std.conv.__unittest_L4875_C9.Bar`
+    static assert(text(     new       Bar ()     )  ==               "Bar"   );
+           assert(text(     new       Bar ()     ).endsWith  (      ".Bar"  ));
+    static assert(text("=", new       Bar (), ".")  ==              "=Bar."  );
+           assert(text("=", new       Bar (), ".").endsWith  (      ".Bar." ));
+    static assert(text(     new const(Bar)()     )  ==         "const(Bar)"  );
+           assert(text(     new const(Bar)()     ).startsWith( "const("     ));
+           assert(text(     new const(Bar)()     ).endsWith  (      ".Bar)" ));
+    static assert(text("=", new const(Bar)(), ".")  ==        "=const(Bar)." );
+           assert(text("=", new const(Bar)(), ".").startsWith("=const("     ));
+           assert(text("=", new const(Bar)(), ".").endsWith  (      ".Bar)."));
+}
+
+// Ensure that various types are printed as expected.
+@safe unittest
+{
+    import std.string : endsWith;
+
+    int dummy;
+
+    static struct Foo {}
+    struct Bar { int i() @safe => dummy; }
+
+    static struct Point
+    {
+        int x;
+        int y;
+    }
+
+    struct Range
+    {
+        bool empty()    =>              dummy > 9;
+        int  front()    =>              dummy;
+        void popFront() => cast(void) ++dummy;
+    }
+
+    assert(text(null         ) == "null"     );
+    assert(text(null, null   ) == "nullnull" );
+    assert(text(0, null, '\0') == "0null\x00");
+
+    assert(text('\r','\n','\t','\x00') == "\r\n\t\0");
+    assert(text("\r\n\t\0"           ) == "\r\n\t\0");
+
+    assert(text(       3141,     ) ==    "3141"  );
+    assert(text(": ",  3141, '\0') ==  ": 3141\0");
+    assert(text(      -3141,     ) ==   "-3141"  );
+    assert(text(": ", -3141, '\0') == ": -3141\0");
+
+    () @trusted
+    {
+        int* pointer = cast(int*) 3141;
+        assert(text(       pointer,     ) ==    "C45"  );
+        assert(text(": ",  pointer, '\0') ==  ": C45\0");
+    }();
+
+    assert(text(      3.1415923,      ) ==   "3.14159"  );
+    assert(text(": ", 3.1415923,  '\0') == ": 3.14159\0");
+    assert(text(      3.1415923f,     ) ==   "3.14159"  );
+    assert(text(": ", 3.1415923f, '\0') == ": 3.14159\0");
+
+    assert(text(       !3141,     ) ==   "false"  );
+    assert(text(": ",  !3141, '\0') == ": false\0");
+    assert(text(      !!3141,     ) ==   "true"   );
+    assert(text(": ", !!3141, '\0') == ": true\0" );
+
+    assert(text(             Foo(),      ) ==         "Foo()"  );
+    assert(text(": ",        Foo(),  '\0') ==       ": Foo()\0");
+    assert(text(      const(Foo)(),     ) ==   "const(Foo)()"  );
+    assert(text(": ", const(Foo)(), '\0') == ": const(Foo)()\0");
+
+    assert(text(             Bar(),      ) ==         "Bar()"  );
+    assert(text(": ",        Bar(),  '\0') ==       ": Bar()\0");
+    assert(text(      const(Bar)(),     ) ==   "const(Bar)()"  );
+    assert(text(": ", const(Bar)(), '\0') == ": const(Bar)()\0");
+
+    assert(text(                 Point(3, 141),     ) ==              "Point(3, 141)"  );
+    assert(text(": ",            Point(3, 141), '\0') ==            ": Point(3, 141)\0");
+    assert(text(          const(Point)(3, 141),     ) ==       "const(Point)(3, 141)"  );
+    assert(text(": ",     const(Point)(3, 141), '\0') ==     ": const(Point)(3, 141)\0");
+    assert(text(         shared(Point)(3, 141),     ) ==      "shared(Point)(3, 141)"  );
+    assert(text(": ",    shared(Point)(3, 141), '\0') ==    ": shared(Point)(3, 141)\0");
+    assert(text(      immutable(Point)(3, 141),     ) ==   "immutable(Point)(3, 141)"  );
+    assert(text(": ", immutable(Point)(3, 141), '\0') == ": immutable(Point)(3, 141)\0");
+
+    dummy = 0;
+    assert(text(            Range(),      ) ==   "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]"  );
+    dummy = 0;
+    assert(text(": ",       Range(),  '\0') == ": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\0");
+    assert(text(      const(Range)(),     ) ==   "const(Range)()"                  );
+    assert(text(": ", const(Range)(), '\0') == ": const(Range)()\0"                );
+
+    void function() @safe fn1;
+    void delegate() @safe dg1;
+    assert(text(fn1) == "null");
+    assert(text(dg1) == "void delegate() @safe");
+
+    bool function(bool, int) @safe    fn2;
+    bool delegate(bool, int) @safe    dg2;
+    bool delegate(bool, int) @system  dg3;
+    bool delegate(bool, int) @trusted dg4;
+    assert(text(fn2) == "null");
+    assert(text(dg2) == "bool delegate(bool, int) @safe");
+    assert(text(dg3) == "bool delegate(bool, int) @system");
+    assert(text(dg4) == "bool delegate(bool, int) @trusted");
+}
+
 private S textImpl(S, U...)(U args)
 {
     static if (U.length == 0)
