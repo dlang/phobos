@@ -4792,21 +4792,34 @@ package template WideElementType(T)
         alias WideElementType = E;
 }
 
+private enum hasInputRanges(T...) = anySatisfy!(isInputRange, T);
 
 /***************************************************************
  * Convenience functions for converting one or more arguments
  * of any type into _text (the three character widths).
  */
-string text(T...)(T args)
-if (T.length > 0) { return textImpl!string(args); }
+string text(T...)(const(T) args)
+if (T.length > 0 && hasInputRanges!T) { return textImpl!string(args); }
+
+/// ditto
+string text(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!string(args); }
 
 ///ditto
-wstring wtext(T...)(T args)
-if (T.length > 0) { return textImpl!wstring(args); }
+wstring wtext(T...)(const(T) args)
+if (T.length > 0 && hasInputRanges!T) { return textImpl!wstring(args); }
 
 ///ditto
-dstring dtext(T...)(T args)
-if (T.length > 0) { return textImpl!dstring(args); }
+wstring wtext(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!wstring(args); }
+
+///ditto
+dstring dtext(T...)(const(T) args)
+if (T.length > 0 && hasInputRanges!T) { return textImpl!dstring(args); }
+
+///ditto
+dstring dtext(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!dstring(args); }
 
 ///
 @safe unittest
@@ -4835,7 +4848,92 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(dtext(cs, ' ', ws, " ", ds) == "今日は 여보세요 Здравствуйте"d);
 }
 
-private S textImpl(S, U...)(U args)
+// ensure that ranges are still printed properly
+@safe unittest
+{
+    static struct Range
+    {
+        int counter = 0;
+
+    @safe pure nothrow @nogc:
+        bool empty() const => (counter <= 0);
+        int front() const => counter;
+        void popFront() { --counter; }
+    }
+
+    auto m = Range(2);
+    assert(text(m) == "[2, 1]");
+
+    //const c = Range(3);
+    //assert(text(c) == "const(Range)(3)");
+}
+
+// ensure that a usage pattern seen in libraries like "unit-threaded" keeps working
+@safe unittest
+{
+    static final class Foo
+    {
+        override string toString() const @safe
+        {
+            return ":-)";
+        }
+    }
+
+    const c = new Foo();
+    assert(text(c) == ":-)");
+    assert(text(c, " ") == ":-) ");
+}
+
+private S textImpl(S, U...)(const(U) args)
+if (hasInputRanges!U)
+{
+    static if (U.length == 0)
+    {
+        version (none)
+            return null;
+        else
+            static assert(false, "How can zero-length `U` have InputRanges?");
+    }
+    else static if (U.length == 1)
+    {
+        return to!S(args[0]);
+    }
+    else
+    {
+        import std.array : appender;
+        import std.traits : isSomeChar, isSomeString;
+
+        auto app = appender!S();
+
+        // assume that on average, parameters will have less
+        // than 20 elements
+        app.reserve(U.length * 20);
+        // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+        static foreach (arg; args)
+        {
+            static if (
+                isSomeChar!(typeof(arg))
+                || isSomeString!(typeof(arg))
+                || ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
+            )
+                app.put(arg);
+            else static if (
+
+                is(immutable typeof(arg) == immutable uint) || is(immutable typeof(arg) == immutable ulong) ||
+                is(immutable typeof(arg) == immutable int) || is(immutable typeof(arg) == immutable long)
+            )
+                // https://issues.dlang.org/show_bug.cgi?id=17712#c15
+                app.put(textImpl!(S)(arg));
+            else
+                app.put(to!S(arg));
+        }
+
+        return app.data;
+    }
+}
+
+private S textImpl(S, U...)(const U args)
+if (!hasInputRanges!U)
 {
     static if (U.length == 0)
     {
@@ -4878,7 +4976,6 @@ private S textImpl(S, U...)(U args)
         return app.data;
     }
 }
-
 
 /***************************************************************
 The `octal` facility provides a means to declare a number in base 8.
