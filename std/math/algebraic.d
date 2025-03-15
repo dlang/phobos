@@ -273,7 +273,7 @@ real cbrt(real x) @trusted pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.math.operations : feqrel;
 
