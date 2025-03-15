@@ -4881,6 +4881,7 @@ if (T.length > 0 && !hasInputRanges!T) { return textImpl!dstring(args); }
 
     const c = new Foo();
     assert(text(c) == ":-)");
+    assert(text(c, " ") == ":-) ");
 }
 
 private S textImpl(S, U...)(const(U) args)
