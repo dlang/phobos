@@ -256,7 +256,7 @@ real sqrt(real x) @nogc @safe pure nothrow { return core.math.sqrt(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow @nogc
+real cbrt(real x) @trusted pure nothrow @nogc
 {
     version (CRuntime_Microsoft)
     {
@@ -273,7 +273,7 @@ real cbrt(real x) @trusted nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.math.operations : feqrel;
 
