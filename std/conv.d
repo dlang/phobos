@@ -4792,21 +4792,34 @@ package template WideElementType(T)
         alias WideElementType = E;
 }
 
+private enum hasInputRanges(T...) = anySatisfy!(isInputRange, T);
 
 /***************************************************************
  * Convenience functions for converting one or more arguments
  * of any type into _text (the three character widths).
  */
 string text(T...)(const(T) args)
-if (T.length > 0) { return textImpl!string(args); }
+if (T.length > 0 && hasInputRanges!T) { return textImpl!string(args); }
+
+/// ditto
+string text(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!string(args); }
 
 ///ditto
 wstring wtext(T...)(const(T) args)
-if (T.length > 0) { return textImpl!wstring(args); }
+if (T.length > 0 && hasInputRanges!T) { return textImpl!wstring(args); }
+
+///ditto
+wstring wtext(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!wstring(args); }
 
 ///ditto
 dstring dtext(T...)(const(T) args)
-if (T.length > 0) { return textImpl!dstring(args); }
+if (T.length > 0 && hasInputRanges!T) { return textImpl!dstring(args); }
+
+///ditto
+dstring dtext(T...)(const T args)
+if (T.length > 0 && !hasInputRanges!T) { return textImpl!dstring(args); }
 
 ///
 @safe unittest
@@ -4871,6 +4884,55 @@ if (T.length > 0) { return textImpl!dstring(args); }
 }
 
 private S textImpl(S, U...)(const(U) args)
+if (hasInputRanges!U)
+{
+    static if (U.length == 0)
+    {
+        version (none)
+            return null;
+        else
+            static assert(false, "How can zero-length `U` have InputRanges?");
+    }
+    else static if (U.length == 1)
+    {
+        return to!S(args[0]);
+    }
+    else
+    {
+        import std.array : appender;
+        import std.traits : isSomeChar, isSomeString;
+
+        auto app = appender!S();
+
+        // assume that on average, parameters will have less
+        // than 20 elements
+        app.reserve(U.length * 20);
+        // Must be static foreach because of https://issues.dlang.org/show_bug.cgi?id=21209
+        static foreach (arg; args)
+        {
+            static if (
+                isSomeChar!(typeof(arg))
+                || isSomeString!(typeof(arg))
+                || ( isInputRange!(typeof(arg)) && isSomeChar!(ElementType!(typeof(arg))) )
+            )
+                app.put(arg);
+            else static if (
+
+                is(immutable typeof(arg) == immutable uint) || is(immutable typeof(arg) == immutable ulong) ||
+                is(immutable typeof(arg) == immutable int) || is(immutable typeof(arg) == immutable long)
+            )
+                // https://issues.dlang.org/show_bug.cgi?id=17712#c15
+                app.put(textImpl!(S)(arg));
+            else
+                app.put(to!S(arg));
+        }
+
+        return app.data;
+    }
+}
+
+private S textImpl(S, U...)(const U args)
+if (!hasInputRanges!U)
 {
     static if (U.length == 0)
     {
@@ -4913,7 +4975,6 @@ private S textImpl(S, U...)(const(U) args)
         return app.data;
     }
 }
-
 
 /***************************************************************
 The `octal` facility provides a means to declare a number in base 8.
