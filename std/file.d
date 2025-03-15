@@ -4804,17 +4804,17 @@ private struct DirIteratorImpl
         _mode = mode;
         _followSymlink = followSymlink;
 
-        string pathnameStr;
-        if (pathname.isAbsolute)
-            pathnameStr = pathname;
-        else
+        if (!pathname.isAbsolute)
         {
-            pathnameStr = pathname.absolutePath;
-            const offset = (pathnameStr.length - pathname.length);
-            _pathPrefix = pathnameStr[0 .. offset];
+            const pathnameRel = pathname;
+            alias pathnameAbs = pathname;
+            pathname = pathname.absolutePath;
+
+            const offset = pathnameAbs.length - pathnameRel.length;
+            _pathPrefix  = pathnameAbs[0 .. offset];
         }
 
-        if (stepIn(pathnameStr))
+        if (stepIn(pathname))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
