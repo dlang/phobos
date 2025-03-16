@@ -757,6 +757,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     import std.math.algebraic : hypot;
     import std.math.traits : isInfinity, isNaN;
     import std.math : fabs;
+    import std.math.algebraic : sqrt;
     
     // Handle special cases
     if (z.re == 0 && z.im == 0)
@@ -796,12 +797,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         return absIm * sqrt(1 + q * q);
     }
 }
-private T sqrt(T)(T x) @safe pure nothrow @nogc
-{
-    import core.math : sqrt;
-    return sqrt(x);
-}
-
 ///
 @safe pure nothrow unittest
 {
