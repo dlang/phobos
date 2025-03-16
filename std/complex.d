@@ -755,9 +755,141 @@ if (is(T R == Complex!R))
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     import std.math.algebraic : hypot;
-    return hypot(z.re, z.im);
+    import std.math.traits : isInfinity, isNaN;
+    import std.math : fabs;
+    
+    // Handle special cases
+    if (z.re == 0 && z.im == 0)
+        return 0;
+    if (isNaN(z.re) || isNaN(z.im))
+        return T.nan;
+    if (isInfinity(z.re) || isInfinity(z.im))
+        return T.infinity;
+    
+    // For complex numbers with only real component
+    // Return the absolute value directly for perfect accuracy
+    if (z.im == 0)
+        return fabs(z.re);
+    // For complex numbers with only imaginary component
+    if (z.re == 0)
+        return fabs(z.im);
+        
+    // For very small values where both components are present
+    if (fabs(z.re) < T.min_normal && fabs(z.im) < T.min_normal)
+    {
+        import std.algorithm.comparison : max;
+        return max(fabs(z.re), fabs(z.im));
+    }
+
+    // Use a direct calculation that avoids intermediate overflow/underflow
+    T absRe = fabs(z.re);
+    T absIm = fabs(z.im);
+    
+    if (absRe > absIm)
+    {
+        T q = absIm / absRe;
+        return absRe * sqrt(1 + q * q);
+    }
+    else
+    {
+        T q = absRe / absIm;
+        return absIm * sqrt(1 + q * q);
+    }
+}
+private T sqrt(T)(T x) @safe pure nothrow @nogc
+{
+    import core.math : sqrt;
+    return sqrt(x);
 }
 
+///
+@safe pure nothrow unittest
+{
+    import std.meta : AliasSeq;
+    import std.math.operations : isClose;
+    import std.math.traits : isNaN;
+    import std.math : fabs;
+    
+    // Test the specific problematic case
+    {
+        auto x = Complex!float(-5.016556e-20, 0);
+        assert(x.abs == 5.016556e-20f);
+        
+        // Test with slightly different values to ensure robustness
+        auto x1 = Complex!float(-5.016556e-20f, 0);
+        assert(x1.abs == 5.016556e-20f);
+        
+        auto x2 = Complex!float(5.016556e-20f, 0);
+        assert(x2.abs == 5.016556e-20f);
+    }
+    
+    // Basic test cases
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        // Zero
+        assert(Complex!T(0, 0).abs == 0);
+        
+        // Pure real
+        assert(Complex!T(1, 0).abs == 1);
+        assert(Complex!T(-1, 0).abs == 1);
+        
+        // Pure imaginary
+        assert(Complex!T(0, 1).abs == 1);
+        assert(Complex!T(0, -1).abs == 1);
+        
+        // Equal real and imaginary
+        assert(isClose(Complex!T(1, 1).abs, sqrt(cast(T)2)));
+        assert(isClose(Complex!T(-1, -1).abs, sqrt(cast(T)2)));
+        
+        // Standard case
+        assert(Complex!T(3, 4).abs == 5);
+        assert(Complex!T(-3, 4).abs == 5);
+        assert(Complex!T(3, -4).abs == 5);
+        assert(Complex!T(-3, -4).abs == 5);
+    }}
+    
+    // Test very small values
+    {
+        // Various small values
+        auto y1 = Complex!double(1.0e-200, 0);
+        assert(y1.abs == 1.0e-200);
+        
+        auto y2 = Complex!double(0, 1.0e-200);
+        assert(y2.abs == 1.0e-200);
+        
+        auto y3 = Complex!double(1.0e-200, 1.0e-200);
+        assert(isClose(y3.abs, 1.0e-200 * sqrt(2.0)));
+        
+        // Different magnitudes
+        auto y4 = Complex!double(1.0e-300, 1.0e-310);
+        assert(isClose(y4.abs, 1.0e-300));
+        
+        auto y5 = Complex!double(1.0e-310, 1.0e-300);
+        assert(isClose(y5.abs, 1.0e-300));
+    }
+    
+    // Test special values
+    {
+        // NaN
+        assert(isNaN(Complex!double(double.nan, 0).abs));
+        assert(isNaN(Complex!double(0, double.nan).abs));
+        assert(isNaN(Complex!double(double.nan, double.nan).abs));
+        
+        // Infinity
+        assert(Complex!double(double.infinity, 0).abs == double.infinity);
+        assert(Complex!double(0, double.infinity).abs == double.infinity);
+        assert(Complex!double(double.infinity, double.infinity).abs == double.infinity);
+        assert(Complex!double(double.infinity, double.nan).abs == double.infinity);
+        assert(Complex!double(double.nan, double.infinity).abs == double.infinity);
+    }
+    
+    // Verify consistency with conjugate
+    {
+        auto c1 = Complex!double(2.5, 3.7);
+        auto c2 = Complex!double(2.5, -3.7);
+        assert(c1.abs == c2.abs);
+    }
+}
 ///
 @safe pure nothrow unittest
 {
