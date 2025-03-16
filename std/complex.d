@@ -746,8 +746,6 @@ if (is(T R == Complex!R))
     auto z2 = addI(one);
     assert(z1 == z2);
 }
-
-
 /**
    Params: z = A complex number.
    Returns: The absolute value (or modulus) of `z`.
@@ -758,30 +756,23 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     import std.math.traits : isInfinity, isNaN;
     import std.math : fabs;
     static import std.math.algebraic;
-    // Handle special cases
     if (z.re == 0 && z.im == 0)
         return 0;
     if (isNaN(z.re) || isNaN(z.im))
         return T.nan;
     if (isInfinity(z.re) || isInfinity(z.im))
         return T.infinity;
-    // For complex numbers with only real component
-    // Return the absolute value directly for perfect accuracy
     if (z.im == 0)
         return fabs(z.re);
-    // For complex numbers with only imaginary component
     if (z.re == 0)
         return fabs(z.im);
-    // For very small values where both components are present
     if (fabs(z.re) < T.min_normal && fabs(z.im) < T.min_normal)
     {
         import std.algorithm.comparison : max;
         return max(fabs(z.re), fabs(z.im));
     }
-    // Use a direct calculation that avoids intermediate overflow/underflow
     T absRe = fabs(z.re);
     T absIm = fabs(z.im);
-    
     if (absRe > absIm)
     {
         T q = absIm / absRe;
@@ -793,25 +784,21 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         return absIm * std.math.algebraic.sqrt(1 + q * q);
     }
 }
-///
 @safe pure nothrow unittest
 {
     import std.meta : AliasSeq;
     import std.math.operations : isClose;
     import std.math.traits : isNaN;
     import std.math : fabs;
-    // Test the specific problematic case
     {
         auto x = Complex!float(-5.016556e-20, 0);
         assert(x.abs == 5.016556e-20f);
-        // Test with slightly different values to ensure robustness
         auto x1 = Complex!float(-5.016556e-20f, 0);
         assert(x1.abs == 5.016556e-20f);
-         auto x2 = Complex!float(5.016556e-20f, 0);
+        auto x2 = Complex!float(5.016556e-20f, 0);
         assert(x2.abs == 5.016556e-20f);
-    }  
+    }
 }
-///
 @safe pure nothrow unittest
 {
     static import core.math;
@@ -819,7 +806,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(0.0, 1.0)) == 1.0);
     assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
 }
-
 @safe pure nothrow @nogc unittest
 {
     static import core.math;
@@ -827,7 +813,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(0.0L, 71.6L)) == 71.6L);
     assert(abs(complex(-1.0L, 1.0L)) == core.math.sqrt(2.0L));
 }
-
 @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
