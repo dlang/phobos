@@ -3167,14 +3167,8 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
             msg = "Floating point conversion error";
         return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
-
     enforce(!p.empty, bailOut());
-
-    static if (doCount)
-        size_t count = 0;
-    else
-        size_t count = 0; // Still needed for algorithm logic but will be optimized out
-
+    size_t count = 0; 
     bool sign = false;
     switch (p.front)
     {
@@ -4416,9 +4410,9 @@ if (isStaticArray!Target && !is(Target == enum) &&
     }
 
 Lmanyerr:
-    throw new ConvException("Too many elements in input for static array");
+    throw parseError(text("Too many elements in input, ", result.length, " elements expected."));
 Lfewerr:
-    throw new ConvException("Too few elements in input for static array");
+    throw parseError(text("Too few elements in input, ", result.length, " elements expected."));
 }
 
 @safe pure unittest
@@ -4465,9 +4459,8 @@ Lfewerr:
  *     $(LI A `tuple` containing an associative array of type `Target` and a `size_t`
  *     if `doCount` is set to `Yes.doCount`))
  */
-auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(
-    ref Source s, dchar lbracket = '[', dchar rbracket = ']',
-    dchar keyval = ':', dchar comma = ',')
+auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s, dchar lbracket = '[',
+                             dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
 if (isAssociativeArray!Target && !is(Target == enum) &&
     isSomeString!Source && !is(Source == enum))
 {
@@ -4890,13 +4883,13 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     size_t count;
     static if (doCount)
-        count = 1; // Only initialize count when needed
+        count = 1; 
 
     if (s.empty)
         throw convError!(Source, Target)(s);
 
     static if (doCount)
-        count++; // Only increment when doCount is true
+        count++; 
 
     if (s.front != '\\')
     {
@@ -4915,7 +4908,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     static if (doCount)
     {
-        count++; // Only increment when doCount is true
+        count++;
         return tuple!("data", "count")(c, count);
     }
     else
