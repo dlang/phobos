@@ -1184,68 +1184,74 @@ public:
 }
 
 
-   @trusted private void prime()
-    {
-        if (_empty)
-            return;
-        _input.row++;
-        static if (is(Contents == struct) || is(Contents == class))
-        {
-            recordRange = typeof(recordRange)
-                                 (_input, _separator, _quote, null,
-                                  _allowInconsistentDelimiterCount);
-        }
-        else
-        {
-            recordRange = typeof(recordRange)
-                                 (_input, _separator, _quote, indices,
-                                  _allowInconsistentDelimiterCount);
-        }
-        if (recordRange.empty)
-        {
-            popFront();
-            return;
-        }
-
-        static if (is(Contents T : T[U], U : string))
-        {
-            T[U] aa;
-            try
-            {
-                for (; !recordRange.empty; recordRange.popFront())
-                {
-                    const i = _input.col - 1;
-                    if (i >= header.length)
-                        throw new CSVException("row contains more values than header", _input.row, _input.col);
-                    aa[header[i]] = recordRange.front;
-                }
-            }
-            catch (ConvException e)
-            {
-                throw new CSVException(e.msg, _input.row, _input.col, e);
-            }
-
-            recordContent = aa;
-        }
-        else static if (is(Contents == struct) || is(Contents == class))
+ @trusted private void prime()
 {
-    static if (is(Contents == class))
-        recordContent = new typeof(recordContent)();
-    else
-        recordContent = typeof(recordContent).init;
-    size_t colIndex;
-    try
+    if (_empty)
+        return;
+    _input.row++;
+    static if (is(Contents == struct) || is(Contents == class))
     {
-        for (; !recordRange.empty;)
+        recordRange = typeof(recordRange)
+                             (_input, _separator, _quote, null,
+                              _allowInconsistentDelimiterCount);
+    }
+    else
+    {
+        recordRange = typeof(recordRange)
+                             (_input, _separator, _quote, indices,
+                              _allowInconsistentDelimiterCount);
+    }
+    if (recordRange.empty)
+    {
+        popFront();
+        return;
+    }
+
+    static if (is(Contents T : T[U], U : string))
+    {
+        T[U] aa;
+        try
         {
-            auto colData = recordRange.front;
-            scope(exit) colIndex++;
+            for (; !recordRange.empty; recordRange.popFront())
+            {
+                const i = _input.col - 1;
+                if (i >= header.length)
+                    throw new CSVException("row contains more values than header", _input.row, _input.col);
+                aa[header[i]] = recordRange.front;
+            }
+        }
+        catch (ConvException e)
+        {
+            throw new CSVException(e.msg, _input.row, _input.col, e);
+        }
+
+        recordContent = aa;
+    }
+    else static if (is(Contents == struct) || is(Contents == class))
+    {
+        static if (is(Contents == class))
+            recordContent = new typeof(recordContent)();
+        else
+            recordContent = typeof(recordContent).init;
+        size_t colIndex;
+        try
+        {
+            // Store all available values in a temporary array
+            string[] values;
+            for (; !recordRange.empty; recordRange.popFront())
+            {
+                values ~= recordRange.front;
+            }
+            
+            // Process values based on available data
             if (indices.length > 0)
             {
                 foreach (ti, ToType; Fields!(Contents))
                 {
-                    if (indices[ti] == colIndex)
+                    size_t idx = indices[ti];
+                    if (idx < values.length)  // Check if we have this value
                     {
+                        auto colData = values[idx];
                         // Only attempt conversion if the field is not empty
                         if (colData.length > 0 || isSomeString!ToType)
                         {
@@ -1254,14 +1260,16 @@ public:
                         }
                         // Otherwise leave the field with its default value
                     }
+                    // If we don't have this value, leave it as default
                 }
             }
             else
             {
                 foreach (ti, ToType; Fields!(Contents))
                 {
-                    if (ti == colIndex)
+                    if (ti < values.length)  // Check if we have this value
                     {
+                        auto colData = values[ti];
                         // Only attempt conversion if the field is not empty
                         if (colData.length > 0 || isSomeString!ToType)
                         {
@@ -1270,17 +1278,16 @@ public:
                         }
                         // Otherwise leave the field with its default value
                     }
+                    // If we don't have this value, leave it as default
                 }
             }
-            recordRange.popFront();
+        }
+        catch (ConvException e)
+        {
+            throw new CSVException(e.msg, _input.row, colIndex, e);
         }
     }
-    catch (ConvException e)
-    {
-        throw new CSVException(e.msg, _input.row, colIndex, e);
-    }
 }
-    }
 }
 
 @safe pure unittest
