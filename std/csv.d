@@ -503,7 +503,7 @@ all overloads of the `csvReader` function as shown below.
     import std.algorithm.comparison : equal;
 
     string text = "76,26,22\n1,2\n3,4,5,6";
-    auto records = text.csvReader!int(',', '"', true);
+    auto records = csvReader!(int, Malformed.ignore)(text, ',', '"', true);
 
     assert(records.equal!equal([
         [76, 26, 22],
