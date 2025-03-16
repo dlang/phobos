@@ -758,7 +758,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     import std.math.traits : isInfinity, isNaN;
     import std.math : fabs;
     static import std.math.algebraic;
-    
     // Handle special cases
     if (z.re == 0 && z.im == 0)
         return 0;
@@ -766,7 +765,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         return T.nan;
     if (isInfinity(z.re) || isInfinity(z.im))
         return T.infinity;
-    
     // For complex numbers with only real component
     // Return the absolute value directly for perfect accuracy
     if (z.im == 0)
@@ -774,14 +772,12 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     // For complex numbers with only imaginary component
     if (z.re == 0)
         return fabs(z.im);
-        
     // For very small values where both components are present
     if (fabs(z.re) < T.min_normal && fabs(z.im) < T.min_normal)
     {
         import std.algorithm.comparison : max;
         return max(fabs(z.re), fabs(z.im));
     }
-
     // Use a direct calculation that avoids intermediate overflow/underflow
     T absRe = fabs(z.re);
     T absIm = fabs(z.im);
@@ -804,21 +800,16 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     import std.math.operations : isClose;
     import std.math.traits : isNaN;
     import std.math : fabs;
-    
     // Test the specific problematic case
     {
         auto x = Complex!float(-5.016556e-20, 0);
         assert(x.abs == 5.016556e-20f);
-        
         // Test with slightly different values to ensure robustness
         auto x1 = Complex!float(-5.016556e-20f, 0);
         assert(x1.abs == 5.016556e-20f);
-        
-        auto x2 = Complex!float(5.016556e-20f, 0);
+         auto x2 = Complex!float(5.016556e-20f, 0);
         assert(x2.abs == 5.016556e-20f);
-    }
-    
-    
+    }  
 }
 ///
 @safe pure nothrow unittest
