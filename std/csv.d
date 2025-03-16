@@ -149,11 +149,15 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() @safe pure const
-    {
-        return "(Row: " ~ to!string(row) ~
-              ", Col: " ~ to!string(col) ~ ") " ~ msg;
-    }
+   override string toString() @safe pure const
+{
+    import std.format : format;
+    
+    if (row == 0 && col == 0)
+        return msg; // Just return the message if row and col are not set
+    else
+        return format("(Row: %s, Col: %s) %s", row, col, msg);
+}
 }
 
 ///
