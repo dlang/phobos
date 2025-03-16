@@ -3147,7 +3147,6 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
     {
         alias p = source;
     }
-
     void advanceSource()
     {
         static if (isNarrowString!Source)
@@ -3167,7 +3166,7 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
         return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
     enforce(!p.empty, bailOut());
-    size_t count = 0; 
+    size_t count = 0;
     bool sign = false;
     switch (p.front)
     {
@@ -4885,9 +4884,8 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         count = 1;
     if (s.empty)
         throw convError!(Source, Target)(s);
-
     static if (doCount)
-        count++; 
+        count++;
     if (s.front != '\\')
     {
         c = s.front;
