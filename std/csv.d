@@ -1132,7 +1132,7 @@ public:
      *       closed before data was empty, a conversion failed, or when the
      *       row's length does not match the previous length.
      */
-    void popFront()
+   @trusted void popFront()
 {
     while (!recordRange.empty)
     {
@@ -1184,7 +1184,7 @@ public:
 }
 
 
-    private void prime()
+   @trusted private void prime()
     {
         if (_empty)
             return;
@@ -1533,10 +1533,11 @@ public:
         }
     }
 }
-@safe pure unittest
+@safe  @trusted  pure unittest
 {
     // Test Case: Handling empty rows
     string csvData = "foo\n1\n\n";
+    
     auto records = csvReader(csvData).array;
     
     assert(records.length == 2); 
