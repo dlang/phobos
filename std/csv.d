@@ -1078,6 +1078,7 @@ public:
 
         popFront();
     }
+}
 
     /**
      * Part of an input range as defined by
@@ -1130,7 +1131,7 @@ public:
      *       closed before data was empty, a conversion failed, or when the
      *       row's length does not match the previous length.
      */
-    // In the CsvReader.popFront() method (around line 1365-1401)
+
     void popFront()
     {
         while (!recordRange.empty)
@@ -1172,6 +1173,7 @@ public:
 
         prime();
     }
+
     private void prime()
     {
         if (_empty)
@@ -1257,11 +1259,11 @@ public:
 
 @safe pure unittest
 {
-    import std.array; // Import std.array here for appender and array
+    import std.array; 
     import std.algorithm.comparison : equal;
 
     string str = "foo,bar\n1,2\n";
-    auto records = csvReader(str).array; // Uses std.array.array
+    auto records = csvReader(str).array; 
 
     assert(records.length == 2);
     assert(records[0].equal(["foo", "bar"]));
@@ -1270,7 +1272,7 @@ public:
 
 @safe pure unittest
 {
-    import std.array; // Import std.array here for appender
+    import std.array; 
 
     string str = "\"one\nnew line";
 
@@ -1290,8 +1292,7 @@ public:
 
 @safe pure unittest
 {
-    import std.array; // Import std.array here for appender
-
+    import std.array;
     string str = "one, two \"quoted\" end";
 
     auto a = appender!(dchar[])();
@@ -1302,6 +1303,7 @@ public:
     csvNextToken!(string, Malformed.ignore)(str, a, ',', '"');
     assert(a.data == " two \"quoted\" end");
 }
+
 
 @safe pure unittest
 {
