@@ -3160,7 +3160,6 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
     static immutable real[13] postab =
         [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
                 1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
-
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (msg == null)
@@ -4883,14 +4882,12 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     size_t count;
     static if (doCount)
-        count = 1; 
-
+        count = 1;
     if (s.empty)
         throw convError!(Source, Target)(s);
 
     static if (doCount)
         count++; 
-
     if (s.front != '\\')
     {
         c = s.front;
