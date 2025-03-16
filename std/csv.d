@@ -107,6 +107,8 @@ import std.conv;
 import std.exception : basicExceptionCtors;
 import std.range.primitives;
 import std.traits;
+import std.format; 
+import std.array;
 
 /**
  * Exception containing the row and column for when an exception was thrown.
@@ -1151,6 +1153,7 @@ public:
             else
             {
                 throw new CSVException(
+                    
                     format("Row %d's length %d does not match previous length of %d.", 
                            _input.row, _input.col, _input.rowLength));
             }
