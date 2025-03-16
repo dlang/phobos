@@ -1130,6 +1130,7 @@ public:
      *       closed before data was empty, a conversion failed, or when the
      *       row's length does not match the previous length.
      */
+    // In the CsvReader.popFront() method (around line 1365-1401)
     void popFront()
     {
         while (!recordRange.empty)
@@ -1155,6 +1156,14 @@ public:
                 _input.range.popFront();
         }
 
+        // Add this check to handle trailing newlines
+        if (_input.range.empty || 
+            (_input.range.front == '\n' || _input.range.front == '\r'))
+        {
+            _empty = true;
+            return;
+        }
+
         if (_input.range.empty)
         {
             _empty = true;
@@ -1163,7 +1172,6 @@ public:
 
         prime();
     }
-
     private void prime()
     {
         if (_empty)
@@ -1172,14 +1180,14 @@ public:
         static if (is(Contents == struct) || is(Contents == class))
         {
             recordRange = typeof(recordRange)
-                                 (_input, _separator, _quote, null,
-                                  _allowInconsistentDelimiterCount);
+                                (_input, _separator, _quote, null,
+                                _allowInconsistentDelimiterCount);
         }
         else
         {
             recordRange = typeof(recordRange)
-                                 (_input, _separator, _quote, indices,
-                                  _allowInconsistentDelimiterCount);
+                                (_input, _separator, _quote, indices,
+                                _allowInconsistentDelimiterCount);
         }
 
         static if (is(Contents T : T[U], U : string))
@@ -1246,6 +1254,53 @@ public:
             }
         }
     }
+
+@safe pure unittest
+{
+    import std.array; // Import std.array here for appender and array
+    import std.algorithm.comparison : equal;
+
+    string str = "foo,bar\n1,2\n";
+    auto records = csvReader(str).array; // Uses std.array.array
+
+    assert(records.length == 2);
+    assert(records[0].equal(["foo", "bar"]));
+    assert(records[1].equal(["1", "2"]));
+}
+
+@safe pure unittest
+{
+    import std.array; // Import std.array here for appender
+
+    string str = "\"one\nnew line";
+
+    typeof(appender!(dchar[])()) a;
+    try
+    {
+        a = appender!(dchar[])();
+        csvNextToken(str, a, ',', '"');
+        assert(0);
+    }
+    catch (IncompleteCellException ice)
+    {
+        assert(a.data == "one\nnew line");
+        assert(str == "");
+    }
+}
+
+@safe pure unittest
+{
+    import std.array; // Import std.array here for appender
+
+    string str = "one, two \"quoted\" end";
+
+    auto a = appender!(dchar[])();
+    csvNextToken!(string, Malformed.ignore)(str, a, ',', '"');
+    assert(a.data == "one");
+    str.popFront();
+    a.shrinkTo(0);
+    csvNextToken!(string, Malformed.ignore)(str, a, ',', '"');
+    assert(a.data == " two \"quoted\" end");
 }
 
 @safe pure unittest
