@@ -1533,7 +1533,7 @@ public:
         }
     }
 }
-@safe  @trusted  pure unittest
+@safe  pure unittest
 {
     // Test Case: Handling empty rows
     string csvData = "foo\n1\n\n";
