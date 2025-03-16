@@ -1116,7 +1116,7 @@ public:
      * Part of an input range as defined by
      * $(REF isInputRange, std,range,primitives).
      */
-    @property bool empty() @safe @nogc pure nothrow const
+    @property bool empty() @safe @nogc pure nothrow 
     {
         return _empty;
     }
