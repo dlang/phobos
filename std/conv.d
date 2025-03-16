@@ -4465,102 +4465,86 @@ Lfewerr:
  *     $(LI A `tuple` containing an associative array of type `Target` and a `size_t`
  *     if `doCount` is set to `Yes.doCount`))
  */
-auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(ref Source s, dchar lbracket = '[',
-                             dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-if (isAssociativeArray!Target && !is(Target == enum) &&
+auto parse(Target, Source, Flag!"doCount" doCount = No.doCount)(
+    ref Source s, dchar lbracket = '[', dchar rbracket = ']', 
+    dchar keyval = ':', dchar comma = ',')
+if (isAssociativeArray!Target && !is(Target == enum) && 
     isSomeString!Source && !is(Source == enum))
 {
     alias KeyType = typeof(Target.init.keys[0]);
     alias ValType = typeof(Target.init.values[0]);
 
     Target result;
-    size_t count;
+    static if (doCount) size_t count;
 
     parseCheck!s(lbracket);
-    static if (doCount)
-    {
-        count = 1 + skipWS!(Source, Yes.doCount)(s);
-    }
-    else
-    {
-        skipWS!(Source, No.doCount)(s);
-    }
     
+    static if (doCount)
+        count = 1 + skipWS!(Source, Yes.doCount)(s);
+    else
+        skipWS!(Source, No.doCount)(s);
+
     if (s.empty)
         throw convError!(Source, Target)(s);
+
     if (s.front == rbracket)
     {
         s.popFront();
         static if (doCount)
-        {
-            count++;
-            return tuple!("data", "count")(result, count);
-        }
+            return tuple!("data", "count")(result, count + 1);
         else
-        {
             return result;
-        }
     }
-    
+
     for (;;)
     {
         static if (doCount)
         {
             auto key = parseElement!(KeyType, Source, Yes.doCount)(s);
             count += key.count + skipWS!(Source, Yes.doCount)(s);
+
+            parseCheck!s(keyval);
+            count += 1 + skipWS!(Source, Yes.doCount)(s);
+            auto val = parseElement!(ValType, Source, Yes.doCount)(s);
+            count += val.count + skipWS!(Source, Yes.doCount)(s);
+
+            result[key.data] = val.data;
         }
         else
         {
             auto key = parseElement!(KeyType, Source, No.doCount)(s);
             skipWS!(Source, No.doCount)(s);
-        }
-        
-        parseCheck!s(keyval);
-        
-        static if (doCount)
-        {
-            count += 1 + skipWS!(Source, Yes.doCount)(s);
-            auto val = parseElement!(ValType, Source, Yes.doCount)(s);
-            count += val.count + skipWS!(Source, Yes.doCount)(s);
-        }
-        else
-        {
+
+            parseCheck!s(keyval);
             skipWS!(Source, No.doCount)(s);
             auto val = parseElement!(ValType, Source, No.doCount)(s);
             skipWS!(Source, No.doCount)(s);
+
+            result[key] = val;
         }
-        
-        result[static if (doCount) key.data else key] = static if (doCount) val.data else val;
-        
+
         if (s.empty)
             throw convError!(Source, Target)(s);
+
         if (s.front != comma)
             break;
-            
+
         s.popFront();
+
         static if (doCount)
-        {
-            count++;
-            count += skipWS!(Source, Yes.doCount)(s);
-        }
+            count += 1 + skipWS!(Source, Yes.doCount)(s);
         else
-        {
             skipWS!(Source, No.doCount)(s);
-        }
     }
-    
+
     parseCheck!s(rbracket);
-    
+
     static if (doCount)
-    {
-        count++;
-        return tuple!("data", "count")(result, count);
-    }
+        return tuple!("data", "count")(result, count + 1);
     else
-    {
         return result;
-    }
 }
+
 
 ///
 @safe pure unittest
