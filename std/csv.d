@@ -1131,38 +1131,55 @@ public:
      *       row's length does not match the previous length.
      */
     void popFront()
+{
+    while (!recordRange.empty)
     {
-        while (!recordRange.empty)
-        {
-            recordRange.popFront();
-        }
-
-        static if (ErrorLevel == Malformed.throwException)
-            if (_input.rowLength == 0)
-                _input.rowLength = _input.col;
-
-        _input.col = 0;
-
-        if (!_input.range.empty)
-        {
-            if (_input.range.front == '\r')
-            {
-                _input.range.popFront();
-                if (!_input.range.empty && _input.range.front == '\n')
-                    _input.range.popFront();
-            }
-            else if (_input.range.front == '\n')
-                _input.range.popFront();
-        }
-
-        if (_input.range.empty)
-        {
-            _empty = true;
-            return;
-        }
-
-        prime();
+        recordRange.popFront();
     }
+
+    static if (ErrorLevel == Malformed.throwException)
+    {
+        if (_input.rowLength == 0)
+            _input.rowLength = _input.col;
+        else if (_input.col != 0 && _input.rowLength != _input.col)
+        {
+            // Fix: Instead of throwing an error, adjust dynamically
+            if (_allowInconsistentDelimiterCount)
+            {
+                _input.rowLength = _input.col;
+            }
+            else
+            {
+                throw new CSVException(
+                    format("Row %d's length %d does not match previous length of %d.", 
+                           _input.row, _input.col, _input.rowLength));
+            }
+        }
+    }
+
+    _input.col = 0;
+
+    if (!_input.range.empty)
+    {
+        if (_input.range.front == '\r')
+        {
+            _input.range.popFront();
+            if (!_input.range.empty && _input.range.front == '\n')
+                _input.range.popFront();
+        }
+        else if (_input.range.front == '\n')
+            _input.range.popFront();
+    }
+
+    if (_input.range.empty)
+    {
+        _empty = true;
+        return;
+    }
+
+    prime();
+}
+
 
     private void prime()
     {
@@ -1180,6 +1197,11 @@ public:
             recordRange = typeof(recordRange)
                                  (_input, _separator, _quote, indices,
                                   _allowInconsistentDelimiterCount);
+        }
+        if (recordRange.empty)
+        {
+            popFront();
+            return;
         }
 
         static if (is(Contents T : T[U], U : string))
@@ -1508,6 +1530,17 @@ public:
         }
     }
 }
+@safe pure unittest
+{
+    // Test Case: Handling empty rows
+    string csvData = "foo\n1\n\n";
+    auto records = csvReader(csvData).array;
+    
+    assert(records.length == 2); 
+    assert(equal(records[0], ["foo"]));
+    assert(equal(records[1], ["1"]));
+}
+
 
 /**
  * Lower level control over parsing CSV
