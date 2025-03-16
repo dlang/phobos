@@ -1228,48 +1228,58 @@ public:
             recordContent = aa;
         }
         else static if (is(Contents == struct) || is(Contents == class))
+{
+    static if (is(Contents == class))
+        recordContent = new typeof(recordContent)();
+    else
+        recordContent = typeof(recordContent).init;
+    size_t colIndex;
+    try
+    {
+        for (; !recordRange.empty;)
         {
-            static if (is(Contents == class))
-                recordContent = new typeof(recordContent)();
-            else
-                recordContent = typeof(recordContent).init;
-            size_t colIndex;
-            try
+            auto colData = recordRange.front;
+            scope(exit) colIndex++;
+            if (indices.length > 0)
             {
-                for (; !recordRange.empty;)
+                foreach (ti, ToType; Fields!(Contents))
                 {
-                    auto colData = recordRange.front;
-                    scope(exit) colIndex++;
-                    if (indices.length > 0)
+                    if (indices[ti] == colIndex)
                     {
-                        foreach (ti, ToType; Fields!(Contents))
+                        // Only attempt conversion if the field is not empty
+                        if (colData.length > 0 || isSomeString!ToType)
                         {
-                            if (indices[ti] == colIndex)
-                            {
-                                static if (!isSomeString!ToType) skipWS(colData);
-                                recordContent.tupleof[ti] = to!ToType(colData);
-                            }
+                            static if (!isSomeString!ToType) skipWS(colData);
+                            recordContent.tupleof[ti] = to!ToType(colData);
                         }
+                        // Otherwise leave the field with its default value
                     }
-                    else
-                    {
-                        foreach (ti, ToType; Fields!(Contents))
-                        {
-                            if (ti == colIndex)
-                            {
-                                static if (!isSomeString!ToType) skipWS(colData);
-                                recordContent.tupleof[ti] = to!ToType(colData);
-                            }
-                        }
-                    }
-                    recordRange.popFront();
                 }
             }
-            catch (ConvException e)
+            else
             {
-                throw new CSVException(e.msg, _input.row, colIndex, e);
+                foreach (ti, ToType; Fields!(Contents))
+                {
+                    if (ti == colIndex)
+                    {
+                        // Only attempt conversion if the field is not empty
+                        if (colData.length > 0 || isSomeString!ToType)
+                        {
+                            static if (!isSomeString!ToType) skipWS(colData);
+                            recordContent.tupleof[ti] = to!ToType(colData);
+                        }
+                        // Otherwise leave the field with its default value
+                    }
+                }
             }
+            recordRange.popFront();
         }
+    }
+    catch (ConvException e)
+    {
+        throw new CSVException(e.msg, _input.row, colIndex, e);
+    }
+}
     }
 }
 
