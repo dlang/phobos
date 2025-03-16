@@ -1138,41 +1138,42 @@ public:
         {
             recordRange.popFront();
         }
-
+        
         static if (ErrorLevel == Malformed.throwException)
             if (_input.rowLength == 0)
                 _input.rowLength = _input.col;
-
+        
         _input.col = 0;
-
+        
+        // Handle standard line endings
         if (!_input.range.empty)
         {
             if (_input.range.front == '\r')
             {
                 _input.range.popFront();
+                // Only treat as line ending if followed by \n (Windows style CRLF)
                 if (!_input.range.empty && _input.range.front == '\n')
                     _input.range.popFront();
+                else
+                    // Single \r without \n should not be treated as a line ending
+                    // Continue processing the current line
+                    _empty = false;
             }
             else if (_input.range.front == '\n')
                 _input.range.popFront();
         }
-
-        // Add this check to handle trailing newlines
-        if (_input.range.empty || 
-            (_input.range.front == '\n' || _input.range.front == '\r'))
+        
+        // Check for end of file or empty lines with proper line endings
+        if (_input.range.empty || _input.range.front == '\n')
         {
             _empty = true;
             return;
         }
-
-        if (_input.range.empty)
-        {
-            _empty = true;
-            return;
-        }
-
+        
+    
+        
         prime();
-    }
+    }   
 
     private void prime()
     {
