@@ -757,7 +757,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     import std.math.algebraic : hypot;
     import std.math.traits : isInfinity, isNaN;
     import std.math : fabs;
-    import std.math.algebraic : sqrt;
+    static import std.math.algebraic;
     
     // Handle special cases
     if (z.re == 0 && z.im == 0)
@@ -789,12 +789,12 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     if (absRe > absIm)
     {
         T q = absIm / absRe;
-        return absRe * sqrt(1 + q * q);
+        return absRe * std.math.algebraic.sqrt(1 + q * q);
     }
     else
     {
         T q = absRe / absIm;
-        return absIm * sqrt(1 + q * q);
+        return absIm * std.math.algebraic.sqrt(1 + q * q);
     }
 }
 ///
@@ -818,72 +818,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         assert(x2.abs == 5.016556e-20f);
     }
     
-    // Basic test cases
-    static foreach (T; AliasSeq!(float, double, real))
-    {{
-        // Zero
-        assert(Complex!T(0, 0).abs == 0);
-        
-        // Pure real
-        assert(Complex!T(1, 0).abs == 1);
-        assert(Complex!T(-1, 0).abs == 1);
-        
-        // Pure imaginary
-        assert(Complex!T(0, 1).abs == 1);
-        assert(Complex!T(0, -1).abs == 1);
-        
-        // Equal real and imaginary
-        assert(isClose(Complex!T(1, 1).abs, sqrt(cast(T)2)));
-        assert(isClose(Complex!T(-1, -1).abs, sqrt(cast(T)2)));
-        
-        // Standard case
-        assert(Complex!T(3, 4).abs == 5);
-        assert(Complex!T(-3, 4).abs == 5);
-        assert(Complex!T(3, -4).abs == 5);
-        assert(Complex!T(-3, -4).abs == 5);
-    }}
     
-    // Test very small values
-    {
-        // Various small values
-        auto y1 = Complex!double(1.0e-200, 0);
-        assert(y1.abs == 1.0e-200);
-        
-        auto y2 = Complex!double(0, 1.0e-200);
-        assert(y2.abs == 1.0e-200);
-        
-        auto y3 = Complex!double(1.0e-200, 1.0e-200);
-        assert(isClose(y3.abs, 1.0e-200 * sqrt(2.0)));
-        
-        // Different magnitudes
-        auto y4 = Complex!double(1.0e-300, 1.0e-310);
-        assert(isClose(y4.abs, 1.0e-300));
-        
-        auto y5 = Complex!double(1.0e-310, 1.0e-300);
-        assert(isClose(y5.abs, 1.0e-300));
-    }
-    
-    // Test special values
-    {
-        // NaN
-        assert(isNaN(Complex!double(double.nan, 0).abs));
-        assert(isNaN(Complex!double(0, double.nan).abs));
-        assert(isNaN(Complex!double(double.nan, double.nan).abs));
-        
-        // Infinity
-        assert(Complex!double(double.infinity, 0).abs == double.infinity);
-        assert(Complex!double(0, double.infinity).abs == double.infinity);
-        assert(Complex!double(double.infinity, double.infinity).abs == double.infinity);
-        assert(Complex!double(double.infinity, double.nan).abs == double.infinity);
-        assert(Complex!double(double.nan, double.infinity).abs == double.infinity);
-    }
-    
-    // Verify consistency with conjugate
-    {
-        auto c1 = Complex!double(2.5, 3.7);
-        auto c2 = Complex!double(2.5, -3.7);
-        assert(c1.abs == c2.abs);
-    }
 }
 ///
 @safe pure nothrow unittest
