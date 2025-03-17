@@ -2883,7 +2883,6 @@ do
 
     static if (doCount)
         size_t count = 0;
-
     auto found = false;
     do
     {
@@ -2910,10 +2909,8 @@ do
         auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
         enforce!ConvOverflowException(!overflow && nextv <= Target.max, "Overflow in integral conversion");
         v = cast(Target) nextv;
-
         static if (doCount)
             ++count;
-
         s.popFront();
         found = true;
     } while (!s.empty);
@@ -4102,22 +4099,18 @@ if (isDynamicArray!Target && !is(Target == enum) &&
     isSomeString!Source && !is(Source == enum))
 {
     import std.array : appender;
-
+    
     auto result = appender!Target();
 
     parseCheck!s(lbracket);
-
     static if (doCount)
         size_t count = 1;
-
     static if (doCount)
         count += skipWS!(Source, Yes.doCount)(s);
     else
         skipWS!(Source, No.doCount)(s);
-
     if (s.empty)
         throw convError!(Source, Target)(s);
-
     if (s.front == rbracket)
     {
         s.popFront();
@@ -4131,12 +4124,10 @@ if (isDynamicArray!Target && !is(Target == enum) &&
             return result.data;
         }
     }
-
     for (;;)
     {
         if (!s.empty && s.front == rbracket)
             break;
-
         static if (doCount)
         {
             auto r = parseElement!(WideElementType!Target, Source, Yes.doCount)(s);
@@ -4150,26 +4141,19 @@ if (isDynamicArray!Target && !is(Target == enum) &&
             result ~= r;
             skipWS!(Source, No.doCount)(s);
         }
-
         if (s.empty)
             throw convError!(Source, Target)(s);
-
         if (s.front != comma)
             break;
-
         s.popFront();
-
         static if (doCount)
             ++count;
-
         static if (doCount)
             count += skipWS!(Source, Yes.doCount)(s);
         else
             skipWS!(Source, No.doCount)(s);
     }
-
     parseCheck!s(rbracket);
-
     static if (doCount)
     {
         ++count;
@@ -4330,18 +4314,14 @@ if (isStaticArray!Target && !is(Target == enum) &&
         Target result = void;
 
     parseCheck!s(lbracket);
-
     static if (doCount)
         size_t count = 1;
-
     static if (doCount)
         count += skipWS!(Source, Yes.doCount)(s);
     else
         skipWS!(Source, No.doCount)(s);
-
     if (s.empty)
         throw convError!(Source, Target)(s);
-
     if (s.front == rbracket)
     {
         static if (result.length != 0)
@@ -4360,12 +4340,10 @@ if (isStaticArray!Target && !is(Target == enum) &&
             }
         }
     }
-
     for (size_t i = 0; ; )
     {
         if (i == result.length)
             goto Lmanyerr;
-
         static if (doCount)
         {
             auto r = parseElement!(ElementType!Target, Source, Yes.doCount)(s);
@@ -4379,30 +4357,23 @@ if (isStaticArray!Target && !is(Target == enum) &&
             result[i++] = r;
             skipWS!(Source, No.doCount)(s);
         }
-
         if (s.empty)
             throw convError!(Source, Target)(s);
-
         if (s.front != comma)
         {
             if (i != result.length)
                 goto Lfewerr;
             break;
         }
-
         s.popFront();
-
         static if (doCount)
             ++count;
-
         static if (doCount)
             count += skipWS!(Source, Yes.doCount)(s);
         else
             skipWS!(Source, No.doCount)(s);
     }
-
     parseCheck!s(rbracket);
-
     static if (doCount)
     {
         ++count;
@@ -4475,15 +4446,12 @@ if (isAssociativeArray!Target && !is(Target == enum) &&
     static if (doCount) size_t count;
 
     parseCheck!s(lbracket);
-
     static if (doCount)
         count = 1 + skipWS!(Source, Yes.doCount)(s);
     else
         skipWS!(Source, No.doCount)(s);
-
     if (s.empty)
         throw convError!(Source, Target)(s);
-
     if (s.front == rbracket)
     {
         s.popFront();
@@ -4492,56 +4460,44 @@ if (isAssociativeArray!Target && !is(Target == enum) &&
         else
             return result;
     }
-
     for (;;)
     {
         static if (doCount)
         {
             auto key = parseElement!(KeyType, Source, Yes.doCount)(s);
             count += key.count + skipWS!(Source, Yes.doCount)(s);
-
             parseCheck!s(keyval);
             count += 1 + skipWS!(Source, Yes.doCount)(s);
             auto val = parseElement!(ValType, Source, Yes.doCount)(s);
             count += val.count + skipWS!(Source, Yes.doCount)(s);
-
             result[key.data] = val.data;
         }
         else
         {
             auto key = parseElement!(KeyType, Source, No.doCount)(s);
             skipWS!(Source, No.doCount)(s);
-
             parseCheck!s(keyval);
             skipWS!(Source, No.doCount)(s);
             auto val = parseElement!(ValType, Source, No.doCount)(s);
             skipWS!(Source, No.doCount)(s);
-
             result[key] = val;
         }
-
         if (s.empty)
             throw convError!(Source, Target)(s);
-
         if (s.front != comma)
             break;
-
         s.popFront();
-
         static if (doCount)
             count += 1 + skipWS!(Source, Yes.doCount)(s);
         else
             skipWS!(Source, No.doCount)(s);
     }
-
     parseCheck!s(rbracket);
-
     static if (doCount)
         return tuple!("data", "count")(result, count + 1);
     else
         return result;
 }
-
 
 ///
 @safe pure unittest
@@ -4600,7 +4556,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
     size_t count;
     static if (doCount)
         count = 1;
-
     if (s.empty)
         throw parseError("Unterminated escape sequence");
 
@@ -4618,7 +4573,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
             throw parseError("Hex digit is missing");
         return isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
-
     // We need to do octals separate, because they need a lookahead to find out,
     // where the escape sequence ends.
     auto first = s.front;
@@ -4628,7 +4582,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         s.popFront();
         static if (doCount)
             ++count;
-
         if (s.empty)
         {
             static if (doCount)
@@ -4655,7 +4608,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         s.popFront();
         static if (doCount)
             ++count;
-
         dchar c3 = s.front;
         if (c3 < '0' || c3 > '7')
         {
@@ -4671,7 +4623,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         s.popFront();
         static if (doCount)
             ++count;
-
         if (c1 > '3')
             throw parseError("Octal sequence is larger than \\377");
         static if (doCount)
@@ -4763,7 +4714,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         // https://issues.dlang.org/show_bug.cgi?id=9621 (Named Character Entities)
         //'\&amp;', '\&quot;',
     ];
-
     foreach (i ; 0 .. s1.length)
     {
         assert(s2[i] == parseEscape(s1[i]));
@@ -4819,7 +4769,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     size_t count;
     static if (doCount)
         count = 1;
-
     if (s.empty)
         throw convError!(Source, Target)(s);
     if (s.front == '\"')
@@ -4835,7 +4784,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             return result.data;
         }
     }
-
     while (true)
     {
         if (s.empty)
@@ -4885,7 +4833,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     Unqual!Target c;
 
     parseCheck!s('\'');
-
     size_t count;
     static if (doCount)
         count = 1;
@@ -4905,9 +4852,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         else
             c = parseEscape!(typeof(s), No.doCount)(s);
     }
-
     parseCheck!s('\'');
-
     static if (doCount)
     {
         count++;
