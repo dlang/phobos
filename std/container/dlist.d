@@ -220,7 +220,11 @@ struct DList(T)
     static BaseNode* createNode(Stuff)(auto ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         import std.algorithm.mutation : move;
-
+        static if (is(Stuff == const) || is(Stuff == immutable))
+        {
+            // For const/immutable values, create a copy instead of moving
+            return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
+        }
         static if (isMutable!Stuff)
             return (new PayNode(BaseNode(prev, next), move(arg))).asBaseNode();
         else
@@ -1175,19 +1179,36 @@ private:
 
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
     import std.container : DList;
-
-    DList!int D;
-    D.insert(1);
-    assert(D[].equal([1]));
-
+    import std.algorithm.comparison : equal;
+    
+    // Test all scenarios with const values
+    DList!int list;
+    
+    // Regular value and non-const variable
+    list.insert(1);
     int i = 2;
-    D.insert(i);
-    assert(D[].equal([1, 2]));
-
+    list.insert(i);
+    
+    // Const variable
     const c = 3;
-    static assert(__traits(compiles, { D.insert(c); }));
-    static assert(__traits(compiles, { D.insert(c + 1); }));
-    static assert(__traits(compiles, { D.insert(c + c); }));
+    list.insert(c);
+    
+    // Const expressions
+    list.insert(c + 1);  // mixed expression
+    list.insert(c + c);  // pure const expression
+    
+    // Immutable value
+    immutable im = 6;
+    list.insert(im);
+    
+    // Verify all values were inserted correctly
+    assert(equal(list[], [1, 2, 3, 4, 6, 6]));
+    
+    // Test other insertion methods
+    const d = 7;
+    list.insertFront(d);
+    list.insertBack(d * 2);
+    
+    assert(equal(list[], [7, 1, 2, 3, 4, 6, 6, 14]));
 }
