@@ -2553,6 +2553,7 @@ Lerr:
             throw convError!(Source, Target)(source);
     }
 }
+
 ///
 @safe pure unittest
 {
@@ -2937,6 +2938,7 @@ do
         return v;
     }
 }
+
 @safe pure unittest
 {
     string s; // parse doesn't accept rvalues
@@ -3147,6 +3149,7 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
     {
         alias p = source;
     }
+
     void advanceSource()
     {
         static if (isNarrowString!Source)
@@ -3159,13 +3162,16 @@ if (isFloatingPoint!Target && !is(Target == enum) &&
     static immutable real[13] postab =
         [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
                 1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
+
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (msg == null)
             msg = "Floating point conversion error";
         return new ConvException(text(msg, " for input \"", source, "\"."), fn, ln);
     }
+
     enforce(!p.empty, bailOut());
+
     size_t count = 0;
     bool sign = false;
     switch (p.front)
@@ -4736,6 +4742,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source))
         return cast (dchar) result;
     }
 }
+
 @safe pure unittest
 {
     string[] s1 = [
