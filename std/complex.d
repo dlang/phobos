@@ -746,10 +746,28 @@ if (is(T R == Complex!R))
     auto z2 = addI(one);
     assert(z1 == z2);
 }
+
+
 /**
-   Params: z = A complex number.
-   Returns: The absolute value (or modulus) of `z`.
-*/
+ * Calculates the absolute value (or modulus) of a complex number.
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH $(I z))                          $(TH abs(z))             $(TH Notes))
+ *      $(TR $(TD (0, 0))                          $(TD 0)                  $(TD ))
+ *      $(TR $(TD (NaN, any) or (any, NaN))        $(TD NaN)                $(TD ))
+ *      $(TR $(TD (Inf, any) or (any, Inf))        $(TD Inf)                $(TD ))
+ *      $(TR $(TD (a, 0))                          $(TD |a|)                $(TD Direct real absolute value ))
+ *      $(TR $(TD (0, b))                          $(TD |b|)                $(TD Direct imaginary absolute value ))
+ *      $(TR $(TD (tiny, tiny))                    $(TD max(|re|, |im|))    $(TD When both components are subnormal ))
+ *      $(TR $(TD (a, b)) normal case              $(TD Stable computation) $(TD Uses algorithm to prevent overflow/underflow ))
+ *      )
+ *
+ * Params:
+ *      z = A complex number of type Complex!T
+ *
+ * Returns:
+ *      The absolute value (modulus) of `z`
+ */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     import std.math.algebraic : hypot;
@@ -784,6 +802,8 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         return absIm * std.math.algebraic.sqrt(1 + q * q);
     }
 }
+
+///
 @safe pure nothrow unittest
 {
     import std.meta : AliasSeq;
@@ -799,6 +819,8 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         assert(x2.abs == 5.016556e-20f);
     }
 }
+
+///
 @safe pure nothrow unittest
 {
     static import core.math;
@@ -806,6 +828,8 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(0.0, 1.0)) == 1.0);
     assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
 }
+
+///
 @safe pure nothrow @nogc unittest
 {
     static import core.math;
@@ -813,6 +837,8 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(0.0L, 71.6L)) == 71.6L);
     assert(abs(complex(-1.0L, 1.0L)) == core.math.sqrt(2.0L));
 }
+
+///
 @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
@@ -849,6 +875,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(isClose(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
     assert(isClose(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
+
 
 /// ditto
 T sqAbs(T)(const T x) @safe pure nothrow @nogc
