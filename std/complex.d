@@ -749,13 +749,42 @@ if (is(T R == Complex!R))
 
 
 /**
-   Params: z = A complex number.
-   Returns: The absolute value (or modulus) of `z`.
-*/
+ * Calculates the absolute value (or modulus) of a complex number.
+ *
+ *      $(TABLE_SV
+ *      $(TR $(TH $(I z))                          $(TH abs(z))             $(TH Notes))
+ *      $(TR $(TD (0, 0))                          $(TD 0)                  $(TD ))
+ *      $(TR $(TD (NaN, any) or (any, NaN))        $(TD NaN)                $(TD ))
+ *      $(TR $(TD (Inf, any) or (any, Inf))        $(TD Inf)                $(TD ))
+ *      $(TR $(TD (a, b)) normal case              $(TD hypot(a, b))      $(TD Uses algorithm to prevent overflow/underflow ))
+ *      )
+ *
+ * Params:
+ *      z = A complex number of type Complex!T
+ *
+ * Returns:
+ *      The absolute value (modulus) of `z`
+ */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : hypot;
-    return hypot(z.re, z.im);
+    import std.math.algebraic : sqrt;
+    import std.math.traits : isInfinity, isNaN;
+    import std.math : fabs;
+    import std.algorithm.comparison : max;
+
+    if (isNaN(z.re) || isNaN(z.im))
+        return T.nan;
+    if (isInfinity(z.re) || isInfinity(z.im))
+        return T.infinity;
+
+    const T maxabs = max(fabs(z.re), fabs(z.im));
+    if (maxabs == 0.0)
+        return maxabs;
+
+    const T qx = z.re / maxabs;
+    const T qy = z.im / maxabs;
+
+    return maxabs * sqrt(qx * qx + qy * qy);
 }
 
 ///
@@ -765,6 +794,26 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(1.0)) == 1.0);
     assert(abs(complex(0.0, 1.0)) == 1.0);
     assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
+}
+
+@safe pure nothrow unittest
+{
+    {
+        auto x = Complex!float(-5.016556e-20, 0);
+        assert(x.abs == 5.016556e-20f);
+        auto x1 = Complex!float(-5.016556e-20f, 0);
+        assert(x1.abs == 5.016556e-20f);
+        auto x2 = Complex!float(5.016556e-20f, 0);
+        assert(x2.abs == 5.016556e-20f);
+    }
+    {
+        import std.math.traits : isNaN, isInfinity;
+        assert(Complex!double(double.nan, 0).abs.isNaN);
+        assert(Complex!double(double.nan, double.nan).abs.isNaN);
+        assert(Complex!double(double.infinity, 0).abs.isInfinity);
+        assert(Complex!double(0, double.infinity).abs.isInfinity);
+        assert(Complex!double(0, 0).abs == 0);
+    }
 }
 
 @safe pure nothrow @nogc unittest
@@ -787,6 +836,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         assert(std.math.isClose(abs(-a), b));
     }}
 }
+
 
 /++
    Params:
@@ -811,6 +861,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(isClose(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
     assert(isClose(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
+
 
 /// ditto
 T sqAbs(T)(const T x) @safe pure nothrow @nogc
