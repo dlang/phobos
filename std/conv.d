@@ -4099,7 +4099,7 @@ if (isDynamicArray!Target && !is(Target == enum) &&
     isSomeString!Source && !is(Source == enum))
 {
     import std.array : appender;
-    
+
     auto result = appender!Target();
 
     parseCheck!s(lbracket);
