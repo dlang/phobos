@@ -756,10 +756,10 @@ if (is(T R == Complex!R))
  *      $(TR $(TD (0, 0))                          $(TD 0)                  $(TD ))
  *      $(TR $(TD (NaN, any) or (any, NaN))        $(TD NaN)                $(TD ))
  *      $(TR $(TD (Inf, any) or (any, Inf))        $(TD Inf)                $(TD ))
- *      $(TR $(TD (a, 0))                          $(TD |a|)                $(TD Direct real absolute value ))
- *      $(TR $(TD (0, b))                          $(TD |b|)                $(TD Direct imaginary absolute value ))
+ *      $(TR $(TD (a, 0))                          $(TD a)                $(TD Direct real absolute value ))
+ *      $(TR $(TD (0, b))                          $(TD b)                $(TD Direct imaginary absolute value ))
  *      $(TR $(TD (tiny, tiny))                    $(TD max(|re|, |im|))    $(TD When both components are subnormal ))
- *      $(TR $(TD (a, b)) normal case              $(TD Stable computation) $(TD Uses algorithm to prevent overflow/underflow ))
+ *      $(TR $(TD (a, b)) normal case              $(TD hypot(a, b))      $(TD Uses algorithm to prevent overflow/underflow ))
  *      )
  *
  * Params:
@@ -770,40 +770,35 @@ if (is(T R == Complex!R))
  */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : hypot;
+    import std.math.algebraic : sqrt;
     import std.math.traits : isInfinity, isNaN;
     import std.math : fabs;
-    static import std.math.algebraic;
-    if (z.re == 0 && z.im == 0)
-        return 0;
+    import std.algorithm.comparison : max;
+
     if (isNaN(z.re) || isNaN(z.im))
         return T.nan;
     if (isInfinity(z.re) || isInfinity(z.im))
         return T.infinity;
-    if (z.im == 0)
-        return fabs(z.re);
-    if (z.re == 0)
-        return fabs(z.im);
-    if (fabs(z.re) < T.min_normal && fabs(z.im) < T.min_normal)
-    {
-        import std.algorithm.comparison : max;
-        return max(fabs(z.re), fabs(z.im));
-    }
-    T absRe = fabs(z.re);
-    T absIm = fabs(z.im);
-    if (absRe > absIm)
-    {
-        T q = absIm / absRe;
-        return absRe * std.math.algebraic.sqrt(1 + q * q);
-    }
-    else
-    {
-        T q = absRe / absIm;
-        return absIm * std.math.algebraic.sqrt(1 + q * q);
-    }
+
+    const T maxabs = max(fabs(z.re), fabs(z.im));
+    if (maxabs == 0.0)
+        return maxabs;
+
+    const T qx = z.re / maxabs;
+    const T qy = z.im / maxabs;
+
+    return maxabs * sqrt(qx * qx + qy * qy);
 }
 
 ///
+@safe pure nothrow unittest
+{
+    static import core.math;
+    assert(abs(complex(1.0)) == 1.0);
+    assert(abs(complex(0.0, 1.0)) == 1.0);
+    assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
+}
+
 @safe pure nothrow unittest
 {
     {
@@ -816,16 +811,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     }
 }
 
-///
-@safe pure nothrow unittest
-{
-    static import core.math;
-    assert(abs(complex(1.0)) == 1.0);
-    assert(abs(complex(0.0, 1.0)) == 1.0);
-    assert(abs(complex(1.0L, -2.0L)) == core.math.sqrt(5.0L));
-}
-
-///
 @safe pure nothrow @nogc unittest
 {
     static import core.math;
@@ -834,7 +819,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     assert(abs(complex(-1.0L, 1.0L)) == core.math.sqrt(2.0L));
 }
 
-///
 @safe pure nothrow @nogc unittest
 {
     import std.meta : AliasSeq;
@@ -847,6 +831,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         assert(std.math.isClose(abs(-a), b));
     }}
 }
+
 
 /++
    Params:
