@@ -322,10 +322,10 @@ if (isFloatingPoint!T)
         u = fabs(y);
         if (u == T.infinity) return u; // hypot(inf, nan) == inf
         if (v == T.infinity) return v; // hypot(nan, inf) == inf
+        if (u.isNaN || v.isNaN)
+            return T.nan;
     }
-
-    if (u.isNaN || v.isNaN)
-        return T.nan;
+    assert(!(u.isNaN || v.isNaN), "Comparison to NaN always fails, thus is is always handled in the branch above");
 
     const maxabs = max(u,v);
     if (v == 0.0)
