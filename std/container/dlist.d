@@ -1189,6 +1189,5 @@ private:
     const c = 3;
     static assert(__traits(compiles, { D.insert(c); }));
     static assert(__traits(compiles, { D.insert(c + 1); }));
-
     static assert(__traits(compiles, { D.insert(c + c); }));
 }
