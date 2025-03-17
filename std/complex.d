@@ -808,7 +808,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
     }
     {
         import std.math.traits : isNaN, isInfinity;
-        
         assert(Complex!double(double.nan, 0).abs.isNaN);
         assert(Complex!double(double.nan, double.nan).abs.isNaN);
         assert(Complex!double(double.infinity, 0).abs.isInfinity);
