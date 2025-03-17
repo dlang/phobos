@@ -806,10 +806,6 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.meta : AliasSeq;
-    import std.math.operations : isClose;
-    import std.math.traits : isNaN;
-    import std.math : fabs;
     {
         auto x = Complex!float(-5.016556e-20, 0);
         assert(x.abs == 5.016556e-20f);
