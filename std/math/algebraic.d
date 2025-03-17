@@ -294,10 +294,11 @@ real cbrt(real x) @trusted pure nothrow @nogc
  * hypot(x, -y) are equivalent.
  *
  *  $(TABLE_SV
- *  $(TR $(TH x)            $(TH y)            $(TH hypot(x, y)) $(TH invalid?))
- *  $(TR $(TD x)            $(TD $(PLUSMN)0.0) $(TD |x|)         $(TD no))
- *  $(TR $(TD $(PLUSMNINF)) $(TD y)            $(TD +$(INFIN))   $(TD no))
- *  $(TR $(TD $(PLUSMNINF)) $(TD $(NAN))       $(TD +$(INFIN))   $(TD no))
+ *  $(TR $(TH x)            $(TH y)                 $(TH hypot(x, y)) $(TH invalid?))
+ *  $(TR $(TD x)            $(TD $(PLUSMN)0.0)      $(TD |x|)         $(TD no))
+ *  $(TR $(TD $(PLUSMNINF)) $(TD y)                 $(TD +$(INFIN))   $(TD no))
+ *  $(TR $(TD $(PLUSMNINF)) $(TD $(NAN))            $(TD +$(INFIN))   $(TD no))
+ *  $(TR $(TD $(NAN))       $(TD y != $(PLUSMNINF)) $(TD $(NAN))      $(TD no))
  *  )
  */
 T hypot(T)(const T x, const T y) @safe pure nothrow @nogc
@@ -308,18 +309,28 @@ if (isFloatingPoint!T)
     // If both are huge, avoid overflow by scaling by 2^^-N.
     // If both are tiny, avoid underflow by scaling by 2^^N.
     import core.math : fabs, sqrt;
-    import std.math.traits : floatTraits, RealFormat;
+    import std.math.traits : floatTraits, RealFormat, isNaN;
+    import std.algorithm.comparison : max;
 
     alias F = floatTraits!T;
 
     T u = fabs(x);
     T v = fabs(y);
-    if (!(u >= v))  // check for NaN as well.
+    if (!(u >= v))
     {
         v = u;
         u = fabs(y);
         if (u == T.infinity) return u; // hypot(inf, nan) == inf
         if (v == T.infinity) return v; // hypot(nan, inf) == inf
+    }
+
+    if (u.isNaN || v.isNaN)
+        return T.nan;
+
+    const maxabs = max(u,v);
+    if (v == 0.0)
+    {
+        return u;
     }
 
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -375,18 +386,23 @@ if (isFloatingPoint!T)
     }
 
     // both are in the normal range
-    return ratio * sqrt(u*u + v*v);
+    return ratio * sqrt(u^^2 + v^^2);
 }
 
 ///
 @safe unittest
 {
     import std.math.operations : feqrel;
+    import std.math.traits : isNaN;
 
     assert(hypot(1.0, 1.0).feqrel(1.4142) > 16);
     assert(hypot(3.0, 4.0).feqrel(5.0) > 16);
     assert(hypot(real.infinity, 1.0L) == real.infinity);
+    assert(hypot(1.0L, real.infinity) == real.infinity);
     assert(hypot(real.infinity, real.nan) == real.infinity);
+    assert(hypot(real.nan, real.infinity) == real.infinity);
+    assert(hypot(real.nan, 1.0L).isNaN);
+    assert(hypot(1.0L, real.nan).isNaN);
 }
 
 @safe unittest
