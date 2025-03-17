@@ -420,6 +420,15 @@ if (isFloatingPoint!T)
     assert(hypot(double.infinity, double.nan) == double.infinity);
 }
 
+// https://github.com/dlang/phobos/issues/10491
+@safe pure nothrow unittest
+{
+    import std.math : isClose;
+
+    enum small = 5.016556e-20f;
+    assert(hypot(small, 0).isClose(small));
+}
+
 @safe unittest
 {
     import std.math.operations : feqrel;
