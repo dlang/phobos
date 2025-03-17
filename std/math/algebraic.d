@@ -310,7 +310,6 @@ if (isFloatingPoint!T)
     // If both are tiny, avoid underflow by scaling by 2^^N.
     import core.math : fabs, sqrt;
     import std.math.traits : floatTraits, RealFormat, isNaN;
-    import std.algorithm.comparison : max;
 
     alias F = floatTraits!T;
 
@@ -326,12 +325,6 @@ if (isFloatingPoint!T)
             return T.nan;
     }
     assert(!(u.isNaN || v.isNaN), "Comparison to NaN always fails, thus is is always handled in the branch above");
-
-    const maxabs = max(u,v);
-    if (v == 0.0)
-    {
-        return u;
-    }
 
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -360,6 +353,13 @@ if (isFloatingPoint!T)
     else
         assert(0, "hypot not implemented");
 
+    if (u * T.epsilon > v)
+    {
+        // hypot (huge, tiny) = huge
+        // also: hypot(x, 0) = x
+        return u;
+    }
+
     // Now u >= v, or else one is NaN.
     T ratio = 1.0;
     if (v >= SQRTMAX)
@@ -377,12 +377,6 @@ if (isFloatingPoint!T)
         ratio = SCALE_OVERFLOW;
         u *= SCALE_UNDERFLOW;
         v *= SCALE_UNDERFLOW;
-    }
-
-    if (u * T.epsilon > v)
-    {
-        // hypot (huge, tiny) = huge
-        return u;
     }
 
     // both are in the normal range
@@ -427,6 +421,7 @@ if (isFloatingPoint!T)
 
     enum small = 5.016556e-20f;
     assert(hypot(small, 0).isClose(small));
+    assert(hypot(small, float.min_normal).isClose(small));
 }
 
 @safe unittest
