@@ -1172,3 +1172,23 @@ private:
     B.insert(a);
     assert(B[].equal([A(1), A(3)]));
 }
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container : DList;
+
+    DList!int D;
+    D.insert(1);
+    assert(D[].equal([1]));
+
+    int i = 2;
+    D.insert(i);
+    assert(D[].equal([1, 2]));
+
+    const c = 3;
+    static assert(__traits(compiles, { D.insert(c); }));
+    static assert(__traits(compiles, { D.insert(c + 1); }));
+
+    static assert(__traits(compiles, { D.insert(c + c); }));
+}

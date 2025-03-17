@@ -1468,16 +1468,20 @@ private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            // If T is nested struct, keep original context pointer
-            static if (__traits(isNested, T))
-                enum sz = T.sizeof - (void*).sizeof;
-            else
-                enum sz = T.sizeof;
+            // Skip zeroing out for const/immutable source
+            static if (!is(T == const) && !is(T == immutable))
+            {
+                // If T is nested struct, keep original context pointer
+                static if (__traits(isNested, T))
+                    enum sz = T.sizeof - (void*).sizeof;
+                else
+                    enum sz = T.sizeof;
 
-            static if (__traits(isZeroInit, T))
-                () @trusted { memset(&source, 0, sz); }();
-            else
-                () @trusted { memcpy(&source, __traits(initSymbol, T).ptr, sz); }();
+                static if (__traits(isZeroInit, T))
+                    () @trusted { memset(&source, 0, sz); }();
+                else
+                    () @trusted { memcpy(&source, __traits(initSymbol, T).ptr, sz); }();
+            }
         }
     }
     else static if (isStaticArray!T)
@@ -1492,7 +1496,6 @@ private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
         target = source;
     }
 }
-
 /**
  * Similar to $(LREF move) but assumes `target` is uninitialized. This
  * is more efficient because `source` can be blitted over `target`
