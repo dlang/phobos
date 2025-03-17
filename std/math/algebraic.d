@@ -380,7 +380,7 @@ if (isFloatingPoint!T)
     }
 
     // both are in the normal range
-    return ratio * sqrt(u^^2 + v^^2);
+    return ratio * sqrt(u*u + v*v);
 }
 
 ///
