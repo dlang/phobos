@@ -756,9 +756,6 @@ if (is(T R == Complex!R))
  *      $(TR $(TD (0, 0))                          $(TD 0)                  $(TD ))
  *      $(TR $(TD (NaN, any) or (any, NaN))        $(TD NaN)                $(TD ))
  *      $(TR $(TD (Inf, any) or (any, Inf))        $(TD Inf)                $(TD ))
- *      $(TR $(TD (a, 0))                          $(TD a)                $(TD Direct real absolute value ))
- *      $(TR $(TD (0, b))                          $(TD b)                $(TD Direct imaginary absolute value ))
- *      $(TR $(TD (tiny, tiny))                    $(TD max(|re|, |im|))    $(TD When both components are subnormal ))
  *      $(TR $(TD (a, b)) normal case              $(TD hypot(a, b))      $(TD Uses algorithm to prevent overflow/underflow ))
  *      )
  *
@@ -808,6 +805,13 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
         assert(x1.abs == 5.016556e-20f);
         auto x2 = Complex!float(5.016556e-20f, 0);
         assert(x2.abs == 5.016556e-20f);
+    }
+    {
+        assert(Complex!double(double.nan, 0).abs.isNaN);
+        assert(Complex!double(double.nan, double.nan).abs.isNaN);
+        assert(Complex!double(double.infinity, 0).abs.isInfinity);
+        assert(Complex!double(0, double.infinity).abs.isInfinity);
+        assert(Complex!double(0, 0).abs == 0);
     }
 }
 
