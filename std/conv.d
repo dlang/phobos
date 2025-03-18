@@ -1057,6 +1057,10 @@ if (!(is(S : T) &&
         {
             return to!T("void");
         }
+        else
+        {
+            return to!T(value.toString());
+        }
     }
     else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
