@@ -860,33 +860,33 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
             return low;
         }
         else version(LDC) {
-            // LDC/GDC: Use GCC-style inline assembly
-            ulong low, high;
+    uint low, high;
 
-            asm  pure @trusted nothrow @nogc{
-                "mulq %[b]"
-                : "=a"(low), "=d"(high)
-                : [a] "a"(a), [b] "r"(b)
-                : "cc";
-        };
+    asm pure @trusted nothrow @nogc {
+        "mull %2"
+        : "=a"(low), "=d"(high)
+        : "r"(b), "0"(a)   // Ensure a is in eax
+        : "cc";
+    };
 
-            if (high >= c) {
-                high %= c;
-            }
+    if (high >= c) {
+        high %= c;
+    }
 
-            if (high == 0) {
-                return low % c;
-            }
+    if (high == 0) {
+        return low % c;
+    }
 
-            asm pure @trusted nothrow @nogc {
-                "divq %[c]"
-                : "=a"(low), "=d"(high)
-                : [a] "a"(low), "d"(high), [c] "r"(c)
-                : "cc";
-        };
+    asm pure @trusted nothrow @nogc {
+        "divl %2"
+        : "=a"(low), "=d"(high)
+        : "r"(c), "0"(low), "1"(high)  // Ensure correct register allocation
+        : "cc";
+    };
 
-            return low;
-        }
+    return low;
+}
+
           else {
             // Use 64-bit type for the calculation
             ulong result = (cast(ulong)a * cast(ulong)b) % c;
@@ -895,7 +895,7 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
       
     }
     else static if (T.sizeof == 4) {
-        version (D_InlineAsm_X86) {
+        version (D_InlineAsm_X86_64) {
             uint low = void;
             uint high = void;
 
