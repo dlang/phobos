@@ -819,6 +819,9 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
 if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 {
     import std.meta : AliasSeq;
+    import std.traits : isUnsigned, Largest, Unqual;
+    import core.stdc.config : c_ulong;
+
     alias T = Unqual!(Largest!(F, H));
     static if (T.sizeof <= 4)
     {
@@ -830,16 +833,23 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         static if (T.sizeof == 8)
         {
             // Use 128-bit multiplication for 64-bit types if supported
-            version (D_InlineAsm_X86_64)
+             version (D_InlineAsm_X86_64)
             {
+                import core.cpuid : asm_inline;
+                
                 // x86_64 inline assembly implementation for 128-bit multiplication
-                ulong low, high;
-                asm pure nothrow @nogc
+                ulong low = void;
+                ulong high = void;
+                
+                // Multiply a * b to get 128-bit result in [RDX:RAX]
+                asm @trusted nothrow @nogc
                 {
-                    mov RAX, a;
-                    mul b;
-                    mov low, RAX;
-                    mov high, RDX;
+                    // Clear flags and prepare registers
+                    mov RAX, a;          // Load a into RAX
+                    xor RDX, RDX;        // Clear RDX
+                    mul qword ptr [RSP+8]; // Multiply by b (indirectly accessed)
+                    mov low, RAX;        // Store low 64 bits
+                    mov high, RDX;       // Store high 64 bits
                 }
                 
                 // Now perform modular reduction of the 128-bit result
@@ -850,43 +860,18 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                 }
                 else
                 {
-                    // Barrett reduction or similar technique
-                    ulong q, r, t;
-                    ulong r_max = c - 1;
+                    // Use a faster method for computing (high * 2^64 + low) % c
+                    // This uses the fact that (a * b) % c = ((a % c) * (b % c)) % c
                     
-                    // Process high bits first
-                    q = high;
-                    r = q % c;
+                    // First, compute (2^64) % c
+                    ulong mod2_64 = (c <= (1UL << 63)) ? (1UL << 63) % c * 2 % c : 1;
                     
-                    // Process low bits (with carry from high)
-                    t = ((r << 32) | (low >> 32)) % c;
-                    r = ((t << 32) | (low & 0xFFFFFFFF)) % c;
+                    // Now compute (high * 2^64) % c
+                    ulong highPart = (high % c * mod2_64) % c;
                     
-                    return r;
+                    // Add low part and reduce
+                    return (highPart + low % c) % c;
                 }
-            }
-            else
-            {
-                // Fall back to the safe algorithm when inline asm not available
-                static T addmod(T a, T b, T c)
-                {
-                    b = c - b;
-                    if (a >= b)
-                        return a - b;
-                    else
-                        return c - b + a;
-                }
-                
-                T result = 0;
-                b %= c;
-                while (a > 0)
-                {
-                    if (a & 1)
-                        result = addmod(result, b, c);
-                    a >>= 1;
-                    b = addmod(b, b, c);
-                }
-                return result;
             }
         }
         else
