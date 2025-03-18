@@ -815,91 +815,198 @@ private real _powImpl(real x, real y) @safe @nogc pure nothrow
  *
  * The function requires that all values have unsigned types.
  */
-Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
-if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
-{
+Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUnsigned!G && isUnsigned!H) {
     import std.meta : AliasSeq;
-    import std.traits : isUnsigned, Largest, Unqual;
-    import core.stdc.config : c_ulong;
-
+    
     alias T = Unqual!(Largest!(F, H));
-    static if (T.sizeof <= 4)
-    {
+    static if (T.sizeof <= 4) {
         alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
     }
     
-    static T mulmod(T a, T b, T c)
-    {
-        static if (T.sizeof == 8)
-        {
-            // Use 128-bit multiplication for 64-bit types if supported
-             version (D_InlineAsm_X86_64)
-            {
-                import core.cpuid : asm_inline;
-                
-                // x86_64 inline assembly implementation for 128-bit multiplication
-                ulong low = void;
-                ulong high = void;
-                
-                // Multiply a * b to get 128-bit result in [RDX:RAX]
-                asm @trusted nothrow @nogc
-                {
-                    // Clear flags and prepare registers
-                    mov RAX, a;          // Load a into RAX
-                    xor RDX, RDX;        // Clear RDX
-                    mul qword ptr [RSP+8]; // Multiply by b (indirectly accessed)
-                    mov low, RAX;        // Store low 64 bits
-                    mov high, RDX;       // Store high 64 bits
-                }
-                
-                // Now perform modular reduction of the 128-bit result
-                if (high == 0)
-                {
-                    // If high part is zero, just do a single modulo
-                    return low % c;
-                }
-                else
-                {
-                    // Use a faster method for computing (high * 2^64 + low) % c
-                    // This uses the fact that (a * b) % c = ((a % c) * (b % c)) % c
-                    
-                    // First, compute (2^64) % c
-                    ulong mod2_64 = (c <= (1UL << 63)) ? (1UL << 63) % c * 2 % c : 1;
-                    
-                    // Now compute (high * 2^64) % c
-                    ulong highPart = (high % c * mod2_64) % c;
-                    
-                    // Add low part and reduce
-                    return (highPart + low % c) % c;
-                }
+  static T mulmod(T)(T a, T b, T c) {
+    static if (T.sizeof == 8) {
+        version (D_InlineAsm_X86_64) {
+            // Fast path for DMD (uses D-style assembly)
+            ulong low = void;
+            ulong high = void;
+
+            asm pure @trusted nothrow @nogc {
+                mov RAX, a;      // Load a into RAX
+                mul b;           // Multiply by b (RDX:RAX = a * b)
+                mov low, RAX;    // Store low 64 bits
+                mov high, RDX;   // Store high 64 bits
             }
+
+            if (high >= c) {
+                high %= c;
+            }
+
+            if (high == 0) {
+                return low % c;
+            }
+
+            asm pure @trusted nothrow @nogc {
+                mov RAX, high;   // Load high part
+                xor RDX, RDX;    // Clear RDX for division
+                div c;           // Divide high by c
+                mov high, RDX;   // Store remainder
+
+                mov RAX, low;    // Load low part
+                mov RDX, high;   // Load reduced high part
+                div c;           // Divide full 128-bit number by c
+                mov low, RDX;    // Store remainder (final result)
+            }
+
+            return low;
         }
-        else
-        {
-            // For smaller types, we can safely use the double-width type
-            DoubleT result = cast(DoubleT)(cast(DoubleT) a * cast(DoubleT) b);
-            return cast(T)(result % c);
+        else version(LDC) {
+            // LDC/GDC: Use GCC-style inline assembly
+            ulong low, high;
+
+            asm  pure @trusted nothrow @nogc{
+                "mulq %[b]"
+                : "=a"(low), "=d"(high)
+                : [a] "a"(a), [b] "r"(b)
+                : "cc";
+        };
+
+            if (high >= c) {
+                high %= c;
+            }
+
+            if (high == 0) {
+                return low % c;
+            }
+
+            asm pure @trusted nothrow @nogc {
+                "divq %[c]"
+                : "=a"(low), "=d"(high)
+                : [a] "a"(low), "d"(high), [c] "r"(c)
+                : "cc";
+        };
+
+            return low;
         }
+          else {
+            // Use 64-bit type for the calculation
+            ulong result = (cast(ulong)a * cast(ulong)b) % c;
+            return cast(T)result;
+        }
+      
     }
+    else static if (T.sizeof == 4) {
+        version (D_InlineAsm_X86) {
+            uint low = void;
+            uint high = void;
+
+            asm pure @trusted nothrow @nogc {
+                mov EAX, a;      // Load a into EAX
+                mul b;           // Multiply by b (EDX:EAX = a * b)
+                mov low, EAX;    // Store low 32 bits
+                mov high, EDX;   // Store high 32 bits
+            }
+
+            if (high >= c) {
+                high %= c;
+            }
+
+            if (high == 0) {
+                return low % c;
+            }
+
+            asm pure @trusted nothrow @nogc {
+                mov EAX, high;   // Load high part
+                xor EDX, EDX;    // Clear EDX for division
+                div c;           // Divide high by c
+                mov high, EDX;   // Store remainder
+
+                mov EAX, low;    // Load low part
+                mov EDX, high;   // Load reduced high part
+                div c;           // Divide full 64-bit number by c
+                mov low, EDX;    // Store remainder (final result)
+            }
+
+            return low;
+        }
+        else version(LDC)  {
+            uint low, high;
+
+            asm pure @trusted nothrow @nogc {
+                "mull %[b]"
+                : "=a"(low), "=d"(high)
+                : [a] "a"(a), [b] "r"(b)
+                : "cc";
+            };
+
+            if (high >= c) {
+                high %= c;
+            }
+
+            if (high == 0) {
+                return low % c;
+            }
+
+            asm pure @trusted nothrow @nogc {
+                "divl %[c]"
+                : "=a"(low), "=d"(high)
+                : [a] "a"(low), "d"(high), [c] "r"(c)
+                : "cc";
+            };
+
+            return low;
+        }
+         else {
+            // Fallback for non-x86_64 platforms
+            T result = 0;
+            a %= c;
+            b %= c;
+
+            while (b > 0) {
+                if (b & 1) {
+                    result = (result + a) % c;
+                }
+                a = (a * 2) % c;
+                b >>= 1;
+            }
+
+            return result;
+        }
+        
+    }
+    else {
+        // For smaller types, use double-width multiplication
+        import std.meta : AliasSeq;
+        alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
+        DoubleT result = cast(DoubleT)(cast(DoubleT) a * cast(DoubleT) b);
+        return cast(T)(result % c);
+    }
+}
+
+
     
-    // Handle special cases first
-    if (m == 1)
-        return 0;
-    if (n == 0)
-        return 1;
-    
-    T base = x % m;  // Reduce base initially
+    T base = x % m;  // Reduce base modulo m initially
     T result = 1;
-    T modulus = m;
     Unqual!G exponent = n;
     
-    while (exponent > 0)
-    {
+    // Handle special cases
+    if (m == 1)
+        return 0;  // Any number mod 1 is 0
+    
+    if (m == 0)
+        return 0;  // Convention: a^n mod 0 = 0
+    
+    if (exponent == 0)
+        return 1;  // x^0 = 1 for any x
+    
+    // Standard binary exponentiation
+    while (exponent > 0) {
         if (exponent & 1)
-            result = mulmod(result, base, modulus);
-        base = mulmod(base, base, modulus);
+            result = mulmod(result, base, m);
+        
+        base = mulmod(base, base, m);
         exponent >>= 1;
     }
+    
     return result;
 }
 
