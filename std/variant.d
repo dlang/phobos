@@ -3255,3 +3255,14 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     immutable aa = ["0": 0];
     auto v = Variant(aa); // compile error
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=8195
+// Verify that alignment is respected
+@safe unittest
+{
+    static struct Foo { double x; }
+    alias AFoo1 = Algebraic!(Foo);
+    static assert(AFoo1.alignof == 8);
+    // This should also hold for 32 bit versions
+    static assert(AFoo1.sizeof == 16);
+}
