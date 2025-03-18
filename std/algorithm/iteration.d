@@ -865,8 +865,8 @@ See_Also: $(REF tee, std,range)
 template each(alias fun = "a")
 {
     import std.meta : AliasSeq;
-    import std.traits : Parameters;
-    import std.typecons : Flag, Yes, No;
+    import std.traits : Parameters, isInstanceOf;
+    import std.typecons : Flag, Yes, No, Tuple;
 
 private:
     alias BinaryArgs = AliasSeq!(fun, "i", "a");
@@ -912,7 +912,8 @@ public:
     Flag!"each" each(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
-        __traits(compiles, typeof(r.front).length)))
+        // Tuples get automatically expanded if function takes right number of args
+        (isInputRange!Range && isInstanceOf!(Tuple, typeof(r.front)))))
     {
         static if (isRangeIterable!Range)
         {
@@ -953,7 +954,11 @@ public:
         }
         else
         {
-            // range interface with >2 parameters.
+            /* Range over Tuples, fun must have correct number of args
+            * If number of args of fun is <= 2, calling fun(tuple) or fun(idx, tuple)
+            * will have precendence over fun(tuple.expand).
+            * Provide types to delegate params to control this.
+            */
             for (auto range = r; !range.empty; range.popFront())
             {
                 static if (!is(typeof(fun(r.front.expand)) == Flag!"each"))
