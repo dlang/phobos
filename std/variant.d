@@ -3262,7 +3262,9 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 {
     static struct Foo { double x; }
     alias AFoo1 = Algebraic!(Foo);
-    static assert(AFoo1.alignof == 8);
-    // This should also hold for 32 bit versions
-    static assert(AFoo1.sizeof == 16);
+    static assert(AFoo1.alignof >= double.alignof);
+
+    // Algebraic using a function pointer is an implementation detail. If test fails, this is safe to change
+    enum FP_SIZE = (int function()).sizeof;
+    static assert(AFoo1.sizeof >= double.sizeof + FP_SIZE);
 }
