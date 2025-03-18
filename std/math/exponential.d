@@ -819,59 +819,102 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
 if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 {
     import std.meta : AliasSeq;
-
     alias T = Unqual!(Largest!(F, H));
     static if (T.sizeof <= 4)
     {
         alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
     }
-
+    
     static T mulmod(T a, T b, T c)
     {
         static if (T.sizeof == 8)
         {
-            static T addmod(T a, T b, T c)
+            // Use 128-bit multiplication for 64-bit types if supported
+            version (D_InlineAsm_X86_64)
             {
-                b = c - b;
-                if (a >= b)
-                    return a - b;
+                // x86_64 inline assembly implementation for 128-bit multiplication
+                ulong low, high;
+                asm pure nothrow @nogc
+                {
+                    mov RAX, a;
+                    mul b;
+                    mov low, RAX;
+                    mov high, RDX;
+                }
+                
+                // Now perform modular reduction of the 128-bit result
+                if (high == 0)
+                {
+                    // If high part is zero, just do a single modulo
+                    return low % c;
+                }
                 else
-                    return c - b + a;
+                {
+                    // Barrett reduction or similar technique
+                    ulong q, r, t;
+                    ulong r_max = c - 1;
+                    
+                    // Process high bits first
+                    q = high;
+                    r = q % c;
+                    
+                    // Process low bits (with carry from high)
+                    t = ((r << 32) | (low >> 32)) % c;
+                    r = ((t << 32) | (low & 0xFFFFFFFF)) % c;
+                    
+                    return r;
+                }
             }
-
-            T result = 0, tmp;
-
-            b %= c;
-            while (a > 0)
+            else
             {
-                if (a & 1)
-                    result = addmod(result, b, c);
-
-                a >>= 1;
-                b = addmod(b, b, c);
+                // Fall back to the safe algorithm when inline asm not available
+                static T addmod(T a, T b, T c)
+                {
+                    b = c - b;
+                    if (a >= b)
+                        return a - b;
+                    else
+                        return c - b + a;
+                }
+                
+                T result = 0;
+                b %= c;
+                while (a > 0)
+                {
+                    if (a & 1)
+                        result = addmod(result, b, c);
+                    a >>= 1;
+                    b = addmod(b, b, c);
+                }
+                return result;
             }
-
-            return result;
         }
         else
         {
-            DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
-            return result % c;
+            // For smaller types, we can safely use the double-width type
+            DoubleT result = cast(DoubleT)(cast(DoubleT) a * cast(DoubleT) b);
+            return cast(T)(result % c);
         }
     }
-
-    T base = x, result = 1, modulus = m;
+    
+    // Handle special cases first
+    if (m == 1)
+        return 0;
+    if (n == 0)
+        return 1;
+    
+    T base = x % m;  // Reduce base initially
+    T result = 1;
+    T modulus = m;
     Unqual!G exponent = n;
-
+    
     while (exponent > 0)
     {
         if (exponent & 1)
             result = mulmod(result, base, modulus);
-
         base = mulmod(base, base, modulus);
         exponent >>= 1;
     }
-
     return result;
 }
 
