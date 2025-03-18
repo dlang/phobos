@@ -767,24 +767,8 @@ if (is(T R == Complex!R))
  */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-    import std.math.algebraic : sqrt;
-    import std.math.traits : isInfinity, isNaN;
-    import std.math : fabs;
-    import std.algorithm.comparison : max;
-
-    if (isNaN(z.re) || isNaN(z.im))
-        return T.nan;
-    if (isInfinity(z.re) || isInfinity(z.im))
-        return T.infinity;
-
-    const T maxabs = max(fabs(z.re), fabs(z.im));
-    if (maxabs == 0.0)
-        return maxabs;
-
-    const T qx = z.re / maxabs;
-    const T qy = z.im / maxabs;
-
-    return maxabs * sqrt(qx * qx + qy * qy);
+    import std.math.algebraic : hypot;
+    return hypot(z.re, z.im);
 }
 
 ///
