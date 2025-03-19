@@ -4537,9 +4537,10 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-void  browse(scope const(char)[] url) @safe @nogc
+void  browse(scope const(char)[] url) @safe
 {
-
+    
+    
     
     import std.process : environment, spawnProcess, Config;
     version  (OSX) {
@@ -4551,14 +4552,15 @@ void  browse(scope const(char)[] url) @safe @nogc
     string[2] browserArgs = [browserName, url.idup];
     spawnProcess(browserArgs[], null, Config.detached);
 }
+}
     
-    }
+    
 else
     static assert(0, "os not supported");
 
 // Verify attributes are consistent between all implementations
 
-@safe @nogc nothrow unittest
+@safe nothrow unittest
 {
     if (false)
         browse("");
