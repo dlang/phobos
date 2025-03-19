@@ -3255,3 +3255,16 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     immutable aa = ["0": 0];
     auto v = Variant(aa); // compile error
 }
+
+// https://issues.dlang.org/show_bug.cgi?id=8195
+// Verify that alignment is respected
+@safe unittest
+{
+    static struct Foo { double x; }
+    alias AFoo1 = Algebraic!(Foo);
+    static assert(AFoo1.alignof >= double.alignof);
+
+    // Algebraic using a function pointer is an implementation detail. If test fails, this is safe to change
+    enum FP_SIZE = (int function()).sizeof;
+    static assert(AFoo1.sizeof >= double.sizeof + FP_SIZE);
+}
