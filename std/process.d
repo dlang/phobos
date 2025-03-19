@@ -4539,9 +4539,8 @@ else version (Posix)
 
     void browse(scope const(char)[] url) @safe
     {
-    import std.process : environment, spawnProcess, Config;
     version (OSX)
-    enum defaultBrowser = "open";
+        enum defaultBrowser = "open";
     else
         enum defaultBrowser = "xdg-open";
     string browserName = environment.get("BROWSER", defaultBrowser);
