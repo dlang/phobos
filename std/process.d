@@ -4537,33 +4537,28 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-void browse(scope const(char)[] url) @safe
+void  browse(scope const(char)[] url) @safe @nogc
 {
 
-    import std.exception : enforce;
-     version (Posix)
-{
+    
     import std.process : environment, spawnProcess, Config;
-    version (OSX)
+    version  (OSX) {
         enum defaultBrowser = "open";
+    }
     else
         enum defaultBrowser = "xdg-open";
     string browserName = environment.get("BROWSER", defaultBrowser);
     string[2] browserArgs = [browserName, url.idup];
     spawnProcess(browserArgs[], null, Config.detached);
 }
-    else
-    {
-        static assert(0, "Platform not supported");
+    
     }
-    }
-}
 else
     static assert(0, "os not supported");
 
 // Verify attributes are consistent between all implementations
 
-@safe  nothrow unittest
+@safe @nogc nothrow unittest
 {
     if (false)
         browse("");
