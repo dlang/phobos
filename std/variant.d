@@ -3256,7 +3256,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     auto v = Variant(aa); // compile error
 }
 
-// https://issues.dlang.org/show_bug.cgi?id=8195
+// https://github.com/dlang/phobos/issues/9585
 // Verify that alignment is respected
 @safe unittest
 {
