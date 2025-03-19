@@ -4537,62 +4537,31 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-   /**
- * Start up the browser and set it to viewing the page at url.
- *
- * Uses std.process.spawnProcess internally to properly handle process creation
- * across platforms.
- */
 void browse(scope const(char)[] url) @safe
 {
-    import std.process : spawnProcess, Config;
+
     import std.exception : enforce;
-    
-    
-    version (Windows)
-    {
-       
-        import std.process : spawnShell;
-        
-        auto pid = spawnShell("start " ~ url, null, Config.detached);
-    }
-    else version (Posix)
-    {
-        import std.process : environment;
-        import std.array : array;
-        
- 
-        string browser = environment.get("BROWSER", null);
-        string[] args;
-        
-        if (browser !is null)
-        {
-            args = [browser, url.idup];
-        }
-        else
-        {
-            version (OSX)
-            {
-                args = ["open", url.idup];
-            }
-            else
-            {
-                args = ["xdg-open", url.idup]; 
-            }
-        }
-        
-       
-        auto pid = spawnProcess(args, null, Config.detached);
-    }
+     version (Posix)
+{
+    import std.process : environment, spawnProcess, Config;
+    version (OSX)
+        enum defaultBrowser = "open";
+    else
+        enum defaultBrowser = "xdg-open";
+    string browserName = environment.get("BROWSER", defaultBrowser);
+    string[2] browserArgs = [browserName, url.idup];
+    spawnProcess(browserArgs[], null, Config.detached);
+}
     else
     {
         static assert(0, "Platform not supported");
     }
-}
+    }
 }
 else
     static assert(0, "os not supported");
 
+// Verify attributes are consistent between all implementations
 
 @safe  nothrow unittest
 {
