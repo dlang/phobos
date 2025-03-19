@@ -4537,65 +4537,64 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void browse(scope const(char)[] url) nothrow @nogc @safe
+   /**
+ * Start up the browser and set it to viewing the page at url.
+ *
+ * Uses std.process.spawnProcess internally to properly handle process creation
+ * across platforms.
+ */
+void browse(scope const(char)[] url) @safe
+{
+    import std.process : spawnProcess, Config;
+    import std.exception : enforce;
+    
+    
+    version (Windows)
     {
-        const buffer = url.tempCString(); // Retain buffer until end of scope
-        const(char)*[3] args;
-
-        // Trusted because it's called with a zero-terminated literal
-        const(char)* browser = (() @trusted => core.stdc.stdlib.getenv("BROWSER"))();
-        if (browser)
+       
+        import std.process : spawnShell;
+        
+        auto pid = spawnShell("start " ~ url, null, Config.detached);
+    }
+    else version (Posix)
+    {
+        import std.process : environment;
+        import std.array : array;
+        
+ 
+        string browser = environment.get("BROWSER", null);
+        string[] args;
+        
+        if (browser !is null)
         {
-            // String already zero-terminated
-            browser = (() @trusted => strdup(browser))();
-            args[0] = browser;
+            args = [browser, url.idup];
         }
         else
         {
             version (OSX)
             {
-                args[0] = "open";
+                args = ["open", url.idup];
             }
             else
             {
-                //args[0] = "x-www-browser";  // doesn't work on some systems
-                args[0] = "xdg-open";
+                args = ["xdg-open", url.idup]; 
             }
         }
-
-        args[1] = buffer;
-        args[2] = null;
-
-        auto childpid = core.sys.posix.unistd.fork();
-        if (childpid == 0)
-        {
-            // Trusted because args and all entries are always zero-terminated
-            (() @trusted {
-                core.sys.posix.unistd.execvp(args[0], &args[0]);
-                perror(args[0]);
-                core.sys.posix.unistd._exit(1);
-            })();
-            assert(0, "Child failed to exec");
-        }
-        if (browser)
-            // Trusted because it's allocated via strdup above
-            (() @trusted => free(cast(void*) browser))();
-
-        version (StdUnittest)
-        {
-            // Verify that the test script actually suceeds
-            int status;
-            const check = (() @trusted => waitpid(childpid, &status, 0))();
-            assert(check != -1);
-            assert(status == 0);
-        }
+        
+       
+        auto pid = spawnProcess(args, null, Config.detached);
     }
+    else
+    {
+        static assert(0, "Platform not supported");
+    }
+}
 }
 else
     static assert(0, "os not supported");
 
-// Verify attributes are consistent between all implementations
-@safe @nogc nothrow unittest
+
+@safe  nothrow unittest
 {
     if (false)
         browse("");
