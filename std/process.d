@@ -4537,7 +4537,7 @@ else version (Posix)
     import core.stdc.string;
     import core.sys.posix.unistd;
 
-    void  browse(scope const(char)[] url) @safe
+    void browse(scope const(char)[] url) @safe
     {
     import std.process : environment, spawnProcess, Config;
     version (OSX)
