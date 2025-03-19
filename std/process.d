@@ -4547,8 +4547,8 @@ else version (Posix)
     string browserName = environment.get("BROWSER", defaultBrowser);
     string[2] browserArgs = [browserName, url.idup];
     spawnProcess(browserArgs[], null, Config.detached);
-    }   
-}  
+    }
+}
 else
     static assert(0, "os not supported");
 
