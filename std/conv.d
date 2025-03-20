@@ -1019,7 +1019,14 @@ if (!(is(S : T) &&
                !__traits(isDisabled, S.toString) &&
                is(typeof(value.toString()) == string))
     {
-        return value.toString();
+            static if (is(T == char[]))
+        {
+            return value.toString().dup;
+        }
+        else
+        {
+            return value.toString();
+        }
     }
     else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
