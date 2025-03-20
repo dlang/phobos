@@ -815,234 +815,239 @@ private real _powImpl(real x, real y) @safe @nogc pure nothrow
  *
  * The function requires that all values have unsigned types.
  */
-Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUnsigned!G && isUnsigned!H) {
+Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
+if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
+{
     import std.meta : AliasSeq;
-    
+
     alias T = Unqual!(Largest!(F, H));
-    static if (T.sizeof <= 4) {
+    static if (T.sizeof <= 4)
+    {
         alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
     }
-    
-  static T mulmod(T)(T a, T b, T c) {
-    static if (T.sizeof == 8) {
-        if (c <= 0x100000000) {
-            T result = a * b;
-            return result % c;
-        }
-        
-        version (D_InlineAsm_X86_64) {
-            // Fast path for DMD (uses D-style assembly)
-            ulong low = void;
-            ulong high = void;
 
-            asm pure @trusted nothrow @nogc {
-                mov RAX, a;      // Load a into RAX
-                mul b;           // Multiply by b (RDX:RAX = a * b)
-                mov low, RAX;    // Store low 64 bits
-                mov high, RDX;   // Store high 64 bits
-            }
-
-            if (high >= c) {
-                high %= c;
-            }
-
-            if (high == 0) {
-                return low % c;
-            }
-
-            asm pure @trusted nothrow @nogc {
-                mov RAX, high;   // Load high part
-                xor RDX, RDX;    // Clear RDX for division
-                div c;           // Divide high by c
-                mov high, RDX;   // Store remainder
-
-                mov RAX, low;    // Load low part
-                mov RDX, high;   // Load reduced high part
-                div c;           // Divide full 128-bit number by c
-                mov low, RDX;    // Store remainder (final result)
-            }
-
-            return low;
-        }
-        else version(LDC) {
-            // 128-bit mul with gcc extended asm for LDC
-            uint low, high;
-
-            asm pure @trusted nothrow @nogc {
-                "mull %2"
-                : "=a"(low), "=d"(high)
-                : "r"(b), "0"(a)   // Ensure a is in eax
-                : "cc";
-            };
-
-            if (high >= c) {
-                high %= c;
-            }
-
-            if (high == 0) {
-                return low % c;
-            }
-
-            asm pure @trusted nothrow @nogc {
-                "divl %2"
-                : "=a"(low), "=d"(high)
-                : "r"(c), "0"(low), "1"(high)  // Ensure correct register allocation
-                : "cc";
-            };
-
-            return low;
-        }
-        else {
-            // Slow addmod method for non-x86_64 platforms
-            static T addmod(T x, T y, T m)
+    static T mulmod(T)(T a,T b,T c)
+    {
+        static if (T.sizeof == 8)
+        {
+            if (c <= 0x100000000)
             {
-                y = m - y;
-                if (x >= y)
-                    return x - y;
-                else
-                    return m - y + x;
+                T result=a*b;
+                return result%c;
             }
-            
-            T result = 0;
-            b %= c;
-            
-            while (a > 0) {
-                if (a & 1)
-                    result = addmod(result, b, c);
-                a >>= 1;
-                b = addmod(b, b, c);
-            }
-
-            return result;
-        }
-    }
-    else static if (T.sizeof == 4) {
-        if (c <= 0x10000) {
-            T result = a * b;
-            return result % c;
-        }
-        
-        version (D_InlineAsm_X86_64) {
-            uint low = void;
-            uint high = void;
-
-            asm pure @trusted nothrow @nogc {
-                mov EAX, a;      // Load a into EAX
-                mul b;           // Multiply by b (EDX:EAX = a * b)
-                mov low, EAX;    // Store low 32 bits
-                mov high, EDX;   // Store high 32 bits
-            }
-
-            if (high >= c) {
-                high %= c;
-            }
-
-            if (high == 0) {
-                return low % c;
-            }
-
-            asm pure @trusted nothrow @nogc {
-                mov EAX, high;   // Load high part
-                xor EDX, EDX;    // Clear EDX for division
-                div c;           // Divide high by c
-                mov high, EDX;   // Store remainder
-
-                mov EAX, low;    // Load low part
-                mov EDX, high;   // Load reduced high part
-                div c;           // Divide full 64-bit number by c
-                mov low, EDX;    // Store remainder (final result)
-            }
-
-            return low;
-        }
-        else version(LDC) {
-            uint low, high;
-
-            asm pure @trusted nothrow @nogc {
-                "mull %[b]"
-                : "=a"(low), "=d"(high)
-                : [a] "a"(a), [b] "r"(b)
-                : "cc";
-            };
-
-            if (high >= c) {
-                high %= c;
-            }
-
-            if (high == 0) {
-                return low % c;
-            }
-
-            asm pure @trusted nothrow @nogc {
-                "divl %[c]"
-                : "=a"(low), "=d"(high)
-                : [a] "a"(low), "d"(high), [c] "r"(c)
-                : "cc";
-            };
-
-            return low;
-        }
-        else {
-            // Fallback for non-x86_64 platforms
-            static T addmod(T x, T y, T m)
+            version (D_InlineAsm_X86_64)
             {
-                y = m - y;
-                if (x >= y)
-                    return x - y;
-                else
-                    return m - y + x;
-            }
-            
-            T result = 0;
-            b %= c;
-            
-            while (a > 0) {
-                if (a & 1)
-                    result = addmod(result, b, c);
-                a >>= 1;
-                b = addmod(b, b, c);
-            }
+                ulong low=void;
+                ulong high=void;
 
-            return result;
+                asm pure @trusted nothrow @nogc
+                {
+                    mov RAX,a;
+                    mul b;
+                    mov low,RAX;
+                    mov high,RDX;
+                }
+
+                if (high >= c)
+                {
+                    high%=c;
+                }
+
+                if (high == 0)
+                {
+                    return low%c;
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    mov RAX,high;
+                    xor RDX,RDX;
+                    div c;
+                    mov high,RDX;
+
+                    mov RAX,low;
+                    mov RDX,high;
+                    div c;
+                    mov low,RDX;
+                }
+
+                return low;
+            }
+            else version (LDC)
+            {
+                uint low,high;
+
+                asm pure @trusted nothrow @nogc
+                {
+                    "mull %2"
+                    :"=a"(low),"=d"(high)
+                    :"r"(b),"0"(a)
+                    :"cc";
+                }
+
+                if (high >= c)
+                {
+                    high%=c;
+                }
+
+                if (high == 0)
+                {
+                    return low%c;
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    "divl %2"
+                    :"=a"(low),"=d"(high)
+                    :"r"(c),"0"(low),"1"(high)
+                    :"cc";
+                }
+
+                return low;
+            }
+            else{
+                static T addmod (T x,T y,T m)
+                {
+                    y=m-y;
+                    if (x >= y)
+                        return x-y;
+                    else
+                        return m-y+x;
+                }
+                T result=0;
+                b%=c;
+                while (a > 0)
+                {
+                    if (a&1)
+                        result=addmod(result,b,c);
+                    a>>=1;
+                    b=addmod(b,b,c);
+                }
+
+                return result;
+            }
+        }
+        else static if (T.sizeof == 4)
+        {
+            if (c <= 0x10000)
+            {
+                T result=a*b;
+                return result%c;
+            }
+            version (D_InlineAsm_X86_64)
+            {
+                uint low=void;
+                uint high=void;
+
+                asm pure @trusted nothrow @nogc
+                {
+                    mov EAX,a;
+                    mul b;
+                    mov low,EAX;
+                    mov high,EDX;
+                }
+
+                if (high >= c)
+                {
+                    high%=c;
+                }
+
+                if (high == 0)
+                {
+                    return low%c;
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    mov EAX,high;
+                    xor EDX,EDX;
+                    div c;
+                    mov high,EDX;
+
+                    mov EAX,low;
+                    mov EDX,high;
+                    div c;
+                    mov low,EDX;
+                }
+
+                return low;
+            }
+            else version (LDC)
+            {
+                uint low,high;
+
+                asm pure @trusted nothrow @nogc
+                {
+                    "mull %[b]"
+                    :"=a"(low),"=d"(high)
+                    :[a]"a"(a),[b]"r"(b)
+                    :"cc";
+                }
+
+                if (high >= c)
+                {
+                    high%=c;
+                }
+
+                if (high == 0)
+                {
+                    return low%c;
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    "divl %[c]"
+                    :"=a"(low),"=d"(high)
+                    :[a]"a"(low),"d"(high),[c]"r"(c)
+                    :"cc";
+                }
+
+                return low;
+            }
+            else{
+                static T addmod (T x,T y,T m)
+                {
+                    y=m-y;
+                    if (x >= y)
+                        return x-y;
+                    else
+                        return m-y+x;
+                }
+                T result=0;
+                b%=c;
+                while (a > 0)
+                {
+                    if (a&1)
+                        result=addmod(result,b,c);
+                    a>>=1;
+                    b=addmod(b,b,c);
+                }
+
+                return result;
+            }
+        }
+        else
+        {
+            alias DoubleT=AliasSeq!(void,ushort,uint,void,ulong)[T.sizeof];
+            DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+            return cast(T)(result%c);
         }
     }
-    else {
-        // For smaller types, use double-width multiplication
-        import std.meta : AliasSeq;
-        alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
-        DoubleT result = cast(DoubleT)(cast(DoubleT) a * cast(DoubleT) b);
-        return cast(T)(result % c);
-    }
-}
 
-
-    
-    T base = x % m;  // Reduce base modulo m initially
-    T result = 1;
+    T base = x, result = 1, modulus = m;
     Unqual!G exponent = n;
-    
-    // Handle special cases
-    if (m == 1)
-        return 0;  // Any number mod 1 is 0
-    
-    if (m == 0)
-        return 0;  // Convention: a^n mod 0 = 0
-    
-    if (exponent == 0)
-        return 1;  // x^0 = 1 for any x
-    
-    // Standard binary exponentiation
-    while (exponent > 0) {
+
+    while (exponent > 0)
+    {
         if (exponent & 1)
-            result = mulmod(result, base, m);
-        
-        base = mulmod(base, base, m);
+            result = mulmod(result, base, modulus);
+
+        base = mulmod(base, base, modulus);
         exponent >>= 1;
     }
-    
+
     return result;
 }
-
 ///
 @safe pure nothrow @nogc unittest
 {
