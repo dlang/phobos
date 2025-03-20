@@ -58,6 +58,11 @@ version (D_HardFloat)
     // FloatingPointControl.clearExceptions() depends on version IeeeFlagsSupport
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
+version (X86_64)
+{
+    version (GNU) version = GNU_OR_LDC_X86_64;
+    version (LDC) version = GNU_OR_LDC_X86_64;
+}
 
 /**
  * Compute the value of x $(SUPERSCRIPT n), where n is an integer
@@ -873,164 +878,57 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 return low;
             }
-            else version (LDC)
+            else version (X86_64)
             {
-                uint low,high;
+                uint low, high;
 
                 asm pure @trusted nothrow @nogc
                 {
-                    "mull %2"
-                    :"=a"(low),"=d"(high)
-                    :"r"(b),"0"(a)
-                    :"cc";
+                    "mulq %[factor]"
+                    : "=a"(low), "=d"(high)
+                    : [factor] "r"(b), [multiplicand] "0"(a)
+                    : "cc";
                 }
 
                 if (high >= c)
                 {
-                    high%=c;
+                    high %= c;
                 }
 
                 if (high == 0)
                 {
-                    return low%c;
+                    return low % c;
                 }
 
                 asm pure @trusted nothrow @nogc
                 {
-                    "divl %2"
-                    :"=a"(low),"=d"(high)
-                    :"r"(c),"0"(low),"1"(high)
-                    :"cc";
+                    "divq %[divisor]"
+                    : "+a"(low), "+d"(high)
+                    : [divisor] "r"(c)
+                    : "cc";
                 }
 
-                return low;
-            }
-            else{
-                static T addmod (T x,T y,T m)
-                {
-                    y=m-y;
-                    if (x >= y)
-                        return x-y;
-                    else
-                        return m-y+x;
-                }
-                T result=0;
-                b%=c;
-                while (a > 0)
-                {
-                    if (a&1)
-                        result=addmod(result,b,c);
-                    a>>=1;
-                    b=addmod(b,b,c);
-                }
-
-                return result;
+                return high;
             }
         }
         else static if (T.sizeof == 4)
         {
             if (c <= 0x10000)
             {
-                T result=a*b;
-                return result%c;
+                T result = a * b;
+                return result % c;
             }
-            version (D_InlineAsm_X86_64)
+            else
             {
-                uint low=void;
-                uint high=void;
-
-                asm pure @trusted nothrow @nogc
-                {
-                    mov EAX,a;
-                    mul b;
-                    mov low,EAX;
-                    mov high,EDX;
-                }
-
-                if (high >= c)
-                {
-                    high%=c;
-                }
-
-                if (high == 0)
-                {
-                    return low%c;
-                }
-
-                asm pure @trusted nothrow @nogc
-                {
-                    mov EAX,high;
-                    xor EDX,EDX;
-                    div c;
-                    mov high,EDX;
-
-                    mov EAX,low;
-                    mov EDX,high;
-                    div c;
-                    mov low,EDX;
-                }
-
-                return low;
-            }
-            else version (LDC)
-            {
-                uint low,high;
-
-                asm pure @trusted nothrow @nogc
-                {
-                    "mull %[b]"
-                    :"=a"(low),"=d"(high)
-                    :[a]"a"(a),[b]"r"(b)
-                    :"cc";
-                }
-
-                if (high >= c)
-                {
-                    high%=c;
-                }
-
-                if (high == 0)
-                {
-                    return low%c;
-                }
-
-                asm pure @trusted nothrow @nogc
-                {
-                    "divl %[c]"
-                    :"=a"(low),"=d"(high)
-                    :[a]"a"(low),"d"(high),[c]"r"(c)
-                    :"cc";
-                }
-
-                return low;
-            }
-            else{
-                static T addmod (T x,T y,T m)
-                {
-                    y=m-y;
-                    if (x >= y)
-                        return x-y;
-                    else
-                        return m-y+x;
-                }
-                T result=0;
-                b%=c;
-                while (a > 0)
-                {
-                    if (a&1)
-                        result=addmod(result,b,c);
-                    a>>=1;
-                    b=addmod(b,b,c);
-                }
-
-                return result;
+                DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+                return result % c;
             }
         }
         else
         {
             alias DoubleT=AliasSeq!(void,ushort,uint,void,ulong)[T.sizeof];
             DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
-            return cast(T)(result%c);
+            return result%c;
         }
     }
 
