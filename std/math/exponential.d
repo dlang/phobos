@@ -825,6 +825,11 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
     
   static T mulmod(T)(T a, T b, T c) {
     static if (T.sizeof == 8) {
+        if (c <= 0x100000000) {
+            T result = a * b;
+            return result % c;
+        }
+        
         version (D_InlineAsm_X86_64) {
             // Fast path for DMD (uses D-style assembly)
             ulong low = void;
@@ -860,41 +865,63 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
             return low;
         }
         else version(LDC) {
-    uint low, high;
+            // 128-bit mul with gcc extended asm for LDC
+            uint low, high;
 
-    asm pure @trusted nothrow @nogc {
-        "mull %2"
-        : "=a"(low), "=d"(high)
-        : "r"(b), "0"(a)   // Ensure a is in eax
-        : "cc";
-    };
+            asm pure @trusted nothrow @nogc {
+                "mull %2"
+                : "=a"(low), "=d"(high)
+                : "r"(b), "0"(a)   // Ensure a is in eax
+                : "cc";
+            };
 
-    if (high >= c) {
-        high %= c;
-    }
+            if (high >= c) {
+                high %= c;
+            }
 
-    if (high == 0) {
-        return low % c;
-    }
+            if (high == 0) {
+                return low % c;
+            }
 
-    asm pure @trusted nothrow @nogc {
-        "divl %2"
-        : "=a"(low), "=d"(high)
-        : "r"(c), "0"(low), "1"(high)  // Ensure correct register allocation
-        : "cc";
-    };
+            asm pure @trusted nothrow @nogc {
+                "divl %2"
+                : "=a"(low), "=d"(high)
+                : "r"(c), "0"(low), "1"(high)  // Ensure correct register allocation
+                : "cc";
+            };
 
-    return low;
-}
-
-          else {
-            // Use 64-bit type for the calculation
-            ulong result = (cast(ulong)a * cast(ulong)b) % c;
-            return cast(T)result;
+            return low;
         }
-      
+        else {
+            // Slow addmod method for non-x86_64 platforms
+            static T addmod(T x, T y, T m)
+            {
+                y = m - y;
+                if (x >= y)
+                    return x - y;
+                else
+                    return m - y + x;
+            }
+            
+            T result = 0;
+            b %= c;
+            
+            while (a > 0) {
+                if (a & 1)
+                    result = addmod(result, b, c);
+                a >>= 1;
+                b = addmod(b, b, c);
+            }
+
+            return result;
+        }
     }
     else static if (T.sizeof == 4) {
+        if (c <= 0x10000) {
+            T result = a * b;
+            return result % c;
+        }
+        
         version (D_InlineAsm_X86_64) {
             uint low = void;
             uint high = void;
@@ -928,7 +955,7 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
 
             return low;
         }
-        else version(LDC)  {
+        else version(LDC) {
             uint low, high;
 
             asm pure @trusted nothrow @nogc {
@@ -955,23 +982,29 @@ Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m) if (isUnsigned!F && isUns
 
             return low;
         }
-         else {
+        else {
             // Fallback for non-x86_64 platforms
+            static T addmod(T x, T y, T m)
+            {
+                y = m - y;
+                if (x >= y)
+                    return x - y;
+                else
+                    return m - y + x;
+            }
+            
             T result = 0;
-            a %= c;
             b %= c;
-
-            while (b > 0) {
-                if (b & 1) {
-                    result = (result + a) % c;
-                }
-                a = (a * 2) % c;
-                b >>= 1;
+            
+            while (a > 0) {
+                if (a & 1)
+                    result = addmod(result, b, c);
+                a >>= 1;
+                b = addmod(b, b, c);
             }
 
             return result;
         }
-        
     }
     else {
         // For smaller types, use double-width multiplication
