@@ -885,9 +885,9 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 asm pure @trusted nothrow @nogc
                 {
-                    "mulq %[factor]"                        // Multiply RAX by 'factor'
+                    "mulq %[fac]"                        // Multiply RAX by 'fac==factor'
                     : "=a"(low), "=d"(high)                 // Store result: low part in RAX, high part in RDX
-                    : [factor] "r"(b), [multiplicand] "0"(a)// Input: 'a' in RAX, 'b' as multiplier
+                    : [fac] "r"(b), [mulip] "0"(a)      // Input: 'a' in RAX, 'b' as multiplier mulip==multiplicand
                     : "cc";                                 // Flags are clobbered
                 }
 
