@@ -2016,6 +2016,37 @@ if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
     return parse!T(value);
 }
 
+private T toImpl(T, S)(S range)
+if (isInputRange!S && isInfinite!S && is(T == string))
+{
+    import std.range : empty, front, popFront;
+    import std.conv : to;
+
+    enum maxElements = 3; // Number of elements to display
+    string result = "[";
+    int count = 0;
+
+    while (!range.empty && count < maxElements)
+    {
+        if (count > 0) result ~= ", ";
+        result ~= to!string(range.front);
+        range.popFront();
+        count++;
+    }
+    result ~= ", ...]";
+    return result;
+}
+
+@safe unittest
+{
+    import std.range : repeat;
+    import std.conv : to;
+
+    auto infiniteRange = repeat(42);
+    assert(to!string(infiniteRange) == "[42, 42, 42, ...]");
+}
+
+
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
 if (isSomeFiniteCharInputRange!S &&
