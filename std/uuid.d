@@ -1205,10 +1205,7 @@ public struct UUID
  * This function is not supported at compile time.
  *
  * Bugs:
- * $(LINK2
- *     https://github.com/dlang/phobos/issues/9881
- *     Issue #9881 - Randomness in UUID generation is insufficient
- * )
+ * $(LINK2 https://github.com/dlang/phobos/issues/9881, Issue #9881 - Randomness in UUID generation is insufficient)
  *
  * Warning:
  * $(B This function must not be used for cryptographic purposes.)
