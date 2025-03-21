@@ -845,12 +845,13 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                 ulong low=void;
                 ulong high=void;
 
+                // Perform 128-bit multiplication: a * b = [high:low]
                 asm pure @trusted nothrow @nogc
                 {
-                    mov RAX,a;
-                    mul b;
-                    mov low,RAX;
-                    mov high,RDX;
+                    mov RAX,a;      // Load a into RAX
+                    mul b;          // Multiply by b (RDX:RAX = a * b)
+                    mov low,RAX;    // Store low 64 bits
+                    mov high,RDX;   // Store high 64 bits
                 }
 
                 if (high >= c)
@@ -865,15 +866,15 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 asm pure @trusted nothrow @nogc
                 {
-                    mov RAX,high;
-                    xor RDX,RDX;
-                    div c;
-                    mov high,RDX;
+                    mov RAX,high;   // Load high part
+                    xor RDX,RDX;    // Clear RDX for division
+                    div c;          // RAX = high / mod, RDX = high % mod
+                    mov high,RDX;   // Store remainder (high % mod)
 
-                    mov RAX,low;
-                    mov RDX,high;
-                    div c;
-                    mov low,RDX;
+                    mov RAX,low;    // Load low part
+                    mov RDX,high;   // Load reduced high part
+                    div c;          // Divide full 128-bit number by mod
+                    mov low,RDX;    // Store remainder (final result)
                 }
 
                 return low;
@@ -884,10 +885,10 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 asm pure @trusted nothrow @nogc
                 {
-                    "mulq %[factor]"
-                    : "=a"(low), "=d"(high)
-                    : [factor] "r"(b), [multiplicand] "0"(a)
-                    : "cc";
+                    "mulq %[factor]"                        // Multiply RAX by 'factor'
+                    : "=a"(low), "=d"(high)                 // Store result: low part in RAX, high part in RDX
+                    : [factor] "r"(b), [multiplicand] "0"(a)// Input: 'a' in RAX, 'b' as multiplier
+                    : "cc";                                 // Flags are clobbered
                 }
 
                 if (high >= c)
@@ -902,13 +903,34 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 asm pure @trusted nothrow @nogc
                 {
-                    "divq %[divisor]"
-                    : "+a"(low), "+d"(high)
-                    : [divisor] "r"(c)
-                    : "cc";
+                    "divq %[divisor]"       // Divide RDX:RAX by 'divisor' (c)
+                    : "+a"(low), "+d"(high) // Operate on (low, high), storing quotient in RAX and remainder in RDX
+                    : [divisor] "r"(c)      // Input divisor 'c'
+                    : "cc";                 // Flags are clobbered
                 }
 
                 return high;
+            }
+            else
+            {
+                static T addmod(T a, T b, T c)
+                {
+                    b = c - b;
+                    if (a >= b)
+                        return a - b;
+                    else
+                        return c - b + a;
+                }
+                T result = 0;
+                b %= c;
+                while (a > 0)
+                {
+                    if (a & 1)
+                        result = addmod(result, b, c);
+                    a >>= 1;
+                    b = addmod(b, b, c);
+                }
+                return result;
             }
         }
         else static if (T.sizeof == 4)
@@ -926,7 +948,6 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         }
         else
         {
-            alias DoubleT=AliasSeq!(void,ushort,uint,void,ulong)[T.sizeof];
             DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
             return result%c;
         }
@@ -946,6 +967,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
     return result;
 }
+
 ///
 @safe pure nothrow @nogc unittest
 {
