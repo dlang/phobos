@@ -831,7 +831,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
     }
 
-    static T mulmod(T)(T a,T b,T c)
+    static T mulmod(T a, T b, T c)
     {
         static if (T.sizeof == 8)
         {
