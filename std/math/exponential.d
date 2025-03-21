@@ -837,13 +837,13 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         {
             if (c <= 0x100000000)
             {
-                T result=a*b;
-                return result%c;
+                T result = a*b;
+                return result % c;
             }
             version (D_InlineAsm_X86_64)
             {
-                ulong low=void;
-                ulong high=void;
+                ulong low = void;
+                ulong high = void;
 
                 // Perform 128-bit multiplication: a * b = [high:low]
                 asm pure @trusted nothrow @nogc
@@ -856,12 +856,12 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 
                 if (high >= c)
                 {
-                    high%=c;
+                    high %= c;
                 }
 
                 if (high == 0)
                 {
-                    return low%c;
+                    return low % c;
                 }
 
                 asm pure @trusted nothrow @nogc
