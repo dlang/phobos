@@ -1013,7 +1013,13 @@ if (!(is(S : T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
     !isInfinite!S && isExactSomeString!T)
 {
-    static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
+    static if (is(S == struct) &&
+               is(typeof(value.toString()) Ret : T) &&
+               isSomeString!Ret)
+    {
+        return value.toString();
+    }
+    else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
         // string-to-string with incompatible qualifier conversion
         static if (is(ElementEncodingType!T == immutable))
@@ -1120,6 +1126,18 @@ if (!(is(S : T) &&
         // other non-string values runs formatting
         return toStr!T(value);
     }
+}
+// https://issues.dlang.org/show_bug.cgi?id=24739
+@system unittest
+{
+    import std.conv : to;
+
+    struct S
+    {
+        string toString() { return "S"; }
+    }
+
+    assert(S.init.toString().ptr == S.init.to!string.ptr);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=14042
