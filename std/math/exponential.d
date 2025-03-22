@@ -881,7 +881,6 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
             }
             else version (X86_64)
             {
-                T low = a;  // Input a goes in low (RAX)
                 T high = void;
 
                 asm pure @trusted nothrow @nogc
