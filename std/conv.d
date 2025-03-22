@@ -1015,7 +1015,7 @@ if (!(is(S : T) &&
 {
     static if (is(S == struct) &&
                is(typeof(value.toString()) Ret : T) &&
-               isSomeString!Ret
+               isSomeString!Ret)
     {
         return value.toString();
     }
