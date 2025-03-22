@@ -58,6 +58,11 @@ version (D_HardFloat)
     // FloatingPointControl.clearExceptions() depends on version IeeeFlagsSupport
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
+version (X86_64)
+{
+    version (GNU) version = GNU_OR_LDC_X86_64;
+    version (LDC) version = GNU_OR_LDC_X86_64;
+}
 
 /**
  * Compute the value of x $(SUPERSCRIPT n), where n is an integer
@@ -830,33 +835,111 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
     {
         static if (T.sizeof == 8)
         {
-            static T addmod(T a, T b, T c)
+            if (c <= 0x100000000)
             {
-                b = c - b;
-                if (a >= b)
-                    return a - b;
-                else
-                    return c - b + a;
+                T result = a*b;
+                return result % c;
             }
-
-            T result = 0, tmp;
-
-            b %= c;
-            while (a > 0)
+            version (D_InlineAsm_X86_64)
             {
-                if (a & 1)
-                    result = addmod(result, b, c);
+                ulong low = void;
+                ulong high = void;
 
-                a >>= 1;
-                b = addmod(b, b, c);
+                // Perform 128-bit multiplication: a * b = [high:low]
+                asm pure @trusted nothrow @nogc
+                {
+                    mov RAX,a;      // Load a into RAX
+                    mul b;          // Multiply by b (RDX:RAX = a * b)
+                    mov low,RAX;    // Store low 64 bits
+                    mov high,RDX;   // Store high 64 bits
+                }
+
+                if (high >= c)
+                {
+                    high %= c;
+                }
+
+                if (high == 0)
+                {
+                    return low % c;
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    mov RAX,high;   // Load high part
+                    xor RDX,RDX;    // Clear RDX for division
+                    div c;          // RAX = high / mod, RDX = high % mod
+                    mov high,RDX;   // Store remainder (high % mod)
+
+                    mov RAX,low;    // Load low part
+                    mov RDX,high;   // Load reduced high part
+                    div c;          // Divide full 128-bit number by mod
+                    mov low,RDX;    // Store remainder (final result)
+                }
+
+                return low;
             }
+            else version (X86_64)
+            {
+                T high = void;
 
-            return result;
+                asm pure @trusted nothrow @nogc
+                {
+                    "mulq %[fac]"                        // Multiply RAX by 'fac == factor'
+                    : "=a"(low), "=d"(high)                 // Store result: low part in RAX, high part in RDX
+                    : [fac] "r"(b), [mulip] "0"(a)      // Input: 'a' in RAX, 'b' as multiplier mulip == multiplicand
+                    : "cc";                                 // Flags are clobbered
+                }
+
+                asm pure @trusted nothrow @nogc
+                {
+                    "divq %[divisor]"       // Divide RDX:RAX by 'divisor' (c)
+                    : "+a"(low), "+d"(high) // Operate on (low, high), storing quotient in RAX and remainder in RDX
+                    : [divisor] "r"(c)      // Input divisor 'c'
+                    : "cc";                 // Flags are clobbered
+                }
+
+                return high;
+            }
+            else
+            {
+                static T addmod(T a, T b, T c)
+                {
+                    b = c - b;
+                    if (a >= b)
+                        return a - b;
+                    else
+                        return c - b + a;
+                }
+                T result = 0;
+                b %= c;
+                while (a > 0)
+                {
+                    if (a & 1)
+                        result = addmod(result, b, c);
+                    a >>= 1;
+                    b = addmod(b, b, c);
+                }
+                return result;
+            }
+        }
+        else static if (T.sizeof == 4)
+        {
+            if (c <= 0x10000)
+            {
+                T result = a * b;
+                return result % c;
+            }
+            else
+            {
+                DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+                return result % c;
+            }
         }
         else
         {
             DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
-            return result % c;
+            return result%c;
         }
     }
 
