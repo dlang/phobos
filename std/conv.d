@@ -1014,10 +1014,8 @@ if (!(is(S : T) &&
     !isInfinite!S && isExactSomeString!T)
 {
     static if (is(S == struct) &&
-               __traits(hasMember, S, "toString") &&
-               isSomeFunction!(value.toString) &&
-               !__traits(isDisabled, S.toString) &&
-               is(typeof(value.toString()) == string))
+               is(typeof(value.toString()) Ret : T) &&
+               isSomeString!Ret
     {
             static if (is(T == char[]))
         {
