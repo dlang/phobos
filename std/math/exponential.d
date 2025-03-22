@@ -881,7 +881,8 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
             }
             else version (X86_64)
             {
-                uint low, high;
+                T low = void;
+                T high = void;
 
                 asm pure @trusted nothrow @nogc
                 {
