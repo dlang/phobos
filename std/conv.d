@@ -1017,14 +1017,7 @@ if (!(is(S : T) &&
                is(typeof(value.toString()) Ret : T) &&
                isSomeString!Ret
     {
-            static if (is(T == char[]))
-        {
-            return value.toString().dup;
-        }
-        else
-        {
-            return value.toString();
-        }
+        return value.toString();
     }
     else static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
