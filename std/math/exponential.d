@@ -881,7 +881,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
             }
             else version (X86_64)
             {
-                T low = void;
+                T low = a;  // Input a goes in low (RAX)
                 T high = void;
 
                 asm pure @trusted nothrow @nogc
@@ -890,16 +890,6 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                     : "=a"(low), "=d"(high)                 // Store result: low part in RAX, high part in RDX
                     : [fac] "r"(b), [mulip] "0"(a)      // Input: 'a' in RAX, 'b' as multiplier mulip == multiplicand
                     : "cc";                                 // Flags are clobbered
-                }
-
-                if (high >= c)
-                {
-                    high %= c;
-                }
-
-                if (high == 0)
-                {
-                    return low % c;
                 }
 
                 asm pure @trusted nothrow @nogc
