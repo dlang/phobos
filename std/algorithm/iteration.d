@@ -4314,18 +4314,20 @@ Implements the homonym function (also known as `accumulate`, $(D
 compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
-The call `reduce!(fun)(seed, range)` first assigns `seed` to
-an internal variable `result`, also called the accumulator.
-Then, for each element `x` in `range`, `result = fun(result, x)`
-gets evaluated. Finally, `result` is returned.
+
+* Use `seed` to initialize an internal `accumulator`.
+* For each element `e` in $(D range), evaluate `accumulator = fun(result, e)`.
+* Return $(D accumulator).
+
 The one-argument version `reduce!(fun)(range)`
 works similarly, but it uses the first element of the range as the
-seed (the range must be non-empty).
+seed (the range must be non-empty, else this throws).
+
 If range has only one element, the functions are never invoked and
 `result` and the seed is returned unchanged.
 
 Returns:
-    the accumulated `result`
+    the accumulated result
 
 Params:
     fun = one or more functions of the form `Acc function(Acc, ElemT)`
@@ -4816,10 +4818,9 @@ type of the accumulator.)
 $(P For a single function,
 the call `fold!(fun)(range, seed)` will:)
 
-* Use `seed` to initialize an internal variable `result` (also called
-  the accumulator).
-* For each element `e` in $(D range), evaluate `result = fun(result, e)`.
-* Return $(D result).
+* Use `seed` to initialize an internal `accumulator`.
+* For each element `e` in $(D range), evaluate `accumulator = fun(result, e)`.
+* Return $(D accumulator).
 
 $(P The one-argument version `fold!(fun)(range)`
 works similarly, but it uses the first element of the range as the
