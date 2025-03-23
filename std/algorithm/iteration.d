@@ -4808,10 +4808,10 @@ languages of functional flavor, iteratively calling one or more predicates.
 $(P Each predicate in `fun` must take two arguments:)
 * An accumulator value
 * An element of the range `r`
-$(P Each predicate must return a value which implicitly converts to the
+$(P Each function must return a value which implicitly converts to the
 type of the accumulator.)
 
-$(P For a single predicate,
+$(P For a single function,
 the call `fold!(fun)(range, seed)` will:)
 
 * Use `seed` to initialize an internal variable `result` (also called
@@ -4824,7 +4824,7 @@ works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty) and iterates over the remaining
 elements.)
 
-Multiple results are produced when using multiple predicates.
+Multiple results are produced when using multiple functions.
 
 Params:
     fun = one or more functions of the form `Acc function(Acc, ElemT)`
