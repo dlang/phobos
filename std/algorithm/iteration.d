@@ -4326,7 +4326,7 @@ Returns:
     the accumulated `result`
 
 Params:
-    fun = one or more functions
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -4827,7 +4827,7 @@ elements.)
 Multiple results are produced when using multiple predicates.
 
 Params:
-    fun = the predicate function(s) to apply to the elements
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 See_Also:
     * $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -4918,7 +4918,7 @@ This function is also known as
     $(HTTP mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
 
 Params:
-    fun = one or more functions to use as fold operation
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 Returns:
     The function returns a range containing the consecutive reduced values. If
