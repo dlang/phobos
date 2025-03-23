@@ -4979,13 +4979,17 @@ alias DirIterator = _DirIterator!dip1000Enabled;
     operating system / filesystem, and may not follow any particular sorting.
 
     Params:
+        Path = Type of the directory path.
+               Can be either a `string` or a `DirEntry`.
+
         useDIP1000 = used to instantiate this function separately for code with
                      and without -preview=dip1000 compiler switch, because it
                      affects the ABI of this function. Set automatically -
                      don't touch.
 
         path = The directory to iterate over.
-               If empty, the current directory will be iterated.
+               If an empty string (or data that implicitly converts to one) is
+               provided, the current directory will be iterated.
 
         pattern = Optional string with wildcards, such as $(RED
                   "*.d"). When present, it is used to filter the
@@ -5073,8 +5077,11 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, SpanMode mode, bool followSymlink = true)
+// The template constraint is necessary to prevent this overload from matching
+// `DirEntry`. Said type has an `alias this` member of type `string`.
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == string))
 {
     return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
@@ -5175,46 +5182,11 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
     dirEntries("", SpanMode.shallow).walkLength();
 }
 
-// https://github.com/dlang/phobos/issues/9584
-@safe unittest
-{
-	import std.path : absolutePath, buildPath;
-
-	string root = deleteme();
-	mkdirRecurse(root);
-	scope (exit) rmdirRecurse(root);
-
-	mkdirRecurse(root.buildPath("1", "2"));
-	mkdirRecurse(root.buildPath("3", "4"));
-	mkdirRecurse(root.buildPath("3", "5", "6"));
-
-    const origWD = getcwd();
-	chdir(root);
-    scope(exit) chdir(origWD);
-
-    /*
-        This wouldn't work if `entry` were a `string` – for obvious reasons:
-        One cannot (reliably) iterate nested directory trees using relative path strings
-        while changing directories in between.
-
-        The expected error would be something along the lines of:
-        > Failed to stat file `./3/5': No such file or directory
-
-        See <https://github.com/dlang/phobos/issues/9584> for further details.
-    */
-	foreach (DirEntry entry; ".".dirEntries(SpanMode.shallow))
-	{
-		if (entry.isDir)
-			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
-				if (subEntry.isDir)
-					chdir(subEntry.absolutePath); // ←
-	}
-}
-
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, string pattern, SpanMode mode,
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, string pattern, SpanMode mode,
     bool followSymlink = true)
+if (is(Path == string)) // necessary, see comment on previous overload for details
 {
     import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
@@ -5332,6 +5304,114 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 {
     import std.exception : assertThrown;
     assertThrown!Exception(dirEntries("237f5babd6de21f40915826699582e36", "*.bin", SpanMode.depth));
+}
+
+@safe unittest
+{
+    // This is why all the template constraints on `dirEntries` are necessary.
+    static assert(isImplicitlyConvertible!(DirEntry, string));
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(path, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(
+        path, pattern, mode,
+        followSymlink
+    );
+}
+
+@safe unittest
+{
+    static struct Wrapper
+    {
+        string data;
+        alias data this;
+    }
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+    auto wrapped = Wrapper(root);
+    foreach(entry; dirEntries(wrapped, SpanMode.shallow)) {}
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(path.nameWithPrefix, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(
+        path.nameWithPrefix, pattern, mode,
+        followSymlink
+    );
+}
+
+// https://github.com/dlang/phobos/issues/9584
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+
+    /*
+        This wouldn't work if `entry` were a `string` – for fair reasons:
+        One cannot (reliably) iterate nested directory trees using relative path strings
+        while changing directories in between.
+
+        The expected error would be something along the lines of:
+        > Failed to stat file `./3/5': No such file or directory
+
+        See <https://github.com/dlang/phobos/issues/9584> for further details.
+    */
+    chdir(root);
+    scope(exit) chdir(origWD);
+	foreach (DirEntry entry; ".".dirEntries(SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath); // ←
+	}
+
+    chdir(root);
+    scope(exit) chdir(origWD);
+    foreach (DirEntry entry; ".".dirEntries("*", SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath); // ←
+	}
 }
 
 /**
