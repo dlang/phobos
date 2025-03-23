@@ -3652,13 +3652,25 @@ version (StdDdoc)
         +/
         this(return scope string path);
 
+        /++
+            Constructs a `DirEntry` for the given file (or directory).
+
+            Params:
+                path = The file (or directory) to get a DirEntry for.
+                prefix = A prefix to chomp off the path when querying the name of the DirEntry.
+
+            Throws:
+                $(LREF FileException) if the file does not exist.
+        +/
+        this(return scope string path, return scope string prefix);
+
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
+            private this(string path, in WIN32_FIND_DATAW *fd, string prefix = null);
         }
         else version (Posix)
         {
-            private this(string path, core.sys.posix.dirent.dirent* fd);
+            private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null);
         }
 
         /++
@@ -3675,6 +3687,13 @@ assert(de2.name == "/usr/share/include");
           +/
         @property string name() const return scope;
 
+        /++
+            Returns the path to the file represented by this `DirEntry`.
+
+            Unlike `name`, this property returns the internal name as-is,
+            potentially starting with an unexpected prefix.
+         +/
+        @property string nameWithPrefix() const return scope;
 
         /++
             Returns whether the file represented by this `DirEntry` is a
@@ -3810,6 +3829,11 @@ else version (Windows)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
@@ -3831,12 +3855,20 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        this(return scope string path, return scope string prefix)
+        {
+            _namePrefix = prefix;
+            this(path);
+        }
+
+        private this(string path, WIN32_FIND_DATAW *fd, string prefix = null) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
+
+            _namePrefix = prefix;
 
             fd.cFileName[$ - 1] = 0;
 
@@ -3851,7 +3883,18 @@ else version (Windows)
 
         @property string name() const pure nothrow return scope
         {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_namePrefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
+        {
             return _name;
+        }
+
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() const pure nothrow scope
@@ -3904,6 +3947,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -3919,6 +3963,11 @@ else version (Posix)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
@@ -3933,9 +3982,11 @@ else version (Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
+        private this(string path, core.sys.posix.dirent.dirent* fd, string prefix = null) @safe
         {
             import std.path : buildPath;
+
+            _namePrefix = prefix;
 
             static if (is(typeof(fd.d_namlen)))
                 immutable len = fd.d_namlen;
@@ -3974,7 +4025,18 @@ else version (Posix)
 
         @property string name() const pure nothrow return scope
         {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_namePrefix);
+        }
+
+        @property string nameWithPrefix() const pure nothrow return scope
+        {
             return _name;
+        }
+
+        private @property string namePrefix() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() scope
@@ -4107,6 +4169,7 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
@@ -4638,7 +4701,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+    string _namePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4696,7 +4759,6 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
-            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4713,7 +4775,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo, _namePrefix);
             return true;
         }
 
@@ -4758,8 +4820,6 @@ private struct DirIteratorImpl
 
         bool next() @trusted
         {
-            import std.string : chompPrefix;
-
             if (_stack.length == 0)
                 return false;
 
@@ -4769,7 +4829,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata, _namePrefix);
                     return true;
                 }
             }
@@ -4811,7 +4871,7 @@ private struct DirIteratorImpl
             pathname = pathname.absolutePath;
 
             const offset = pathnameAbs.length - pathnameRel.length;
-            _pathPrefix  = pathnameAbs[0 .. offset];
+            _namePrefix  = pathnameAbs[0 .. offset];
         }
 
         if (stepIn(pathname))
@@ -4820,7 +4880,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4850,7 +4910,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur.nameWithPrefix))
                     {
                         pushExtra(thisDir);
                     }
@@ -4864,7 +4924,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur.nameWithPrefix))
                     while (!empty && !next()){}
             }
             else
@@ -4918,14 +4978,23 @@ alias DirIterator = _DirIterator!dip1000Enabled;
     Note: The order of returned directory entries is as it is provided by the
     operating system / filesystem, and may not follow any particular sorting.
 
+    Pitfall: In cases where a change of the working directory (`chdir`) can occur,
+    it's recommended that one either uses absolute paths
+    or avoids converting `DirEntry` structures to `string`.
+    For further details see $(LINK2 https://github.com/dlang/phobos/issues/9584, #9584 on GitHub).
+
     Params:
+        Path = Type of the directory path.
+               Can be either a `string` or a `DirEntry`.
+
         useDIP1000 = used to instantiate this function separately for code with
                      and without -preview=dip1000 compiler switch, because it
                      affects the ABI of this function. Set automatically -
                      don't touch.
 
         path = The directory to iterate over.
-               If empty, the current directory will be iterated.
+               If an empty string (or data that implicitly converts to one) is
+               provided, the current directory will be iterated.
 
         pattern = Optional string with wildcards, such as $(RED
                   "*.d"). When present, it is used to filter the
@@ -5013,8 +5082,11 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, SpanMode mode, bool followSymlink = true)
+// The template constraint is necessary to prevent this overload from matching
+// `DirEntry`. Said type has an `alias this` member of type `string`.
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == string))
 {
     return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
@@ -5113,21 +5185,13 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
-
-    // https://github.com/dlang/phobos/issues/9584
-    string cwd = getcwd();
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
-    {
-        if (entry.isDir)
-            chdir(entry);
-    }
-    chdir(cwd); // needed for the directories to be removed
 }
 
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, string pattern, SpanMode mode,
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, string pattern, SpanMode mode,
     bool followSymlink = true)
+if (is(Path == string)) // necessary, see comment on previous overload for details
 {
     import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
@@ -5245,6 +5309,114 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 {
     import std.exception : assertThrown;
     assertThrown!Exception(dirEntries("237f5babd6de21f40915826699582e36", "*.bin", SpanMode.depth));
+}
+
+@safe unittest
+{
+    // This is why all the template constraints on `dirEntries` are necessary.
+    static assert(isImplicitlyConvertible!(DirEntry, string));
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(path, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(
+        path, pattern, mode,
+        followSymlink
+    );
+}
+
+@safe unittest
+{
+    static struct Wrapper
+    {
+        string data;
+        alias data this;
+    }
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+    auto wrapped = Wrapper(root);
+    foreach (entry; dirEntries(wrapped, SpanMode.shallow)) {}
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(path.nameWithPrefix, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(
+        path.nameWithPrefix, pattern, mode,
+        followSymlink
+    );
+}
+
+// https://github.com/dlang/phobos/issues/9584
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+
+    /*
+        This wouldn't work if `entry` were a `string` – for fair reasons:
+        One cannot (reliably) iterate nested directory trees using relative path strings
+        while changing directories in between.
+
+        The expected error would be something along the lines of:
+        > Failed to stat file `./3/5': No such file or directory
+
+        See <https://github.com/dlang/phobos/issues/9584> for further details.
+    */
+    chdir(root);
+    scope(exit) chdir(origWD);
+	foreach (DirEntry entry; ".".dirEntries(SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath);
+	}
+
+    chdir(root);
+    scope(exit) chdir(origWD);
+    foreach (DirEntry entry; ".".dirEntries("*", SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath);
+	}
 }
 
 /**
