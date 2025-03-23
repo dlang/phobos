@@ -5417,6 +5417,27 @@ if (is(Path == DirEntry))
 				if (subEntry.isDir)
 					chdir(subEntry.absolutePath);
 	}
+
+    /*
+        This tests whether the “relative-path string” pitfall is still a thing.
+        It can be removed later in case the underlying issue got fixed somehow.
+        When doing so, one should make sure to delete the warning from the doc
+        comment of `dirEntries` as well.
+     */
+    void traverseByString() @safe
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+        foreach (string entry; ".".dirEntries(SpanMode.shallow))
+        {
+            if (entry.isDir)
+                foreach (string subEntry; entry.dirEntries(SpanMode.shallow))
+                    if (subEntry.isDir)
+                        chdir(subEntry.absolutePath);
+        }
+    }
+    import std.exception : assertThrown;
+    assertThrown(traverseByString());
 }
 
 /**
