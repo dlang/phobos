@@ -4978,6 +4978,11 @@ alias DirIterator = _DirIterator!dip1000Enabled;
     Note: The order of returned directory entries is as it is provided by the
     operating system / filesystem, and may not follow any particular sorting.
 
+    Pitfall: In cases where a change of the working directory (`chdir`) can occur,
+    it's recommended that one either uses absolute paths
+    or avoids converting `DirEntry` structures to `string`.
+    For further details see $(LINK2 https://github.com/dlang/phobos/issues/9584, #9584 on GitHub).
+
     Params:
         Path = Type of the directory path.
                Can be either a `string` or a `DirEntry`.
