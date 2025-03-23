@@ -5192,21 +5192,22 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 	chdir(root);
     scope(exit) chdir(origWD);
 
-    // When issue #9584 is triggered,
-    // one of the `isDir` calls fails with "No such file or directory".
-	foreach (string entry; ".".dirEntries(SpanMode.shallow))
+    /*
+        This wouldn't work if `entry` were a `string` – for obvious reasons:
+        One cannot (reliably) iterate nested directory trees using relative path strings
+        while changing directories in between.
+
+        The expected error would be something along the lines of:
+        > Failed to stat file `./3/5': No such file or directory
+
+        See <https://github.com/dlang/phobos/issues/9584> for further details.
+    */
+	foreach (DirEntry entry; ".".dirEntries(SpanMode.shallow))
 	{
 		if (entry.isDir)
-		{
-			foreach (string subEntry; entry.dirEntries(SpanMode.shallow))
-			{
+			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
 				if (subEntry.isDir)
-				{
-					chdir(subEntry.absolutePath);
-					assert(subEntry.absolutePath);
-				}
-			}
-		}
+					chdir(subEntry.absolutePath); // ←
 	}
 }
 
