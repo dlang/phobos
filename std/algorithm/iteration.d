@@ -4321,6 +4321,8 @@ gets evaluated. Finally, `result` is returned.
 The one-argument version `reduce!(fun)(range)`
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
+If range has only one element, the functions are never invoked and
+`result` and the seed is returned unchanged.
 
 Returns:
     the accumulated `result`
@@ -4825,6 +4827,9 @@ seed (the range must be non-empty) and iterates over the remaining
 elements.)
 
 Multiple results are produced when using multiple functions.
+
+If range has only one element, the functions are never invoked and
+`result` and the seed is returned unchanged.
 
 Params:
     fun = one or more functions of the form `Acc function(Acc, ElemT)`
