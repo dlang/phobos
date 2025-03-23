@@ -5400,7 +5400,7 @@ if (is(Path == DirEntry))
 		if (entry.isDir)
 			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
 				if (subEntry.isDir)
-					chdir(subEntry.absolutePath); // ←
+					chdir(subEntry.absolutePath);
 	}
 
     chdir(root);
@@ -5410,7 +5410,7 @@ if (is(Path == DirEntry))
 		if (entry.isDir)
 			foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
 				if (subEntry.isDir)
-					chdir(subEntry.absolutePath); // ←
+					chdir(subEntry.absolutePath);
 	}
 }
 
