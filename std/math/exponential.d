@@ -854,16 +854,6 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                     mov high,RDX;   // Store high 64 bits
                 }
 
-                if (high >= c)
-                {
-                    high %= c;
-                }
-
-                if (high == 0)
-                {
-                    return low % c;
-                }
-
                 asm pure @trusted nothrow @nogc
                 {
                     mov RAX,high;   // Load high part
