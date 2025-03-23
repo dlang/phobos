@@ -3829,6 +3829,11 @@ else version (Windows)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
@@ -3958,6 +3963,11 @@ else version (Posix)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
