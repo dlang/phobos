@@ -126,13 +126,14 @@ jobs:
             freebsd_version: '13.2'
     name: ${{ matrix.job_name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20  # Should complete in 11 minutes
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 50
       - name: Run in VM
         uses: cross-platform-actions/action@v0.23.0
+        timeout-minutes: 19
         with:
           operating_system: freebsd
           hypervisor: qemu
