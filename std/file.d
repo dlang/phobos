@@ -4109,7 +4109,7 @@ else version (Posix)
                 return;
 
             cenforce(stat(_name.tempCString(), &_statBuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
+                    "Failed to stat file `" ~ _name ~ "'"); // TODO: statat()
 
             _didStat = true;
         }
@@ -4126,7 +4126,7 @@ else version (Posix)
             if (_didStat)
                 return;
 
-            if (stat(_name.tempCString(), &_statBuf) != 0)
+            if (stat(_name.tempCString(), &_statBuf) != 0) // TODO: statat()
             {
                 _ensureLStatDone();
 
@@ -4150,7 +4150,7 @@ else version (Posix)
 
             stat_t statbuf = void;
             cenforce(lstat(_name.tempCString(), &statbuf) == 0,
-                "Failed to stat file `" ~ _name ~ "'");
+                "Failed to stat file `" ~ _name ~ "'"); // TODO: fstatat(… AT_SYMLINK_NOFOLLOW)
 
             _lstatMode = statbuf.st_mode;
 
