@@ -840,77 +840,13 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                 T result = a*b;
                 return result % c;
             }
-            version (D_InlineAsm_X86_64)
-            {
-                ulong low = void;
-                ulong high = void;
-
-                // Perform 128-bit multiplication: a * b = [high:low]
-                asm pure @trusted nothrow @nogc
-                {
-                    mov RAX,a;      // Load a into RAX
-                    mul b;          // Multiply by b (RDX:RAX = a * b)
-                    mov low,RAX;    // Store low 64 bits
-                    mov high,RDX;   // Store high 64 bits
-                }
-
-                asm pure @trusted nothrow @nogc
-                {
-                    mov RAX,high;   // Load high part
-                    xor RDX,RDX;    // Clear RDX for division
-                    div c;          // RAX = high / mod, RDX = high % mod
-                    mov high,RDX;   // Store remainder (high % mod)
-
-                    mov RAX,low;    // Load low part
-                    mov RDX,high;   // Load reduced high part
-                    div c;          // Divide full 128-bit number by mod
-                    mov low,RDX;    // Store remainder (final result)
-                }
-
-                return low;
-            }
-            else version (X86_64)
-            {
-                T high = void;
-
-                asm pure @trusted nothrow @nogc
-                {
-                    "mulq %[fac]"                        // Multiply RAX by 'fac == factor'
-                    : "=a"(low), "=d"(high)                 // Store result: low part in RAX, high part in RDX
-                    : [fac] "r"(b), [mulip] "0"(a)      // Input: 'a' in RAX, 'b' as multiplier mulip == multiplicand
-                    : "cc";                                 // Flags are clobbered
-                }
-
-                asm pure @trusted nothrow @nogc
-                {
-                    "divq %[divisor]"       // Divide RDX:RAX by 'divisor' (c)
-                    : "+a"(low), "+d"(high) // Operate on (low, high), storing quotient in RAX and remainder in RDX
-                    : [divisor] "r"(c)      // Input divisor 'c'
-                    : "cc";                 // Flags are clobbered
-                }
-
-                return high;
-            }
             else
             {
-                static T addmod(T a, T b, T c)
-                {
-                    b = c - b;
-                    if (a >= b)
-                        return a - b;
-                    else
-                        return c - b + a;
-                }
-                T result = 0;
-                b %= c;
-                while (a > 0)
-                {
-                    if (a & 1)
-                        result = addmod(result, b, c);
-                    a >>= 1;
-                    b = addmod(b, b, c);
-                }
-                return result;
+            import core.int128 : Cent, mul, udivmod;
+            const product128 = mul(Cent(a), Cent(b));
+            Cent centRemainder;
+            udivmod(product128, Cent(c), centRemainder);
+            return cast(T)(centRemainder.lo);
             }
         }
         else static if (T.sizeof == 4)
