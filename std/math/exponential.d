@@ -860,7 +860,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         else
         {
             DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
-            return result%c;
+            return result % c;
         }
     }
 
