@@ -160,6 +160,28 @@ else version (Posix)
     package enum system_file      = "/usr/include/assert.h";
 }
 
+// Shim for missing bindings in druntime
+version (Posix)
+{
+    version (none)
+        import core.sys.posix.dirent : core_sys_posix_dirent_fdopendir = fdopendir;
+    else
+        extern(C) pragma(mangle, "fdopendir")
+        extern DIR* core_sys_posix_dirent_fdopendir(int fd) @trusted nothrow @nogc;
+
+    version (none)
+        import core.sys.posix.dirent : core_sys_posix_dirent_dirfd = dirfd;
+    else
+        extern(C) pragma(mangle, "dirfd")
+        extern int core_sys_posix_dirent_dirfd(DIR* dirp) @trusted nothrow @nogc;
+
+    version (none)
+        import core.sys.posix.fcntl : core_sys_posix_fcntl_openat = openat;
+    else
+        extern(C) pragma(mangle, "openat")
+        extern int core_sys_posix_fcntl_openat(int fd, const(char)* path, int oflag, ...) @system nothrow @nogc;
+}
+
 /++
     Exception thrown for file I/O errors.
  +/
@@ -3991,6 +4013,12 @@ else version (Posix)
             }
         }
 
+        private this(string path, core.sys.posix.dirent.dirent* fd, DIR* parent) @safe
+        {
+            _parent = parent;
+            this(path, fd);
+        }
+
         @property string name() const pure nothrow return scope
         {
             return _name;
@@ -4126,7 +4154,8 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
-        string _fOpendir; /// The directory the file handle was opened in.
+
+        DIR* _parent; // A handle to the parent directory or `null`.
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
@@ -4708,6 +4737,11 @@ private struct DirIteratorImpl
             return toNext(false, &_findinfo);
         }
 
+        bool stepIn(DirEntry directory) @safe
+        {
+            return stepIn(directory.nameWithPrefix);
+        }
+
         bool next()
         {
             if (_stack.length == 0)
@@ -4762,6 +4796,13 @@ private struct DirIteratorImpl
         {
             string dirpath;
             DIR*   h;
+            int    fd = -1;
+
+            void close() @system
+            {
+                closedir(this.h);
+                core.sys.posix.unistd.close(this.fd);
+            }
         }
 
         bool stepIn(string directory)
@@ -4777,6 +4818,45 @@ private struct DirIteratorImpl
             return next();
         }
 
+        bool stepIn(string dirName, int dirFD)
+        {
+            static auto trustedOpendir(int fd) @trusted
+            {
+                return core_sys_posix_dirent_fdopendir(fd);
+            }
+
+            auto h = trustedOpendir(dirFD);
+            cenforce(h, dirName);
+            _stack ~= (DirHandle(dirName, h, dirFD));
+            return next();
+        }
+
+        bool stepIn(DirEntry directory)
+        {
+            import std.path : baseName, dirName;
+
+            if (directory._parent is null)
+                return stepIn(directory.name);
+
+            static auto trustedOpenat(int fd, string dir, int oflag) @trusted
+            {
+                return core_sys_posix_fcntl_openat(fd, dir.tempCString(), oflag);
+            }
+
+            const fdParent = core_sys_posix_dirent_dirfd(directory._parent);
+            cenforce(fdParent != -1, dirName(directory.name));
+
+            const fd = trustedOpenat(
+                fdParent,
+                baseName(directory.name),
+                core.sys.posix.fcntl.O_RDONLY
+            );
+            cenforce(fd != 1, directory.name);
+            //scope (exit) core.sys.posix.unistd.close(fd);
+
+            return stepIn(directory.name, fd);
+        }
+
         bool next() @trusted
         {
             if (_stack.length == 0)
@@ -4788,7 +4868,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath, fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata, _stack[$-1].h);
                     return true;
                 }
             }
@@ -4800,14 +4880,14 @@ private struct DirIteratorImpl
         void popDirStack() @trusted
         {
             assert(_stack.length != 0);
-            closedir(_stack[$-1].h);
+            _stack[$-1].close();
             _stack.popBack();
         }
 
         void releaseDirStack() @trusted
         {
             foreach (d; _stack)
-                closedir(d.h);
+                d.close();
         }
 
         bool mayStepIn()
@@ -4837,19 +4917,35 @@ private struct DirIteratorImpl
             }
         }
 
-        if (stepIn(pathname))
+        initialStepIn(pathname);
+    }
+
+    this(DirEntry path, SpanMode mode, bool followSymlink)
+    {
+        version (Posix)
+        {
+            _mode = mode;
+            _followSymlink = followSymlink;
+
+            initialStepIn(path);
+        }
+        else
+        {
+            this(pathname, mode, followSymlink);
+        }
+    }
+
+    private void initialStepIn(T)(T pathOrPathName)
+    if (is(T == DirEntry) || is(T == string))
+    {
+        if (stepIn(pathOrPathName))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
 
-                    version (Posix)
-                        const curName = _cur.name;
-                    else
-                        const curName = _cur.nameWithPrefix;
-
-                    if (stepIn(curName))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4880,12 +4976,7 @@ private struct DirIteratorImpl
                 {
                     auto thisDir = _cur;
 
-                    version (Posix)
-                        const curName = _cur.name;
-                    else
-                        const curName = _cur.nameWithPrefix;
-
-                    if (stepIn(curName))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4899,12 +4990,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                version (Posix)
-                    const curName = _cur.name;
-                else
-                    const curName = _cur.nameWithPrefix;
-
-                if (!stepIn(curName))
+                if (!stepIn(_cur))
                     while (!empty && !next()){}
             }
             else
