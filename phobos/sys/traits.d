@@ -62,9 +62,6 @@
               $(LREF isStaticArray)
               $(LREF isUnsignedInteger)
     ))
-    $(TR $(TD Aggregate Type traits) $(TD
-              $(LREF EnumMembers)
-    ))
     $(TR $(TD Traits testing for type conversions) $(TD
               $(LREF isImplicitlyConvertible)
               $(LREF isQualifierConvertible)
@@ -73,6 +70,9 @@
               $(LREF isEqual)
               $(LREF isSameSymbol)
               $(LREF isSameType)
+    ))
+    $(TR $(TD Function traits) $(TD
+              $(LREF ToFunctionType)
     ))
     $(TR $(TD Aggregate Type Traits) $(TD
               $(LREF FieldNames)
@@ -86,6 +86,7 @@
     $(TR $(TD General Types) $(TD
               $(LREF KeyType)
               $(LREF OriginalType)
+              $(LREF TrueTypeOf)
               $(LREF ValueType)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
@@ -100,6 +101,7 @@
               $(LREF SharedOf)
     ))
     $(TR $(TD Misc) $(TD
+              $(LREF EnumMembers)
               $(LREF lvalueOf)
               $(LREF rvalueOf)
     ))
@@ -2495,6 +2497,212 @@ template isSameType(T)
     import phobos.sys.meta : AliasSeq, indexOf;
     alias Types = AliasSeq!(float, string, int, double);
     static assert(indexOf!(isSameType!int, Types) == 2);
+}
+
+/++
+    Converts a function type, function pointer type, or delegate type to the
+    corresponding function type.
+
+    For a function, the result is the same as the given type.
+
+    For a function pointer or delegate, the result is the same as it would be
+    for a function with the same return type, the same set of parameters, and
+    the same set of attributes.
+
+    Another way to look at it would be that it's the type that comes from
+    dereferencing the function pointer. And while it's not technically possible
+    to dereference a delegate, it's conceptually the same thing, since a
+    delegate is essentially a fat pointer to a function in the sense that it
+    contains a pointer to a function and a pointer to the function's context.
+    The result of ToFunctionType is the type of that function.
+
+    Note that code which has a symbol for a function which might be a property
+    function should use $(LREF TrueTypeOf) rather than $(D_KEYWORD typeof) to
+    get the function's type to pass it to ToFunctionType, since
+    $(D_KEYWORD typeof) treats property functions as expressions and gives the
+    type that comes from calling the function (meaning that for a getter
+    property, the result is the function's return type rather than the type of
+    the function itself). $(LREF TrueTypeOf) will give the type of the function
+    itself for a property function.
+
+    See_Also:
+        $(LREF TrueTypeOf)
+  +/
+template ToFunctionType(T)
+if (is(T == return))
+{
+    // Function pointers.
+    static if (is(T == U*, U) && is(U == function))
+        alias ToFunctionType = U;
+    // Delegates.
+    else static if (is(T U == delegate))
+        alias ToFunctionType = U;
+    // Functions.
+    else
+        alias ToFunctionType = T;
+}
+
+///
+@safe unittest
+{
+    static string func(int) { return ""; }
+    auto funcPtr = &func;
+
+    static assert( is(ToFunctionType!(typeof(func)) == typeof(func)));
+    static assert( is(ToFunctionType!(typeof(funcPtr)) == typeof(func)));
+    static assert(!is(typeof(funcPtr) == function));
+    static assert( is(ToFunctionType!(typeof(funcPtr)) == function));
+
+    int var;
+    int funcWithContext(string) { return var; }
+    auto funcDel = &funcWithContext;
+
+    static assert( is(ToFunctionType!(typeof(funcWithContext)) ==
+                      typeof(funcWithContext)));
+    static assert( is(ToFunctionType!(typeof(funcDel)) ==
+                      typeof(funcWithContext)));
+    static assert( is(typeof(funcWithContext) == function));
+    static assert(!is(typeof(funcDel) == function));
+    static assert( is(typeof(funcDel) == delegate));
+    static assert( is(ToFunctionType!(typeof(funcDel)) == function));
+
+    static @property int prop() { return 0; }
+    auto propPtr = &prop;
+
+    static assert( is(typeof(prop) == int));
+    static assert(!is(typeof(prop) == function));
+    static assert( is(TrueTypeOf!prop == function));
+    static assert( is(TrueTypeOf!prop ==
+                      ToFunctionType!(int function() @property @safe pure nothrow @nogc)));
+
+    static assert(!__traits(compiles, ToFunctionTypeOf!(typeof(prop))));
+    static assert( is(ToFunctionType!(TrueTypeOf!(prop)) == TrueTypeOf!prop));
+
+    static assert(!is(typeof(propPtr) == function));
+    static assert(!is(TrueTypeOf!propPtr == function));
+    //static assert( isFunctionPointer!(typeof(propPtr)));
+    static assert( is(ToFunctionType!(typeof(propPtr)) == function));
+    static assert( is(ToFunctionType!(typeof(propPtr)) == TrueTypeOf!prop));
+
+    static assert( is(typeof(propPtr) ==
+                      int function() @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(typeof(propPtr)) ==
+                      int function() @property @safe pure nothrow @nogc));
+    static assert( is(ToFunctionType!(typeof(propPtr)) ==
+                      ToFunctionType!(int function() @property @safe pure nothrow @nogc)));
+
+    @property void propWithContext(int i) { var += i; }
+    auto propDel = &propWithContext;
+
+    // typeof fails to compile with setter properties, complaining about there
+    // not being enough arguments, because it's treating it as an expression
+    // - and thus treats it like the function is being called.
+    static assert(!__traits(compiles, typeof(propWithContext)));
+    static assert( is(TrueTypeOf!propWithContext == function));
+    static assert( is(TrueTypeOf!propWithContext ==
+                      ToFunctionType!(void function(int) @property @safe pure nothrow @nogc)));
+
+    static assert( is(ToFunctionType!(TrueTypeOf!(propWithContext)) ==
+                      TrueTypeOf!propWithContext));
+
+    static assert(!is(typeof(propDel) == function));
+    static assert(!is(TrueTypeOf!propDel == function));
+    static assert( is(typeof(propDel) == delegate));
+    static assert( is(ToFunctionType!(typeof(propDel)) == function));
+    static assert( is(ToFunctionType!(typeof(propDel)) ==
+                      TrueTypeOf!propWithContext));
+
+    static assert( is(typeof(propDel) ==
+                      void delegate(int) @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(typeof(propDel)) ==
+                      void delegate(int) @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(typeof(propDel)) ==
+                      void function(int) @property @safe pure nothrow @nogc));
+    static assert( is(ToFunctionType!(typeof(propDel)) ==
+                      ToFunctionType!(void function(int) @property @safe pure nothrow @nogc)));
+
+    static struct S
+    {
+        string foo(int);
+        string bar(int, int);
+        @property void prop(string);
+    }
+
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.foo)) ==
+                      ToFunctionType!(string function(int))));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.bar)) ==
+                      ToFunctionType!(string function(int, int))));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.prop)) ==
+                      ToFunctionType!(void function(string) @property)));
+}
+
+@safe unittest
+{
+    // Unfortunately, in this case, we get linker errors when taking the address
+    // of the functions if we avoid inference by not giving function bodies.
+    // So if we don't want to list all of those attributes in the tests, we have
+    // to stop the inference in another way.
+    static int var;
+    static void killAttributes() @system { ++var; throw new Exception("message"); }
+
+    static struct S
+    {
+        int func1() { killAttributes(); return 0; }
+        void func2(int) { killAttributes(); }
+
+        static int func3() { killAttributes(); return 0; }
+        static void func4(int) { killAttributes(); }
+
+        @property int func5() { killAttributes(); return 0; }
+        @property void func6(int) { killAttributes(); }
+    }
+
+    static assert( is(TrueTypeOf!(S.func1) == ToFunctionType!(int function())));
+    static assert( is(TrueTypeOf!(S.func2) == ToFunctionType!(void function(int))));
+    static assert( is(TrueTypeOf!(S.func3) == ToFunctionType!(int function())));
+    static assert( is(TrueTypeOf!(S.func4) == ToFunctionType!(void function(int))));
+    static assert( is(TrueTypeOf!(S.func5) == ToFunctionType!(int function() @property)));
+    static assert( is(TrueTypeOf!(S.func6) == ToFunctionType!(void function(int) @property)));
+
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func1)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func2)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func3)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func4)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func5)) == ToFunctionType!(int function() @property)));
+    static assert( is(ToFunctionType!(TrueTypeOf!(S.func6)) ==
+                      ToFunctionType!(void function(int) @property)));
+
+    auto ptr1 = &S.init.func1;
+    auto ptr2 = &S.init.func2;
+    auto ptr3 = &S.func3;
+    auto ptr4 = &S.func4;
+    auto ptr5 = &S.init.func5;
+    auto ptr6 = &S.init.func6;
+
+    // For better or worse, static member functions can be accessed through
+    // instance of the type as well as through the type.
+    auto ptr3Instance = &S.init.func3;
+    auto ptr4Instance = &S.init.func4;
+
+    static assert( is(typeof(ptr1) == int delegate()));
+    static assert( is(typeof(ptr2) == void delegate(int)));
+    static assert( is(typeof(ptr3) == int function()));
+    static assert( is(typeof(ptr4) == void function(int)));
+    static assert( is(typeof(ptr5) == int delegate() @property));
+    static assert( is(typeof(ptr6) == void delegate(int) @property));
+
+    static assert( is(typeof(ptr3Instance) == int function()));
+    static assert( is(typeof(ptr4Instance) == void function(int)));
+
+    static assert( is(ToFunctionType!(typeof(ptr1)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(typeof(ptr2)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(typeof(ptr3)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(typeof(ptr4)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(typeof(ptr5)) == ToFunctionType!(int function() @property)));
+    static assert( is(ToFunctionType!(typeof(ptr6)) == ToFunctionType!(void function(int) @property)));
+
+    static assert( is(ToFunctionType!(typeof(ptr3Instance)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(typeof(ptr4Instance)) == ToFunctionType!(void function(int))));
 }
 
 /++
@@ -5572,6 +5780,365 @@ else
     class Derived : Base {}
     static assert(is(OriginalType!Base == Base));
     static assert(is(OriginalType!Derived == Derived));
+}
+
+/++
+    Evaluates to the actual type of the given symbol (ignoring
+    $(D_KEYWORD typeof)'s behavior with regards to $(D_KEYWORD @property)).
+
+    When $(D_KEYWORD typeof) is used on a function marked with
+    $(D_KEYWORD @property), it treats it as an expression and gives the type of
+    that expression rather than giving the type of the function itself.
+
+    This behavior of $(D_KEYWORD typeof) was introduced at a time when it was
+    the plan that optional parens would be removed from the language, making
+    it so that $(D_KEYWORD @property) would make it so that a function had to
+    be called without parens, and the lack of $(D_KEYWORD @property) would make
+    it so that it had to be called with parens. So, $(D_KEYWORD @property)
+    would control whether a function could be treated like a field when calling
+    it. However, ultimately, with the introduction of UFCS, optional parens
+    became popular enough to use with normal functions that this never
+    happened, and for now, all that $(D_KEYWORD @property) does is make it so
+    that $(D_KEYWORD typeof) evaluates the type of the function as an
+    expression rather than giving the type of the function itself. It's
+    possible that $(D_KEYWORD @property) will be altered to do more in the
+    future, but for now, that's all it does, for better or for worse, and
+    removing the current behavior of $(D_KEYWORD typeof) with regards to
+    $(D_KEYWORD @property) would break a lot of code, so for now at least, it's
+    not going anywhere. The result is that $(D_KEYWORD typeof) effectively lies
+    about property functions, complicating things. Occasionally, this is useful
+    (e.g. $(LREF lvalueOf) and $(LREF rvalueOf) rely on this behavior to do
+     what they do), but in most cases, it's problematic.
+
+    So, when $(D_KEYWORD typeof) is used on a getter property function, the
+    result is the return type of the function instead of the type of the
+    function itself. In principle, this means that code can just do something
+    like $(D typeof(obj.foo)) to get the type of result without caring about
+    whether $(D foo) is a field or a property function, but because optional
+    parens are legal, it could also be a regular function, and then the result
+    would be the type of the function rather than the type of the expression.
+    So, in practice, type introspection code that doesn't care about whether
+    a symbol is a field or function needs to use $(D_KEYWORD typeof) on an
+    expression using the symbol rather than the symbol itself (e.g. by getting
+    the return type of a lambda that returns the symbol).
+
+    When $(D_KEYWORD typeof) is used on a setter property function,
+    $(D_KEYWORD typeof) fails to compile, giving an error that it's being
+    called with too few arguments. This behavior is probably never desirable and
+    is likely just a consequence of trying to treat property functions as
+    fields, and since setting a field is only ever done with an expression
+    (e.g. $(D obj.foo = value;)), in that sense, it doesn't really make sense to
+    use $(D_KEYWORD typeof) on a setter if the setter is being treated like a
+    field (as $(D_KEYWORD @property) is supposed to do). But whatever conceptual
+    sense it does or doesn't make, it does mean that in practice, if code
+    attempts to get the type of a setter property function using
+    $(D_KEYWORD typoef), it's going to fail to compile.
+
+    Unlike $(D_KEYWORD typeof), TrueTypeOf evaluates to the actual function
+    type of all property functions, so it provides a solution to work around
+    $(D_KEYWORD typeof)'s behavior with regards to property functions when that
+    behavior is undesirable.
+
+    Aside from property functions, TrueTypeOf gives the same result as
+    $(D_KEYWORD typeof).
+
+    Note however that because alias template parameters require that their
+    arguments be able to be evaluated at compile time, some expressions that
+    work with $(D_KEYWORD typeof) will not work with TrueTypeOf. However,
+    because those expressions won't be property functions, using
+    $(D_KEYWORD typeof) in those cases is perfectly fine.
+  +/
+template TrueTypeOf(alias sym)
+if (!is(sym))
+{
+    // This handles functions that don't have a context pointer.
+    static if (is(typeof(&sym) == T*, T) && is(T == function))
+        alias TrueTypeOf = T;
+    // This handles functions that do have a context pointer.
+    else static if (is(typeof(&sym) T == delegate))
+        alias TrueTypeOf = T;
+    // This handles everything that isn't a function.
+    else
+        alias TrueTypeOf = typeof(sym);
+}
+
+///
+@safe unittest
+{
+    int i;
+    static assert( is(TrueTypeOf!i == int));
+
+    string str;
+    static assert( is(TrueTypeOf!str == string));
+
+    static string func(int) { return ""; }
+    static assert( is(TrueTypeOf!func == typeof(func)));
+
+    void funcWithContext(string) { ++i; }
+    static assert( is(TrueTypeOf!funcWithContext == typeof(funcWithContext)));
+
+    int function(int[]) funcPtr;
+    static assert( is(TrueTypeOf!funcPtr == typeof(funcPtr)));
+
+    int delegate(int[]) del;
+    static assert( is(TrueTypeOf!del == typeof(del)));
+
+    @property static int prop() { return 0; }
+    static assert(!is(TrueTypeOf!prop == typeof(prop)));
+    static assert( is(typeof(prop) == int));
+    static assert( is(TrueTypeOf!prop == function));
+
+    // ToFunctionType is used here to get around the fact that we don't
+    // currently have a way to write out function types in is expressions
+    // (whereas we can write out the type of a function pointer), which is a
+    // consequence of not being able to declare variables with a function type
+    // (as opposed to a function pointer type). is expressions are pretty much
+    // the only place where writing out a function type would make sense.
+
+    // The function type has more attributes than the function declaration,
+    // because the attributes are inferred for nested functions.
+    static assert( is(TrueTypeOf!prop ==
+                      ToFunctionType!(int function() @property @safe pure nothrow @nogc)));
+
+    @property static void prop2(int) {}
+
+    // Because it's a setter property, typeof fails to compile.
+    static assert(!__traits(compiles, typeof(prop2)));
+    static assert( is(TrueTypeOf!prop2 == function));
+    static assert( is(TrueTypeOf!prop2 ==
+                      ToFunctionType!(void function(int) @property @safe pure nothrow @nogc)));
+}
+
+/++
+    With templated types or functions, a specific instantiation should be passed
+    to TrueTypeOf, not the symbol for the template itself. If either
+    $(D_KEYWORD typeof) or TrueTypeOf is used on a template (rather than an
+    instantiation of the template), the result will be $(D_KEYWORD void),
+    because the template itself does not have a type.
+  +/
+@safe unittest
+{
+    T func(T)(T t) { return t; }
+
+    static assert(is(typeof(func) == void));
+    static assert(is(TrueTypeOf!func == void));
+
+    static assert(is(TrueTypeOf!(func!int) ==
+                     ToFunctionType!(int function(int) @safe pure nothrow @nogc)));
+    static assert(is(TrueTypeOf!(func!string) ==
+                     ToFunctionType!(string function(string) @safe pure nothrow @nogc)));
+}
+
+/++
+    If a function is overloaded, then when using it as a symbol to pass to
+    $(D_KEYWORD typeof) or to a template such as TrueTypeOf, the compiler
+    automatically selects the first overload. In order to get the symbol for a
+    specific overload, $(D __traits(getOverloads, ...)) must be used.
+  +/
+@safe unittest
+{
+    static struct S
+    {
+        string foo();
+        void foo(string);
+        bool foo(string, int);
+    }
+
+    static assert(is(TrueTypeOf!(S.foo) ==
+                     ToFunctionType!(string function())));
+
+    alias overloads = __traits(getOverloads, S, "foo");
+    static assert(is(TrueTypeOf!(overloads[0]) == function));
+    static assert(is(TrueTypeOf!(overloads[1]) == function));
+    static assert(is(TrueTypeOf!(overloads[2]) == function));
+
+    static assert(is(TrueTypeOf!(overloads[0]) ==
+                     ToFunctionType!(string function())));
+    static assert(is(TrueTypeOf!(overloads[1]) ==
+                     ToFunctionType!(void function(string))));
+    static assert(is(TrueTypeOf!(overloads[2]) ==
+                     ToFunctionType!(bool function(string, int))));
+}
+
+/++
+    Because template alias parameters only accept the names or values of
+    symbols and not general expressions, TrueTypeOf does not work with some
+    expressions that work with $(D_KEYWORD typeof). In such a situation,
+    TrueTypeOf will give an error about the expression not being able to be
+    evaluated at compile time.
+  +/
+@system unittest
+{
+    int var;
+    static assert( is(typeof(&var) == int*));
+    static assert(!__traits(compiles, TrueTypeOf!(&var)));
+
+    auto ptr = &var;
+    static assert( is(typeof(ptr) == int*));
+    static assert( is(TrueTypeOf!ptr == int*));
+}
+
+@safe unittest
+{
+    int var;
+
+    @property int propWithContext() { return var; }
+    static assert(is(typeof(propWithContext) == int));
+    static assert(is(TrueTypeOf!propWithContext == function));
+    static assert(is(TrueTypeOf!propWithContext ==
+                     ToFunctionType!(int function() @property @safe pure nothrow @nogc)));
+
+    // For those who might be confused by this sort of declaration, this is a
+    // property function which returns a function pointer that takes no
+    // arguments and returns int, which gets an even uglier signature when
+    // writing out the type for a pointer to such a property function.
+    static int function() propFuncPtr() @property { return null; }
+    static assert(is(typeof(propFuncPtr) == int function()));
+    static assert(is(TrueTypeOf!propFuncPtr == function));
+    static assert(is(TrueTypeOf!propFuncPtr ==
+                     ToFunctionType!(int function() function() @property @safe pure nothrow @nogc)));
+
+    static int delegate() propDel() @property { return null; }
+    static assert(is(typeof(propDel) == int delegate()));
+    static assert(is(TrueTypeOf!propDel == function));
+    static assert(is(TrueTypeOf!propDel ==
+                     ToFunctionType!(int delegate() function() @property @safe pure nothrow @nogc)));
+
+    int function() propFuncPtrWithContext() @property { ++var; return null; }
+    static assert(is(typeof(propFuncPtrWithContext) == int function()));
+    static assert(is(TrueTypeOf!propFuncPtrWithContext == function));
+    static assert(is(TrueTypeOf!propFuncPtrWithContext ==
+                     ToFunctionType!(int function() function() @property @safe pure nothrow @nogc)));
+
+    int delegate() propDelWithContext() @property { ++var; return null; }
+    static assert(is(typeof(propDelWithContext) == int delegate()));
+    static assert(is(TrueTypeOf!propDelWithContext == function));
+    static assert(is(TrueTypeOf!propDelWithContext ==
+                     ToFunctionType!(int delegate() function() @property @safe pure nothrow @nogc)));
+
+    static struct S
+    {
+        void foo();
+        static void bar();
+
+        @property int prop();
+        @property void prop(int);
+
+        static @property void staticProp(string);
+        static @property string staticProp();
+    }
+
+    static assert( is(typeof(S.foo) == function));
+    static assert( is(TrueTypeOf!(S.foo) == function));
+    static assert( is(TrueTypeOf!(S.foo) == ToFunctionType!(void function())));
+
+    static assert( is(typeof(S.bar) == function));
+    static assert( is(TrueTypeOf!(S.bar) == function));
+    static assert( is(TrueTypeOf!(S.bar) == ToFunctionType!(void function())));
+
+    static assert( is(typeof(S.prop) == int));
+    static assert( is(TrueTypeOf!(S.prop) == function));
+    static assert( is(TrueTypeOf!(S.prop) == ToFunctionType!(int function() @property)));
+
+    alias propOverloads = __traits(getOverloads, S, "prop");
+
+    static assert( is(typeof(propOverloads[0]) == int));
+    static assert( is(TrueTypeOf!(propOverloads[0]) == function));
+    static assert( is(TrueTypeOf!(propOverloads[0]) == ToFunctionType!(int function() @property)));
+
+    static assert(!__traits(compiles, typeof(propOverloads[1])));
+    static assert( is(TrueTypeOf!(propOverloads[1]) == function));
+    static assert( is(TrueTypeOf!(propOverloads[1]) == ToFunctionType!(void function(int) @property)));
+
+    static assert( is(typeof(S.staticProp) == string));
+    static assert( is(TrueTypeOf!(S.staticProp) == function));
+    static assert( is(TrueTypeOf!(S.staticProp) == ToFunctionType!(void function(string) @property)));
+
+    alias staticPropOverloads = __traits(getOverloads, S, "staticProp");
+
+    static assert(!__traits(compiles, typeof(staticPropOverloads[0])));
+    static assert( is(TrueTypeOf!(staticPropOverloads[0]) == function));
+    static assert( is(TrueTypeOf!(staticPropOverloads[0]) == ToFunctionType!(void function(string) @property)));
+
+    static assert( is(typeof(staticPropOverloads[1]) == string));
+    static assert( is(TrueTypeOf!(staticPropOverloads[1]) == function));
+    static assert( is(TrueTypeOf!(staticPropOverloads[1]) == ToFunctionType!(string function() @property)));
+}
+
+// This is probably overkill, since it's arguably testing the compiler more
+// than it's testing TrueTypeOf or ToFunctionType, but with various tests
+// either using inference for all attributes or not providing a body to avoid
+// it entirely, it seemed prudent to add some tests where the attributues being
+// inferred were better controlled, and it does help ensure that TrueTypeOf
+// and ToFunctionType behave as expected in each case.
+@safe unittest
+{
+    static int var;
+
+    // Since these are actually called below (even if those functions aren't
+    // called) we can't play the trick of not providing a body to set all of
+    // the attributes, because we get linker errors when the functions below
+    // call these functions.
+    static void useGC() @safe pure nothrow { new int; }
+    static void throws() @safe pure @nogc { Exception e; throw e; }
+    static void impure() @safe nothrow @nogc { ++var; }
+    static void unsafe() @system pure nothrow @nogc { int i; int* ptr = &i; }
+
+    {
+        static void func() { useGC(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure nothrow)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @safe pure nothrow)));
+    }
+    {
+        static void func() { throws(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure @nogc)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @safe pure @nogc)));
+    }
+    {
+        static void func() { impure(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe nothrow @nogc)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @safe nothrow @nogc)));
+    }
+    {
+        static void func() { unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system pure nothrow @nogc)));
+
+        // Doubling the test shouldn't be necessary, but since the order of the
+        // attributes isn't supposed to matter, it seemed prudent to have at
+        // least one test that used a different order.
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @system pure nothrow @nogc)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @nogc nothrow pure @system)));
+    }
+    {
+        static void func() { useGC(); throws(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @safe pure)));
+    }
+    {
+        static void func() { throws(); impure(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe @nogc)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @safe @nogc)));
+    }
+    {
+        static void func() { impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system nothrow @nogc)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @system nothrow @nogc)));
+    }
+    {
+        static void func() { useGC(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system pure nothrow)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @system pure nothrow)));
+    }
+    {
+        static void func() { useGC(); throws(); impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @system)));
+    }
+    {
+        static void func() @trusted { useGC(); throws(); impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @trusted)));
+        static assert( is(TrueTypeOf!func == ToFunctionType!(void function() @trusted)));
+    }
 }
 
 /++
