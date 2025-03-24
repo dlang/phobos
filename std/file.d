@@ -3889,6 +3889,11 @@ else version (Windows)
             return _name;
         }
 
+        package @property string namePrefixOnly() const pure nothrow return scope
+        {
+            return _namePrefix;
+        }
+
         @property bool isDir() const pure nothrow scope
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -4835,13 +4840,13 @@ private struct DirIteratorImpl
         {
             import std.path : baseName, dirName;
 
-            if (directory._parent is null)
-                return stepIn(directory.name);
-
             static auto trustedOpenat(int fd, string dir, int oflag) @trusted
             {
                 return core_sys_posix_fcntl_openat(fd, dir.tempCString(), oflag);
             }
+
+            if (directory._parent is null)
+                return stepIn(directory.name);
 
             const fdParent = core_sys_posix_dirent_dirfd(directory._parent);
             cenforce(fdParent != -1, dirName(directory.name));
@@ -4852,7 +4857,6 @@ private struct DirIteratorImpl
                 core.sys.posix.fcntl.O_RDONLY
             );
             cenforce(fd != 1, directory.name);
-            //scope (exit) core.sys.posix.unistd.close(fd);
 
             return stepIn(directory.name, fd);
         }
@@ -4896,7 +4900,8 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink)
+    if (is(Path == string))
     {
         _mode = mode;
         _followSymlink = followSymlink;
@@ -4920,7 +4925,19 @@ private struct DirIteratorImpl
         initialStepIn(pathname);
     }
 
-    this(DirEntry path, SpanMode mode, bool followSymlink)
+    version (Posix) {}
+    else
+    this(string nameWithPrefix, string namePrefix, SpanMode mode, bool followSymlink)
+    {
+        _mode = mode;
+        _followSymlink = followSymlink;
+        _namePrefix = namePrefix;
+
+        initialStepIn(nameWithPrefix);
+    }
+
+    this(Path)(Path path, SpanMode mode, bool followSymlink)
+    if (is(Path == DirEntry))
     {
         version (Posix)
         {
@@ -4931,7 +4948,10 @@ private struct DirIteratorImpl
         }
         else
         {
-            this(pathname, mode, followSymlink);
+            if (path.namePrefixOnly != "")
+                this(path.nameWithPrefix, path.namePrefixOnly, mode, followSymlink);
+            else
+                this(path.name, mode, followSymlink);
         }
     }
 
@@ -5018,10 +5038,12 @@ struct _DirIterator(bool useDIP1000)
 private:
     SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
-    this(string pathname, SpanMode mode, bool followSymlink) @trusted
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink) @trusted
+    if (is(Path == string) || is(Path == DirEntry))
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
+
 public:
     @property bool empty() @trusted { return impl.empty; }
     @property DirEntry front() @trusted { return impl.front; }
@@ -5031,6 +5053,17 @@ public:
 // This has the client code to automatically use and link to the correct
 // template instance
 alias DirIterator = _DirIterator!dip1000Enabled;
+
+private auto dirEntriesFiltered(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+{
+    import std.algorithm.iteration : filter;
+    import std.path : globMatch, baseName;
+
+    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
+    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+}
 
 /++
     Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -5259,11 +5292,7 @@ auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
     bool followSymlink = true)
 if (is(Path == string)) // necessary, see comment on previous overload for details
 {
-    import std.algorithm.iteration : filter;
-    import std.path : globMatch, baseName;
-
-    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+    return dirEntriesFiltered!(Path, useDIP1000)(path, pattern, mode, followSymlink);
 }
 
 @safe unittest
@@ -5424,12 +5453,7 @@ auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
     (Path path, SpanMode mode, bool followSymlink = true)
 if (is(Path == DirEntry))
 {
-    version (Posix)
-        const name = path.name;
-    else
-        const name = path.nameWithPrefix;
-
-    return dirEntries!(string, useDIP1000)(name, mode, followSymlink);
+    return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
 
 /// Ditto
@@ -5438,12 +5462,7 @@ auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
     bool followSymlink = true)
 if (is(Path == DirEntry))
 {
-    version (Posix)
-        const name = path.name;
-    else
-        const name = path.nameWithPrefix;
-
-    return dirEntries!(string, useDIP1000)(name, pattern, mode, followSymlink);
+    return dirEntriesFiltered!(string, useDIP1000)(path, pattern, mode, followSymlink);
 }
 
 // https://github.com/dlang/phobos/issues/9584
