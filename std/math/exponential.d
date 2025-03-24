@@ -58,11 +58,6 @@ version (D_HardFloat)
     // FloatingPointControl.clearExceptions() depends on version IeeeFlagsSupport
     version (IeeeFlagsSupport) version = FloatingPointControlSupport;
 }
-version (X86_64)
-{
-    version (GNU) version = GNU_OR_LDC_X86_64;
-    version (LDC) version = GNU_OR_LDC_X86_64;
-}
 
 /**
  * Compute the value of x $(SUPERSCRIPT n), where n is an integer
