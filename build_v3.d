@@ -70,6 +70,7 @@ int main(string[] args)
         argFile.writeln("-main");
         argFile.writeln("-unittest");
         argFile.writeln("-debug");
+        argFile.writeln("-version=PhobosUnittest");
 
         version(Windows)
         {
