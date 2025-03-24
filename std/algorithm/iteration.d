@@ -4314,19 +4314,23 @@ Implements the homonym function (also known as `accumulate`, $(D
 compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
-The call `reduce!(fun)(seed, range)` first assigns `seed` to
-an internal variable `result`, also called the accumulator.
-Then, for each element `x` in `range`, `result = fun(result, x)`
-gets evaluated. Finally, `result` is returned.
+
+* Use `seed` to initialize an internal `accumulator`.
+* For each element `e` in $(D range), evaluate `accumulator = fun(result, e)`.
+* Return $(D accumulator).
+
 The one-argument version `reduce!(fun)(range)`
 works similarly, but it uses the first element of the range as the
-seed (the range must be non-empty).
+seed (the range must be non-empty, else this throws).
+
+If range has only one element, the functions are never invoked and
+`result` and the seed is returned unchanged.
 
 Returns:
-    the accumulated `result`
+    the accumulated result
 
 Params:
-    fun = one or more functions
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -4808,26 +4812,28 @@ languages of functional flavor, iteratively calling one or more predicates.
 $(P Each predicate in `fun` must take two arguments:)
 * An accumulator value
 * An element of the range `r`
-$(P Each predicate must return a value which implicitly converts to the
+$(P Each function must return a value which implicitly converts to the
 type of the accumulator.)
 
-$(P For a single predicate,
+$(P For a single function,
 the call `fold!(fun)(range, seed)` will:)
 
-* Use `seed` to initialize an internal variable `result` (also called
-  the accumulator).
-* For each element `e` in $(D range), evaluate `result = fun(result, e)`.
-* Return $(D result).
+* Use `seed` to initialize an internal `accumulator`.
+* For each element `e` in $(D range), evaluate `accumulator = fun(result, e)`.
+* Return $(D accumulator).
 
 $(P The one-argument version `fold!(fun)(range)`
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty) and iterates over the remaining
 elements.)
 
-Multiple results are produced when using multiple predicates.
+Multiple results are produced when using multiple functions.
+
+If range has only one element, the functions are never invoked and
+`result` and the seed is returned unchanged.
 
 Params:
-    fun = the predicate function(s) to apply to the elements
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 See_Also:
     * $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -4918,7 +4924,7 @@ This function is also known as
     $(HTTP mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
 
 Params:
-    fun = one or more functions to use as fold operation
+    fun = one or more functions of the form `Acc function(Acc, ElemT)`
 
 Returns:
     The function returns a range containing the consecutive reduced values. If
