@@ -832,7 +832,7 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
         {
             if (c <= 0x100000000)
             {
-                T result = a*b;
+                T result = a * b;
                 return result % c;
             }
             else
