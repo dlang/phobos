@@ -160,6 +160,27 @@ else version (Posix)
     package enum system_file      = "/usr/include/assert.h";
 }
 
+// Shim for missing bindings in druntime
+version (Posix)
+{
+    version (none)
+        import core.sys.posix.dirent : core_sys_posix_dirent_fdopendir = fdopendir;
+    else
+        extern(C) pragma(mangle, "fdopendir")
+        extern DIR* core_sys_posix_dirent_fdopendir(int fd) @trusted nothrow @nogc;
+
+    version (none)
+        import core.sys.posix.dirent : core_sys_posix_dirent_dirfd = dirfd;
+    else
+        extern(C) pragma(mangle, "dirfd")
+        extern int core_sys_posix_dirent_dirfd(DIR* dirp) @trusted nothrow @nogc;
+
+    version (none)
+        import core.sys.posix.fcntl : core_sys_posix_fcntl_openat = openat;
+    else
+        extern(C) pragma(mangle, "openat")
+        extern int core_sys_posix_fcntl_openat(int fd, const(char)* path, int oflag, ...) @system nothrow @nogc;
+}
 
 /++
     Exception thrown for file I/O errors.
@@ -3653,11 +3674,7 @@ version (StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
-        }
-        else version (Posix)
-        {
-            private this(string path, core.sys.posix.dirent.dirent* fd);
+            private this(string path, in WIN32_FIND_DATAW *fd, string prefix = null);
         }
 
         /++
@@ -3673,7 +3690,6 @@ assert(de2.name == "/usr/share/include");
 --------------------
           +/
         @property string name() const return scope;
-
 
         /++
             Returns whether the file represented by this `DirEntry` is a
@@ -3809,6 +3825,11 @@ else version (Windows)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
@@ -3830,12 +3851,20 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        package this(return scope string path, return scope string prefix)
+        {
+            _namePrefix = prefix;
+            this(path);
+        }
+
+        private this(string path, WIN32_FIND_DATAW *fd, string prefix = null) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
+
+            _namePrefix = prefix;
 
             fd.cFileName[$ - 1] = 0;
 
@@ -3850,7 +3879,18 @@ else version (Windows)
 
         @property string name() const pure nothrow return scope
         {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_namePrefix);
+        }
+
+        package @property string nameWithPrefix() const pure nothrow return scope
+        {
             return _name;
+        }
+
+        package @property string namePrefixOnly() const pure nothrow return scope
+        {
+            return _namePrefix;
         }
 
         @property bool isDir() const pure nothrow scope
@@ -3903,6 +3943,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _namePrefix; /// A prefix to be chomped off the name (e.g. parent directories of an absolute path).
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -3918,6 +3959,11 @@ else version (Posix)
     {
     @safe:
     public:
+        /+
+            Note for Phobos v3:
+            This has caused user confusion in cases where nested directory trees are interated.
+            See <https://github.com/dlang/phobos/issues/9584> for details.
+         +/
         alias name this;
 
         this(return scope string path)
@@ -3969,6 +4015,12 @@ else version (Posix)
                 // e.g. Solaris does not have the d_type member
                 _dTypeSet = false;
             }
+        }
+
+        private this(string path, core.sys.posix.dirent.dirent* fd, DIR* parent) @safe
+        {
+            _parent = parent;
+            this(path, fd);
         }
 
         @property string name() const pure nothrow return scope
@@ -4056,7 +4108,7 @@ else version (Posix)
                 return;
 
             cenforce(stat(_name.tempCString(), &_statBuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
+                    "Failed to stat file `" ~ _name ~ "'"); // TODO: statat()
 
             _didStat = true;
         }
@@ -4073,7 +4125,7 @@ else version (Posix)
             if (_didStat)
                 return;
 
-            if (stat(_name.tempCString(), &_statBuf) != 0)
+            if (stat(_name.tempCString(), &_statBuf) != 0) // TODO: statat()
             {
                 _ensureLStatDone();
 
@@ -4097,7 +4149,7 @@ else version (Posix)
 
             stat_t statbuf = void;
             cenforce(lstat(_name.tempCString(), &statbuf) == 0,
-                "Failed to stat file `" ~ _name ~ "'");
+                "Failed to stat file `" ~ _name ~ "'"); // TODO: fstatat(… AT_SYMLINK_NOFOLLOW)
 
             _lstatMode = statbuf.st_mode;
 
@@ -4106,6 +4158,8 @@ else version (Posix)
         }
 
         string _name; /// The file or directory represented by this DirEntry.
+
+        DIR* _parent; // A handle to the parent directory or `null`.
 
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
@@ -4637,7 +4691,9 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+
+    version (Posix) {}
+    else string _namePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4685,6 +4741,11 @@ private struct DirIteratorImpl
             return toNext(false, &_findinfo);
         }
 
+        bool stepIn(DirEntry directory) @safe
+        {
+            return stepIn(directory.nameWithPrefix);
+        }
+
         bool next()
         {
             if (_stack.length == 0)
@@ -4695,7 +4756,6 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
-            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4712,7 +4772,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo, _namePrefix);
             return true;
         }
 
@@ -4740,6 +4800,13 @@ private struct DirIteratorImpl
         {
             string dirpath;
             DIR*   h;
+            int    fd = -1;
+
+            void close() @system
+            {
+                closedir(this.h);
+                core.sys.posix.unistd.close(this.fd);
+            }
         }
 
         bool stepIn(string directory)
@@ -4755,10 +4822,46 @@ private struct DirIteratorImpl
             return next();
         }
 
+        bool stepIn(string dirName, int dirFD)
+        {
+            static auto trustedOpendir(int fd) @trusted
+            {
+                return core_sys_posix_dirent_fdopendir(fd);
+            }
+
+            auto h = trustedOpendir(dirFD);
+            cenforce(h, dirName);
+            _stack ~= (DirHandle(dirName, h, dirFD));
+            return next();
+        }
+
+        bool stepIn(DirEntry directory)
+        {
+            import std.path : baseName, dirName;
+
+            static auto trustedOpenat(int fd, string dir, int oflag) @trusted
+            {
+                return core_sys_posix_fcntl_openat(fd, dir.tempCString(), oflag);
+            }
+
+            if (directory._parent is null)
+                return stepIn(directory.name);
+
+            const fdParent = core_sys_posix_dirent_dirfd(directory._parent);
+            cenforce(fdParent != -1, dirName(directory.name));
+
+            const fd = trustedOpenat(
+                fdParent,
+                baseName(directory.name),
+                core.sys.posix.fcntl.O_RDONLY
+            );
+            cenforce(fd != 1, directory.name);
+
+            return stepIn(directory.name, fd);
+        }
+
         bool next() @trusted
         {
-            import std.string : chompPrefix;
-
             if (_stack.length == 0)
                 return false;
 
@@ -4768,7 +4871,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata, _stack[$-1].h);
                     return true;
                 }
             }
@@ -4780,14 +4883,14 @@ private struct DirIteratorImpl
         void popDirStack() @trusted
         {
             assert(_stack.length != 0);
-            closedir(_stack[$-1].h);
+            _stack[$-1].close();
             _stack.popBack();
         }
 
         void releaseDirStack() @trusted
         {
             foreach (d; _stack)
-                closedir(d.h);
+                d.close();
         }
 
         bool mayStepIn()
@@ -4796,30 +4899,72 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink)
+    if (is(Path == string))
     {
-        import std.path : absolutePath, isAbsolute;
-
         _mode = mode;
         _followSymlink = followSymlink;
 
-        if (!pathname.isAbsolute)
+        version (Posix) {}
+        else
         {
-            const pathnameRel = pathname;
-            alias pathnameAbs = pathname;
-            pathname = pathname.absolutePath;
+            import std.path : absolutePath, isAbsolute;
 
-            const offset = pathnameAbs.length - pathnameRel.length;
-            _pathPrefix  = pathnameAbs[0 .. offset];
+            if (!pathname.isAbsolute)
+            {
+                const pathnameRel = pathname;
+                alias pathnameAbs = pathname;
+                pathname = pathname.absolutePath;
+
+                const offset = pathnameAbs.length - pathnameRel.length;
+                _namePrefix  = pathnameAbs[0 .. offset];
+            }
         }
 
-        if (stepIn(pathname))
+        initialStepIn(pathname);
+    }
+
+    version (Posix) {}
+    else
+    this(string nameWithPrefix, string namePrefix, SpanMode mode, bool followSymlink)
+    {
+        _mode = mode;
+        _followSymlink = followSymlink;
+        _namePrefix = namePrefix;
+
+        initialStepIn(nameWithPrefix);
+    }
+
+    this(Path)(Path path, SpanMode mode, bool followSymlink)
+    if (is(Path == DirEntry))
+    {
+        version (Posix)
+        {
+            _mode = mode;
+            _followSymlink = followSymlink;
+
+            initialStepIn(path);
+        }
+        else
+        {
+            if (path.namePrefixOnly != "")
+                this(path.nameWithPrefix, path.namePrefixOnly, mode, followSymlink);
+            else
+                this(path.name, mode, followSymlink);
+        }
+    }
+
+    private void initialStepIn(T)(T pathOrPathName)
+    if (is(T == DirEntry) || is(T == string))
+    {
+        if (stepIn(pathOrPathName))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4849,7 +4994,8 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4863,7 +5009,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur))
                     while (!empty && !next()){}
             }
             else
@@ -4891,10 +5037,12 @@ struct _DirIterator(bool useDIP1000)
 private:
     SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
-    this(string pathname, SpanMode mode, bool followSymlink) @trusted
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink) @trusted
+    if (is(Path == string) || is(Path == DirEntry))
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
+
 public:
     @property bool empty() @trusted { return impl.empty; }
     @property DirEntry front() @trusted { return impl.front; }
@@ -4904,6 +5052,17 @@ public:
 // This has the client code to automatically use and link to the correct
 // template instance
 alias DirIterator = _DirIterator!dip1000Enabled;
+
+private auto dirEntriesFiltered(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+{
+    import std.algorithm.iteration : filter;
+    import std.path : globMatch, baseName;
+
+    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
+    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+}
 
 /++
     Returns an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -4917,14 +5076,23 @@ alias DirIterator = _DirIterator!dip1000Enabled;
     Note: The order of returned directory entries is as it is provided by the
     operating system / filesystem, and may not follow any particular sorting.
 
+    Pitfall: In cases where a change of the working directory (`chdir`) can occur,
+    it's recommended that one either uses absolute paths
+    or avoids converting `DirEntry` structures to `string`.
+    For further details see $(LINK2 https://github.com/dlang/phobos/issues/9584, #9584 on GitHub).
+
     Params:
+        Path = Type of the directory path.
+               Can be either a `string` or a `DirEntry`.
+
         useDIP1000 = used to instantiate this function separately for code with
                      and without -preview=dip1000 compiler switch, because it
                      affects the ABI of this function. Set automatically -
                      don't touch.
 
         path = The directory to iterate over.
-               If empty, the current directory will be iterated.
+               If an empty string (or data that implicitly converts to one) is
+               provided, the current directory will be iterated.
 
         pattern = Optional string with wildcards, such as $(RED
                   "*.d"). When present, it is used to filter the
@@ -5012,8 +5180,11 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, SpanMode mode, bool followSymlink = true)
+// The template constraint is necessary to prevent this overload from matching
+// `DirEntry`. Said type has an `alias this` member of type `string`.
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == string))
 {
     return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
@@ -5112,27 +5283,15 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 
     // https://issues.dlang.org/show_bug.cgi?id=15146
     dirEntries("", SpanMode.shallow).walkLength();
-
-    // https://github.com/dlang/phobos/issues/9584
-    string cwd = getcwd();
-    foreach (string entry; dirEntries(testdir, SpanMode.shallow))
-    {
-        if (entry.isDir)
-            chdir(entry);
-    }
-    chdir(cwd); // needed for the directories to be removed
 }
 
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, string pattern, SpanMode mode,
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, string pattern, SpanMode mode,
     bool followSymlink = true)
+if (is(Path == string)) // necessary, see comment on previous overload for details
 {
-    import std.algorithm.iteration : filter;
-    import std.path : globMatch, baseName;
-
-    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(_DirIterator!useDIP1000(path, mode, followSymlink));
+    return dirEntriesFiltered!(Path, useDIP1000)(path, pattern, mode, followSymlink);
 }
 
 @safe unittest
@@ -5244,6 +5403,132 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 {
     import std.exception : assertThrown;
     assertThrown!Exception(dirEntries("237f5babd6de21f40915826699582e36", "*.bin", SpanMode.depth));
+}
+
+@safe unittest
+{
+    // This is why all the template constraints on `dirEntries` are necessary.
+    static assert(isImplicitlyConvertible!(DirEntry, string));
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(path, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (isImplicitlyConvertible!(Path, string) && !is(Path == string) && !is(Path == DirEntry))
+{
+    return dirEntries!(string, useDIP1000)(
+        path, pattern, mode,
+        followSymlink
+    );
+}
+
+@safe unittest
+{
+    static struct Wrapper
+    {
+        string data;
+        alias data this;
+    }
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+    auto wrapped = Wrapper(root);
+    foreach (entry; dirEntries(wrapped, SpanMode.shallow)) {}
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return _DirIterator!useDIP1000(path, mode, followSymlink);
+}
+
+/// Ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+if (is(Path == DirEntry))
+{
+    return dirEntriesFiltered!(string, useDIP1000)(path, pattern, mode, followSymlink);
+}
+
+// https://github.com/dlang/phobos/issues/9584
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+
+    /*
+        This wouldn't work if `entry` were a `string` – for fair reasons:
+        One cannot (reliably) iterate nested directory trees using relative path strings
+        while changing directories in between.
+
+        The expected error would be something along the lines of:
+        > Failed to stat file `./3/5': No such file or directory
+
+        See <https://github.com/dlang/phobos/issues/9584> for further details.
+    */
+    chdir(root);
+    scope(exit) chdir(origWD);
+	foreach (DirEntry entry; ".".dirEntries(SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries(SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath);
+	}
+
+    chdir(root);
+    scope(exit) chdir(origWD);
+    foreach (DirEntry entry; ".".dirEntries("*", SpanMode.shallow))
+	{
+		if (entry.isDir)
+			foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
+				if (subEntry.isDir)
+					chdir(subEntry.absolutePath);
+	}
+
+    /*
+        This tests whether the “relative-path string” pitfall is still a thing.
+        It can be removed later in case the underlying issue got fixed somehow.
+        When doing so, one should make sure to delete the warning from the doc
+        comment of `dirEntries` as well.
+     */
+    void traverseByString() @safe
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+        foreach (string entry; ".".dirEntries(SpanMode.shallow))
+        {
+            if (entry.isDir)
+                foreach (string subEntry; entry.dirEntries(SpanMode.shallow))
+                    if (subEntry.isDir)
+                        chdir(subEntry.absolutePath);
+        }
+    }
+    import std.exception : assertThrown;
+    assertThrown(traverseByString());
 }
 
 /**
