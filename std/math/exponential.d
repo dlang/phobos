@@ -838,10 +838,12 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
             else
             {
             import core.int128 : Cent, mul, udivmod;
-            const product128 = mul(a, b);
-            Cent remainder;
-            udivmod(product128, Cent(lo: c), remainder);
-            return cast(T) remainder.lo;
+            auto product = mul(a, b);
+            if (product.hi >= c)
+            product.hi %= c;
+            T remainder = void;
+            udivmod(product, c, remainder);
+            return remainder;
             }
         }
         else static if (T.sizeof == 4)
