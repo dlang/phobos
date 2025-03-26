@@ -437,14 +437,7 @@ private struct _Cache(R, bool bidir)
 auto lazyCache(Range)(Range range)
 if (isInputRange!Range)
 {
-    return LazyCache!(Range, false)(range);
-}
-
-/// ditto
-auto lazyCacheBidirectional(Range)(Range range)
-if (isBidirectionalRange!Range)
-{
-    return LazyCache!(Range, true)(range);
+    return LazyCache!(Range, isBidirectionalRange!Range)(range);
 }
 
 ///
