@@ -427,6 +427,8 @@ private struct _Cache(R, bool bidir)
  * This can be useful when evaluation of range elements has side effects that
  * should be delayed until actually needed.
  *
+ * See_Also: cache
+ *
  * Params:
  *    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
  *
