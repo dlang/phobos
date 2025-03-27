@@ -76,6 +76,7 @@ import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 import std.typecons : Flag, Yes, No;
+
 /++
 `cache` eagerly evaluates $(REF_ALTTEXT front, front, std,range,primitives) of `range`
 on each construction or call to $(REF_ALTTEXT popFront, popFront, std,range,primitives),
