@@ -4695,7 +4695,6 @@ private struct DirIteratorImpl
         bool toNext(bool fetch, scope WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
-            import std.string : chompPrefix;
 
             if (fetch)
             {
@@ -4712,7 +4711,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
             return true;
         }
 
@@ -4757,8 +4756,6 @@ private struct DirIteratorImpl
 
         bool next() @trusted
         {
-            import std.string : chompPrefix;
-
             if (_stack.length == 0)
                 return false;
 
@@ -4768,7 +4765,7 @@ private struct DirIteratorImpl
                 if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
                     core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack[$-1].dirpath.chompPrefix(_pathPrefix), fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata);
                     return true;
                 }
             }
@@ -4798,20 +4795,8 @@ private struct DirIteratorImpl
 
     this(string pathname, SpanMode mode, bool followSymlink)
     {
-        import std.path : absolutePath, isAbsolute;
-
         _mode = mode;
         _followSymlink = followSymlink;
-
-        if (!pathname.isAbsolute)
-        {
-            const pathnameRel = pathname;
-            alias pathnameAbs = pathname;
-            pathname = pathname.absolutePath;
-
-            const offset = pathnameAbs.length - pathnameRel.length;
-            _pathPrefix  = pathnameAbs[0 .. offset];
-        }
 
         if (stepIn(pathname))
         {
