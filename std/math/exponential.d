@@ -842,7 +842,9 @@ if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
                 auto product = mul(a, b);
 
                 if (product.hi >= c)
-                product.hi %= c;
+                {
+                    product.hi %= c;
+                }
 
                 T remainder = void;
                 udivmod(product, c, remainder);
