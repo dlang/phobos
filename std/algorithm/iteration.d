@@ -8,6 +8,10 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cache,
         Eagerly evaluates and caches another range's `front`.)
+$(T2 lazyCache,
+        Lazily evaluates and caches another range's `front`, unlike `cache`,
+        which eagerly evaluates elements. Useful when delaying computation
+        is necessary.)
 $(T2 cacheBidirectional,
         As above, but also provides `back` and `popBack`.)
 $(T2 chunkBy,
