@@ -147,6 +147,17 @@ private enum isDirEntry(T) = is(T == DirEntry);
 
     const origWD = getcwd();
 
+    // DirEntry existance test
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+
+        auto entry = ".".dirEntries(SpanMode.shallow).front;
+        assert(entry.exists);
+        chdir(nirvana);
+        assert(entry.exists);
+    }
+
     // Directory tree traversal test
     {
         chdir(root);
@@ -157,6 +168,8 @@ private enum isDirEntry(T) = is(T == DirEntry);
             found[] = 0;
             foreach(DirEntry entry; ".".dirEntries(spanMode))
             {
+                assert(entry.exists);
+
                 enum switchCase(char c, char idx) = `case '` ~ c ~ `': ++found [` ~ idx ~ `]; break;`;
                 switch (entry.name[$-1])
                 {
@@ -2013,9 +2026,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 bool exists(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return exists!(StringTypeOf!R)(name);
+}
+
+/// ditto
+bool exists(R)(auto ref const R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return exists(name.absoluteName);
+    version (Posix)
+        return exists(name.name);
 }
 
 ///
