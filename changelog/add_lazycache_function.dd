@@ -8,7 +8,7 @@ Unlike `cache`, which eagerly evaluates range elements during construction,
 auto result = iota(-4, 5).map!(a => tuple(a, expensiveComputation(a)))().lazyCache();
 // No computations performed at this point
 
-auto firstElement = result.front; 
+auto firstElement = result.front;
 // First element is now evaluated
 ---
 
