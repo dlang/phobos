@@ -3886,6 +3886,7 @@ else version (Windows)
                 throw new FileException(path, "File does not exist");
 
             _name = path;
+            this.absolutizeName();
 
             with (getFileAttributesWin(path))
             {
@@ -3915,9 +3916,33 @@ else version (Windows)
             _attributes = fd.dwFileAttributes;
         }
 
-        @property string name() const pure nothrow return scope
+        private void absolutizeName()
+        {
+            import std.path : absolutePath, isAbsolute;
+
+            if (_name.isAbsolute)
+                return;
+
+            const rel = _name;
+            const abs = rel.absolutePath;
+            const idx = abs.length - rel.length;
+
+            if (idx == 0)
+                return; // Keep prefix `null`.
+
+            _absolutePrefix = abs[0 .. idx];
+            _name = abs;
+        }
+
+        package @property string absoluteName() const pure nothrow return scope
         {
             return _name;
+        }
+
+        @property string name() const pure nothrow return scope
+        {
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_absolutePrefix);
         }
 
         @property bool isDir() const pure nothrow scope
@@ -3970,6 +3995,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _absolutePrefix; /// Optional absolute directory path that has been prepended to `_name`.
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
