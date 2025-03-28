@@ -126,6 +126,73 @@ else version (Posix)
 else
     static assert(0);
 
+@safe unittest
+{
+	import std.path : absolutePath, buildPath;
+
+	string root = deleteme();
+	mkdirRecurse(root);
+	scope (exit) rmdirRecurse(root);
+
+	mkdirRecurse(root.buildPath("1", "2"));
+	mkdirRecurse(root.buildPath("3", "4"));
+	mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    const origWD = getcwd();
+
+    // Directory tree traversal test
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+
+        static void test(SpanMode spanMode, out int[7] found) @safe
+        {
+            found[] = 0;
+            foreach(DirEntry entry; ".".dirEntries(spanMode))
+            {
+                enum switchCase(char c, char idx) = `case '` ~ c ~ `': ++found [` ~ idx ~ `]; break;`;
+                switch (entry.name[$-1])
+                {
+                    mixin(switchCase!('1', '0'));
+                    mixin(switchCase!('2', '1'));
+                    mixin(switchCase!('3', '2'));
+                    mixin(switchCase!('4', '3'));
+                    mixin(switchCase!('5', '4'));
+                    mixin(switchCase!('6', '5'));
+                    default:
+                        assert(false, "Unexpected directory entry: " ~ entry.name);
+                }
+            }
+        }
+
+        int[7] found;
+
+        test(SpanMode.depth, found);
+        assert(found[0] == 1);
+        assert(found[1] == 1);
+        assert(found[2] == 1);
+        assert(found[3] == 1);
+        assert(found[4] == 1);
+        assert(found[5] == 1);
+
+        test(SpanMode.breadth, found);
+        assert(found[0] == 1);
+        assert(found[1] == 1);
+        assert(found[2] == 1);
+        assert(found[3] == 1);
+        assert(found[4] == 1);
+        assert(found[5] == 1);
+
+        test(SpanMode.shallow, found);
+        assert(found[0] == 1);
+        assert(found[1] == 0);
+        assert(found[2] == 1);
+        assert(found[3] == 0);
+        assert(found[4] == 0);
+        assert(found[5] == 0);
+    }
+}
+
 // Purposefully not documented. Use at your own risk
 @property string deleteme() @safe
 {
