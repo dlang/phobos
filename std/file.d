@@ -131,15 +131,15 @@ private enum isDirEntry(T) = is(T == DirEntry);
 
 @safe unittest
 {
-	import std.path : absolutePath, buildPath;
+    import std.path : absolutePath, buildPath;
 
-	string root = deleteme();
-	mkdirRecurse(root);
-	scope (exit) rmdirRecurse(root);
+    string root = deleteme();
+    mkdirRecurse(root);
+    scope (exit) rmdirRecurse(parent);
 
-	mkdirRecurse(root.buildPath("1", "2"));
-	mkdirRecurse(root.buildPath("3", "4"));
-	mkdirRecurse(root.buildPath("3", "5", "6"));
+    mkdirRecurse(root.buildPath("1", "2"));
+    mkdirRecurse(root.buildPath("3", "4"));
+    mkdirRecurse(root.buildPath("3", "5", "6"));
 
     const origWD = getcwd();
 
