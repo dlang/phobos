@@ -129,7 +129,7 @@ else
 private enum isConvertibleToStringButNoDirEntry(T) = !is(T == DirEntry) && isConvertibleToString!T;
 private enum isDirEntry(T) = is(T == DirEntry);
 
-@safe unittest
+version (Windows) @safe unittest
 {
     import std.path : absolutePath, buildPath;
 
