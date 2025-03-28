@@ -3946,15 +3946,13 @@ else version (Windows)
             _attributes = fd.dwFileAttributes;
         }
 
-        private void absolutizeName()
+        private void absolutizeName() pure return scope
         {
-            import std.path : absolutePath, isAbsolute;
-
-            if (_name.isAbsolute)
-                return;
+            import std.path : absolutePath;
 
             const rel = _name;
-            const abs = rel.absolutePath;
+            alias abs = _name;
+            _name = _name.absolutePath;
             const idx = abs.length - rel.length;
 
             if (idx == 0)
