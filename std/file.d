@@ -126,6 +126,9 @@ else version (Posix)
 else
     static assert(0);
 
+private enum isConvertibleToStringButNoDirEntry(T) = !is(T == DirEntry) && isConvertibleToString!T;
+private enum isDirEntry(T) = is(T == DirEntry);
+
 @safe unittest
 {
 	import std.path : absolutePath, buildPath;
