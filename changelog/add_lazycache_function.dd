@@ -1,0 +1,44 @@
+Add lazyCache to std.algorithm.iteration
+
+The new `lazyCache` function provides a lazily evaluated range caching mechanism. Unlike `cache`, which eagerly evaluates range elements during construction, `lazyCache` defers evaluation until elements are explicitly requested.
+
+---
+import std.algorithm.comparison : equal;
+import std.range : iota;
+import std.typecons : tuple;
+
+ulong counter = 0;
+double fun(int x)
+{
+    ++counter;
+    // http://en.wikipedia.org/wiki/Quartic_function
+    return ( (x + 4.0) * (x + 1.0) * (x - 1.0) * (x - 3.0) ) / 14.0 + 0.5;
+}
+
+@safe unittest {
+    // With lazyCache, front won't be evaluated until requested
+    counter = 0;
+    auto result = iota(-4, 5).map!(a => tuple(a, fun(a)))().lazyCache();
+    
+    // At this point, no elements have been evaluated yet
+    assert(counter == 0);
+    
+    // Now access the first element
+    auto firstElement = result.front;
+    
+    // Only now the first element is evaluated
+    assert(counter == 1);
+    
+    // Process the result lazily
+    auto filtered = result.filter!(a => a[1] < 0)()
+                         .map!(a => a[0])();
+    
+    // Values are calculated as we iterate
+    assert(equal(filtered, [-3, -2, 2]));
+    
+    // Only elements we actually accessed were evaluated
+    assert(counter == iota(-4, 5).length);
+}
+---
+
+See the $(REF lazyCache, std,algorithm,iteration) documentation for more details.
