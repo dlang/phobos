@@ -3944,6 +3944,8 @@ else version (Windows)
             _timeLastAccessed = FILETIMEToSysTime(&fd.ftLastAccessTime);
             _timeLastModified = FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
+
+            this.absolutizeName();
         }
 
         private void absolutizeName() pure return scope
