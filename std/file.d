@@ -133,9 +133,13 @@ private enum isDirEntry(T) = is(T == DirEntry);
 {
     import std.path : absolutePath, buildPath;
 
-    string root = deleteme();
+    string parent = deleteme().absolutePath;
+    string root = parent.buildPath("r");
     mkdirRecurse(root);
     scope (exit) rmdirRecurse(parent);
+
+    string nirvana = parent.buildPath("nirvana");
+    mkdir(nirvana);
 
     mkdirRecurse(root.buildPath("1", "2"));
     mkdirRecurse(root.buildPath("3", "4"));
