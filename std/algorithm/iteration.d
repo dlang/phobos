@@ -8,6 +8,8 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cache,
         Eagerly evaluates and caches another range's `front`.)
+$(T2 lazyCache,
+        Lazily evaluates and caches another range's `front`, unlike `cache`.)
 $(T2 cacheBidirectional,
         As above, but also provides `back` and `popBack`.)
 $(T2 chunkBy,
@@ -410,6 +412,203 @@ private struct _Cache(R, bool bidir)
             in
             {
                 assert(low <= high, "Bounds error when slicing cache.");
+            }
+            do
+            {
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
+            }
+        }
+    }
+}
+
+/**
+ * Similar to `cache`, but lazily evaluates the elements. Unlike `cache`,
+ * this function does not eagerly evaluate the front of the range until
+ * it's explicitly requested.
+ *
+ * This can be useful when evaluation of range elements has side effects that
+ * should be delayed until actually needed.
+ *
+ * See_Also: cache
+ *
+ * Params:
+ *    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ *
+ * Returns:
+ *    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with the lazily cached values of range
+ */
+
+auto lazyCache(Range)(Range range)
+if (isInputRange!Range)
+{
+    return LazyCache!(Range, isBidirectionalRange!Range)(range);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range, std.stdio;
+    import std.typecons : tuple;
+
+    ulong counter = 0;
+    double fun(int x)
+    {
+        ++counter;
+        // http://en.wikipedia.org/wiki/Quartic_function
+        return ( (x + 4.0) * (x + 1.0) * (x - 1.0) * (x - 3.0) ) / 14.0 + 0.5;
+    }
+    // With lazyCache, front won't be evaluated until requested
+    counter = 0;
+    auto result = iota(-4, 5).map!(a => tuple(a, fun(a)))()
+                            .lazyCache();
+    // At this point, no elements have been evaluated yet
+    assert(counter == 0);
+    // Now access the first element
+    auto firstElement = result.front;
+    // Only now the first element is evaluated
+    assert(counter == 1);
+    // Process the result lazily
+    auto filtered = result.filter!(a => a[1] < 0)()
+                         .map!(a => a[0])();
+    // Values are calculated as we iterate
+    assert(equal(filtered, [-3, -2, 2]));
+    // Only elements we actually accessed were evaluated
+    assert(counter == iota(-4, 5).length);
+}
+
+private struct LazyCache(R, bool bidir)
+{
+    import core.exception : RangeError;
+
+    private
+    {
+        import std.algorithm.internal : algoFormat;
+        import std.meta : AliasSeq;
+
+        alias E  = ElementType!R;
+        alias UE = Unqual!E;
+
+        R source;
+
+        static if (bidir) alias CacheTypes = AliasSeq!(UE, UE);
+        else              alias CacheTypes = AliasSeq!UE;
+        CacheTypes caches;
+        // Flags to track if front/back have been cached
+        bool frontCached = false;
+        static if (bidir) bool backCached = false;
+
+        static assert(isAssignable!(UE, E) && is(UE : E),
+            algoFormat(
+                "Cannot instantiate range with %s because %s elements are not assignable to %s.",
+                R.stringof,
+                E.stringof,
+                UE.stringof
+            )
+        );
+    }
+
+    this(R range)
+    {
+        source = range;
+        // Don't eagerly evaluate anything in the constructor
+    }
+
+    static if (isInfinite!R)
+        enum empty = false;
+    else
+        bool empty() @property
+        {
+            return source.empty;
+        }
+
+    mixin ImplementLength!source;
+
+    E front() @property
+    {
+        version (assert) if (empty) throw new RangeError();
+        // Only evaluate front if it hasn't been cached yet
+        if (!frontCached && !source.empty)
+        {
+            caches[0] = source.front;
+            frontCached = true;
+        }
+        return caches[0];
+    }
+    static if (bidir) E back() @property
+    {
+        version (assert) if (empty) throw new RangeError();
+        // Only evaluate back if it hasn't been cached yet
+        if (!backCached && !source.empty)
+        {
+            caches[1] = source.back;
+            backCached = true;
+        }
+        return caches[1];
+    }
+
+    void popFront()
+    {
+        version (assert) if (empty) throw new RangeError();
+        source.popFront();
+        // Reset the cache state for front
+        frontCached = false;
+    }
+    static if (bidir) void popBack()
+    {
+        version (assert) if (empty) throw new RangeError();
+        source.popBack();
+        // Reset the cache state for back
+        backCached = false;
+    }
+
+    static if (isForwardRange!R)
+    {
+        private this(R source, ref CacheTypes caches, bool frontCached, bool backCached = false)
+        {
+            this.source = source;
+            this.caches = caches;
+            this.frontCached = frontCached;
+            static if (bidir) this.backCached = backCached;
+        }
+        typeof(this) save() @property
+        {
+            static if (bidir)
+                return typeof(this)(source.save, caches, frontCached, backCached);
+            else
+                return typeof(this)(source.save, caches, frontCached);
+        }
+    }
+
+    static if (hasSlicing!R)
+    {
+        enum hasEndSlicing = is(typeof(source[size_t.max .. $]));
+
+        static if (hasEndSlicing)
+        {
+            private static struct DollarToken{}
+            enum opDollar = DollarToken.init;
+
+            auto opSlice(size_t low, DollarToken)
+            {
+                return typeof(this)(source[low .. $]);
+            }
+        }
+
+        static if (!isInfinite!R)
+        {
+            typeof(this) opSlice(size_t low, size_t high)
+            {
+                return typeof(this)(source[low .. high]);
+            }
+        }
+        else static if (hasEndSlicing)
+        {
+            auto opSlice(size_t low, size_t high)
+            in
+            {
+                assert(low <= high, "Bounds error when slicing lazyCache.");
             }
             do
             {
