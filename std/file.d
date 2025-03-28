@@ -3809,7 +3809,7 @@ else version (Windows)
     {
     @safe:
     public:
-        alias name this;
+        deprecated("0xEAB") alias name this; // TODO: undo temporary deprecation
 
         this(return scope string path)
         {
@@ -3918,7 +3918,7 @@ else version (Posix)
     {
     @safe:
     public:
-        alias name this;
+        deprecated("0xEAB") alias name this; // TODO: undo temporary deprecation
 
         this(return scope string path)
         {
