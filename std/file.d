@@ -255,6 +255,23 @@ version (Windows) @safe unittest
             assert(!"x".exists);
         }
     }
+
+    // Removal test
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+
+        const string file = "1/2/test.txt";
+        write(file, "…");
+        auto entry = DirEntry(file);
+        assert(file.exists);
+
+        chdir(nirvana);
+        remove(entry);
+
+        chdir(root);
+        assert(!file.exists);
+    }
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1177,9 +1194,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void remove(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     remove!(StringTypeOf!R)(name);
+}
+
+/// ditto
+void remove(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return remove(name.absoluteName);
+    else
+        return remove(name.name);
 }
 
 ///
