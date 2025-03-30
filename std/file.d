@@ -462,7 +462,7 @@ version (Windows) @safe unittest
     runIn(root, {
         const string dirPath = "3/5";
 
-        const string sentinel = lineNumberString!();
+        const string sentinel = "sentinel_" ~ lineNumberString!();
         const string sentinelPath = dirPath.buildPath(sentinel);
         write(sentinelPath, "…");
         scope (exit) remove(sentinelPath);
@@ -477,7 +477,7 @@ version (Windows) @safe unittest
 
     // Directory creation test
     runIn(root, {
-        const string dirPath = "3/5/" ~ lineNumberString!();
+        const string dirPath = "3/5/test_" ~ lineNumberString!();
         mkdir(dirPath);
 
         const dirEntry = DirEntry(dirPath);
@@ -493,7 +493,7 @@ version (Windows) @safe unittest
 
     // Directory removal test
     runIn(root, {
-        const string dirPath = "3/5/" ~ lineNumberString!();
+        const string dirPath = "3/5/test_" ~ lineNumberString!();
         mkdir(dirPath);
 
         assert(dirPath.exists);
@@ -504,7 +504,7 @@ version (Windows) @safe unittest
         assert(!dirPath.exists);
     });
 
-    // Directory non-removal test
+    // Directory tree non-removal test
     runIn(root, {
         import std.exception : assertThrown;
 
