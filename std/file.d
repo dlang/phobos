@@ -449,10 +449,12 @@ version (Windows) @safe unittest
         const dirEntry = DirEntry(dirPath);
 
         runIn(nirvana, {
-            assert( isFile(fileEntry));
-            assert(!isDir (fileEntry));
-            assert(!isFile( dirEntry));
-            assert( isDir ( dirEntry));
+            assert( isFile   (fileEntry));
+            assert(!isDir    (fileEntry));
+            assert(!isSymlink(fileEntry));
+            assert(!isFile   ( dirEntry));
+            assert( isDir    ( dirEntry));
+            assert(!isSymlink( dirEntry));
         });
     });
 
@@ -3203,9 +3205,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isSymlink(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return name.isSymlink!(StringTypeOf!R);
+}
+
+/// ditto
+@property bool isSymlink(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isSymlink(name.absoluteName);
+    else
+        return isSymlink(name.name);
 }
 
 @safe unittest
