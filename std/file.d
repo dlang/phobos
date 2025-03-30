@@ -439,6 +439,25 @@ version (Windows) @safe unittest
 
         remove(file);
     });
+
+    // Type identification test
+    runIn(root, {
+        const string filePath = "1/2/test_" ~ lineNumberString!();
+        const string dirPath = "3/4";
+        write(filePath, "…");
+
+        const fileEntry = DirEntry(filePath);
+        const dirEntry = DirEntry(dirPath);
+
+        runIn(nirvana, {
+            assert( isFile(fileEntry));
+            assert(!isDir (fileEntry));
+            assert(!isFile( dirEntry));
+            assert( isDir ( dirEntry));
+        });
+
+        remove(filePath);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -2801,9 +2820,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isDir(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return name.isDir!(StringTypeOf!R);
+}
+
+/// ditto
+@property bool isDir(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isDir(name.absoluteName);
+    else
+        return isDir(name.name);
 }
 
 ///
@@ -2975,9 +3004,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isFile(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return isFile!(StringTypeOf!R)(name);
+}
+
+/// ditto
+@property bool isFile(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isFile(name.absoluteName);
+    else
+        return isFile(name.name);
 }
 
 ///
