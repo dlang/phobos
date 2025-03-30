@@ -312,7 +312,10 @@ version (Windows) @safe unittest
                 import std.stdio : stderr;
                 () @trusted
                 {
-                    stderr.writeln("Unexpected access time; probably caused by time-sync or filesystem.");
+                    stderr.writeln(
+                        __FILE__, ":", __LINE__,
+                        "Unexpected access time; probably caused by time-sync or filesystem. ",
+                    );
                 }();
             }
             if (modificationTime < now)
@@ -320,7 +323,10 @@ version (Windows) @safe unittest
                 import std.stdio : stderr;
                 () @trusted
                 {
-                    stderr.writeln("Unexpected modification time; probably caused by time-sync or filesystem.");
+                    stderr.writeln(
+                        __FILE__, ":", __LINE__,
+                        "Unexpected modification time; probably caused by time-sync or filesystem.",
+                    );
                 }();
             }
         });
