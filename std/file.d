@@ -328,6 +328,59 @@ version (Windows) @safe unittest
         remove(file);
         assert(!file.exists);
     });
+
+    // Windows File-time querying test
+    version (Windows) runIn(root, {
+        import std.datetime : Clock;
+
+        auto now = Clock.currTime();
+        const string file = "1/2/test.txt";
+        write(file, "…");
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            assert(!file.exists);
+            SysTime creationTime, accessTime, modificationTime;
+            getTimesWin(entry, creationTime, accessTime, modificationTime);
+
+            if (creationTime < now)
+            {
+                import std.stdio : stderr;
+                () @trusted
+                {
+                    stderr.writeln(
+                        __FILE__, ":", __LINE__,
+                        "Unexpected creation time; probably caused by time-sync or filesystem.",
+                    );
+                }();
+            }
+            if (accessTime < now)
+            {
+                import std.stdio : stderr;
+                () @trusted
+                {
+                    stderr.writeln(
+                        __FILE__, ":", __LINE__,
+                        "Unexpected access time; probably caused by time-sync or filesystem.",
+                    );
+                }();
+            }
+            if (modificationTime < now)
+            {
+                import std.stdio : stderr;
+                () @trusted
+                {
+                    stderr.writeln(
+                        __FILE__, ":", __LINE__,
+                        "Unexpected modification time; probably caused by time-sync or filesystem.",
+                    );
+                }();
+            }
+        });
+
+        remove(file);
+        assert(!file.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1672,9 +1725,18 @@ else version (Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-    if (isConvertibleToString!R)
+    if (isConvertibleToStringButNoDirEntry!R)
     {
         getTimesWin!(StringTypeOf!R)(name, fileCreationTime, fileAccessTime, fileModificationTime);
+    }
+
+    void getTimesWin(R)(auto ref R name,
+                        out SysTime fileCreationTime,
+                        out SysTime fileAccessTime,
+                        out SysTime fileModificationTime)
+    if (isDirEntry!R)
+    {
+        return getTimesWin(name.absoluteName, fileCreationTime, fileAccessTime, fileModificationTime);
     }
 }
 
