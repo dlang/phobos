@@ -285,6 +285,42 @@ version (Windows) @safe unittest
         remove(file);
         assert(!file.exists);
     });
+
+    // File-time querying test
+    runIn(root, {
+        import std.datetime : Clock;
+
+        auto now = Clock.currTime();
+        const string file = "1/2/test.txt";
+        write(file, "…");
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            assert(!file.exists);
+            SysTime accessTime, modificationTime;
+            getTimes(entry, accessTime, modificationTime);
+
+            if (accessTime < now)
+            {
+                import std.stdio : stderr;
+                () @trusted
+                {
+                    stderr.writeln("Unexpected access time; probably caused by time-sync or filesystem.");
+                }();
+            }
+            if (modificationTime < now)
+            {
+                import std.stdio : stderr;
+                () @trusted
+                {
+                    stderr.writeln("Unexpected modification time; probably caused by time-sync or filesystem.");
+                }();
+            }
+        });
+
+        remove(file);
+        assert(!file.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1480,9 +1516,21 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
+}
+
+/// ditto
+void getTimes(R)(auto ref R name,
+              out SysTime accessTime,
+              out SysTime modificationTime)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getTimes(name.absoluteName, accessTime, modificationTime);
+    else
+        return getTimes(name.name, accessTime, modificationTime);
 }
 
 ///
