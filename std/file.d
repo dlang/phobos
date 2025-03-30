@@ -620,6 +620,18 @@ version (Windows) @safe unittest
             assertThrown(getAvailableDiskSpace(entry2));
         });
     });
+
+    // Slurping test
+    runIn(root, {
+        const string filePath = "1/test_" ~ lineNumberString!();
+        write(filePath, "10\r\n20");
+        scope (exit) remove(filePath);
+
+        auto entry = DirEntry(filePath);
+        runIn(nirvana, () @trusted {
+            assert(slurp!(int)(entry, "%d") == [10, 20]);
+        });
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -5990,6 +6002,15 @@ slurp(Types...)(string filename, scope const(char)[] format)
         app.put(toAdd);
     }
     return app.data;
+}
+
+/// ditto
+auto slurp(Types...)(const DirEntry filename, scope const(char)[] format)
+{
+    version (Windows)
+        return slurp!(Types)(filename.absoluteName, format);
+    else
+        return slurp!(Types)(filename.name, format);
 }
 
 ///
