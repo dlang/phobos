@@ -154,6 +154,12 @@ version (Windows) @safe unittest
         callback();
     }
 
+    static void warnAbout(string msg, string file = __FILE__, size_t line = __LINE__) @trusted
+    {
+        import std.stdio : stderr;
+        stderr.writefln!"%s(%s): %s"(file, line, msg);
+    }
+
     string parent = deleteme().absolutePath;
     string root = parent.buildPath("r");
     mkdirRecurse(root);
@@ -320,25 +326,9 @@ version (Windows) @safe unittest
             getTimes(entry, accessTime, modificationTime);
 
             if (accessTime < now)
-            {
-                () @trusted
-                {
-                    stderr.writeln(
-                        __FILE__, "(", __LINE__, "): ",
-                        "Unexpected access time; probably caused by time-sync or filesystem. ",
-                    );
-                }();
-            }
+                warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
             if (modificationTime < now)
-            {
-                () @trusted
-                {
-                    stderr.writeln(
-                        __FILE__, "(", __LINE__, "): ",
-                        "Unexpected modification time; probably caused by time-sync or filesystem.",
-                    );
-                }();
-            }
+                warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
         });
 
         runIn(nirvana, {
@@ -369,35 +359,11 @@ version (Windows) @safe unittest
             getTimesWin(entry, creationTime, accessTime, modificationTime);
 
             if (creationTime < now)
-            {
-                () @trusted
-                {
-                    stderr.writeln(
-                        __FILE__, "(", __LINE__, "): ",
-                        "Unexpected creation time; probably caused by time-sync or filesystem.",
-                    );
-                }();
-            }
+                warnAbout("Unexpected creation time; probably caused by time-sync or filesystem.");
             if (accessTime < now)
-            {
-                () @trusted
-                {
-                    stderr.writeln(
-                        __FILE__, "(", __LINE__, "): ",
-                        "Unexpected access time; probably caused by time-sync or filesystem.",
-                    );
-                }();
-            }
+                warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
             if (modificationTime < now)
-            {
-                () @trusted
-                {
-                    stderr.writeln(
-                        __FILE__, "(", __LINE__, "): ",
-                        "Unexpected modification time; probably caused by time-sync or filesystem.",
-                    );
-                }();
-            }
+                warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
         });
 
         remove(file);
@@ -426,25 +392,9 @@ version (Windows) @safe unittest
         getTimes(entry, accessTime, modificationTime);
 
         if (accessTime != thePast)
-        {
-            () @trusted
-            {
-                stderr.writeln(
-                    __FILE__, "(", __LINE__, "): ",
-                    "Unexpected access time; probably caused by time-sync or filesystem.",
-                );
-            }();
-        }
+            warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
         if (modificationTime != theFuture)
-        {
-            () @trusted
-            {
-                stderr.writeln(
-                    __FILE__, "(", __LINE__, "): ",
-                    "Unexpected modification time; probably caused by time-sync or filesystem.",
-                );
-            }();
-        }
+            warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
 
         remove(file);
         assert(!file.exists);
