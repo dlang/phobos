@@ -516,6 +516,52 @@ version (Windows) @safe unittest
         });
         assert(dirPath.exists);
     });
+
+    // Directory tree removal test
+    version (none) // TODO: port `dirEntries()`
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string treeRoot = "tree_" ~ lineNumberString!();
+        mkdir(treeRoot);
+
+        const string treeBranch1 = treeRoot ~ "/ab/cd/ef";
+        const string treeBranch2 = treeRoot ~ "/ab/gh";
+        const string treeBranch3 = treeRoot ~ "/ij";
+        const string treeBranch4 = treeRoot ~ "/ij/kl.mno";
+
+        mkdirRecurse(treeBranch1);
+        mkdirRecurse(treeBranch2);
+        mkdirRecurse(treeBranch3);
+        write       (treeBranch4, "…");
+
+        assert(treeBranch1.exists);
+        assert(treeBranch2.exists);
+        assert(treeBranch3.exists);
+        assert(treeBranch4.exists);
+
+        const entryRoot = DirEntry(treeRoot);
+        const entryBranch2 = DirEntry(treeBranch2);
+
+        runIn(nirvana, {
+            rmdirRecurse(entryBranch2);
+        });
+        assert( treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert( treeBranch3.exists);
+        assert( treeBranch4.exists);
+        assert( treeRoot.exists);
+
+        runIn(nirvana, {
+            assertThrown(rmdir(entryRoot));
+            rmdirRecurse(entryRoot);
+        });
+        assert(!treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert(!treeBranch3.exists);
+        assert(!treeBranch4.exists);
+        assert(!treeRoot.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -5068,9 +5114,9 @@ void rmdirRecurse(ref scope DirEntry de) @safe
     if (de.isSymlink)
     {
         version (Windows)
-            rmdir(de.name);
+            rmdir(de);
         else
-            remove(de.name);
+            remove(de);
     }
     else
     {
@@ -5080,14 +5126,14 @@ void rmdirRecurse(ref scope DirEntry de) @safe
         // be @trusted
         () @trusted {
             // all children, recursively depth-first
-            foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
+            foreach (DirEntry e; dirEntries(de, SpanMode.depth, false))
             {
-                attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
+                attrIsDir(e.linkAttributes) ? rmdir(e) : remove(e);
             }
         }();
 
         // the dir itself
-        rmdir(de.name);
+        rmdir(de);
     }
 }
 ///ditto
