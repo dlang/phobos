@@ -474,6 +474,22 @@ version (Windows) @safe unittest
             assert(sentinel.isFile);
         });
     });
+
+    // Directory creation test
+    runIn(root, {
+        const string dirPath = "3/5/" ~ lineNumberString!();
+        mkdir(dirPath);
+
+        const dirEntry = DirEntry(dirPath);
+        rmdir(dirPath);
+        assert(!dirPath.exists);
+
+        runIn(nirvana, {
+            mkdir(dirEntry);
+        });
+        assert(dirPath.exists);
+        rmdir(dirPath);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -3500,9 +3516,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void mkdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return mkdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void mkdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return mkdir(pathname.absoluteName);
+    else
+        return mkdir(pathname.name);
 }
 
 @safe unittest
