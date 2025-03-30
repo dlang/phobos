@@ -303,8 +303,8 @@ version (Windows) @safe unittest
         write(file, "…");
 
         auto entry = DirEntry(file);
+        SysTime accessTime, modificationTime;
         runIn(nirvana, {
-            SysTime accessTime, modificationTime;
             getTimes(entry, accessTime, modificationTime);
 
             if (accessTime < now)
@@ -329,8 +329,17 @@ version (Windows) @safe unittest
             }
         });
 
+        runIn(nirvana, {
+            assert(timeLastModified(entry) == modificationTime);
+        });
+
         remove(file);
         assert(!file.exists);
+
+        runIn(nirvana, {
+            // non-existent file
+            assert(timeLastModified(entry, now) == now);
+        });
     });
 
     // Windows File-time querying test
@@ -2083,9 +2092,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 SysTime timeLastModified(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return timeLastModified!(StringTypeOf!R)(name);
+}
+
+/// ditto
+SysTime timeLastModified(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return timeLastModified(name.absoluteName);
+    else
+        return timeLastModified(name.name);
 }
 
 ///
@@ -2139,7 +2158,7 @@ else
 --------------------
 +/
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-if (isSomeFiniteCharInputRange!R)
+if (isSomeFiniteCharInputRange!R && !isDirEntry!R)
 {
     version (Windows)
     {
@@ -2162,6 +2181,16 @@ if (isSomeFiniteCharInputRange!R)
                returnIfMissing :
                statTimeToStdTime!'m'(statbuf);
     }
+}
+
+/// ditto
+SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return timeLastModified(name.absoluteName, returnIfMissing);
+    else
+        return timeLastModified(name.name, returnIfMissing);
 }
 
 ///
