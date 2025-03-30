@@ -490,6 +490,32 @@ version (Windows) @safe unittest
         assert(dirPath.exists);
         rmdir(dirPath);
     });
+
+    // Directory removal test
+    runIn(root, {
+        const string dirPath = "3/5/" ~ lineNumberString!();
+        mkdir(dirPath);
+
+        assert(dirPath.exists);
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            rmdir(dirEntry);
+        });
+        assert(!dirPath.exists);
+    });
+
+    // Directory non-removal test
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string dirPath = "3";
+        assert(dirPath.exists);
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            assertThrown(rmdir(dirEntry));
+        });
+        assert(dirPath.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -3722,9 +3748,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void rmdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     rmdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void rmdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return rmdir(pathname.absoluteName);
+    else
+        return rmdir(pathname.name);
 }
 
 @safe unittest
