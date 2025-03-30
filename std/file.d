@@ -268,6 +268,21 @@ version (Windows) @safe unittest
         });
         assert(!file.exists);
     });
+
+    // File-size querying test
+    runIn(root, {
+        const string file = "1/2/test.txt";
+        static immutable data = cast(immutable(ubyte)[]) "foobar";
+        write(file, data);
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            assert(getSize(entry) == data.length);
+        });
+
+        remove(file);
+        assert(!file.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1348,9 +1363,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 ulong getSize(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getSize!(StringTypeOf!R)(name);
+}
+
+/// ditto
+ulong getSize(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getSize(name.absoluteName);
+    else
+        return getSize(name.name);
 }
 
 @safe unittest
