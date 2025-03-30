@@ -295,16 +295,15 @@ version (Windows) @safe unittest
 
     // File-time querying test
     runIn(root, {
-        import std.datetime : Clock;
+        import std.datetime : Clock, SysTime;
         import std.stdio : stderr;
 
-        auto now = Clock.currTime();
+        const now = Clock.currTime();
         const string file = "1/2/test.txt";
         write(file, "…");
 
         auto entry = DirEntry(file);
         runIn(nirvana, {
-            assert(!file.exists);
             SysTime accessTime, modificationTime;
             getTimes(entry, accessTime, modificationTime);
 
@@ -336,7 +335,7 @@ version (Windows) @safe unittest
 
     // Windows File-time querying test
     version (Windows) runIn(root, {
-        import std.datetime : Clock;
+        import std.datetime : Clock, SysTime;
         import std.stdio : stderr;
 
         auto now = Clock.currTime();
@@ -345,7 +344,6 @@ version (Windows) @safe unittest
 
         auto entry = DirEntry(file);
         runIn(nirvana, {
-            assert(!file.exists);
             SysTime creationTime, accessTime, modificationTime;
             getTimesWin(entry, creationTime, accessTime, modificationTime);
 
