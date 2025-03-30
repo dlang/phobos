@@ -133,6 +133,18 @@ version (Windows) @safe unittest
 {
     import std.path : absolutePath, buildPath;
 
+    template lineNumberString(size_t line = __LINE__)
+    {
+        import std.conv : to;
+        enum lineNumberString = to!string(line);
+    }
+
+    {
+        import std.conv : to;
+        assert(lineNumberString!().to!size_t() == __LINE__);
+        assert(lineNumberString!().to!size_t() == __LINE__);
+    }
+
     static void runIn(string dir, void delegate() @safe callback)
     {
         const origWD = getcwd();
@@ -265,7 +277,7 @@ version (Windows) @safe unittest
 
     // Removal test
     runIn(root, {
-        const string file = "1/2/test.txt";
+        const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
         auto entry = DirEntry(file);
         assert(file.exists);
@@ -280,7 +292,7 @@ version (Windows) @safe unittest
 
     // File-size querying test
     runIn(root, {
-        const string file = "1/2/test.txt";
+        const string file = "1/2/test_" ~ lineNumberString!();
         static immutable data = cast(immutable(ubyte)[]) "foobar";
         write(file, data);
 
@@ -299,7 +311,7 @@ version (Windows) @safe unittest
         import std.stdio : stderr;
 
         const now = Clock.currTime();
-        const string file = "1/2/test.txt";
+        const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
 
         auto entry = DirEntry(file);
@@ -348,7 +360,7 @@ version (Windows) @safe unittest
         import std.stdio : stderr;
 
         auto now = Clock.currTime();
-        const string file = "1/2/test.txt";
+        const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
 
         auto entry = DirEntry(file);
@@ -402,7 +414,7 @@ version (Windows) @safe unittest
         const thePast = now - oneYear;
         const theFuture = now + oneYear;
 
-        const string file = "1/2/test.txt";
+        const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
 
         auto entry = DirEntry(file);
