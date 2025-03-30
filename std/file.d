@@ -211,6 +211,50 @@ version (Windows) @safe unittest
         assert(found[4] == 0);
         assert(found[5] == 0);
     }
+
+    // Renaming test
+    {
+        chdir(root);
+        scope(exit) chdir(origWD);
+
+        {
+            rename("1", "x");
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            rename("x", "1");
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        {
+            auto de1 = DirEntry("1");
+            rename(de1, "x");
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            rename(deX, "1");
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        {
+            auto de1 = DirEntry("1");
+            chdir(nirvana);
+            rename(de1, root.buildPath("x"));
+
+            chdir(root);
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            chdir(nirvana);
+            rename(deX, root.buildPath("1"));
+
+            chdir(root);
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+    }
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1025,11 +1069,21 @@ if ((isSomeFiniteCharInputRange!RF || isSomeString!RF) && !isConvertibleToString
 
 /// ditto
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
-if (isConvertibleToString!RF || isConvertibleToString!RT)
+if ((isConvertibleToString!RF || isConvertibleToString!RT) && !isDirEntry!RF)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     rename!Types(from, to);
+}
+
+/// ditto
+void rename(RF, RT)(auto ref RF from, auto ref RT to)
+if ((isConvertibleToString!RF || isConvertibleToString!RT) && isDirEntry!RF)
+{
+    version (Windows)
+        return rename(from.absoluteName, to);
+    else
+        return rename(from.name, to);
 }
 
 @safe unittest
