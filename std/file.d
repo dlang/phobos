@@ -384,6 +384,52 @@ version (Windows) @safe unittest
         remove(file);
         assert(!file.exists);
     });
+
+    // File-time application test
+    runIn(root, {
+        import std.datetime : Clock, dur, SysTime;
+        import std.stdio : stderr;
+
+        const oneYear = 900.dur!"days";
+        const now = Clock.currTime();
+        const thePast = now - oneYear;
+        const theFuture = now + oneYear;
+
+        const string file = "1/2/test.txt";
+        write(file, "…");
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            setTimes(entry, thePast, theFuture);
+        });
+
+        SysTime accessTime, modificationTime;
+        getTimes(entry, accessTime, modificationTime);
+
+        if (accessTime != thePast)
+        {
+            () @trusted
+            {
+                stderr.writeln(
+                    __FILE__, "(", __LINE__, "): ",
+                    "Unexpected access time; probably caused by time-sync or filesystem.",
+                );
+            }();
+        }
+        if (modificationTime != theFuture)
+        {
+            () @trusted
+            {
+                stderr.writeln(
+                    __FILE__, "(", __LINE__, "): ",
+                    "Unexpected modification time; probably caused by time-sync or filesystem.",
+                );
+            }();
+        }
+
+        remove(file);
+        assert(!file.exists);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -1875,9 +1921,21 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
+}
+
+/// ditto
+void setTimes(R)(auto ref R name,
+              SysTime accessTime,
+              SysTime modificationTime)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return setTimes(name.absoluteName, accessTime, modificationTime);
+    else
+        return setTimes(name.name, accessTime, modificationTime);
 }
 
 private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
