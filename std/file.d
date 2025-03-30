@@ -415,6 +415,30 @@ version (Windows) @safe unittest
             assert(!linkAttributes.attrIsFile);
         });
     });
+
+    // Attribute appliance test
+    runIn(root, {
+        import std.conv : octal;
+
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        auto entry = DirEntry(file);
+
+        runIn(nirvana, {
+            const attributes0 = getAttributes(entry);
+            version (Posix)
+                const attributes1 = (attributes0 & uint(octal!"37777777000")) | octal!"400";
+            version (Windows)
+                const attributes1 = attributes0 | FILE_ATTRIBUTE_READONLY;
+
+            setAttributes(entry, attributes1);
+            scope (exit) setAttributes(entry, attributes0);
+
+            assert(getAttributes(entry) == attributes1);
+        });
+
+        remove(file);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -2678,9 +2702,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return setAttributes!(StringTypeOf!R)(name, attributes);
+}
+
+/// ditto
+void setAttributes(R)(auto ref R name, uint attributes)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return setAttributes(name.absoluteName, attributes);
+    else
+        return setAttributes(name.name, attributes);
 }
 
 @safe unittest
