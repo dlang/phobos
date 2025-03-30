@@ -598,6 +598,28 @@ version (Windows) @safe unittest
         assert(!treeBranch4.exists);
         assert(!treeRoot.exists);
     });
+
+    // Disk space querying test
+    runIn(root, {
+        const string path1 = "test1_" ~ lineNumberString!();
+        const string path2 = "test2_" ~ lineNumberString!();
+        mkdir(path1);
+        scope (exit) rmdir(path1);
+        mkdir(path2);
+        scope (exit) { if (path2.exists) rmdir(path2); }
+
+        const entry1 = DirEntry(path1);
+        const entry2 = DirEntry(path2);
+
+        rmdir(path2);
+
+        runIn(nirvana, {
+            import std.exception : assertThrown;
+
+            assert(getAvailableDiskSpace(entry1) >= 0);
+            assertThrown(getAvailableDiskSpace(entry2));
+        });
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -6189,6 +6211,15 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
         }
     }
     else static assert(0, "Unsupported platform");
+}
+
+/// ditto
+ulong getAvailableDiskSpace(scope const DirEntry path) @safe
+{
+    version (Windows)
+        return getAvailableDiskSpace(path.absoluteName);
+    else
+        return getAvailableDiskSpace(path.name);
 }
 
 ///
