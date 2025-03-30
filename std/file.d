@@ -131,7 +131,7 @@ private enum isConvertibleToStringButNoDirEntry(T) = !isDirEntry!T && isConverti
 
 version (Windows) @safe unittest
 {
-    import std.path : absolutePath, buildPath;
+    import std.path : absolutePath, buildPath, isAbsolute;
 
     template lineNumberString(size_t line = __LINE__)
     {
@@ -148,6 +148,8 @@ version (Windows) @safe unittest
     static void runIn(string dir, void delegate() @safe callback)
     {
         const origWD = getcwd();
+        assert(origWD.isAbsolute);
+
         chdir(dir);
         scope (exit) chdir(origWD);
 
