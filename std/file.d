@@ -399,6 +399,22 @@ version (Windows) @safe unittest
         remove(file);
         assert(!file.exists);
     });
+
+    // Attribute querying test
+    runIn(root, {
+        const string path = "1/2";
+        auto entry = DirEntry(path);
+
+        runIn(nirvana, {
+            const   attributes = getAttributes(entry);
+            assert( attributes.attrIsDir);
+            assert(!attributes.attrIsFile);
+
+            const   linkAttributes = getLinkAttributes(entry);
+            assert( linkAttributes.attrIsDir);
+            assert(!linkAttributes.attrIsFile);
+        });
+    });
 }
 
 // Purposefully not documented. Use at your own risk
@@ -2437,9 +2453,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 uint getAttributes(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getAttributes!(StringTypeOf!R)(name);
+}
+
+/// ditto
+uint getAttributes(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getAttributes(name.absoluteName);
+    else
+        return getAttributes(name.name);
 }
 
 /// getAttributes with a file
@@ -2526,9 +2552,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 uint getLinkAttributes(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
+}
+
+/// ditto
+uint getLinkAttributes(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getLinkAttributes(name.absoluteName);
+    else
+        return getLinkAttributes(name.name);
 }
 
 ///
