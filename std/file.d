@@ -133,6 +133,15 @@ version (Windows) @safe unittest
 {
     import std.path : absolutePath, buildPath;
 
+    static void runIn(string dir, void delegate() @safe callback)
+    {
+        const origWD = getcwd();
+        chdir(dir);
+        scope(exit) chdir(origWD);
+
+        callback();
+    }
+
     string parent = deleteme().absolutePath;
     string root = parent.buildPath("r");
     mkdirRecurse(root);
@@ -145,24 +154,17 @@ version (Windows) @safe unittest
     mkdirRecurse(root.buildPath("3", "4"));
     mkdirRecurse(root.buildPath("3", "5", "6"));
 
-    const origWD = getcwd();
-
     // DirEntry existance test
-    {
-        chdir(root);
-        scope(exit) chdir(origWD);
-
+    runIn(root, {
         auto entry = ".".dirEntries(SpanMode.shallow).front;
         assert(entry.exists);
-        chdir(nirvana);
-        assert(entry.exists);
-    }
+        runIn(nirvana, () {
+            assert(entry.exists);
+        });
+    });
 
     // Directory tree traversal test
-    {
-        chdir(root);
-        scope(exit) chdir(origWD);
-
+    runIn(root, {
         static void test(SpanMode spanMode, out int[7] found) @safe
         {
             found[] = 0;
@@ -210,13 +212,11 @@ version (Windows) @safe unittest
         assert(found[3] == 0);
         assert(found[4] == 0);
         assert(found[5] == 0);
-    }
+    });
 
-    // Renaming test
-    {
-        chdir(root);
-        scope(exit) chdir(origWD);
-
+    // Renaming tests
+    runIn(root, {
+        // string-based renaming
         {
             rename("1", "x");
             assert(!"1".exists);
@@ -226,6 +226,7 @@ version (Windows) @safe unittest
             assert( "1".exists);
             assert(!"x".exists);
         }
+        // regular DirEntry renaming
         {
             auto de1 = DirEntry("1");
             rename(de1, "x");
@@ -237,41 +238,36 @@ version (Windows) @safe unittest
             assert( "1".exists);
             assert(!"x".exists);
         }
+        // DirEntry renaming with `chdir()`
         {
             auto de1 = DirEntry("1");
-            chdir(nirvana);
-            rename(de1, root.buildPath("x"));
-
-            chdir(root);
+            runIn(nirvana, {
+                rename(de1, root.buildPath("x"));
+            });
             assert(!"1".exists);
             assert( "x".exists);
 
             auto deX = DirEntry("x");
-            chdir(nirvana);
-            rename(deX, root.buildPath("1"));
-
-            chdir(root);
+            runIn(nirvana, {
+                rename(deX, root.buildPath("1"));
+            });
             assert( "1".exists);
             assert(!"x".exists);
         }
-    }
+    });
 
     // Removal test
-    {
-        chdir(root);
-        scope(exit) chdir(origWD);
-
+    runIn(root, {
         const string file = "1/2/test.txt";
         write(file, "…");
         auto entry = DirEntry(file);
         assert(file.exists);
 
-        chdir(nirvana);
-        remove(entry);
-
-        chdir(root);
+        runIn(nirvana, {
+            remove(entry);
+        });
         assert(!file.exists);
-    }
+    });
 }
 
 // Purposefully not documented. Use at your own risk
