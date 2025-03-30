@@ -491,6 +491,42 @@ version (Windows) @safe unittest
         rmdir(dirPath);
     });
 
+    // Directory tree creation test
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string treeRoot = "tree_" ~ lineNumberString!();
+        mkdir(treeRoot);
+        scope (exit) { if (treeRoot.exists) rmdirRecurse(treeRoot); }
+
+        const string treeBranch1 = treeRoot ~ "/ab/cd/ef";
+        const string treeBranch2 = treeRoot ~ "/ab/gh";
+        const string treeBranch3 = treeRoot ~ "/ij";
+        mkdirRecurse(treeBranch1);
+        mkdirRecurse(treeBranch2);
+        mkdirRecurse(treeBranch3);
+        const entry1 = DirEntry(treeBranch1);
+        const entry2 = DirEntry(treeBranch2);
+        const entry3 = DirEntry(treeBranch3);
+
+        rmdirRecurse(treeRoot);
+        assert(!treeRoot.exists);
+        assert(!treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert(!treeBranch3.exists);
+
+        runIn(nirvana, {
+            mkdirRecurse(entry1);
+            mkdirRecurse(entry2);
+            mkdirRecurse(entry3);
+        });
+
+        assert(treeRoot.exists);
+        assert(treeBranch1.exists);
+        assert(treeBranch2.exists);
+        assert(treeBranch3.exists);
+    });
+
     // Directory removal test
     runIn(root, {
         const string dirPath = "3/5/test_" ~ lineNumberString!();
@@ -3676,8 +3712,17 @@ void mkdirRecurse(scope const(char)[] pathname) @safe
     }
     if (!baseName(pathname).empty)
     {
-        ensureDirExists(pathname);
+        cast(void) ensureDirExists(pathname);
     }
+}
+
+/// ditto
+void mkdirRecurse(scope const DirEntry pathname) @safe
+{
+    version (Windows)
+        return mkdirRecurse(pathname.absoluteName);
+    else
+        return mkdirRecurse(pathname.name);
 }
 
 ///
