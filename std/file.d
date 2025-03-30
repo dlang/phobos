@@ -344,7 +344,7 @@ version (Windows) @safe unittest
         });
     });
 
-    // Windows File-time querying test
+    // Windows-only file-time querying test
     version (Windows) runIn(root, {
         import std.datetime : Clock, SysTime;
         import std.stdio : stderr;
