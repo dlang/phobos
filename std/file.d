@@ -157,9 +157,9 @@ version (Windows) @safe unittest
     // DirEntry existance test
     runIn(root, {
         auto entry = ".".dirEntries(SpanMode.shallow).front;
-        assert(entry.exists);
+        assert(exists(entry));
         runIn(nirvana, () {
-            assert(entry.exists);
+            assert(exists(entry));
         });
     });
 
@@ -264,7 +264,9 @@ version (Windows) @safe unittest
         assert(file.exists);
 
         runIn(nirvana, {
+            assert(entry.exists);
             remove(entry);
+            assert(!entry.exists);
         });
         assert(!file.exists);
     });
