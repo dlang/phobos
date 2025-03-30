@@ -149,7 +149,7 @@ version (Windows) @safe unittest
     {
         const origWD = getcwd();
         chdir(dir);
-        scope(exit) chdir(origWD);
+        scope (exit) chdir(origWD);
 
         callback();
     }
@@ -285,14 +285,17 @@ version (Windows) @safe unittest
     runIn(root, {
         const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
+        scope (failure) { if (file.exists) remove(file); }
+
         auto entry = DirEntry(file);
         assert(file.exists);
 
         runIn(nirvana, {
-            assert(entry.exists);
-            remove(entry);
+            assert( entry.exists);
+            remove( entry);
             assert(!entry.exists);
         });
+
         assert(!file.exists);
     });
 
@@ -301,14 +304,12 @@ version (Windows) @safe unittest
         const string file = "1/2/test_" ~ lineNumberString!();
         static immutable data = cast(immutable(ubyte)[]) "foobar";
         write(file, data);
+        scope (exit) remove(file);
 
         auto entry = DirEntry(file);
         runIn(nirvana, {
             assert(getSize(entry) == data.length);
         });
-
-        remove(file);
-        assert(!file.exists);
     });
 
     // File-time querying test
@@ -319,6 +320,7 @@ version (Windows) @safe unittest
         const now = Clock.currTime();
         const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
+        scope (failure) { if (file.exists) remove(file); }
 
         auto entry = DirEntry(file);
         SysTime accessTime, modificationTime;
@@ -352,6 +354,7 @@ version (Windows) @safe unittest
         auto now = Clock.currTime();
         const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
+        scope (exit) remove(file);
 
         auto entry = DirEntry(file);
         runIn(nirvana, {
@@ -365,9 +368,6 @@ version (Windows) @safe unittest
             if (modificationTime < now)
                 warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
         });
-
-        remove(file);
-        assert(!file.exists);
     });
 
     // File-time application test
@@ -382,6 +382,7 @@ version (Windows) @safe unittest
 
         const string file = "1/2/test_" ~ lineNumberString!();
         write(file, "…");
+        scope (exit) remove(file);
 
         auto entry = DirEntry(file);
         runIn(nirvana, {
@@ -395,9 +396,6 @@ version (Windows) @safe unittest
             warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
         if (modificationTime != theFuture)
             warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
-
-        remove(file);
-        assert(!file.exists);
     });
 
     // Attribute querying test
@@ -445,6 +443,7 @@ version (Windows) @safe unittest
         const string filePath = "1/2/test_" ~ lineNumberString!();
         const string dirPath = "3/4";
         write(filePath, "…");
+        scope (exit) remove(filePath);
 
         const fileEntry = DirEntry(filePath);
         const dirEntry = DirEntry(dirPath);
@@ -455,8 +454,23 @@ version (Windows) @safe unittest
             assert(!isFile( dirEntry));
             assert( isDir ( dirEntry));
         });
+    });
 
-        remove(filePath);
+    // Working directory change test
+    runIn(root, {
+        const string dirPath = "3/5";
+
+        const string sentinel = lineNumberString!();
+        const string sentinelPath = dirPath.buildPath(sentinel);
+        write(sentinelPath, "…");
+        scope (exit) remove(sentinelPath);
+
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            chdir(dirEntry);
+            assert(sentinel.exists);
+            assert(sentinel.isFile);
+        });
     });
 }
 
@@ -3387,9 +3401,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void chdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void chdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return chdir(pathname.absoluteName);
+    else
+        return chdir(pathname.name);
 }
 
 ///
