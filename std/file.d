@@ -161,6 +161,13 @@ version (Windows) @safe unittest
         runIn(nirvana, () {
             assert(exists(entry));
         });
+
+        const file2 = "3/5/6";
+        auto entry2 = DirEntry(file2);
+        runIn(nirvana, () {
+            assert(!exists(file2));
+            assert( exists(entry2));
+        });
     });
 
     // Directory tree traversal test
