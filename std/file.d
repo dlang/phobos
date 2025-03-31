@@ -4166,11 +4166,18 @@ version (Posix) @safe unittest
         $(LREF FileException) on error.
   +/
 version (StdDdoc) string readLink(R)(R link)
-if (isSomeFiniteCharInputRange!R || isConvertibleToString!R);
+if (isSomeFiniteCharInputRange!R || isConvertibleToString!R || isDirEntry!R);
 else version (Posix) string readLink(R)(R link)
-if (isSomeFiniteCharInputRange!R || isConvertibleToString!R)
+if (isSomeFiniteCharInputRange!R || isConvertibleToString!R || isDirEntry!R)
 {
-    static if (isConvertibleToString!R)
+    static if (isDirEntry!R)
+    {
+        version (Windows) // hypothetically, currently ruled out by `version (Posix)`
+            return readLink(link.absoluteName);
+        else
+            return readLink(link.name);
+    }
+    else static if (isConvertibleToString!R)
     {
         return readLink!(convertToString!R)(link);
     }
