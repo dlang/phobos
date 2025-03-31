@@ -334,6 +334,69 @@ version (Windows) @safe unittest
         }
     });
 
+    // Copying tests
+    runIn(parent, {
+        const string copyingDir = "dir_" ~ lineNumberString!();
+        mkdir(copyingDir);
+        scope (exit) rmdirRecurse(copyingDir);
+
+        runIn(copyingDir, {
+            const string path1 = lineNumberString!() ~ ".f00";
+            const string path2 = lineNumberString!() ~ ".f01";
+            const string path1Abs = absolutePath(path1);
+            const string path2Abs = absolutePath(path2);
+
+            static immutable demoData = "foobar\nOachkatzlschwoaf\n";
+            write(path1, demoData);
+            write(path2, "-");
+
+            const entry1 = DirEntry(path1);
+            const entry2 = DirEntry(path2);
+
+            // Overwriting files with copies
+            {
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(entry1, path2Abs);
+                });
+                assert(readText(path2) == demoData);
+
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(path1Abs, entry2);
+                });
+                assert(readText(path2) == demoData);
+
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(entry1, entry2);
+                });
+                assert(readText(path2) == demoData);
+            }
+
+            // Creating new files through copying
+            {
+                remove(path2);
+                runIn(nirvana, {
+                    copy(entry1, path2Abs);
+                });
+                assert(readText(path2) == demoData);
+
+                remove(path2);
+                runIn(nirvana, {
+                    copy(path1Abs, entry2);
+                });
+                assert(readText(path2) == demoData);
+
+                remove(path2);
+                runIn(nirvana, {
+                    copy(entry1, entry2);
+                });
+                assert(readText(path2) == demoData);
+            }
+        });
+    });
+
     // Removal test
     runIn(root, {
         const string file = "1/2/test_" ~ lineNumberString!();
@@ -5049,11 +5112,40 @@ if (isSomeFiniteCharInputRange!RF && !isConvertibleToString!RF &&
 
 /// ditto
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
-if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT || isDirEntry!RF || isDirEntry!RT)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, RF, RT);
-    copy!Types(from, to, preserve);
+    static if (isDirEntry!RF && isDirEntry!RT)
+    {
+        version (Windows)
+            return copy(from.absoluteName, to.absoluteName);
+        else
+            return copy(from.name, to.name);
+    }
+    else static if (isDirEntry!RF)
+    {
+        alias Types = AliasSeq!(string, Unconst!(convertToString!RT));
+
+        version (Windows)
+            return copy!Types(from.absoluteName, to);
+        else
+            return copy!Types(from.name, to);
+    }
+    else static if (isDirEntry!RT)
+    {
+        alias Types = AliasSeq!(Unconst!(convertToString!RF), string);
+
+        version (Windows)
+            return copy!Types(from, to.absoluteName);
+        else
+            return copy!Types(from, to.name);
+    }
+    else
+    {
+        import std.meta : staticMap;
+
+        alias Types = staticMap!(convertToString, RF, RT);
+        copy!Types(from, to, preserve);
+    }
 }
 
 ///
