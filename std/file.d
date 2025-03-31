@@ -262,6 +262,24 @@ version (Windows) @safe unittest
         });
     });
 
+    // Path determination test
+    runIn(root, {
+        import std.path : asRelativePath, relativePath, asNormalizedPath;
+
+        const string relative = "1";
+        const string absolute = absolutePath(relative);
+        const string expected = relativePath(absolute, nirvana);
+
+        const entry = DirEntry(relative);
+
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+            assert(equal(  relativePath(entry          ), expected));
+            assert(equal(  relativePath(entry, getcwd()), expected));
+            assert(equal(asRelativePath(entry, getcwd()), expected));
+        });
+    });
+
     // Renaming tests
     runIn(root, {
         // string-based renaming

@@ -2936,6 +2936,15 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     return asRelativePath!cs(path, baseVar).to!string;
 }
 
+string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
+    (const DirEntry path, lazy string base = getcwd())
+{
+    version (Windows)
+        return relativePath!cs(path.absoluteName, base);
+    else
+        return relativePath!cs(path.name, base);
+}
+
 ///
 @safe unittest
 {
@@ -3111,9 +3120,24 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (auto ref R1 path, auto ref R2 base)
 if (isConvertibleToString!R1 || isConvertibleToString!R2)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, R1, R2);
-    return asRelativePath!(cs, Types)(path, base);
+    enum r1IsDirEntry = is(Unconst!R1 == DirEntry);
+
+    static if (r1IsDirEntry)
+    {
+        import std.meta : AliasSeq;
+
+        alias Types = AliasSeq!(string, convertToString!R2);
+        version (Windows)
+            return asRelativePath!(cs, Types)(path.absoluteName, base);
+        else
+            return asRelativePath!(cs, Types)(path.name, base);
+    }
+    else
+    {
+        import std.meta : staticMap;
+        alias Types = staticMap!(convertToString, R1, R2);
+        return asRelativePath!(cs, Types)(path, base);
+    }
 }
 
 @safe unittest
