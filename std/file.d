@@ -316,6 +316,31 @@ version (Windows) @safe unittest
             assert( "1".exists);
             assert(!"x".exists);
         }
+        // `const` variation
+        {
+            const string rp1 = "1";
+            const string rpX = "x";
+            const string ap1 = absolutePath(rp1);
+            const string apX = absolutePath(rpX);
+            const de1 = DirEntry("1");
+            rename("1", "x");
+            const deX = DirEntry("x");
+
+            runIn(nirvana, {
+                rename(apX, de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+
+            runIn(nirvana, {
+                rename(de1, apX);
+            });
+            runIn(nirvana, {
+                rename(deX, ap1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
         // Dual-DirEntry renaming with `chdir()`
         {
             auto de1 = DirEntry("1");
