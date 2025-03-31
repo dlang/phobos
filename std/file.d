@@ -302,6 +302,22 @@ version (Windows) @safe unittest
             assert( "1".exists);
             assert(!"x".exists);
         }
+        // Dual-DirEntry renaming with `chdir()`
+        {
+            auto de1 = DirEntry("1");
+            runIn(nirvana, {
+                rename(de1, root.buildPath("x"));
+            });
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            runIn(nirvana, {
+                rename(deX, de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
     });
 
     // Removal test
