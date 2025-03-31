@@ -817,6 +817,38 @@ version (Windows) @safe unittest
             assert(slurp!(int)(entry, "%d") == [10, 20]);
         });
     });
+
+    // Mild chaos directory tree traversal test
+    runIn(root, {
+        auto iterator = ".".dirEntries(SpanMode.shallow);
+
+        int found1 = 0;
+        int found3 = 0;
+        int foundOthers = 0;
+
+        runIn(nirvana, {
+            foreach (DirEntry entry; iterator)
+            {
+                switch (entry.name[$-1])
+                {
+                    case '1':
+                        ++found1;
+                        break;
+                    case '3':
+                        ++found3;
+                        break;
+                    default:
+                        ++foundOthers;
+                        break;
+                }
+                chdir(parent);
+            }
+        });
+
+        assert(found1 == 1);
+        assert(found3 == 1);
+        assert(foundOthers == 0);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
