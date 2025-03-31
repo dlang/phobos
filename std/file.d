@@ -302,6 +302,20 @@ version (Windows) @safe unittest
             assert( "1".exists);
             assert(!"x".exists);
         }
+        // string-based path to `DirEntry` renaming with `chdir()`
+        {
+            auto de1 = DirEntry("1");
+            rename("1", "x");
+
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            runIn(nirvana, {
+                rename(root.buildPath("x"), de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
         // Dual-DirEntry renaming with `chdir()`
         {
             auto de1 = DirEntry("1");
