@@ -280,6 +280,32 @@ version (Windows) @safe unittest
         });
     });
 
+    // Path normalization test
+    runIn(root, {
+        import std.path : asNormalizedPath, buildNormalizedPath;
+        import std.range : array;
+
+        const string relative = "./3/4/../5/../5/6";
+        assert(!isAbsolute(relative));
+
+        assert(!isAbsolute(buildNormalizedPath(relative)));
+        assert(!isAbsolute(asNormalizedPath(relative).array));
+
+        const entry = DirEntry(relative);
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+
+            static immutable expected = buildNormalizedPath("../r/3/5/6");
+            assert(buildNormalizedPath(entry)              == expected);
+            assert(buildNormalizedPath(entry, "../6")      == expected);
+            assert(buildNormalizedPath(entry, "../6", ".") == expected);
+            assert(equal(asNormalizedPath(entry), expected));
+
+            assert(!isAbsolute(buildNormalizedPath(entry)));
+            assert(!isAbsolute(asNormalizedPath(entry).array));
+        });
+    });
+
     // Renaming tests
     runIn(root, {
         // string-based renaming

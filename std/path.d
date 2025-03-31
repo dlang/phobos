@@ -1769,6 +1769,23 @@ if (isSomeChar!C)
     return result.array;
 }
 
+/// ditto
+immutable(char)[] buildNormalizedPath(const DirEntry path0, const(char[])[] paths...)
+    @safe
+{
+    version (Windows)
+    {
+        const name = path0.name;
+        if (name.isAbsolute)
+            return buildNormalizedPath!char(name ~ paths);
+
+        const arg0 = relativePath(path0.absoluteName, getcwd());
+        return buildNormalizedPath!char(arg0 ~ paths);
+    }
+    else
+        return buildNormalizedPath!char(arg0 ~ paths);
+}
+
 ///
 @safe unittest
 {
@@ -1808,6 +1825,7 @@ if (isSomeChar!C)
     assert(buildNormalizedPath("", null) == "");
     assert(buildNormalizedPath(null, "") == "");
     assert(buildNormalizedPath!(char)(null, null) == "");
+    assert(buildNormalizedPath!(char)() == "");
 
     version (Posix)
     {
@@ -2072,10 +2090,27 @@ if (isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 auto asNormalizedPath(R)(return scope auto ref R path)
-if (isConvertibleToString!R)
+if (isConvertibleToString!R && !is(Unconst!R == DirEntry))
 {
     return asNormalizedPath!(StringTypeOf!R)(path);
+}
+
+/// ditto
+auto asNormalizedPath(R)(return scope auto ref R path)
+if (is(Unconst!R == DirEntry))
+{
+    version (Windows)
+    {
+        const name = path.name;
+        if (name.isAbsolute)
+            return asNormalizedPath(name);
+
+        return asNormalizedPath(relativePath(path.absoluteName, getcwd()));
+    }
+    else
+        return asNormalizedPath(path.name);
 }
 
 @safe unittest
