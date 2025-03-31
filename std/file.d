@@ -1469,21 +1469,40 @@ if ((isSomeFiniteCharInputRange!RF || isSomeString!RF) && !isConvertibleToString
 
 /// ditto
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
-if ((isConvertibleToString!RF || isConvertibleToString!RT) && !isDirEntry!RF)
+if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, RF, RT);
-    rename!Types(from, to);
-}
+    static if (isDirEntry!RF && isDirEntry!RT)
+    {
+        version (Windows)
+            return rename(from.absoluteName, to.absoluteName);
+        else
+            return rename(from.name, to.name);
+    }
+    else static if (isDirEntry!RF)
+    {
+        alias Types = AliasSeq!(string, convertToString!RT);
 
-/// ditto
-void rename(RF, RT)(auto ref RF from, auto ref RT to)
-if ((isConvertibleToString!RF || isConvertibleToString!RT) && isDirEntry!RF)
-{
-    version (Windows)
-        return rename(from.absoluteName, to);
+        version (Windows)
+            return rename!Types(from.absoluteName, to);
+        else
+            return rename!Types(from.name, to);
+    }
+    else static if (isDirEntry!RT)
+    {
+        alias Types = AliasSeq!(convertToString!RF, string);
+
+        version (Windows)
+            return rename!Types(from, to.absoluteName);
+        else
+            return rename!Types(from, to.name);
+    }
     else
-        return rename(from.name, to);
+    {
+        import std.meta : staticMap;
+
+        alias Types = staticMap!(convertToString, RF, RT);
+        rename!Types(from, to);
+    }
 }
 
 @safe unittest
