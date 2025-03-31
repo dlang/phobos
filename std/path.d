@@ -96,7 +96,7 @@ $(TR $(TD Other) $(TD
 module std.path;
 
 
-import std.file : getcwd;
+import std.file : DirEntry, getcwd;
 static import std.meta;
 import std.range;
 import std.traits;
@@ -2756,6 +2756,14 @@ string absolutePath(return scope const string path, lazy string base = getcwd())
     return chainPath(baseVar, path).array;
 }
 
+/// ditto
+version (Windows) // There's a chance this cannot be made pure on Posix.
+string absolutePath(return scope const DirEntry path, lazy string base = getcwd())
+    @safe pure
+{
+    return absolutePath(path.absoluteName, base);
+}
+
 ///
 @safe unittest
 {
@@ -2856,9 +2864,18 @@ if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 }
 
 auto asAbsolutePath(R)(auto ref R path)
-if (isConvertibleToString!R)
+if (isConvertibleToString!R && !is(Unconst!R == DirEntry))
 {
     return asAbsolutePath!(StringTypeOf!R)(path);
+}
+
+auto asAbsolutePath(R)(auto ref scope const R path)
+if (is(R == DirEntry))
+{
+    version (Windows)
+        return asAbsolutePath(path.absoluteName);
+    else
+        return asAbsolutePath(path.name);
 }
 
 @system unittest

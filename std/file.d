@@ -241,6 +241,27 @@ version (Windows) @safe unittest
         assert(found[5] == 0);
     });
 
+    // Path determination test
+    runIn(root, {
+        import std.path : asAbsolutePath, asNormalizedPath;
+
+        const string relative = "1";
+        const string absolute = absolutePath(relative);
+
+        const entry = DirEntry(relative);
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+            assert(equal(
+                absolutePath(entry).asNormalizedPath,
+                absolute.asNormalizedPath
+            ));
+            assert(equal(
+                asAbsolutePath(entry).asNormalizedPath,
+                absolute.asNormalizedPath
+            ));
+        });
+    });
+
     // Renaming tests
     runIn(root, {
         // string-based renaming
