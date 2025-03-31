@@ -88,8 +88,8 @@ $(I FormatIndicator):
 $(I FormatCharacter):
     $(I see remark below)
 $(I CompoundIndicator):
-    $(B '$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
-    $(B '$(LPAREN)') $(I FormatString) $(B '%|') $(I Delimiter) $(B '%$(RPAREN)')
+    $(B '%$(LPAREN)') $(I FormatString) $(B '%$(RPAREN)')
+    $(B '%$(LPAREN)') $(I FormatString) $(B '%|') $(I Delimiter) $(B '%$(RPAREN)')
 $(I Delimiter)
     $(I empty)
     $(I Character) $(I Delimiter)
