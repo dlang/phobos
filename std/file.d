@@ -145,13 +145,21 @@ version (Windows) @safe unittest
         assert(lineNumberString!().to!size_t() == __LINE__);
     }
 
+    /++
+        Saves the current working directory,
+        changes it to `dir` before executing `callback`
+        and eventually restores the original working directory.
+
+        The provided callback is free to call `chdir()` as it needs.
+        This function will always restore the original working directory.
+     +/
     static void runIn(string dir, void delegate() @safe callback)
     {
         const origWD = getcwd();
         assert(origWD.isAbsolute);
 
         chdir(dir);
-        scope (exit) chdir(origWD);
+        scope (exit) chdir(origWD); // always(!) restore the original working directory
 
         callback();
     }
