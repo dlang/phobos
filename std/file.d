@@ -126,7 +126,7 @@ else version (Posix)
 else
     static assert(0);
 
-private enum isDirEntry(T) = is(T == DirEntry) || is(T == const(DirEntry)) || is(T == immutable(DirEntry));
+private enum isDirEntry(T) = is(Unconst!T == DirEntry);
 private enum isConvertibleToStringButNoDirEntry(T) = !isDirEntry!T && isConvertibleToString!T;
 
 version (Windows) @safe unittest
