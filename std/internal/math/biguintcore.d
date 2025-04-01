@@ -1740,7 +1740,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             {
                 //use free only at runtime
                 () @trusted { GC.free(scratchbuff.ptr); } ();
-            } 
+            }
         }
         else
         {
