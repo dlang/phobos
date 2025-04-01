@@ -935,8 +935,7 @@ public:
             return x.data[0] & (y-1);
         }
         else
-        {
-            
+        {  
             // horribly inefficient - malloc, copy, & store are unnecessary.
             uint [] wasteful = new BigDigit[x.data.length];
             wasteful[] = x.data[];
