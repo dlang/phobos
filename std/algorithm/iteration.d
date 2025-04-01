@@ -5506,12 +5506,9 @@ empty elements.
 The predicate is passed to $(REF binaryFun, std,functional) and accepts
 any callable function that can be executed via `pred(element, s)`.
 
-Notes:
+Note:
     If splitting a string on whitespace and token compression is desired,
-    consider using `splitter` without specifying a separator.
-
-    If no separator is passed, the $(REF_ALTTEXT, unary, unaryFun, std,functional)
-    predicate `isTerminator` decides whether to accept an element of `r`.
+    consider using the `splitter(r)` overload.
 
 Params:
     pred = The predicate for comparing each element with the separator,
@@ -5520,7 +5517,6 @@ Params:
         split. Must support slicing and `.length` or be a narrow string type.
     s = The element (or range) to be treated as the separator
         between range segments to be split.
-    isTerminator = The predicate for deciding where to split the range when no separator is passed
     keepSeparators = The flag for deciding if the separators are kept
 
 Constraints:
@@ -5534,7 +5530,7 @@ Returns:
     the returned range will be likewise.
     When a range is used a separator, bidirectionality isn't possible.
 
-    If keepSeparators is equal to Yes.keepSeparators the output will also contain the
+    If `keepSeparators` is equal to `Yes.keepSeparators` the output will also contain the
     separators.
 
     If an empty range is given, the result is an empty range. If a range with
@@ -5946,29 +5942,6 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         .equal([ [[0]], [[1]], [[2]] ]));
 }
 
-/// Use splitter without a separator
-@safe unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.range.primitives : front;
-
-    assert(equal(splitter!(a => a == '|')("a|bc|def"), [ "a", "bc", "def" ]));
-    assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
-
-    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
-    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
-    assert(equal(splitter!(a => a == 0)(a), w));
-
-    a = [ 0 ];
-    assert(equal(splitter!(a => a == 0)(a), [ (int[]).init, (int[]).init ]));
-
-    a = [ 0, 1 ];
-    assert(equal(splitter!(a => a == 0)(a), [ [], [1] ]));
-
-    w = [ [0], [1], [2] ];
-    assert(equal(splitter!(a => a.front == 1)(w), [ [[0]], [[2]] ]));
-}
-
 /// Leading separators, trailing separators, or no separators.
 @safe unittest
 {
@@ -6006,17 +5979,6 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.range : retro;
     assert("a|bc|def".splitter!("a == b", Yes.keepSeparators)('|')
         .retro.equal([ "def", "|", "bc", "|", "a" ]));
-}
-
-/// Splitting by word lazily
-@safe unittest
-{
-    import std.ascii : isWhite;
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : splitter;
-
-    string str = "Hello World!";
-    assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
 }
 
 @safe unittest
@@ -6343,11 +6305,60 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     assert(words.equal([ "i", "am", "pointing" ]));
 }
 
-/// ditto
+/++
+Lazily splits a range `r` whenever a predicate `isTerminator` returns true for an element.
+
+As above, two adjacent separators are considered to surround an empty element in
+the split range.
+
+Params:
+    r = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be
+        split.
+    isTerminator = A $(REF_ALTTEXT unary, unaryFun, std,functional) predicate for
+        deciding where to split the range.
+
+Returns:
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
+    the original range split by whitespace.
+ +/
 auto splitter(alias isTerminator, Range)(Range r)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(r.front))))
 {
     return SplitterResult!(unaryFun!isTerminator, Range)(r);
+}
+
+///
+@safe unittest
+{
+    import std.ascii : isWhite;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : splitter;
+
+    string str = "Hello World\t!";
+    assert(str.splitter!(isWhite).equal(["Hello", "World", "!"]));
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range.primitives : front;
+
+    assert(equal(splitter!(a => a == '|')("a|bc|def"), [ "a", "bc", "def" ]));
+    assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
+
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter!(a => a == 0)(a), w));
+
+    a = [ 0 ];
+    assert(equal(splitter!(a => a == 0)(a), [ (int[]).init, (int[]).init ]));
+
+    a = [ 0, 1 ];
+    assert(equal(splitter!(a => a == 0)(a), [ [], [1] ]));
+
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!(a => a.front == 1)(w), [ [[0]], [[2]] ]));
 }
 
 private struct SplitterResult(alias isTerminator, Range)
