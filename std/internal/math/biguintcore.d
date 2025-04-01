@@ -940,7 +940,7 @@ public:
             uint [] wasteful = new BigDigit[x.data.length];
             wasteful[] = x.data[];
             immutable rem = multibyteDivAssign(wasteful, y, 0);
-            if(!__ctfe)
+            if (!__ctfe)
             {
                 //use free only at runtime
                 () @trusted { GC.free(wasteful.ptr); } ();
@@ -1736,7 +1736,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             mulKaratsuba(result[half .. $], y, x[half .. $], scratchbuff);
             BigDigit c = addAssignSimple(result[half .. half + y.length], partial);
             if (c) multibyteIncrementAssign!('+')(result[half + y.length..$], c);
-            if(!__ctfe)
+            if (!__ctfe)
             {
                 //use free only at runtime
                 () @trusted { GC.free(scratchbuff.ptr); } ();
@@ -1799,7 +1799,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
                 addAssignSimple(result[done .. done + y.length + chunksize], partial);
                 done += chunksize;
             }
-            if(!__ctfe)
+            if (!__ctfe)
             {
                 //use free only at runtime
                 () @trusted { GC.free(scratchbuff.ptr); } ();
@@ -1811,7 +1811,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
         // Balanced. Use Karatsuba directly.
         BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(x.length)];
         mulKaratsuba(result, x, y, scratchbuff);
-        if(!__ctfe)
+        if (!__ctfe)
         {
             //use free only at runtime
             () @trusted { GC.free(scratchbuff.ptr); } ();
@@ -1868,7 +1868,7 @@ void squareInternal(BigDigit[] result, const BigDigit[] x) pure nothrow @safe
     // The nice thing about squaring is that it always stays balanced
     BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(x.length)];
     squareKaratsuba(result, x, scratchbuff);
-    if(!__ctfe)
+    if (!__ctfe)
     {
         //use free only at runtime
         () @trusted { GC.free(scratchbuff.ptr); } ();
@@ -1924,7 +1924,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
         if (s == 0) remainder[] = un[0 .. vn.length];
         else multibyteShr(remainder, un[0 .. vn.length+1], s);
     }
-    if(!__ctfe)
+    if (!__ctfe)
     {
         //use free only at runtime
         () @trusted { GC.free(un.ptr); GC.free(vn.ptr); } ();
@@ -2873,7 +2873,7 @@ pure nothrow @safe
         m -= v.length;
     }
     recursiveDivMod(quotient[0 .. m], u[0 .. m + v.length], v, scratch);
-    if(!__ctfe)
+    if (!__ctfe)
     {
         //use free only at runtime
         () @trusted { GC.free(scratch.ptr); } ();
