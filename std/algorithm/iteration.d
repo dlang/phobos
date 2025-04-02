@@ -52,7 +52,7 @@ $(T2 reduce,
 $(T2 splitWhen,
         Lazily splits a range by comparing adjacent elements.)
 $(T2 splitter,
-        Lazily splits a range by a separator.)
+        Lazily splits a range by a separator, element predicate or whitespace.)
 $(T2 substitute,
         `[1, 2].substitute(1, 0.1)` returns `[0.1, 2]`.)
 $(T2 sum,
@@ -3010,10 +3010,10 @@ if (isInputRange!Range)
 
 /**
 Splits a forward range into subranges in places determined by a binary
-predicate.
+predicate called with adjacent elements.
 
 When iterating, one element of `r` is compared with `pred` to the next
-element. If `pred` return true, a new subrange is started for the next element.
+element. If `pred` returns true, a new subrange is started for the next element.
 Otherwise, they are part of the same subrange.
 
 If the elements are compared with an inequality (!=) operator, consider
@@ -3023,7 +3023,8 @@ Params:
 pred = Predicate for determining where to split. The earlier element in the
 source range is always given as the first argument.
 r = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to be split.
-Returns: a range of subranges of `r`, split such that within a given subrange,
+
+Returns: A range of subranges of `r`, split such that within a given subrange,
 calling `pred` with any pair of adjacent elements as arguments returns `false`.
 Copying the range currently has reference semantics, but this may change in the future.
 
@@ -3033,7 +3034,7 @@ relations.
 */
 
 auto splitWhen(alias pred, Range)(Range r)
-if (isForwardRange!Range)
+if (is(typeof(binaryFun!pred(r.front, r.front)) : bool) && isForwardRange!Range)
 {   import std.functional : not;
     return ChunkByImpl!(not!pred, not!pred, GroupingOpType.binaryAny, Range)(r);
 }
@@ -5537,9 +5538,9 @@ Returns:
     one separator is given, the result is a range with two empty elements.
 
 See_Also:
- $(REF _splitter, std,regex) for a version that splits using a regular expression defined separator,
- $(REF _split, std,array) for a version that splits eagerly and
- $(LREF splitWhen), which compares adjacent elements instead of element against separator.
+ - $(REF _splitter, std,regex) for a version that splits using a regular expression defined separator.
+ - $(REF _split, std,array) for a version that splits eagerly.
+ - $(LREF splitWhen), which compares adjacent elements instead of element against separator.
 */
 auto splitter(alias pred = "a == b",
               Flag!"keepSeparators" keepSeparators = No.keepSeparators,
@@ -6318,8 +6319,7 @@ Params:
         deciding where to split the range.
 
 Returns:
-    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
-    the original range split by whitespace.
+    A forward range of slices of the original range split by whitespace.
  +/
 auto splitter(alias isTerminator, Range)(Range r)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(r.front))))
