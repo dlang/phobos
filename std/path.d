@@ -1783,7 +1783,7 @@ immutable(char)[] buildNormalizedPath(const DirEntry path0, const(char[])[] path
         return buildNormalizedPath!char(arg0 ~ paths);
     }
     else
-        return buildNormalizedPath!char(arg0 ~ paths);
+        return buildNormalizedPath!char(path0 ~ paths);
 }
 
 ///
