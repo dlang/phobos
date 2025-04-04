@@ -45,3 +45,8 @@ trick.
 Evidence for the confusing nature of the previous behavior can be found on
 the issue tracker:
 $(LINK2 https://github.com/dlang/phobos/issues/9584, #9584)
+
+On POSIX the newly introduced overloads currently still emulate the old
+behavior. This might be subject to change and should not be relied on.
+In general, it is preferable to explicitly use the `name` property of
+`DirEntry` in cases where the old behavior is desired.

@@ -182,6 +182,19 @@ version (Windows) @safe unittest
     mkdirRecurse(root.buildPath("3", "4"));
     mkdirRecurse(root.buildPath("3", "5", "6"));
 
+    // DirEntry backwards compatibility test
+    runIn(root, {
+        runIn(nirvana, () {
+            foreach(entry; ".".dirEntries(SpanMode.shallow))
+            {
+                // This does not make sense on its own but asserts that
+                // existing (quirky) code works like it did in the past.
+                assert(absolutePath(entry.name        ) == nirvana.buildPath(entry.name));
+                assert(absolutePath(cast(string) entry) == nirvana.buildPath(entry.name));
+            }
+        });
+    });
+
     // DirEntry existance test
     runIn(root, {
         auto entry = ".".dirEntries(SpanMode.shallow).front;
