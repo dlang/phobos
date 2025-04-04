@@ -1,0 +1,47 @@
+Increase  more functions accept `DirEntry` on Windows.
+
+The `DirEntry` structure from `std.file` will now capture its absolute path
+upon construction on Windows targets.
+
+Unlike POSIX systems, absolute paths are unproblematic on Windows,
+as filesystem permissions are evaluated only on the node itself, not by
+traversing the whole directory tree along the path.
+This means, even if a user has no permission to access to `C:\some-dir\`,
+they can still access `C:\some-dir\file` if sufficient permissions are granted
+to them for the file entry itself. The same applies to directories.
+
+A good chunk of file-related Phobos functions are “made compatible” with
+`DirEntry` through the implicit conversion mechanism provided by `alias this`
+found in `DirEntry`. This allows `DirEntry` to become a `string` as needed.
+
+Unfortunately, this comes at the downside that functions can receive a relative
+path that is not relative to the current working directory if it has changed
+since the construction of the `DirEntry` handle. This does not always align
+with the expectations of unsuspecting users — especially in the case where they
+have passed a “fat” `DirEntry` handle instead of a raw path string.
+
+Not much can be done in the case where users convert the `DirEntry` into a
+`string` on their own. When Phobos functions are called with an actual
+`DirEntry`, however, the library can make use of an absolute path that has been
+captured in advance and stored in the `DirEntry`.
+
+This describes exactly what has been changed. `std.file` and a number of
+functions in `std.path` have been overloaded or modified to also accept a
+`DirEntry` parameter in addition to the existing `string` path overloads.
+
+The old behavior can be easily restored either by manually converting a
+`DirEntry` to `string` by casting or using the `name` property of said struct.
+
+While this was implemented to be as backwards compatible as reasonably
+possible, in certain edge cases a simple adaption to user code might be
+necessary. This is the case when users relied on the fact that a relative path
+held by a `DirEntry` structure would always be relative to the current working
+directory at the time of use. Additionally, rare meta programming code which
+assumed that the `string` path overload of applicable functions would get
+matched by `DirEntry` structures will have to be updated.
+As outlined before, manually converting the `DirEntry` to `string` will do the
+trick.
+
+Evidence for the confusing nature of the previous behavior can be found on
+the issue tracker:
+$(LINK2 https://github.com/dlang/phobos/issues/9584, #9584)
