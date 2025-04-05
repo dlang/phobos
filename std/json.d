@@ -2783,3 +2783,305 @@ pure nothrow @safe unittest
     assert(JSONValue(int(5)) in aa);
     assert(JSONValue(uint(5)) in aa);
 }
+
+/**
+ * Optional accessor methods for JSONValue that provide convenient ways to access
+ * properties with default values.
+ */
+
+/**
+ * Get an optional string value from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the string from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't a string
+ *
+ * Returns:
+ *     The string value if the key exists and is a string, otherwise defaultValue
+ */
+string optStr(const JSONValue json, string key, string defaultValue = string.init) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type != JSONType.string)
+        return defaultValue;
+    return valuePtr.str;
+}
+
+/**
+ * Get an optional integer value from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the integer from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't an integer
+ *
+ * Returns:
+ *     The integer value if the key exists and is an integer, otherwise defaultValue
+ */
+long optInteger(const JSONValue json, string key, long defaultValue = 0) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type == JSONType.integer)
+        return valuePtr.integer;
+    else if (valuePtr.type == JSONType.uinteger && valuePtr.uinteger <= long.max)
+        return cast(long) valuePtr.uinteger;
+    else
+        return defaultValue;
+}
+
+/**
+ * Get an optional unsigned integer value from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the unsigned integer from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't an unsigned integer
+ *
+ * Returns:
+ *     The unsigned integer value if the key exists and is an unsigned integer, otherwise defaultValue
+ */
+ulong optUInteger(const JSONValue json, string key, ulong defaultValue = 0) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type == JSONType.uinteger)
+        return valuePtr.uinteger;
+    else if (valuePtr.type == JSONType.integer && valuePtr.integer >= 0)
+        return cast(ulong) valuePtr.integer;
+    else
+        return defaultValue;
+}
+
+/**
+ * Get an optional floating point value from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the float from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't a number
+ *
+ * Returns:
+ *     The float value if the key exists and is a number, otherwise defaultValue
+ */
+double optFloat(const JSONValue json, string key, double defaultValue = 0.0) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type == JSONType.float_)
+        return valuePtr.floating;
+    else if (valuePtr.type == JSONType.integer)
+        return cast(double) valuePtr.integer;
+    else if (valuePtr.type == JSONType.uinteger)
+        return cast(double) valuePtr.uinteger;
+    else
+        return defaultValue;
+}
+
+/**
+ * Get an optional boolean value from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the boolean from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't a boolean
+ *
+ * Returns:
+ *     The boolean value if the key exists and is a boolean, otherwise defaultValue
+ */
+bool optBool(const JSONValue json, string key, bool defaultValue = false) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type == JSONType.true_)
+        return true;
+    else if (valuePtr.type == JSONType.false_)
+        return false;
+    else
+        return defaultValue;
+}
+
+/**
+ * Get an optional JSONValue object from a JSONValue.
+ *
+ * Params:
+ *     json = The JSONValue object to extract from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist
+ *
+ * Returns:
+ *     The JSONValue if the key exists, otherwise defaultValue
+ */
+JSONValue optValue(const JSONValue json, string key, JSONValue defaultValue = JSONValue(null)) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    return *valuePtr;
+}
+
+/**
+ * Get an optional JSONValue array from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract the array from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't an array
+ *
+ * Returns:
+ *     The array if the key exists and is an array, otherwise defaultValue
+ */
+JSONValue[] optArray(const JSONValue json, string key, JSONValue[] defaultValue = null) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type != JSONType.array)
+        return defaultValue;
+    // Create a copy of the array
+    JSONValue[] result;
+    foreach (item; valuePtr.arrayNoRef)
+        result ~= item;
+    return result;
+}
+
+/**
+ * Get an optional JSONValue object (as an associative array) from a JSONValue object.
+ *
+ * Params:
+ *     json = The JSONValue object to extract from
+ *     key = The key to lookup in the object
+ *     defaultValue = Value to return if the key doesn't exist or isn't an object
+ *
+ * Returns:
+ *     The object if the key exists and is an object, otherwise defaultValue
+ */
+JSONValue[string] optObject(const JSONValue json, string key, JSONValue[string] defaultValue = null) @safe
+{
+    if (json.type != JSONType.object)
+        return defaultValue;
+    auto valuePtr = key in json.objectNoRef;
+    if (valuePtr is null)
+        return defaultValue;
+    if (valuePtr.type != JSONType.object)
+        return defaultValue;
+    // Create a copy of the object
+    JSONValue[string] result;
+    foreach (k, v; valuePtr.objectNoRef)
+        result[k] = v;
+    return result;
+}
+
+///
+@safe unittest
+{
+    // Test all optional methods
+    string jsonStr = `{
+        "stringVal": "test",
+        "intVal": 42,
+        "uintVal": 4294967295,
+        "floatVal": 3.14,
+        "trueVal": true,
+        "falseVal": false,
+        "nullVal": null,
+        "arrayVal": [1, 2, 3],
+        "objectVal": {"a": 1}
+    }`;
+    JSONValue json = parseJSON(jsonStr);
+    // String tests
+    assert(optStr(json, "stringVal") == "test");
+    assert(optStr(json, "missing") == string.init);
+    assert(optStr(json, "missing", "default") == "default");
+    assert(optStr(json, "intVal", "default") == "default"); // Wrong type
+    // Integer tests
+    assert(optInteger(json, "intVal") == 42);
+    assert(optInteger(json, "missing") == 0);
+    assert(optInteger(json, "missing", 100) == 100);
+    assert(optInteger(json, "stringVal", 100) == 100); // Wrong type
+    // UInteger tests
+    assert(optUInteger(json, "uintVal") == 4294967295);
+    assert(optUInteger(json, "intVal") == 42); // Compatible type
+    assert(optUInteger(json, "missing") == 0);
+    assert(optUInteger(json, "missing", 100) == 100);
+    // Float tests
+    assert(optFloat(json, "floatVal") == 3.14);
+    assert(optFloat(json, "intVal") == 42.0); // Compatible type
+    assert(optFloat(json, "missing") == 0.0);
+    assert(optFloat(json, "missing", 99.9) == 99.9);
+    // Boolean tests
+    assert(optBool(json, "trueVal") == true);
+    assert(optBool(json, "falseVal") == false);
+    assert(optBool(json, "missing") == false);
+    assert(optBool(json, "missing", true) == true);
+    assert(optBool(json, "intVal", true) == true); // Wrong type returns default
+    // Array tests
+    assert(optArray(json, "arrayVal").length == 3);
+    assert(optArray(json, "missing").length == 0);
+    // Object tests
+    assert("a" in optObject(json, "objectVal"));
+    assert(optObject(json, "missing").length == 0);
+    // Value tests
+    assert(optValue(json, "intVal").integer == 42);
+    assert(optValue(json, "missing").isNull);
+}
+
+///
+@safe unittest
+{
+    // Original code examples
+    string jsonStr = `{
+        "appId": "myApp",
+        "startTimestamp": "2023-04-05T12:00:00Z"
+    }`;
+    JSONValue js = parseJSON(jsonStr);
+    // Original way:
+    struct Stream1
+    {
+        string appId;
+        string appVersion;
+        string startTimestamp;
+    }
+    Stream1 stream1 = {
+        appId: js["appId"].str,
+        // like this
+        appVersion: js.objectNoRef.get("appVersion", JSONValue("")).str,
+        // or that
+        startTimestamp: ("startTimestamp" in js) ? js["startTimestamp"].str : "",
+    };
+    // New way with optStr:
+    struct Stream2
+    {
+        string appId;
+        string appVersion;
+        string startTimestamp;
+    }
+    Stream2 stream2 = {
+        appId: js["appId"].str,
+        appVersion: optStr(js, "appVersion", "1.0"),
+        startTimestamp: optStr(js, "startTimestamp")
+    };
+    assert(stream1.appId == stream2.appId);
+    assert(stream1.startTimestamp == stream2.startTimestamp);
+    assert(stream2.appVersion == "1.0");
+}
