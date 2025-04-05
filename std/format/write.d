@@ -622,17 +622,13 @@ uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[]
         size_t index = currentArg;
         if (spec.indexStart != 0)
             index = spec.indexStart - 1;
-        else
-            ++currentArg;
     SWITCH: switch (index)
         {
             foreach (i, Tunused; Args)
             {
             case i:
                 formatValue(w, args[i], spec);
-                if (currentArg < spec.indexEnd)
-                    currentArg = spec.indexEnd;
-                // A little know feature of format is to format a range
+                // A little-known feature of format is to format a range
                 // of arguments, e.g. `%1:3$` will format the first 3
                 // arguments. Since they have to be consecutive we can
                 // just use explicit fallthrough to cover that case.
@@ -642,10 +638,16 @@ uint formattedWrite(Writer, Char, Args...)(auto ref Writer w, const scope Char[]
                     static if (i + 1 < Args.length)
                         goto case;
                     else
+                    {
+                        currentArg = i + 1;
                         goto default;
+                    }
                 }
                 else
+                {
+                    currentArg = i + 1;
                     break SWITCH;
+                }
             }
         default:
             if (spec.indexEnd == spec.indexEnd.max)
@@ -1212,8 +1214,9 @@ if (isSomeString!(typeof(fmt)))
     import std.array : appender;
     auto w = appender!(char[])();
 
-    formattedWrite(w, "%1:$d", 1, 2, 3);
+    uint count = formattedWrite(w, "%1:$d", 1, 2, 3);
     assert(w.data == "123");
+    assert(count == 3);
 }
 
 /**
