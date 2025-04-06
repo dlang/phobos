@@ -1798,12 +1798,12 @@ version (linux)
 
         /+
             Linux `getrandom()` emulation built upon `/dev/urandom`.
-            Parameter `flags` is happily ignored.
+            The fourth parameter (`uint flags`) is happily ignored.
          +/
         private ssize_t getrandom(
                 void* buf,
                 size_t buflen,
-                uint flags,
+                uint,
         ) @system nothrow @nogc
         {
             import core.stdc.stdio : fclose, fopen, fread;
