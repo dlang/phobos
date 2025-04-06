@@ -761,7 +761,6 @@ version (Windows) @safe unittest
     });
 
     // Directory tree removal test
-    version (none) // TODO: port `dirEntries()`
     runIn(root, {
         import std.exception : assertThrown;
 
