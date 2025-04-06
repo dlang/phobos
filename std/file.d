@@ -127,6 +127,7 @@ else
     static assert(0);
 
 private enum isDirEntry(T) = is(Unconst!T == DirEntry);
+private enum isString(T) = is(immutable T == immutable C[], C) && is(C == char);
 private enum isConvertibleToStringButNoDirEntry(T) = !isDirEntry!T && isConvertibleToString!T;
 
 version (Windows) @safe unittest
@@ -4617,7 +4618,7 @@ version (StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
+            private this(string name, string absolutePrefix, in WIN32_FIND_DATAW *fd);
         }
         else version (Posix)
         {
@@ -4779,13 +4780,14 @@ else version (Windows)
         {
             import std.datetime.systime : FILETIMEToSysTime;
 
-            if (!path.exists())
+            scope const effectivePath = (path == "") ? "." : path;
+            if (!effectivePath.exists())
                 throw new FileException(path, "File does not exist");
 
             _name = path;
             this.absolutizeName();
 
-            with (getFileAttributesWin(path))
+            with (getFileAttributesWin(_name))
             {
                 _size = makeUlong(nFileSizeLow, nFileSizeHigh);
                 _timeCreated = FILETIMEToSysTime(&ftCreationTime);
@@ -4795,7 +4797,7 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        private this(string path, string absolutePrefix, WIN32_FIND_DATAW *fd) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
@@ -4812,12 +4814,21 @@ else version (Windows)
             _timeLastModified = FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
 
-            this.absolutizeName();
+            if (absolutePrefix is null)
+                this.absolutizeName();
+            else
+                _absolutePrefix = absolutePrefix;
         }
 
         private void absolutizeName() pure return scope
         {
             import std.path : absolutePath;
+
+            if (_name == "")
+            {
+                _name = absolutePath(".");
+                _absolutePrefix = _name;
+            }
 
             const rel = _name;
             alias abs = _name;
@@ -5656,7 +5667,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+    version (Windows) string _absolutePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -5704,6 +5715,11 @@ private struct DirIteratorImpl
             return toNext(false, &_findinfo);
         }
 
+        bool stepIn(const DirEntry directory)
+        {
+            return this.stepIn(directory.absoluteName);
+        }
+
         bool next()
         {
             if (_stack.length == 0)
@@ -5730,7 +5746,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, _absolutePrefix, findinfo);
             return true;
         }
 
@@ -5773,6 +5789,11 @@ private struct DirIteratorImpl
             return next();
         }
 
+        bool stepIn(DirEntry directory)
+        {
+            return this.stepIn(directory.name);
+        }
+
         bool next() @trusted
         {
             if (_stack.length == 0)
@@ -5812,18 +5833,44 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(const DirEntry entry, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
         _followSymlink = followSymlink;
 
+        version (Windows)
+        {
+            const pathname = entry.absoluteName;
+            _absolutePrefix = entry._absolutePrefix;
+        }
+        else
+        {
+            const pathname = entry.name;
+        }
+
+        this.initialStepIn(pathname);
+    }
+
+    version (Windows) { /* Leaving this overload available on Windows has the tendency to introduce regressions. */ }
+    else
+    {
+        this(string pathname, SpanMode mode, bool followSymlink)
+        {
+            _mode = mode;
+            _followSymlink = followSymlink;
+            this.initialStepIn(pathname);
+        }
+    }
+
+    private void initialStepIn(string pathname)
+    {
         if (stepIn(pathname))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -5853,7 +5900,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -5867,7 +5914,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur))
                     while (!empty && !next()){}
             }
             else
@@ -5895,10 +5942,21 @@ struct _DirIterator(bool useDIP1000)
 private:
     SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
-    this(string pathname, SpanMode mode, bool followSymlink) @trusted
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink) @trusted
+    if (isString!Path || isConvertibleToStringButNoDirEntry!Path)
     {
-        impl = typeof(impl)(pathname, mode, followSymlink);
+        version (Windows)
+            impl = typeof(impl)(DirEntry(pathname), mode, followSymlink);
+        else
+            impl = typeof(impl)(pathname, mode, followSymlink);
     }
+
+    this(Path)(Path entry, SpanMode mode, bool followSymlink) @trusted
+    if (isDirEntry!Path)
+    {
+        impl = typeof(impl)(entry, mode, followSymlink);
+    }
+
 public:
     @property bool empty() @trusted { return impl.empty; }
     @property DirEntry front() @trusted { return impl.front; }
@@ -6016,8 +6074,17 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, SpanMode mode, bool followSymlink = true)
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (isString!Path || isConvertibleToStringButNoDirEntry!Path)
+{
+    return _DirIterator!useDIP1000(path, mode, followSymlink);
+}
+
+/// ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, SpanMode mode, bool followSymlink = true)
+if (isDirEntry!Path)
 {
     return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
@@ -6128,9 +6195,10 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 }
 
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, string pattern, SpanMode mode,
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
     bool followSymlink = true)
+if (isString!Path || isConvertibleToString!Path || isDirEntry!Path)
 {
     import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
