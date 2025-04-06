@@ -870,6 +870,16 @@ version (Windows) @safe unittest
         assert(found3 == 1);
         assert(foundOthers == 0);
     });
+
+    // Chaotic directory tree traversal test
+    runIn(root, {
+        // <https://github.com/dlang/phobos/issues/9584>
+        foreach (DirEntry entry; ".".dirEntries("*", SpanMode.shallow))
+            if (entry.isDir)
+                foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
+                    if (subEntry.isDir)
+                        chdir(subEntry);
+    });
 }
 
 // Purposefully not documented. Use at your own risk
