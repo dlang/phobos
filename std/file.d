@@ -5698,7 +5698,8 @@ private struct DirIteratorImpl
             HANDLE h;
         }
 
-        bool stepIn(string directory) @safe
+        bool stepIn(Path)(Path directory) @safe
+        if (isString!Path)
         {
             import std.path : chainPath;
             auto searchPattern = chainPath(directory, "*.*");
@@ -5714,7 +5715,8 @@ private struct DirIteratorImpl
             return toNext(false, &_findinfo);
         }
 
-        bool stepIn(const DirEntry directory)
+        bool stepIn(Path)(Path directory)
+        if (isDirEntry!Path)
         {
             return this.stepIn(directory.absoluteName);
         }
