@@ -543,6 +543,12 @@ template to(T)
     }
 }
 
+private T toImpl(T, S)(S value)
+if (isInputRange!S && isInfinite!S && isExactSomeString!T)
+{
+    static assert(0, "Cannot convert infinite range to string. Use `.take(n)` or `.array` to make it finite.");
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
