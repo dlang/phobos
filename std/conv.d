@@ -546,8 +546,18 @@ template to(T)
 private T toImpl(T, S)(S value)
 if (isInputRange!S && isInfinite!S && isExactSomeString!T)
 {
-    auto _ = value;
-    static assert(0, "Cannot convert infinite range to string. Use `.take(n)` or `.array` to make it finite.");
+    auto _ = value;  
+    static assert(0, "Cannot convert infinite range to string. Use `std.range.take` or `std.range.takeExactly` to make it finite.");
+}
+
+// Test for issue : https://github.com/dlang/phobos/issues/10559
+@safe pure nothrow unittest
+{
+    import std.range : repeat;
+    import std.conv : to;
+
+    // Test that converting an infinite range doesn't compile
+    static assert(!__traits(compiles, repeat(1).to!string));
 }
 
 /**
