@@ -547,7 +547,7 @@ private T toImpl(T, S)(S value)
 if (isInputRange!S && isInfinite!S && isExactSomeString!T)
 {
     auto _ = value;
-    static assert(0, "Cannot convert infinite range to string. 
+    static assert(0, "Cannot convert infinite range to string.
                   Use `std.range.take` or `std.range.takeExactly` to make it finite.");
 }
 
