@@ -546,8 +546,8 @@ template to(T)
 private T toImpl(T, S)(S value)
 if (isInputRange!S && isInfinite!S && isExactSomeString!T)
 {
-    auto _ = value;
     //Using an extra variable to PASS the dscanner in style check in CI
+    auto _ = value;
     static assert(0, "Cannot convert infinite range to string. " ~
                   "Use `std.range.take` or `std.range.takeExactly` to make it finite.");
 }
