@@ -547,7 +547,7 @@ private T toImpl(T, S)(S)
 if (isInputRange!S && isInfinite!S && isExactSomeString!T)
 {
     static assert(0, "Cannot convert infinite range to string. " ~
-                  "Use `std.range.take` or `std.range.takeExactly` to make it finite.");
+                "Use `std.range.take` or `std.range.takeExactly` to make it finite.");
 }
 
 // Test for issue : https://github.com/dlang/phobos/issues/10559
