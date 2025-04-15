@@ -543,6 +543,23 @@ template to(T)
     }
 }
 
+private T toImpl(T, S)(S)
+if (isInputRange!S && isInfinite!S && isExactSomeString!T)
+{
+    static assert(0, "Cannot convert infinite range to string. " ~
+                "Use `std.range.take` or `std.range.takeExactly` to make it finite.");
+}
+
+// Test for issue : https://github.com/dlang/phobos/issues/10559
+@safe pure nothrow unittest
+{
+    import std.range : repeat;
+    import std.conv : to;
+
+    // Test that converting an infinite range doesn't compile
+    static assert(!__traits(compiles, repeat(1).to!string));
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
