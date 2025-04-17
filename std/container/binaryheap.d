@@ -68,9 +68,17 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     import std.algorithm.comparison : min;
     import std.algorithm.mutation : move, swapAt;
     import std.algorithm.sorting : HeapOps;
-    import std.exception : enforce;
     import std.functional : binaryFun;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
+
+    version (D_BetterC)
+    {
+        enum enforce(alias value) = assert(value);
+    }
+    else
+    {
+        import std.exception : enforce;
+    }
 
     static if (isRandomAccessRange!Store)
         alias Range = Store;

@@ -391,8 +391,16 @@ if (!is(immutable T == immutable bool))
 
     import core.memory : GC;
 
-    import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
+
+    version (D_BetterC)
+    {
+        enum enforce(alias value) = assert(value);
+    }
+    else
+    {
+        import std.exception : enforce;
+    }
 
     // This structure is not copyable.
     private struct Payload
@@ -1777,8 +1785,16 @@ if (!is(immutable T == immutable bool))
 struct Array(T)
 if (is(immutable T == immutable bool))
 {
-    import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
+
+    version (D_BetterC)
+    {
+        enum enforce(alias value) = assert(value);
+    }
+    else
+    {
+        import std.exception : enforce;
+    }
 
     static immutable uint bitsPerWord = size_t.sizeof * 8;
     private static struct Data
