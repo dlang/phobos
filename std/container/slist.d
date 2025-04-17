@@ -60,14 +60,7 @@ if (!is(T == shared))
     import std.range.primitives : isInputRange, isForwardRange, ElementType;
     import std.traits : isImplicitlyConvertible;
 
-    version (D_BetterC)
-    {
-        enum enforce(alias value) = assert(value);
-    }
-    else
-    {
-        import std.exception : enforce;
-    }
+    import std.exception : enforce;
 
     private struct Node
     {

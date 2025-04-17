@@ -430,37 +430,46 @@ void assertThrown(T : Throwable = Exception, E)
         If a delegate is passed, the safety and purity of this function are inferred
         from `Dg`'s safety and purity.
  +/
-template enforce(E : Throwable = Exception)
-if (is(typeof(new E("", string.init, size_t.init)) : Throwable) ||
-    is(typeof(new E(string.init, size_t.init)) : Throwable))
+version (D_BetterC)
 {
-    ///
-    T enforce(T)(T value, lazy const(char)[] msg = null,
-    string file = __FILE__, size_t line = __LINE__)
-    if (is(typeof({ if (!value) {} })))
-    {
-        if (!value) bailOut!E(file, line, msg);
+    T enforce(T)(T value) {
+        assert(value);
         return value;
     }
 }
-
-/// ditto
-T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
-    (T value, scope Dg dg)
-if (isSomeFunction!Dg && is(typeof( dg() )) &&
-    is(typeof({ if (!value) {} })))
+else
 {
-    if (!value) dg();
-    return value;
-}
+    template enforce(E : Throwable = Exception)
+    if (is(typeof(new E("", string.init, size_t.init)) : Throwable) ||
+        is(typeof(new E(string.init, size_t.init)) : Throwable))
+    {
+        ///
+        T enforce(T)(T value, lazy const(char)[] msg = null,
+        string file = __FILE__, size_t line = __LINE__)
+        if (is(typeof({ if (!value) {} })))
+        {
+            if (!value) bailOut!E(file, line, msg);
+            return value;
+        }
+    }
 
-/// ditto
-T enforce(T)(T value, lazy Throwable ex)
-{
-    if (!value) throw ex();
-    return value;
-}
+    /// ditto
+    T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
+        (T value, scope Dg dg)
+    if (isSomeFunction!Dg && is(typeof( dg() )) &&
+        is(typeof({ if (!value) {} })))
+    {
+        if (!value) dg();
+        return value;
+    }
 
+    /// ditto
+    T enforce(T)(T value, lazy Throwable ex)
+    {
+        if (!value) throw ex();
+        return value;
+    }
+}
 ///
 @system unittest
 {
