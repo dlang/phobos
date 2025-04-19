@@ -679,7 +679,7 @@ private struct RBRange(N)
     /**
      * Returns the first element in the range
      */
-    @property Elem front()
+    ref @property Elem front()
     {
         return _begin.value;
     }
@@ -687,7 +687,7 @@ private struct RBRange(N)
     /**
      * Returns the last element in the range
      */
-    @property Elem back()
+    ref @property Elem back()
     {
         return _end.prev.value;
     }
@@ -1036,7 +1036,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH 1)
      */
-    inout(Elem) front() inout
+    ref inout(Elem) front() inout
     {
         return _begin.value;
     }
@@ -1046,7 +1046,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    inout(Elem) back() inout
+    ref inout(Elem) back() inout
     {
         return _end.prev.value;
     }
