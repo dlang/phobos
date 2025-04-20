@@ -161,11 +161,22 @@ enum EntropySource
 ///
 enum EntropyStatus
 {
+    /// success
     ok = 0,
+
+    /// catch-all error
     unknownError = 1,
+
+    /// An entropy source was unavailable.
     unavailable,
+
+    /// A dependency providing the entropy source turned out unavailable.
     unavailableLibrary,
+
+    /// The requested entropy source is not supported on this platform.
     unavailablePlatform,
+
+    /// Could not retrieve entropy from the selected source.
     readError,
 }
 
@@ -461,6 +472,8 @@ private
 
 version (all)
 {
+private:
+
     EntropyResult getEntropyViaNone(scope void[]) @safe
     {
         return EntropyResult(EntropyStatus.unavailable, EntropySource.none);
@@ -470,19 +483,7 @@ version (all)
 // dlopen() + dlsym() wrapper
 version (Posix)
 {
-    static import core.sys.posix.dlfcn;
-
-    void* loadLibrary(const(char)* name) @system
-    {
-        return core.sys.posix.dlfcn.dlopen(
-            name,
-            core.sys.posix.dlfcn.RTLD_LAZY,
-        );
-    }
-
-    alias unloadLibrary = core.sys.posix.dlfcn.dlclose;
-    alias loadFunction = core.sys.posix.dlfcn.dlsym;
-}
+private:
 
 version (Posix)
 {
@@ -519,7 +520,7 @@ version (Posix)
 
 version (linux)
 {
-    import core.sys.posix.sys.types : ssize_t;
+private:
 
     EntropyResult getEntropyViaGetrandom(scope void[] buffer) @trusted
     {
@@ -684,6 +685,8 @@ version (Windows)
     import core.sys.windows.bcrypt : BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG;
     import core.sys.windows.windef : HMODULE, PUCHAR, ULONG;
     import core.sys.windows.ntdef : NT_SUCCESS;
+
+private:
 
     EntropyResult getEntropyViaBCryptGenRandom(scope void[] buffer) @trusted
     {
