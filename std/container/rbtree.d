@@ -737,6 +737,10 @@ private struct RBRange(N)
  * elements `a` and `b`, $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
  * always equal `false`.
  *
+ * Care should also be taken to not modify elements in the tree (e.g. via `front` /
+ * `back`, which return by `ref`) in a way which would affect the order defined by
+ * the `less` predicate.
+ *
  * If `allowDuplicates` is set to `true`, then inserting the same element more than
  * once continues to add more elements.  If it is `false`, duplicate elements are
  * ignored on insertion.  If duplicates are allowed, then new elements are
