@@ -276,7 +276,6 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		scopebuffer test/dummyrange test/range \
 		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
-		$(addprefix entropy/, bsd common linux posix windows) \
 		windows/advapi32 \
 	) \
 	typetuple \
