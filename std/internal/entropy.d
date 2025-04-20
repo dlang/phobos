@@ -12,8 +12,6 @@
  +/
 module std.internal.entropy.entropy;
 
-public import std.internal.entropy.common;
-
 import std.internal.entropy.bsd;
 import std.internal.entropy.linux;
 import std.internal.entropy.posix;
