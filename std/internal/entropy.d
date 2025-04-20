@@ -142,7 +142,7 @@ enum EntropySource
     /// `/dev/random`
     charDevRandom = 2,
 
-    /// `getrandom` syscall wrapper
+    /// `getrandom` syscall or wrapper
     getrandom = 3,
 
     /// `arc4random`
@@ -480,13 +480,10 @@ private:
     }
 }
 
-// dlopen() + dlsym() wrapper
 version (Posix)
 {
 private:
 
-version (Posix)
-{
     EntropyResult getEntropyViaCharDevURandom(scope void[] buffer) @trusted
     {
         const status = getEntropyViaCharDev(buffer, "/dev/urandom".ptr);
@@ -528,93 +525,38 @@ private:
         if (loaded != EntropyStatus.ok)
             return EntropyResult(loaded, EntropySource.getrandom);
 
-        const status = callGetrandom(buffer);
+        const status = callGetrandom(buffer, 0);
         return EntropyResult(status, EntropySource.getrandom);
     }
 
-    alias GetrandomFunction = extern(C) ssize_t function(
-        void* buf,
-        size_t buflen,
-        uint flags,
-    ) @system nothrow @nogc;
-
-    static void* _getrandomLib = null;
-    static GetrandomFunction _getrandomFun = null;
-
-    EntropyStatus callGetrandom(scope void[] buffer) @system
+    EntropyStatus syscallGetrandom(scope void[] buffer, uint flags)
     {
-        /+
-            getrandom(2):
-            If the urandom source has been initialized, reads of up to 256
-            bytes will always return as many bytes as requested and will not
-            be interrupted by signals.  No such guarantees apply for larger
-            buffer sizes.
-        +/
-        foreach (chunk; VoidChunks(buffer, 256))
+        import core.sys.linux.errno : EINTR, ENOSYS, errno;
+        import core.sys.linux.sys.syscall : __NR_getrandom;
+        import core.sys.linux.unistd : syscall;
+
+        while (buffer.length > 0)
         {
-            const readBytes = _getrandomFun(chunk.ptr, chunk.length, 0);
-            if (readBytes != chunk.length)
-                return EntropyStatus.readError;
-        }
+            const got = syscall(__NR_getrandom, buffer.length, flags);
 
-        return EntropyStatus.ok;
-    }
-
-    EntropyStatus loadGetrandom() @system
-    {
-        static bool loadLib()
-        {
-            static immutable namesLibC = [
-                "libc.so",
-                "libc.so.6",
-            ];
-
-            foreach (name; namesLibC)
+            if (got == -1)
             {
-                _getrandomLib = loadLibrary(name.ptr);
-                if (_getrandomLib !is null)
-                    return true;
+                switch (errno)
+                {
+                case EINTR:
+                    break; // That’s fine.
+                case ENOSYS:
+                    return EntropyStatus.unavailable;
+                default:
+                    return EntropyStatus.readError;
+                }
             }
 
-            return false;
+            if (got > 0)
+                buffer = buffer[got .. $];
         }
 
-        static bool loadFun()
-        {
-            _getrandomFun = cast(GetrandomFunction) loadFunction(_getrandomLib, "getrandom");
-            return (_getrandomFun !is null);
-        }
-
-        if (_getrandomFun !is null)
-            return EntropyStatus.ok;
-
-        if (_getrandomLib is null)
-        {
-            const libLoaded = loadLib();
-            if (!libLoaded)
-                return EntropyStatus.unavailableLibrary;
-        }
-
-        const funLoaded = loadFun();
-        if (!funLoaded)
-            return EntropyStatus.unavailable;
-
-        return EntropyStatus.ok;
-    }
-
-    void freeGetrandom() @system
-    {
-        if (_getrandomLib is null)
-            return;
-
-        _getrandomFun = null;
-        unloadLibrary(_getrandomLib);
-        _getrandomLib = null;
-    }
-
-    static ~this() @system
-    {
-        freeGetrandom();
+        return true;
     }
 }
 
