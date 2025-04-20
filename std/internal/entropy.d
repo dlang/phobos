@@ -12,10 +12,6 @@
  +/
 module std.internal.entropy.entropy;
 
-import std.internal.entropy.bsd;
-import std.internal.entropy.linux;
-import std.internal.entropy.posix;
-import std.internal.entropy.windows;
 import std.meta;
 
 // Self-test
@@ -524,8 +520,6 @@ version (Posix)
 version (linux)
 {
     import core.sys.posix.sys.types : ssize_t;
-    import std.internal.entropy.common;
-    import std.internal.entropy.posix;
 
     EntropyResult getEntropyViaGetrandom(scope void[] buffer) @trusted
     {
@@ -648,8 +642,6 @@ private
 
     version (SecureARC4Random)
     {
-        import std.internal.entropy.common;
-
         EntropyResult getEntropyViaARC4Random(scope void[] buffer) @trusted
         {
             arc4random_buf(buffer.ptr, buffer.length);
@@ -661,8 +653,6 @@ private
 
     version (UseGetentropy)
     {
-        import std.internal.entropy.common;
-
         EntropyResult getEntropyViaGetentropy(scope void[] buffer) @trusted
         {
             const status = callGetentropy(buffer);
@@ -694,7 +684,6 @@ version (Windows)
     import core.sys.windows.bcrypt : BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG;
     import core.sys.windows.windef : HMODULE, PUCHAR, ULONG;
     import core.sys.windows.ntdef : NT_SUCCESS;
-    import std.internal.entropy.common;
 
     EntropyResult getEntropyViaBCryptGenRandom(scope void[] buffer) @trusted
     {
