@@ -270,12 +270,13 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
 	$(addprefix internal/, \
 		cstring memory digest/sha_SSSE3 \
+		entropy \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
 		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
-		$(addprefix entropy/, bsd common entropy linux posix windows) \
+		$(addprefix entropy/, bsd common linux posix windows) \
 		windows/advapi32 \
 	) \
 	typetuple \

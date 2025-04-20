@@ -8,7 +8,7 @@
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Elias Batek
-    Source:    $(PHOBOSSRC std/internal/entropy/entropy.d)
+    Source:    $(PHOBOSSRC std/internal/entropy.d)
  +/
 module std.internal.entropy.entropy;
 
