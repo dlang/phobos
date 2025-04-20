@@ -20,6 +20,7 @@ import std.internal.entropy.posix;
 import std.internal.entropy.windows;
 import std.meta;
 
+// Self-test
 @safe unittest
 {
     auto buffer = new ubyte[](32);
@@ -38,37 +39,86 @@ import std.meta;
 @nogc nothrow:
 
 // Flagship function
+/++
+    Retrieves random data from an applicable system CSPRNG.
+
+    Params:
+        buffer = An output buffer to store the retrieved entropy in.
+                 The length of it will determine the amount of entropy to be
+                 obtained.
+
+                 This functions (and all overloads) always attempts to fill
+                 the entire buffer. Therefore, they can block, spin or report
+                 an error.
+
+    Returns:
+        An `EntropyResult` that either reports success
+        or the type of error that has occurred.
+
+        In case of an error, the data in `buffer` MUST NOT be used.
+        The recommended way to check for success is through the `isOK()`
+        helper function.
+ +/
 EntropyResult getEntropy(scope void[] buffer) @safe
 {
     return getEntropyImpl(buffer);
 }
 
 // Convenience overload
+/// ditto
 EntropyResult getEntropy(scope ubyte[] buffer) @safe
 {
     return getEntropy(cast(void[]) buffer);
 }
 
 // Convenience wrapper
+/// ditto
+/++
+    Retrieves random data from an applicable system CSPRNG.
+
+    Params:
+        buffer = An output buffer to store the retrieved entropy in.
+        length = Length of the provided `buffer`.
+                 Specifying a wrong value here, will lead to memory corruption.
+ +/
 EntropyResult getEntropy(scope void* buffer, size_t length) @system
 {
     return getEntropy(buffer[0 .. length]);
 }
 
-// Used to manually set the entropy source to use
+/++
+    Manually set the entropy source to use.
+
+    As a rule of thumb, this SHOULD NOT be done.
+
+    It might be useful in cases where the default entropy source chosen by
+    the maintainer of the used compiler package is unavailable on a system.
+    Usually, `EntropySource.tryAll` will be the most reasonable option
+    in such cases.
+ +/
 void forceEntropySource(EntropySource source) @safe
 {
     _entropySource = source;
 }
 
-/+
-    (In-)Convenience wrapper.
+// (In-)Convenience wrapper
+/++
+    Retrieves random data from the requested entropy source.
 
-    In general, it’s a bad idea to let users pick sources themselves.
+    In general, it’s a $(B bad idea) to let users pick sources themselves.
     A sane option should be used by default instead.
+
+    This overload only exists because its used by Phobos.
 
     See_also:
         Use `forceEntropySource` instead.
+
+    Params:
+        buffer = An output buffer to store the retrieved entropy in.
+                 The length of it will determine the amount of entropy to be
+                 obtained.
+        length = Length of the provided `buffer`.
+                 Specifying a wrong value here, will lead to memory corruption.
  +/
 EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source) @system
 {
@@ -79,7 +129,9 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
     return getEntropy(buffer[0 .. length]);
 }
 
-///
+/++
+    A CSPRNG suitable to retrieve entropy (cryptographically-secure random data) from.
+ +/
 enum EntropySource
 {
     /// Try supported sources one-by-one until one is available.
@@ -105,10 +157,10 @@ enum EntropySource
     // `getentropy`
     getentropy = 5,
 
-    /// Windows legacy
+    /// Windows legacy CryptoAPI
     cryptGenRandom = 6,
 
-    /// Windows modern
+    /// Windows Cryptography API: Next Generation (“BCrypt”)
     bcryptGenRandom = 7,
 }
 
@@ -125,8 +177,11 @@ enum EntropyStatus
 
 ///
 struct EntropyResult
-{
+
+    {///
     EntropyStatus status;
+
+    ///
     EntropySource source;
 
     ///
@@ -193,13 +248,18 @@ struct EntropyResult
     }
 }
 
-///
+/++
+    Determines whether an `EntropyResult` reports the success of an operation.
+ +/
 pragma(inline, true) bool isOK(const EntropyResult value) pure @safe
 {
     return value.status == EntropyStatus.ok;
 }
 
-///
+/++
+    Determines whether an `EntropyResult` reports the unvailability of the
+    requested entropy source.
+ +/
 pragma(inline, true) bool isUnavailable(const EntropyResult value) pure @safe
 {
     return (
@@ -211,6 +271,7 @@ pragma(inline, true) bool isUnavailable(const EntropyResult value) pure @safe
 
 package(std):
 
+// If the system let us down, we'll let the system down.
 pragma(inline, true) void crashOnError(const EntropyResult value) pure @safe
 {
     if (value.isOK)
@@ -219,78 +280,126 @@ pragma(inline, true) void crashOnError(const EntropyResult value) pure @safe
     assert(false, value.toString());
 }
 
-private:
-
-struct SrcFunPair(EntropySource source, alias func)
-{
-    enum  src = source;
-    alias fun = func;
-}
-
-template isValidSupportedSource(SupportedSource)
-{
-    import std.traits;
-
-    enum isValidSupportedSource = (
-        is(SupportedSource == SrcFunPair!Args, Args...) &&
-        SupportedSource.src != EntropySource.tryAll &&
-        SupportedSource.src != EntropySource.none
-    );
-}
-
-/++
-    Params:
-        defaultSource = Default entropy source of the platform
-        SupportedSources = Sequence of `SrcFunPair`
-                           representing the supported sources of the platform
+/+
+    Building blocks and implementation helpers
  +/
-mixin template entropyImpl(EntropySource defaultSource, SupportedSources...)
-if (allSatisfy!(isValidSupportedSource, SupportedSources))
+private
 {
-    enum defaultEntropySource = defaultSource;
-
-    EntropyResult getEntropyImpl(scope void[] buffer) @safe
+    /++
+        A “Chunks” implementation that works with `void[]`.
+     +/
+    struct VoidChunks
     {
-        switch (_entropySource)
+        void[] _data;
+        size_t _chunkSize;
+
+    @nogc nothrow pure @safe:
+
+        this(void[] data, size_t chunkSize)
         {
-            static foreach (source; SupportedSources)
+            _data = data;
+            _chunkSize = chunkSize;
+        }
+
+        bool empty() const
+        {
+            return _data.length == 0;
+        }
+
+        inout(void)[] front() inout
+        {
+            if (_data.length < _chunkSize)
+                return _data;
+
+            return _data[0 .. _chunkSize];
+        }
+
+        void popFront()
+        {
+            if (_data.length <= _chunkSize)
             {
-                case source.src:
-                    return source.fun(buffer);
+                _data = null;
+                return;
             }
 
-        case EntropySource.tryAll:
-            {
-                const result = _tryEntropySources(buffer);
-                result.saveSourceForNextUse();
-                return result;
-            }
-
-        case EntropySource.none:
-            return getEntropyViaNone(buffer);
-
-        default:
-            return EntropyResult(EntropyStatus.unavailablePlatform, _entropySource);
+            _data = _data[_chunkSize .. $];
         }
     }
 
-    EntropyResult _tryEntropySources(scope void[] buffer) @safe
+    struct SrcFunPair(EntropySource source, alias func)
     {
-        EntropyResult result;
+        enum  src = source;
+        alias fun = func;
+    }
 
-        static foreach (source; SupportedSources)
+    template isValidSupportedSource(SupportedSource)
+    {
+        enum isValidSupportedSource = (
+            is(SupportedSource == SrcFunPair!Args, Args...) &&
+            SupportedSource.src != EntropySource.tryAll &&
+            SupportedSource.src != EntropySource.none
+        );
+    }
+
+    /++
+        `getEntropyImpl()` implementation helper.
+        To be instantiated and mixed in with platform-specific configuration.
+
+        Params:
+            defaultSource = Default entropy source of the platform
+            SupportedSources = Sequence of `SrcFunPair`
+                               representing the supported sources of the platform
+    +/
+    mixin template entropyImpl(EntropySource defaultSource, SupportedSources...)
+    if (allSatisfy!(isValidSupportedSource, SupportedSources))
+    {
+    private:
+        /// Preconfigured entropy source preset of the platform.
+        enum defaultEntropySource = defaultSource;
+
+        EntropyResult getEntropyImpl(scope void[] buffer) @safe
         {
-            result = source.fun(buffer);
-            if (!result.isUnavailable)
-                return result;
+            switch (_entropySource)
+            {
+                static foreach (source; SupportedSources)
+                {
+                    case source.src:
+                        return source.fun(buffer);
+                }
+
+            case EntropySource.tryAll:
+                {
+                    const result = _tryEntropySources(buffer);
+                    result.saveSourceForNextUse();
+                    return result;
+                }
+
+            case EntropySource.none:
+                return getEntropyViaNone(buffer);
+
+            default:
+                return EntropyResult(EntropyStatus.unavailablePlatform, _entropySource);
+            }
         }
 
-        result = EntropyResult(
-            EntropyStatus.unavailable,
-            EntropySource.none,
-        );
+        EntropyResult _tryEntropySources(scope void[] buffer) @safe
+        {
+            EntropyResult result;
 
-        return result;
+            static foreach (source; SupportedSources)
+            {
+                result = source.fun(buffer);
+                if (!result.isUnavailable)
+                    return result;
+            }
+
+            result = EntropyResult(
+                EntropyStatus.unavailable,
+                EntropySource.none,
+            );
+
+            return result;
+        }
     }
 }
 
@@ -343,56 +452,24 @@ else mixin entropyImpl!(
     EntropySource.none,
 );
 
-static EntropySource _entropySource = defaultEntropySource;
-
-void saveSourceForNextUse(const EntropyResult result) @safe
+private
 {
-    if (!result.isOK)
-        return;
+    static EntropySource _entropySource = defaultEntropySource;
 
-    _entropySource = result.source;
-}
-
-EntropyResult getEntropyViaNone(scope void[]) @safe
-{
-    return EntropyResult(EntropyStatus.unavailable, EntropySource.none);
-}
-
-struct VoidChunks
-{
-    void[] _data;
-    size_t _chunkSize;
-
-@nogc nothrow pure @safe:
-
-    this(void[] data, size_t chunkSize)
+    void saveSourceForNextUse(const EntropyResult result) @safe
     {
-        _data = data;
-        _chunkSize = chunkSize;
-    }
-
-    bool empty() const
-    {
-        return _data.length == 0;
-    }
-
-    inout(void)[] front() inout
-    {
-        if (_data.length < _chunkSize)
-            return _data;
-
-        return _data[0 .. _chunkSize];
-    }
-
-    void popFront()
-    {
-        if (_data.length <= _chunkSize)
-        {
-            _data = null;
+        if (!result.isOK)
             return;
-        }
 
-        _data = _data[_chunkSize .. $];
+        _entropySource = result.source;
+    }
+}
+
+version (all)
+{
+    EntropyResult getEntropyViaNone(scope void[]) @safe
+    {
+        return EntropyResult(EntropyStatus.unavailable, EntropySource.none);
     }
 }
 
