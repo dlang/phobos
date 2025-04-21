@@ -10,7 +10,7 @@
     Authors:   Elias Batek
     Source:    $(PHOBOSSRC std/internal/entropy.d)
  +/
-module std.internal.entropy.entropy;
+module std.internal.entropy;
 
 import std.meta;
 
