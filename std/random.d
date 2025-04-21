@@ -1782,7 +1782,6 @@ version (linux)
 
             `getrandom()` was added to the GNU C Library in v2.25.
          +/
-        //pragma(msg, "`getrandom()` emulation for legacy Linux targets is enabled.");
 
         /+
             On modern kernels (5.6+), `/dev/random` would behave more similar
