@@ -1,7 +1,8 @@
 Add an internal multi-backend entropy system
 
 This Phobos release introduces an internal multi-backend system for the
-retrieval of entropy (as in cryptographically-secure random numbers).
+retrieval of entropy (as in cryptographically-secure random numbers obtained
+from a suitable random number generator provided by the operating system).
 
 The current implementation supports the `getrandom` syscall on Linux.
 

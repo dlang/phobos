@@ -1,10 +1,27 @@
 // Written in the D programming language.
 
 /+
-    Entropy library prototype.
+    CSPRNG library prototype.
 
     This code has not been audited.
     Do not use for cryptographic purposes.
+
+    The terms entropy and entropy sources here do refer to
+    cryptographically-safe random numbers and higher-level generators of such
+    — typically powered by an entropy pool provided by the operating system.
+
+    An example of similar usage of said terminology would be the `getentropy()`
+    function provided by
+    $(LINK2 https://man.freebsd.org/cgi/man.cgi?query=getentropy&apropos=0&sektion=3&manpath=FreeBSD+14.2-RELEASE&arch=default&format=html,
+    FreeBSD).
+
+    This library does not interact with any actual low-level entropy sources
+    by itself. Instead it interfaces with system-provided CSPRNGs that are
+    typically seeded through aforementioned entropy sources by the operating
+    system as needed.
+
+    See_also:
+        $(LINK https://blog.cr.yp.to/20140205-entropy.html)
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Elias Batek
@@ -38,10 +55,10 @@ import std.meta;
 
     Params:
         buffer = An output buffer to store the retrieved entropy in.
-                 The length of it will determine the amount of entropy to be
-                 obtained.
+                 The length of it will determine the amount of random data to
+                 be obtained.
 
-                 This functions (and all overloads) always attempts to fill
+                 This function (and all overloads) always attempt to fill
                  the entire buffer. Therefore, they can block, spin or report
                  an error.
 
@@ -85,8 +102,8 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
 
     As a rule of thumb, this SHOULD NOT be done.
 
-    It might be useful in cases where the default entropy source chosen by
-    the maintainer of the used compiler package is unavailable on a system.
+    It might be useful in cases where the default entropy source — as chosen by
+    the maintainer of the used compiler package — is unavailable on a system.
     Usually, `EntropySource.tryAll` will be the most reasonable option
     in such cases.
  +/
@@ -124,7 +141,9 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
 }
 
 /++
-    A CSPRNG suitable to retrieve entropy (cryptographically-secure random data) from.
+    A CSPRNG suitable to retrieve cryptographically-secure random data from.
+
+    (No actual low-level entropy sources are provided on purpose.)
  +/
 enum EntropySource
 {
