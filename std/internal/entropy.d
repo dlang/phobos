@@ -21,7 +21,8 @@
     system as needed.
 
     See_also:
-        $(LINK https://blog.cr.yp.to/20140205-entropy.html)
+        $(LINK https://blog.cr.yp.to/20140205-entropy.html),
+        $(LINK https://cr.yp.to/talks/2014.10.18/slides-djb-20141018-a4.pdf)
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Elias Batek
