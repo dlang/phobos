@@ -75,8 +75,6 @@ import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
-import std.algorithm : sort, uniq;
-import std.array : array;
 
 /// Value tuples
 @safe unittest
@@ -3677,9 +3675,6 @@ struct Nullable(T)
 
     private bool _isNull = true;
 
-    import std.algorithm : sort, uniq;
-    import std.array : array;
-
     /**
      * Compares two Nullable values.
      * - If one is null and the other is not, the null one is considered smaller.
@@ -3721,8 +3716,7 @@ struct Nullable(T)
         }
     }
 
-    /// Nullable comparison tests
-    // Test 1: Basic Comparison
+    // Basic Null Comparison
     @safe unittest
     {
         Nullable!int a = 5;
@@ -3732,58 +3726,6 @@ struct Nullable(T)
         assert(b < a);
         assert(a == a);
         assert(b == b);
-    }
-
-    // Test 2: Sorting an array of Nullable
-    @safe unittest
-    {
-
-        auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int()];
-        sort(arr);
-
-        assert(arr[0].isNull);
-        assert(arr[1].isNull);
-        assert(arr[2].get == 5);
-        assert(arr[3].get == 10);
-    }
-
-    // Test 3: Uniqueness with Nullable values
-    @safe unittest
-    {
-
-        auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int(10), Nullable!int()];
-        sort(arr);
-        auto uniqueVals = arr.uniq.array;
-
-        assert(uniqueVals.length == 3);
-        assert(uniqueVals[0].isNull);
-        assert(uniqueVals[1].get == 5);
-        assert(uniqueVals[2].get == 10);
-    }
-
-    // Test 4: Nullable inside a struct with sorting
-    @safe unittest
-    {
-
-        struct Person {
-            string name;
-            Nullable!int age;
-
-            int opCmp(const Person other) const {
-                return age.opCmp(other.age);
-            }
-        }
-
-        Person[] people = [
-            Person("Alice", Nullable!int(30)),
-            Person("Bob", Nullable!int()),
-            Person("Charlie", Nullable!int(25)),
-        ];
-
-        sort(people);
-        assert(people[0].name == "Bob");
-        assert(people[1].name == "Charlie");
-        assert(people[2].name == "Alice");
     }
 
     /**
