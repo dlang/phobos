@@ -3733,7 +3733,7 @@ struct Nullable(T)
     @safe unittest
     {
         import std.algorithm : sort;
-        
+
         auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int()];
         sort(arr);
 
