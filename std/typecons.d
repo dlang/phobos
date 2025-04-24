@@ -75,6 +75,8 @@ import std.meta : AliasSeq, allSatisfy;
 import std.range.primitives : isOutputRange;
 import std.traits;
 import std.internal.attributes : betterC;
+import std.algorithm : sort, uniq;
+import std.array : array;
 
 /// Value tuples
 @safe unittest
