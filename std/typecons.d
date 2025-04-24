@@ -3675,6 +3675,9 @@ struct Nullable(T)
 
     private bool _isNull = true;
 
+    import std.algorithm : sort, uniq;
+    import std.array : array;
+
     /**
      * Compares two Nullable values.
      * - If one is null and the other is not, the null one is considered smaller.
@@ -3732,7 +3735,6 @@ struct Nullable(T)
     // Test 2: Sorting an array of Nullable
     @safe unittest
     {
-        import std.algorithm : sort;
 
         auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int()];
         sort(arr);
@@ -3746,8 +3748,6 @@ struct Nullable(T)
     // Test 3: Uniqueness with Nullable values
     @safe unittest
     {
-        import std.algorithm : sort, uniq;
-        import std.array : array;
 
         auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int(10), Nullable!int()];
         sort(arr);
@@ -3762,7 +3762,6 @@ struct Nullable(T)
     // Test 4: Nullable inside a struct with sorting
     @safe unittest
     {
-        import std.algorithm : sort;
 
         struct Person {
             string name;
