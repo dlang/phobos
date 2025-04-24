@@ -3726,7 +3726,8 @@ struct Nullable(T)
 
     /// Nullable comparison tests
     // Test 1: Basic Comparison
-    @safe unittest {
+    @safe unittest
+    {
         Nullable!int a = 5;
         Nullable!int b = Nullable!int.init; // null
 
@@ -3737,9 +3738,10 @@ struct Nullable(T)
     }
 
     // Test 2: Sorting an array of Nullable
-    @safe unittest {
+    @safe unittest
+    {
         import std.algorithm : sort;
-
+        
         auto arr = [Nullable!int(10), Nullable!int(), Nullable!int(5), Nullable!int()];
         sort(arr);
 
@@ -3750,7 +3752,8 @@ struct Nullable(T)
     }
 
     // Test 3: Uniqueness with Nullable values
-    @safe unittest {
+    @safe unittest
+    {
         import std.algorithm : sort, uniq;
         import std.array : array;
 
@@ -3765,7 +3768,8 @@ struct Nullable(T)
     }
 
     // Test 4: Nullable inside a struct with sorting
-    @safe unittest {
+    @safe unittest
+    {
         import std.algorithm : sort;
 
         struct Person {
