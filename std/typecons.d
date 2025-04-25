@@ -3728,7 +3728,7 @@ struct Nullable(T)
     @safe unittest
     {
         Nullable!int a = 5;
-        Nullable!int b = Nullable!int.init; // null
+        Nullable!int b = Nullable!int.init;
 
         assert(a > b);
         assert(b < a);
