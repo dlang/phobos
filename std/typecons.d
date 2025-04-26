@@ -3684,7 +3684,7 @@ struct Nullable(T)
      * Returns:
      *     Negative if `this < rhs`, zero if equal, positive if `this > rhs`.
      */
-    int opCmp(this This, Rhs)(auto ref Rhs rhs) const
+    int opCmp(Rhs)(auto ref Rhs rhs) const
     if (is(typeof(_value.payload < rhs.get)) && is(typeof(_value.payload > rhs.get)))
     {
         static if (is(Rhs == Nullable))
