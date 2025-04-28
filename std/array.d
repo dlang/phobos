@@ -4162,6 +4162,25 @@ if (isDynamicArray!A)
         writeln("WARNING: test of Appender zeroing did not occur");
 }
 
+// https://github.com/dlang/phobos/issues/10747
+@system unittest
+{
+    static struct A10747
+    {
+        this(ref A10747 rhs) { }
+    }
+
+    static class R10747
+    {
+        A10747 front() { return A10747.init; }
+        void popFront() { }
+        bool empty = true;
+    }
+
+    auto a = new R10747();
+    a.array();
+}
+
 //Calculates an efficient growth scheme based on the old capacity
 //of data, and the minimum requested capacity.
 //arg curLen: The current length
