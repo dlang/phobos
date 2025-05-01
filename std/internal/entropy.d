@@ -225,6 +225,9 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
     Usually, `EntropySource.tryAll` will be the most reasonable option
     in such cases.
 
+    Params:
+        source = The requested default entropy source to use for the current thread.
+
     Examples:
 
     ---
@@ -256,6 +259,7 @@ void forceEntropySource(EntropySource source) @safe
                  obtained.
         length = Length of the provided `buffer`.
                  Specifying a wrong value here, will lead to memory corruption.
+        source = The entropy source to use for the operation.
 
     Returns:
         An `EntropyResult` that either reports success
