@@ -181,6 +181,14 @@ EntropyResult getEntropy(scope ubyte[] buffer) @safe
         buffer = An output buffer to store the retrieved entropy in.
         length = Length of the provided `buffer`.
                  Specifying a wrong value here, will lead to memory corruption.
+
+    Returns:
+        An `EntropyResult` that either reports success
+        or the type of error that has occurred.
+
+        In case of an error, the data in `buffer` MUST NOT be used.
+        The recommended way to check for success is through the `isOK()`
+        helper function.
  +/
 EntropyResult getEntropy(scope void* buffer, size_t length) @system
 {
@@ -248,6 +256,14 @@ void forceEntropySource(EntropySource source) @safe
                  obtained.
         length = Length of the provided `buffer`.
                  Specifying a wrong value here, will lead to memory corruption.
+
+    Returns:
+        An `EntropyResult` that either reports success
+        or the type of error that has occurred.
+
+        In case of an error, the data in `buffer` MUST NOT be used.
+        The recommended way to check for success is through the `isOK()`
+        helper function.
  +/
 EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source) @system
 {
@@ -352,7 +368,10 @@ struct EntropyResult
     ///
     EntropySource source;
 
-    ///
+    /++
+        Returns:
+            A human-readable status message.
+     +/
     string toString() const @nogc nothrow pure @safe
     {
         if (status == EntropyStatus.ok)
@@ -446,6 +465,9 @@ struct EntropyResult
 
     Params:
         value = test subject
+
+    Returns:
+        `true` on success
  +/
 pragma(inline, true) bool isOK(const EntropyResult value) pure @safe
 {
@@ -458,6 +480,9 @@ pragma(inline, true) bool isOK(const EntropyResult value) pure @safe
 
     Params:
         value = test subject
+
+    Returns:
+        `true` if entropy source requested to use with the operation was unavailable.
  +/
 pragma(inline, true) bool isUnavailable(const EntropyResult value) pure @safe
 {
