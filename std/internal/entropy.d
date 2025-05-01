@@ -72,7 +72,7 @@ else version (WatchOS)
     }
 
     size_t timesFailed = 0;
-    foreach(n; 0 .. 3)
+    foreach (n; 0 .. 3)
         if (!test())
             ++timesFailed;
 
@@ -105,7 +105,7 @@ else version (WatchOS)
     }
 
     size_t timesFailed = 0;
-    foreach(n; 0 .. 3)
+    foreach (n; 0 .. 3)
         if (!test())
             ++timesFailed;
 
