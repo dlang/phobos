@@ -1,0 +1,32 @@
+Add an internal multi-backend entropy system
+
+This Phobos release introduces an internal multi-backend system for the
+retrieval of entropy (as in cryptographically-secure random numbers obtained
+from a suitable random number generator provided by the operating system).
+
+The current implementation supports the `getrandom` syscall on Linux.
+
+On BSD systems `arc4random_buf` or `getentropy` are used — depending on
+which is implemented by the OS and powered by a secure (non-RC4) algorithm.
+
+Additionally, reading entropy from the character devices `/dev/urandom` and
+`/dev/random` is available on all POSIX targets.
+
+On Windows `BCryptGenRandom` (from the
+$(I Cryptography API: Next Generation (“BCrypt”))) is provided as a backend.
+`CryptGenRandom` from the legacy $(I CryptoAPI) is not supported for the time
+being.
+
+Furthermore, this replaces the `getrandom` backwards compatibility shim
+that had been added by v2.111.1 for Linux targets.
+Instead backwards compatibility is now provided by a hunt strategy algorithm
+that tries potentially available entropy sources one by one to find one that
+is available on the running system.
+Given that the character devices serve as a fallback option here,
+`urandom` is favored over `random`. That is because modern kernel versions —
+where `random` would exhibit the usually more preferable behavior of blocking
+only until the entropy pool has been initialized — will also provide the
+`getrandom` syscall in the first place. Performing the syscall, in turn, is
+even better as it does not depend on the runtime environment exposing the
+special devices in predefined locations, thus working also within chroot
+environments.
