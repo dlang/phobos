@@ -541,23 +541,19 @@ private:
 
     EntropyResult getEntropyViaGetrandom(scope void[] buffer) @trusted
     {
-        const loaded = loadGetrandom();
-        if (loaded != EntropyStatus.ok)
-            return EntropyResult(loaded, EntropySource.getrandom);
-
-        const status = callGetrandom(buffer, 0);
+        const status = syscallGetrandom(buffer, 0);
         return EntropyResult(status, EntropySource.getrandom);
     }
 
-    EntropyStatus syscallGetrandom(scope void[] buffer, uint flags)
+    EntropyStatus syscallGetrandom(scope void[] buffer, uint flags) @system
     {
         import core.sys.linux.errno : EINTR, ENOSYS, errno;
-        import core.sys.linux.sys.syscall : __NR_getrandom;
+        import core.sys.linux.sys.syscall : SYS_getrandom;
         import core.sys.linux.unistd : syscall;
 
         while (buffer.length > 0)
         {
-            const got = syscall(__NR_getrandom, buffer.length, flags);
+            const got = syscall(SYS_getrandom, buffer.ptr, buffer.length, flags);
 
             if (got == -1)
             {
@@ -576,7 +572,7 @@ private:
                 buffer = buffer[got .. $];
         }
 
-        return true;
+        return EntropyStatus.ok;
     }
 }
 
