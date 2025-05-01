@@ -6,7 +6,7 @@
     This code has not been audited.
     Do not use for cryptographic purposes.
 
-    The terms entropy and entropy sources here do refer to
+    The terms $(I entropy) and $(I entropy sources) here do refer to
     cryptographically-safe random numbers and higher-level generators of such
     — typically powered by an entropy pool provided by the operating system.
 
