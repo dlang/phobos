@@ -32,6 +32,15 @@ module std.internal.entropy;
 
 import std.meta;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 // Self-test
 @safe unittest
 {
@@ -592,15 +601,6 @@ private:
 // BSD
 private
 {
-    version (OSX)
-        version = Darwin;
-    else version (iOS)
-        version = Darwin;
-    else version (TVOS)
-        version = Darwin;
-    else version (WatchOS)
-        version = Darwin;
-
     version (Darwin)
         version = SecureARC4Random;
     version (DragonFlyBSD)
