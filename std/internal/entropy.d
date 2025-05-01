@@ -224,8 +224,8 @@ enum EntropyStatus
 
 ///
 struct EntropyResult
-
-    {///
+{
+    ///
     EntropyStatus status;
 
     ///
@@ -706,7 +706,7 @@ private:
         if (!hBcrypt)
             return EntropyStatus.unavailableLibrary;
 
-        ptrBCryptGenRandom = cast(typeof(ptrBCryptGenRandom)) GetProcAddress(hBcrypt , "BCryptGenRandom");
+        ptrBCryptGenRandom = cast(typeof(ptrBCryptGenRandom)) GetProcAddress(hBcrypt, "BCryptGenRandom");
         if (!ptrBCryptGenRandom)
             return EntropyStatus.unavailable;
 
