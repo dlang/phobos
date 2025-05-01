@@ -41,7 +41,7 @@ else version (TVOS)
 else version (WatchOS)
     version = Darwin;
 
-// Self-test
+// Self-test: Detect potentially unsuitable default entropy source.
 @safe unittest
 {
     auto buffer = new ubyte[](32);
@@ -55,6 +55,64 @@ else version (WatchOS)
         ~ " patching it to accommodate to your environment."
     );
     assert(result.isOK);
+}
+
+// Self-test: Detect faulty implementation.
+@system unittest
+{
+    forceEntropySource(defaultEntropySource);
+
+    bool test() @system
+    {
+        static immutable pattern = 0xDEAD_BEEF_1337_0000;
+        long number = pattern;
+        const result = getEntropy(&number, number.sizeof);
+        assert(result.isOK);
+        return number != pattern;
+    }
+
+    size_t timesFailed = 0;
+    foreach(n; 0 .. 3)
+        if (!test())
+            ++timesFailed;
+
+    assert(
+        timesFailed <= 1,
+        "Suspicious random data: Potential security issue or really unlucky; please retry."
+    );
+}
+
+// Self-test: Detect faulty implementation.
+@safe unittest
+{
+    forceEntropySource(defaultEntropySource);
+
+    bool test() @safe
+    {
+        ubyte[32] data;
+        data[] = 0;
+
+        const result = getEntropy(data[]);
+        assert(result.isOK);
+
+        size_t zeros = 0;
+        foreach (b; data)
+            if (b == 0)
+                ++zeros;
+
+        enum threshold = 24;
+        return zeros < threshold;
+    }
+
+    size_t timesFailed = 0;
+    foreach(n; 0 .. 3)
+        if (!test())
+            ++timesFailed;
+
+    assert(
+        timesFailed <= 1,
+        "Suspicious random data: Potential security issue or really unlucky; please retry."
+    );
 }
 
 @nogc nothrow:
@@ -85,11 +143,33 @@ EntropyResult getEntropy(scope void[] buffer) @safe
     return getEntropyImpl(buffer);
 }
 
+///
+@safe unittest
+{
+    int[4] bytes;
+    if (getEntropy(cast(void[]) bytes).isOK)
+    {
+        // Success; data in `bytes` may be used.
+    }
+
+    assert((cast(void[]) bytes).length == bytes.sizeof);
+}
+
 // Convenience overload
 /// ditto
 EntropyResult getEntropy(scope ubyte[] buffer) @safe
 {
     return getEntropy(cast(void[]) buffer);
+}
+
+///
+@safe unittest
+{
+    ubyte[16] bytes;
+    if (getEntropy(bytes).isOK)
+    {
+        // Success; data in `bytes` may be used.
+    }
 }
 
 // Convenience wrapper
@@ -107,8 +187,28 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
     return getEntropy(buffer[0 .. length]);
 }
 
+///
+@system unittest
+{
+    ubyte[16] bytes;
+    if (getEntropy(cast(void*) bytes.ptr, bytes.length).isOK)
+    {
+        // Success; data in `bytes` may be used.
+    }
+}
+
+///
+@system unittest
+{
+    int number = void;
+    if (getEntropy(&number, number.sizeof).isOK)
+    {
+        // Success; value of `number` may be used.
+    }
+}
+
 /++
-    Manually set the entropy source to use.
+    Manually set the entropy source to use for the current thread.
 
     As a rule of thumb, this SHOULD NOT be done.
 
@@ -116,6 +216,14 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
     the maintainer of the used compiler package — is unavailable on a system.
     Usually, `EntropySource.tryAll` will be the most reasonable option
     in such cases.
+
+    Examples:
+
+    ---
+    // Using `forceEntropySource` almost always is a bad idea.
+    // As a rule of thumb, this SHOULD NOT be done.
+    forceEntropySource(EntropySource.none);
+    ---
  +/
 void forceEntropySource(EntropySource source) @safe
 {
@@ -148,6 +256,15 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
 
     _entropySource = source;
     return getEntropy(buffer[0 .. length]);
+}
+
+///
+@system unittest
+{
+    ubyte[4] bytes;
+
+    // `EntropySource.none` always fails.
+    assert(!getEntropy(bytes.ptr, bytes.length, EntropySource.none).isOK);
 }
 
 /++
@@ -222,7 +339,11 @@ enum EntropyStatus
     readError,
 }
 
-///
+/++
+    Status report returned by `getEntropy` functions.
+
+    Use the `isOK` helper function to test for success.
+ +/
 struct EntropyResult
 {
     ///
@@ -295,8 +416,36 @@ struct EntropyResult
     }
 }
 
+///
+@safe unittest
+{
+    ubyte[4] data;
+    EntropyResult result = getEntropy(data[]);
+
+    if (result.isOK)
+    {
+        // Success; data in `bytes` may be used.
+    }
+    else
+    {
+        // Failure
+
+        if (result.isUnavailable)
+        {
+            // System’s entropy source was unavailable.
+        }
+
+        // Call `toString` to obtain a user-readable error message.
+        assert(result.toString() !is null);
+        assert(result.toString().length > 0);
+    }
+}
+
 /++
     Determines whether an `EntropyResult` reports the success of an operation.
+
+    Params:
+        value = test subject
  +/
 pragma(inline, true) bool isOK(const EntropyResult value) pure @safe
 {
@@ -306,6 +455,9 @@ pragma(inline, true) bool isOK(const EntropyResult value) pure @safe
 /++
     Determines whether an `EntropyResult` reports the unvailability of the
     requested entropy source.
+
+    Params:
+        value = test subject
  +/
 pragma(inline, true) bool isUnavailable(const EntropyResult value) pure @safe
 {
