@@ -148,9 +148,22 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
  +/
 enum EntropySource
 {
+    /// Implements a $(I hunting) strategy for finding an entropy source that
+    /// is available at runtime.
+    ///
     /// Try supported sources one-by-one until one is available.
     /// This exists to enable the use of this the entropy library
     /// in a backwards compatibility way.
+    ///
+    /// It is recommended against using this in places that do not strictly
+    /// have to to meet compatibility requirements.
+    /// Like any kind of crypto-agility, this approach may suffer from
+    /// practical issues.
+    ///
+    /// See_also:
+    /// While the following article focuses on cipher agility in protocols,
+    /// it elaborates why agility can lead to problems:
+    /// $(LINK https://web.archive.org/web/20191102211148/https://paragonie.com/blog/2019/10/against-agility-in-cryptography-protocols)
     tryAll = -1,
 
     /// Always fail.
