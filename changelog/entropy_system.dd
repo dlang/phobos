@@ -20,8 +20,8 @@ being.
 Furthermore, this replaces the `getrandom` backwards compatibility shim
 that had been added by v2.111.1 for Linux targets.
 Instead backwards compatibility is now provided by a hunt strategy algorithm
-that tries potentially available entropy source one by one to find one that is
-available on the running system.
+that tries potentially available entropy sources one by one to find one that
+is available on the running system.
 Given that the character devices serve as a fallback option here,
 `urandom` is favored over `random`. That is because modern kernel versions —
 where `random` would exhibit the usually more preferable behavior of blocking
