@@ -1773,72 +1773,9 @@ else
 }
 
 version (linux)
-{
-    version (linux_legacy_emulate_getrandom)
-    {
-        /+
-            Emulates `getrandom()` for backwards compatibility
-            with outdated kernels and legacy libc versions.
-
-            `getrandom()` was added to the GNU C Library in v2.25.
-         +/
-
-        /+
-            On modern kernels (5.6+), `/dev/random` would behave more similar
-            to `getrandom()`.
-            However, this emulator was specifically written for systems older
-            than that. Hence, `/dev/urandom` is the CSPRNG of choice.
-
-            <https://web.archive.org/web/20200914181930/https://www.2uo.de/myths-about-urandom/>
-         +/
-        private static immutable _pathLinuxSystemCSPRNG = "/dev/urandom";
-
-        import core.sys.posix.sys.types : ssize_t;
-
-        /+
-            Linux `getrandom()` emulation built upon `/dev/urandom`.
-            The fourth parameter (`uint flags`) is happily ignored.
-         +/
-        private ssize_t getrandom(
-                void* buf,
-                size_t buflen,
-                uint,
-        ) @system nothrow @nogc
-        {
-            import core.stdc.stdio : fclose, fopen, fread;
-
-            auto blockDev = fopen(_pathLinuxSystemCSPRNG.ptr, "r");
-            if (blockDev is null)
-                assert(false, "System CSPRNG unavailable: `fopen(\"" ~ _pathLinuxSystemCSPRNG ~ "\")` failed.");
-            scope (exit) fclose(blockDev);
-
-            const bytesRead = fread(buf, 1, buflen, blockDev);
-            return bytesRead;
-        }
-    }
-    else
-    {
-        // `getrandom()` was introduced in Linux 3.17.
-
-        // Shim for missing bindings in druntime
-        version (none)
-            import core.sys.linux.sys.random : getrandom;
-        else
-        {
-            import core.sys.posix.sys.types : ssize_t;
-            private extern extern(C) ssize_t getrandom(
-                void* buf,
-                size_t buflen,
-                uint flags,
-            ) @system nothrow @nogc;
-        }
-    }
-}
-
+    version = SeedUseGetEntropy;
 version (Windows)
-{
-    import std.internal.windows.bcrypt : bcryptGenRandom;
-}
+    version = SeedUseGetEntropy;
 
 /**
 A "good" seed for initializing random number engines. Initializing
@@ -1880,35 +1817,14 @@ how excellent the source of entropy is.
 */
 @property uint unpredictableSeed() @trusted nothrow @nogc
 {
-    version (linux)
+    version (SeedUseGetEntropy)
     {
+        import std.internal.entropy : crashOnError, EntropySource, getEntropy;
+
         uint buffer;
-
-        /*
-            getrandom(2):
-            If the _urandom_ source has been initialized, reads of up to
-            256 bytes will always return as many bytes as requested and
-            will not be interrupted by signals. No such guarantees apply
-            for larger buffer sizes.
-            */
-        static assert(buffer.sizeof <= 256);
-
-        const status = (() @trusted => getrandom(&buffer, buffer.sizeof, 0))();
-        assert(status == buffer.sizeof);
-
+        const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySource.tryAll))();
+        crashOnError(status);
         return buffer;
-    }
-    else version (Windows)
-    {
-        uint result;
-        if (!bcryptGenRandom!uint(result))
-        {
-            version (none)
-                return fallbackSeed();
-            else
-                assert(false, "BCryptGenRandom() failed.");
-        }
-        return result;
     }
     else version (AnyARC4Random)
     {
@@ -1959,35 +1875,14 @@ if (isUnsigned!UIntType)
         /// ditto
         @property UIntType unpredictableSeed() @nogc nothrow @trusted
         {
-            version (linux)
+            version (SeedUseGetEntropy)
             {
+                import std.internal.entropy : crashOnError, EntropySource, getEntropy;
+
                 UIntType buffer;
-
-                /*
-                    getrandom(2):
-                    If the _urandom_ source has been initialized, reads of up to
-                    256 bytes will always return as many bytes as requested and
-                    will not be interrupted by signals. No such guarantees apply
-                    for larger buffer sizes.
-                 */
-                static assert(buffer.sizeof <= 256);
-
-                const status = (() @trusted => getrandom(&buffer, buffer.sizeof, 0))();
-                assert(status == buffer.sizeof);
-
+                const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySource.tryAll))();
+                crashOnError(status);
                 return buffer;
-            }
-            else version (Windows)
-            {
-                UIntType result;
-                if (!bcryptGenRandom!UIntType(result))
-                {
-                    version (none)
-                        return fallbackSeed();
-                    else
-                        assert(false, "BCryptGenRandom() failed.");
-                }
-                return result;
             }
             else version (AnyARC4Random)
             {

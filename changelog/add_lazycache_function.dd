@@ -1,0 +1,15 @@
+Add lazyCache to std.algorithm.iteration
+
+The new `lazyCache` function provides a lazily evaluated range caching mechanism.
+Unlike `cache`, which eagerly evaluates range elements during construction,
+`lazyCache` defers evaluation until elements are explicitly requested.
+
+---
+auto result = iota(-4, 5).map!(a => tuple(a, expensiveComputation(a)))().lazyCache();
+// No computations performed at this point
+
+auto firstElement = result.front;
+// First element is now evaluated
+---
+
+See the $(REF lazyCache, std,algorithm,iteration) documentation for more details.
