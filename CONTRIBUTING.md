@@ -14,4 +14,4 @@ More Links
 * Ask questions on our `#d` IRC channel on libera.chat ([web interface](https://kiwiirc.com/client/irc.libera.chat/d))
 * Review Phobos additions in the [Review Queue](http://wiki.dlang.org/Review_Queue).
 
-* Video Tutorial: [Setting Up dmd and Phobos for Contribution](https://www.youtube.com/watch?v=iLN4rQkk4Fs&list=PLIldXzSkPUXXSkM5NjBAGNIdkd4Q2Zf0R&index=1)
+* Video Tutorial: [Setting Up dmd and Phobos for Contribution](https://youtu.be/iLN4rQkk4Fs?list=PLIldXzSkPUXXSkM5NjBAGNIdkd4Q2Zf0R)
