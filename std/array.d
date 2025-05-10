@@ -308,6 +308,10 @@ if (is(Range == U*, U) && isIterable!U && !isAutodecodableString!Range && !isInf
     }
 }
 
+
+
+
+
 /**
 Convert a narrow autodecoding string to an array type that fully supports
 random access.  This is handled as a special case and always returns an array
@@ -3773,6 +3777,70 @@ if (isDynamicArray!A)
     app2.put([ 4, 5, 6 ]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
 }
+
+//https://github.com/dlang/phobos/pull/8789 issue for InPLaceAppenders
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append characters one by one
+    auto a = appender!string();
+    foreach (c; "Dlang")
+        a.put(c);
+    assert(a[] == "Dlang");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append full strings
+    auto a = appender!string();
+    a.put("Hello");
+    a.put(", ");
+    a.put("world!");
+    assert(a[] == "Hello, world!");
+}
+
+
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append special characters
+    auto a = appender!string();
+    a.put("€"); // Euro sign (3 bytes in UTF-8)
+    a.put("✓");
+    assert(a[] == "€✓");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append with escape sequences
+    auto a = appender!string();
+    a.put("Line1\n");
+    a.put("Line2\tTabbed");
+    assert(a[] == "Line1\nLine2\tTabbed");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append empty strings
+    auto a = appender!string();
+    a.put("");
+    a.put("non-empty");
+    a.put("");
+    assert(a[] == "non-empty");
+}
+
+
+
+
 
 package(std) struct InPlaceAppender(A)
 if (isDynamicArray!A)
