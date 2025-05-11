@@ -3676,6 +3676,59 @@ struct Nullable(T)
     private bool _isNull = true;
 
     /**
+     * Compares two Nullable values.
+     * - If one is null and the other is not, the null one is considered smaller.
+     * - If both are null, they are equal.
+     * - If both are non-null, compares the payloads.
+     *
+     * Returns:
+     *     Negative if `this < rhs`, zero if equal, positive if `this > rhs`.
+     */
+    int opCmp(Rhs)(auto ref Rhs rhs) const
+    if (is(typeof(_value.payload < rhs.get)) && is(typeof(_value.payload > rhs.get)))
+    {
+        static if (is(Rhs == Nullable))
+        {
+            if (_isNull)
+                return rhs._isNull ? 0 : -1;
+            else if (rhs._isNull)
+                return 1;
+            else
+                return _value.payload < rhs._value.payload ? -1 :
+                       _value.payload > rhs._value.payload ? 1 : 0;
+        }
+        else
+        {
+            static if (is(typeof(rhs.isNull)))
+            {
+                if (_isNull)
+                    return rhs.isNull ? 0 : -1;
+                else if (rhs.isNull)
+                    return 1;
+                else
+                    return _value.payload < rhs.get ? -1 :
+                           _value.payload > rhs.get ? 1 : 0;
+            }
+            else
+            {
+                return _isNull ? -1 : (_value.payload < rhs ? -1 : (_value.payload > rhs ? 1 : 0));
+            }
+        }
+    }
+
+    // Basic Null Comparison
+    @safe unittest
+    {
+        Nullable!int a = 5;
+        Nullable!int b = Nullable!int.init;
+
+        assert(a > b);
+        assert(b < a);
+        assert(a == a);
+        assert(b == b);
+    }
+
+    /**
      * Constructor initializing `this` with `value`.
      *
      * Params:
