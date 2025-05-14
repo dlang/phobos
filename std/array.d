@@ -88,6 +88,25 @@ import std.traits;
 import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
+import std.algorithm.mutation : move;
+
+
+
+
+
+
+/** 
+ * Method to verify if a constructor is of move-only type or not
+ */
+
+private template needsMove(T)
+{
+    enum bool hasPostblit = __traits(hasMember, T, "__postblit");
+    static if (hasPostblit)
+        enum needsMove = __traits(isDisabled, T.__postblit);
+    else
+        enum needsMove = false;
+}
 /**
  * Allocates an array and initializes it with copies of the elements
  * of range `r`.
@@ -1425,7 +1444,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
         immutable len = src.length;
         for (size_t i = len; i-- > 0;)
         {
-            dest[i] = src[i];
+            static if(needsMove!T)
+                move(dest[i],src[i]);
+            else
+                dest[i] = src[i];
         }
     }
 }
@@ -1525,17 +1547,29 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
                     static if (T.sizeof == char.sizeof)
                     {
                 case 4:
-                        ptr[3] = buf[3];
+                        static if(needsMove!T)
+                            move(ptr[3],buf[3]);
+                        else
+                            ptr[3] = buf[3];
                         goto case;
                 case 3:
-                        ptr[2] = buf[2];
+                        static if(needsMove!T)
+                            move(ptr[2],buf[2]);
+                        else
+                            ptr[2] = buf[2];
                         goto case;
                     }
                 case 2:
-                    ptr[1] = buf[1];
+                    static if(needsMove!T)
+                        move(ptr[1],buf[1]);
+                    else
+                        ptr[1] = buf[1];
                     goto case;
                 case 1:
-                    ptr[0] = buf[0];
+                    static if(needsMove!T)
+                        move(ptr[0],buf[0]);
+                    else
+                        ptr[0] = buf[0];
                 }
                 ptr += len;
                 return ptr;
@@ -1555,7 +1589,10 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
             if (__ctfe)
             {
                 for (size_t i = arr.length - gap; i; --i)
-                    arr[gap + i - 1] = arr[i - 1];
+                    static if(needsMove!T)
+                        move(arr[gap+i-1],arr[i-1]);
+                    else
+                        arr[gap + i - 1] = arr[i - 1];
             }
             else
                 memmove(arr.ptr + gap, arr.ptr, (arr.length - gap) * T.sizeof);
@@ -1935,6 +1972,7 @@ if (isDynamicArray!S)
         immutable len = s.length, nlen = n * len;
         for (size_t i = 0; i < nlen; i += len)
         {
+
             r[i .. i + len] = s[];
         }
     }
@@ -5237,7 +5275,10 @@ if (isInputRange!T && is(ElementType!T : U))
         Unqual!U[n] ret;
         for (auto iter = a.take(n); !iter.empty; iter.popFront())
         {
-            ret[i] = iter.front;
+            static if(needsMove!T)
+                move(ret[i],iter.front);
+            else
+                ret[i] = iter.front;
             i++;
         }
 
@@ -5388,4 +5429,86 @@ version (StdUnittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothr
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b, "a must be equal to b");
+}
+
+version(unittest)
+{
+    import std.container.array : Array;
+    import std.algorithm : equal;
+
+    struct NoCopy
+    {
+        int x;
+        @disable this(this);
+        this(int x) { this.x = x; }
+        // Needed for equality check
+        bool opEquals(const NoCopy rhs) const { return x == rhs.x; }
+    }
+
+    unittest
+    {
+        // Test basic insertBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(1));
+        arr.insertBack(NoCopy(2));
+        assert(arr.length == 2);
+        assert(arr[0].x == 1);
+        assert(arr[1].x == 2);
+    }
+
+    unittest
+    {
+        // Test front and back
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(10));
+        arr.insertBack(NoCopy(20));
+        assert(arr.front.x == 10);
+        assert(arr.back.x == 20);
+    }
+
+    unittest
+    {
+        // Test insertFront
+        Array!NoCopy arr;
+        arr.insertFront(NoCopy(5));
+        arr.insertFront(NoCopy(3));
+        assert(arr.length == 2);
+        assert(arr[0].x == 3);
+        assert(arr[1].x == 5);
+    }
+
+    unittest
+    {
+        // Test clear
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(7));
+        arr.insertBack(NoCopy(8));
+        arr.clear();
+        assert(arr.empty);
+    }
+
+    unittest
+    {
+        // Test popFront / popBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(100));
+        arr.insertBack(NoCopy(200));
+        arr.popFront();
+        assert(arr.length == 1);
+        assert(arr.front.x == 200);
+
+        arr.popBack();
+        assert(arr.empty);
+    }
+
+    unittest
+    {
+        // Regression: ensure moving works inside a loop
+        Array!NoCopy arr;
+        foreach (i; 0 .. 10)
+            arr.insertBack(NoCopy(i));
+
+        foreach (i, val; arr[])
+            assert(val.x == i);
+    }
 }
