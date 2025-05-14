@@ -5440,9 +5440,11 @@ version(unittest)
     {
         int x;
         @disable this(this);
-        this(int x) { this.x = x; }
-        // Needed for equality check
-        bool opEquals(const NoCopy rhs) const { return x == rhs.x; }
+        this(int v) @safe pure nothrow @nogc { x = v; }
+
+         bool opEquals(ref const NoCopy rhs) const   
+            @safe pure nothrow @nogc
+         { return x == rhs.x; }
     }
 
     unittest
