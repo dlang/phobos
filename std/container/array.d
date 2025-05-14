@@ -18,11 +18,22 @@
  */
 module std.container.array;
 
+import std.algorithm.mutation : move, moveEmplace;
+
+import std.traits : Unqual;
+
+
 import core.exception : RangeError;
 import std.range.primitives;
 import std.traits;
 
 public import std.container.util;
+
+
+//moethod to chech whether a constructor is a move-only type or not
+private enum isMoveOnly(T) = __traits(hasMember, T, "__postblit") &&__traits(isDisabled, T.__postblit);
+
+
 
 pure @system unittest
 {
@@ -134,29 +145,91 @@ pure @system unittest
 
 private struct RangeT(A)
 {
+
+    import std.traits : ElementType, Unqual;
+    alias Elem = ElementType!A; 
+
+   
     /* Workaround for https://issues.dlang.org/show_bug.cgi?id=13629
        See also: http://forum.dlang.org/post/vbmwhzvawhnkoxrhbnyb@forum.dlang.org
     */
-    private A[1] _outer_;
-    private @property ref inout(A) _outer() inout { return _outer_[0]; }
+
+    private A* _outer_;
+    private @property ref inout(A) _outer() inout { return *_outer_; }
+
+    private @property ref inout(A) outer() inout
+    {
+        // cast-ul garantează că tipul retur este inout(A),
+        // indiferent dacă _outer_ pointează la const / immutable Array.
+        return *cast(inout(A)*) _outer_;
+    }
+
+
 
     private size_t _a, _b;
 
+    
+     //workaround for move-only types
+    ~this() @system{ }
+
+
     /* E is different from T when A is more restrictively qualified than T:
        immutable(Array!int) => T == int, E = immutable(int) */
-    alias E = typeof(_outer_[0]._data._payload[0]);
 
-    private this(ref A data, size_t a, size_t b)
+    alias E = Unqual!(typeof((*_outer_)[0]));
+    
+    static if (isMoveOnly!E)
     {
-        _outer_ = data;
-        _a = a;
-        _b = b;
+        this(this)               @disable;
+        void opAssign(RangeT)    @disable;
     }
 
-    @property RangeT save()
+    private this(scope ref A data, size_t a, size_t b) @system
     {
-        return this;
+        _outer_ = cast(A*) &data;     // cast handles const/immutable
+        _a = a; _b = b;
+    }   
+    
+   @property RangeT save() const  @system
+    {
+        return RangeT(*cast(A*)_outer_, _a, _b); //workaround for move-only types
     }
+
+    import std.range.primitives : isForwardRange;
+    import std.container.array : Array;
+
+    @safe unittest
+{
+    import std.range.primitives : isInputRange, isForwardRange;
+    import std.container : Array;
+
+    alias R = Array!int.Range;
+
+    static assert(isInputRange!R, "Array!int.Range should be an InputRange");
+    static assert(isForwardRange!R, "Array!int.Range should be a ForwardRange");
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container : Array;
+
+    auto a = Array!int([1, 2, 3]);
+    auto r1 = a[];
+    auto r2 = r1.save; // make a copy
+
+    r1.popFront(); // modifies r1, not r2
+    assert(equal(r2[], [1, 2, 3]), "save() should return an independent copy");
+    assert(equal(r1[], [2, 3]), "popFront should not affect saved copy");
+}
+
+@safe unittest
+{
+    import std.range.primitives : isForwardRange;
+    import std.container : Array;
+
+    static assert(isForwardRange!(Array!bool.Range));
+}
 
     @property bool empty() @safe pure nothrow const
     {
@@ -169,15 +242,16 @@ private struct RangeT(A)
     }
     alias opDollar = length;
 
-    @property ref inout(E) front() inout
+    @property auto ref front() inout
     {
         assert(!empty, "Attempting to access the front of an empty Array");
-        return _outer[_a];
+        return (outer)[_a];
     }
-    @property ref inout(E) back() inout
+    
+    @property auto ref back() inout
     {
         assert(!empty, "Attempting to access the back of an empty Array");
-        return _outer[_b - 1];
+        return (outer)[_b - 1];
     }
 
     void popFront() @safe @nogc pure nothrow
@@ -194,7 +268,6 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
-        import std.algorithm.mutation : move;
 
         E moveFront()
         {
@@ -222,11 +295,11 @@ private struct RangeT(A)
         }
     }
 
-    ref inout(E) opIndex(size_t i) inout
+    @property auto ref opIndex(size_t i) inout
     {
         assert(_a + i < _b,
             "Attempting to fetch using an out of bounds index on an Array");
-        return _outer[_a + i];
+        return (outer)[_a + i];
     }
 
     RangeT opSlice()
@@ -255,20 +328,25 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
-        void opSliceAssign(E value)
-        {
-            assert(_b <= _outer.length,
-                "Attempting to assign using an out of bounds indices on an Array");
-            _outer[_a .. _b] = value;
+        void opSliceAssign(U)(U value) {                 
+            if (is(Unqual!U == Unqual!Elem))                  
+            {
+                static if (isMoveOnly!Elem)
+                    static assert(0, "slice assignment not supported for move-only types");
+                else
+                     _outer[_a .. _b] = cast(Elem)value;       
+            }
         }
 
-        void opSliceAssign(E value, size_t i, size_t j)
-        {
-            assert(_a + j <= _b,
-                "Attempting to slice assign using an out of bounds indices on an Array");
-            _outer[_a + i .. _a + j] = value;
+        void opSliceAssign(U)(U value, size_t i, size_t j){ 
+            if (is(Unqual!U == Unqual!Elem))
+            {
+                static if (isMoveOnly!Elem)
+                    static assert(0, "slice assignment not supported for move-only types");
+                else
+                 _outer[_a + i .. _a + j] = cast(Elem)value;
+            }
         }
-
         void opSliceUnary(string op)()
         if (op == "++" || op == "--")
         {
@@ -394,6 +472,12 @@ if (!is(immutable T == immutable bool))
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
+    static if (isMoveOnly!T)
+    {
+        this(this) @disable;          // disable postblit
+        void opAssign(Array) @disable;
+    }
+
     // This structure is not copyable.
     private struct Payload
     {
@@ -417,9 +501,7 @@ if (!is(immutable T == immutable bool))
             free(cast(void*) _payload.ptr);
         }
 
-        this(this) @disable;
-
-        void opAssign(Payload rhs) @disable;
+       
 
         @property size_t length() const
         {
@@ -489,7 +571,15 @@ if (!is(immutable T == immutable bool))
                 auto newPayload = newPayloadPtr[0 .. oldLength];
 
                 // copy old data over to new array
-                memcpy(cast(void*) newPayload.ptr, cast(void*) _payload.ptr, T.sizeof * oldLength);
+                static if (isMoveOnly!T)
+                {
+                    foreach (i; 0 .. oldLength)
+                        move(newPayload[i], _payload[i]);
+                } 
+                else
+                {
+                    memcpy(cast(void*) newPayload.ptr, cast(void*) _payload.ptr, T.sizeof * oldLength);
+                }                
                 // Zero out unused capacity to prevent gc from seeing false pointers
                 memset( cast(void*) (newPayload.ptr + oldLength),
                         0,
@@ -510,7 +600,7 @@ if (!is(immutable T == immutable bool))
         }
 
         // Insert one item
-        size_t insertBack(Elem)(Elem elem)
+        size_t insertBack(Elem)(auto ref Elem elem)
         if (isImplicitlyConvertible!(Elem, T))
         {
             import core.lifetime : emplace;
@@ -528,8 +618,10 @@ if (!is(immutable T == immutable bool))
             }
             assert(capacity > length && _payload.ptr,
                 "Failed to reserve memory");
-            emplace(_payload.ptr + _payload.length, elem);
-            _payload = _payload.ptr[0 .. _payload.length + 1];
+            static if (isMoveOnly!T)
+                moveEmplace(elem,_payload[_payload.length]);
+            else
+                emplace(_payload.ptr + _payload.length, elem);            _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
         }
 
@@ -564,6 +656,40 @@ if (!is(immutable T == immutable bool))
     private alias Data = RefCounted!(Payload, RefCountedAutoInitialize.no);
     private Data _data;
 
+    /// pune element(e) la început
+size_t insertFront(Stuff)(Stuff stuff)
+if (isImplicitlyConvertible!(Stuff, T) ||
+    isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+{
+    return insertBefore(this[0 .. 0], stuff);
+}
+
+
+    T popFront()
+    {
+        enforce(!empty, "popFront on empty Array");
+        T tmp = move(front);          
+        removeFront();
+        return tmp;                
+    }
+
+
+T popBack()
+{
+    enforce(!empty, "popBack on empty Array");
+    return removeAny();        
+}
+
+void removeFront()
+{
+    assert(!empty);
+    static if (hasElaborateDestructor!T)
+        .destroy(_data._payload[0]);
+    _data._payload = _data._payload[1 .. $];
+}
+
+    
+
     /**
      * Constructor taking a number of items.
      */
@@ -582,7 +708,10 @@ if (!is(immutable T == immutable bool))
                 // Thanks to @dkorpel (https://github.com/dlang/phobos/pull/8162#discussion_r667479090).
 
                 import core.lifetime : emplace;
-                emplace(_data._payload.ptr + _data._payload.length, value);
+                static if (isMoveOnly!T)
+                    move(value, _data._payload[_data._payload.length]);
+                else
+                     emplace(_data._payload.ptr + _data._payload.length, value);
 
                 // We increment the length after each iteration (as opposed to adjusting it just once, after the loop)
                 // in order to improve error-safety (in case one of the calls to emplace throws).
@@ -610,7 +739,7 @@ if (!is(immutable T == immutable bool))
     /**
      * Comparison for equality.
      */
-    bool opEquals(const Array rhs) const
+    bool opEquals(const Array rhs) const 
     {
         return opEquals(rhs);
     }
@@ -620,12 +749,30 @@ if (!is(immutable T == immutable bool))
     private alias Unshared(T: shared U, U) = U;
 
     /// ditto
-    bool opEquals(ref const Array rhs) const
+   @trusted bool opEquals(ref const Array rhs) const     
+
     {
         if (empty) return rhs.empty;
         if (rhs.empty) return false;
 
-        return cast(Unshared!(T)[]) _data._payload ==  cast(Unshared!(T)[]) rhs._data._payload;
+        static if (isMoveOnly!T)
+        {
+            if (length != rhs.length) return false;
+            foreach (i; 0 .. length)
+                if (_data._payload[i] != rhs._data._payload[i])
+                return false;
+            return true;
+        }
+        else 
+        {
+            if (length != rhs.length) return false;
+                foreach (i; 0 .. length)
+                     if (_data._payload[i] != rhs._data._payload[i])
+                        return false;
+                return true;
+
+        }
+        
     }
 
     /**
@@ -650,8 +797,12 @@ if (!is(immutable T == immutable bool))
      */
     @property Array dup()
     {
-        if (!_data.refCountedStore.isInitialized) return this;
-        return Array(_data._payload);
+        static if (isMoveOnly!T)
+            return Array(_data._payload);      
+        else{
+            if (!_data.refCountedStore.isInitialized) return this;
+                return Array(_data._payload);
+        }
     }
 
     /**
@@ -819,19 +970,22 @@ if (!is(immutable T == immutable bool))
      *
      * Complexity: $(BIGOH slice.length)
      */
-    void opSliceAssign(T value)
-    {
-        if (!_data.refCountedStore.isInitialized) return;
-        _data._payload[] = value;
+    void opSliceAssign(T value){
+       static if (!isMoveOnly!T)
+        {
+             if (!_data.refCountedStore.isInitialized) return;
+                _data._payload[] = value;
+        }
     }
 
     /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
-        auto slice = _data.refCountedStore.isInitialized ?
-            _data._payload :
-            T[].init;
-        slice[i .. j] = value;
+        static if (!isMoveOnly!T)
+        {   auto slice = _data.refCountedStore.isInitialized ?
+                _data._payload : T[].init;
+            slice[i .. j] = value;
+        }
     }
 
     /// ditto
@@ -953,9 +1107,20 @@ if (!is(immutable T == immutable bool))
      */
     T removeAny()
     {
+        static if (isMoveOnly!T)
+        {
+            import std.algorithm.mutation : move;
+
+            T tmp = move(back); 
+            removeBack(); 
+            return tmp;
+        }
+        else
+        {
         auto result = back;
         removeBack();
         return result;
+        }
     }
 
     /// ditto
@@ -1054,10 +1219,24 @@ if (!is(immutable T == immutable bool))
         assert(_data.refCountedStore.isInitialized,
             "Failed to allocate capacity to insertBefore");
         // Move elements over by one slot
-        memmove(_data._payload.ptr + r._a + 1,
+        static if (isMoveOnly!T)
+        {
+             // Shift elements to the right one-by-one
+        for (size_t i = length; i > r._a; --i)
+             move(_data._payload[i], _data._payload[i - 1]);
+        }
+        else
+        {
+            // Fast path for copyable types
+            memmove(_data._payload.ptr + r._a + 1,
                 _data._payload.ptr + r._a,
                 T.sizeof * (length - r._a));
-        emplace(_data._payload.ptr + r._a, stuff);
+        }
+
+        static if(isMoveOnly!T)
+            moveEmplace(stuff,_data._payload[r._a]);
+        else
+            emplace(_data._payload.ptr + r._a, stuff);
         _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
         return 1;
     }
@@ -1077,13 +1256,26 @@ if (!is(immutable T == immutable bool))
             assert(_data.refCountedStore.isInitialized,
                 "Failed to allocate capacity to insertBefore");
             // Move elements over by extra slots
-            memmove(_data._payload.ptr + r._a + extra,
+            static if (isMoveOnly!T)
+            {
+                  // Shift elements to the right one-by-one
+            for (size_t i = length; i > r._a; --i)
+                 move(_data._payload[i], _data._payload[i - 1]);
+            }
+            else
+            {
+                 // Fast path for copyable types
+                memmove(_data._payload.ptr + r._a + 1,
                     _data._payload.ptr + r._a,
                     T.sizeof * (length - r._a));
+            }
             foreach (p; _data._payload.ptr + r._a ..
                     _data._payload.ptr + r._a + extra)
             {
-                emplace(p, stuff.front);
+                static if(isMoveOnly!T)
+                    moveEmplace(stuff.front,*p);
+                else
+                    emplace(p, stuff.front);
                 stuff.popFront();
             }
             _data._payload =
@@ -1184,10 +1376,38 @@ if (!is(immutable T == immutable bool))
         immutable offset2 = r._b;
         immutable tailLength = length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
-        length = offset1 + tailLength;
+        static if (!isMoveOnly!T)
+        {
+            // fast path for ordinary element types
+            copy(this[offset2 .. length],
+                 this[offset1 .. offset1 + tailLength]);
+        }
+        else
+        {
+            foreach (i; 0 .. tailLength)
+                moveEmplace(this[offset2 + i], this[offset1 + i]);
+        }
         return this[length - tailLength .. length];
     }
+}
+
+//test move-only types
+
+struct NoCopy {
+    int x;
+    @disable this(this);
+    this(int v) @safe pure nothrow @nogc { x = v; }
+
+    // ADĂUGAT
+    bool opEquals(ref const NoCopy rhs) const
+        @safe pure nothrow @nogc
+    { return x == rhs.x; }
+}
+
+unittest {
+    Array!NoCopy arr;
+    arr.insertBack(NoCopy(1));
+    assert(arr[0].x == 1);
 }
 
 @system unittest
