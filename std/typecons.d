@@ -3836,22 +3836,22 @@ struct Nullable(T)
      * Returns:
      *     A `string` if `writer` and `fmt` are not set; `void` otherwise.
      */
-    string toString()
+    string toString()()
     {
         import std.array : appender;
         auto app = appender!string();
         auto spec = singleSpec("%s");
-        toString(app, spec);
+        this.toString(app, spec);
         return app.data;
     }
 
     /// ditto
-    string toString() const
+    string toString()() const
     {
         import std.array : appender;
         auto app = appender!string();
         auto spec = singleSpec("%s");
-        toString(app, spec);
+        this.toString(app, spec);
         return app.data;
     }
 

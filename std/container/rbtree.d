@@ -679,7 +679,7 @@ private struct RBRange(N)
     /**
      * Returns the first element in the range
      */
-    @property Elem front()
+    ref @property Elem front()
     {
         return _begin.value;
     }
@@ -687,7 +687,7 @@ private struct RBRange(N)
     /**
      * Returns the last element in the range
      */
-    @property Elem back()
+    ref @property Elem back()
     {
         return _end.prev.value;
     }
@@ -736,6 +736,10 @@ private struct RBRange(N)
  * Note that less should produce a strict ordering.  That is, for two unequal
  * elements `a` and `b`, $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
  * always equal `false`.
+ *
+ * Care should also be taken to not modify elements in the tree (e.g. via `front` /
+ * `back`, which return by `ref`) in a way which would affect the order defined by
+ * the `less` predicate.
  *
  * If `allowDuplicates` is set to `true`, then inserting the same element more than
  * once continues to add more elements.  If it is `false`, duplicate elements are
@@ -1036,7 +1040,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH 1)
      */
-    inout(Elem) front() inout
+    ref inout(Elem) front() inout
     {
         return _begin.value;
     }
@@ -1046,7 +1050,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      *
      * Complexity: $(BIGOH log(n))
      */
-    inout(Elem) back() inout
+    ref inout(Elem) back() inout
     {
         return _end.prev.value;
     }

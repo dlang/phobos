@@ -270,6 +270,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
 	$(addprefix internal/, \
 		cstring memory digest/sha_SSSE3 \
+		entropy \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
