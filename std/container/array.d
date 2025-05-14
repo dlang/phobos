@@ -20,6 +20,8 @@ module std.container.array;
 
 import std.algorithm.mutation : move, moveEmplace;
 
+import std.traits : Unqual;
+
 
 import core.exception : RangeError;
 import std.range.primitives;
@@ -152,12 +154,18 @@ private struct RangeT(A)
     private A* _outer_;
     private @property ref inout(A) _outer() inout { return *_outer_; }
 
+    private @property ref inout(A) outer() inout
+    {
+        // cast-ul garantează că tipul retur este inout(A),
+        // indiferent dacă _outer_ pointează la const / immutable Array.
+        return *cast(inout(A)*) _outer_;
+    }
+
 
 
     private size_t _a, _b;
 
-     this(this) @disable;            // disable postblit
-    void opAssign(RangeT) @disable; // disable assignment
+    
      //workaround for move-only types
     ~this() @system{ }
 
@@ -165,7 +173,7 @@ private struct RangeT(A)
     /* E is different from T when A is more restrictively qualified than T:
        immutable(Array!int) => T == int, E = immutable(int) */
 
-    alias E = typeof((*_outer_)._data._payload[0]);
+    alias E = Unqual!(typeof((*_outer_)[0]));
     
     static if (isMoveOnly!E)
     {
@@ -234,12 +242,12 @@ private struct RangeT(A)
     @property ref inout(E) front() inout
     {
         assert(!empty, "Attempting to access the front of an empty Array");
-        return (*_outer_)[_a];
+        return (outer)[_a];
     }
     @property ref inout(E) back() inout
     {
         assert(!empty, "Attempting to access the back of an empty Array");
-        return (*_outer_)[_b - 1];
+        return (outer)[_b - 1];
     }
 
     void popFront() @safe @nogc pure nothrow
@@ -256,7 +264,6 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
-        import std.algorithm.mutation : move;
 
         E moveFront()
         {
@@ -288,7 +295,7 @@ private struct RangeT(A)
     {
         assert(_a + i < _b,
             "Attempting to fetch using an out of bounds index on an Array");
-        return (*_outer_)[_a + i];
+        return (outer)[_a + i];
     }
 
     RangeT opSlice()
@@ -319,7 +326,7 @@ private struct RangeT(A)
     {
         void opSliceAssign(E value)
         {
-           static if (!isMoveOnly!T)
+           static if (!isMoveOnly!E)
            {
                 assert(_b <= _outer.length);
                 _outer[_a .. _b] = value;
@@ -328,7 +335,7 @@ private struct RangeT(A)
 
         void opSliceAssign(E value, size_t i, size_t j)
         {
-            static if (!isMoveOnly!T)
+            static if (!isMoveOnly!E)
             {
                 assert(_a + j <= _b);
                 _outer[_a + i .. _a + j] = value;
@@ -457,9 +464,6 @@ if (!is(immutable T == immutable bool))
 
     import core.memory : GC;
 
-    import std.algorithm.mutation : move,moveEmplace;
-
-
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
@@ -492,9 +496,7 @@ if (!is(immutable T == immutable bool))
             free(cast(void*) _payload.ptr);
         }
 
-        this(this) @disable;
-
-        void opAssign(Payload rhs) @disable;
+       
 
         @property size_t length() const
         {
@@ -649,11 +651,7 @@ if (!is(immutable T == immutable bool))
     private alias Data = RefCounted!(Payload, RefCountedAutoInitialize.no);
     private Data _data;
 
-    static if (isMoveOnly!T)
-    {
-        this(this) @disable;          // disable postblit
-        void opAssign(Array) @disable;
-    }
+    
 
     /**
      * Constructor taking a number of items.
@@ -748,6 +746,8 @@ if (!is(immutable T == immutable bool))
      */
     @property Array dup()
     {
+        static if (isMoveOnly!T)
+            return this;      
         if (!_data.refCountedStore.isInitialized) return this;
         return Array(_data._payload);
     }
@@ -918,10 +918,10 @@ if (!is(immutable T == immutable bool))
      * Complexity: $(BIGOH slice.length)
      */
     void opSliceAssign(T value){
-       if (!isMoveOnly!T)                    // template constraint
-        {        
-        if (!_data.refCountedStore.isInitialized) return;
-                 _data._payload[] = value;
+       static if (!isMoveOnly!T)
+        {
+             if (!_data.refCountedStore.isInitialized) return;
+                _data._payload[] = value;
         }
     }
 
@@ -1303,7 +1303,7 @@ if (!is(immutable T == immutable bool))
      */
     Range linearRemove(Range r)
     {
-        import std.algorithm.mutation : copy,moveEmplace;
+        import std.algorithm.mutation : copy;
 
         enforce(r._outer._data is _data);
         enforce(_data.refCountedStore.isInitialized);
@@ -1321,7 +1321,7 @@ if (!is(immutable T == immutable bool))
         else
         {
             foreach (i; 0 .. tailLength)
-                moveEmplace(this[offset2 + i], &this[offset1 + i]);
+                moveEmplace(this[offset2 + i], this[offset1 + i]);
         }
         return this[length - tailLength .. length];
     }
@@ -1334,6 +1334,7 @@ struct NoCopy {
     @disable this(this);
     this(int v) @safe pure nothrow @nogc { x = v; }
 
+    // ADĂUGAT
     bool opEquals(ref const NoCopy rhs) const
         @safe pure nothrow @nogc
     { return x == rhs.x; }
