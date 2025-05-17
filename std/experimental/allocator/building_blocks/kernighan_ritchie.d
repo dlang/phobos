@@ -111,33 +111,33 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
         this(this) @disable;
 
-        nothrow @nogc @safe
+        nothrow @nogc @trusted
         void[] payload() inout
         {
-            return (() @trusted => (cast(ubyte*) &this)[0 .. size])();
+            return (cast(ubyte*) &this)[0 .. size];
         }
 
-        nothrow @nogc @safe
+        nothrow @nogc @trusted
         bool adjacent(in Node* right) const
         {
             assert(right);
             auto p = payload;
-            return p.ptr < right && right < (() @trusted => (p.ptr + p.length + Node.sizeof))();
+            return p.ptr < right && right < p.ptr + p.length + Node.sizeof;
         }
 
-        nothrow @nogc @safe
+        nothrow @nogc @trusted
         bool coalesce(void* memoryEnd = null)
         {
             // Coalesce the last node before the memory end with any possible gap
             if (memoryEnd
-                && memoryEnd < (() @trusted => (payload.ptr + payload.length + Node.sizeof))())
+                && memoryEnd < payload.ptr + payload.length + Node.sizeof)
             {
-                size += (() @trusted => (memoryEnd - (payload.ptr + payload.length)))();
+                size += memoryEnd - (payload.ptr + payload.length);
                 return true;
             }
 
             if (!adjacent(next)) return false;
-            size = (() @trusted => ((cast(ubyte*) next + next.size) - cast(ubyte*) &this))();
+            size = (cast(ubyte*) next + next.size) - cast(ubyte*) &this;
             next = next.next;
             return true;
         }
