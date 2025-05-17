@@ -3669,7 +3669,7 @@ if (isDynamicArray!A)
     @property size_t length() const => (impl is null) ? 0 : impl.length;
 
     /**
-     * Use opSlice() from now on.
+     * Use () from now on.
      * Returns: The managed array.
      */
     @property inout(T)[] data() inout
@@ -5431,3 +5431,88 @@ version (StdUnittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothr
     assert(a == b, "a must be equal to b");
 }
 
+version(unittest)
+{
+    import std.container.array : Array;
+    import std.algorithm : equal;
+
+    struct NoCopy
+    {
+        int x;
+        @disable this(this);
+        this(int v) @safe pure nothrow @nogc { x = v; }
+
+         bool opEquals(ref const NoCopy rhs) const   
+            @safe pure nothrow @nogc
+         { return x == rhs.x; }
+    }
+
+    unittest
+    {
+        // Test basic insertBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(1));
+        arr.insertBack(NoCopy(2));
+        assert(arr.length == 2);
+        assert(arr[0].x == 1);
+        assert(arr[1].x == 2);
+    }
+/*
+    unittest
+    {
+        // Test front and back
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(10));
+        arr.insertBack(NoCopy(20));
+        assert(arr.front.x == 10);
+        assert(arr.back.x == 20);
+    }
+
+    unittest
+    {
+        // Test insertFront
+        Array!NoCopy arr;
+        arr.insertFront(NoCopy(5));
+        arr.insertFront(NoCopy(3));
+        assert(arr.length == 2);
+        assert(arr[0].x == 3);
+        assert(arr[1].x == 5);
+    }
+
+    unittest
+    {
+        // Test clear
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(7));
+        arr.insertBack(NoCopy(8));
+        arr.clear();
+        assert(arr.empty);
+    }
+
+    unittest
+    {
+        // Test popFront / popBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(100));
+        arr.insertBack(NoCopy(200));
+        arr.popFront();
+        assert(arr.length == 1);
+        assert(arr.front.x == 200);
+
+        arr.popBack();
+        assert(arr.empty);
+    }
+    */
+
+    unittest
+    {
+        // Regression: ensure moving works inside a loop
+        Array!NoCopy arr;
+        foreach (i; 0 .. 10)
+            arr.insertBack(NoCopy(i));
+
+        int i = 0;
+        foreach (const ref val; arr)
+            assert(val.x == i++);
+    }
+}
