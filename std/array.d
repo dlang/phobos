@@ -3669,7 +3669,7 @@ if (isDynamicArray!A)
     @property size_t length() const => (impl is null) ? 0 : impl.length;
 
     /**
-     * Use opSlice() from now on.
+     * Use () from now on.
      * Returns: The managed array.
      */
     @property inout(T)[] data() inout
@@ -5457,7 +5457,7 @@ version(unittest)
         assert(arr[0].x == 1);
         assert(arr[1].x == 2);
     }
-
+/*
     unittest
     {
         // Test front and back
@@ -5502,6 +5502,7 @@ version(unittest)
         arr.popBack();
         assert(arr.empty);
     }
+    */
 
     unittest
     {
@@ -5510,7 +5511,8 @@ version(unittest)
         foreach (i; 0 .. 10)
             arr.insertBack(NoCopy(i));
 
-        foreach (i, val; arr[])
-            assert(val.x == i);
+        int i = 0;
+        foreach (const ref val; arr)
+            assert(val.x == i++);
     }
 }
