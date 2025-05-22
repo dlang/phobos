@@ -1785,7 +1785,9 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     {
         debug
         {
-            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
+            import core.memory : GC;
+            if (!__ctfe && !GC.inFinalizer) // only do this if we are not in the GC finalizer
+                arr[] = cast(typeof(T.init[0]))(0xdead_beef);
         }
         arr = null;
     }
