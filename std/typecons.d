@@ -10786,18 +10786,18 @@ private template replaceTypeInFunctionTypeUnless(alias pred, From, To, fun)
         {
             if (i)
                 result ~= ", ";
+            if (storageClasses[i] & ParameterStorageClass.return_)
+                result ~= "return ";
             if (storageClasses[i] & ParameterStorageClass.scope_)
                 result ~= "scope ";
-            if (storageClasses[i] & ParameterStorageClass.in_)
-                result ~= "in ";
             if (storageClasses[i] & ParameterStorageClass.out_)
                 result ~= "out ";
             if (storageClasses[i] & ParameterStorageClass.ref_)
                 result ~= "ref ";
+            if (storageClasses[i] & ParameterStorageClass.in_)
+                result ~= "in ";
             if (storageClasses[i] & ParameterStorageClass.lazy_)
                 result ~= "lazy ";
-            if (storageClasses[i] & ParameterStorageClass.return_)
-                result ~= "return ";
 
             result ~= "PX[" ~ i.stringof ~ "]";
         }
