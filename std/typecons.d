@@ -6677,8 +6677,8 @@ private static:
                 if (atts & FA.property) poatts ~= " @property";
                 if (atts & FA.safe    ) poatts ~= " @safe";
                 if (atts & FA.trusted ) poatts ~= " @trusted";
-                if (atts & FA.scope_ )  poatts ~= " scope";
                 if (atts & FA.return_ ) poatts ~= " return";
+                if (atts & FA.scope_ )  poatts ~= " scope";
                 return poatts;
             }
             enum postAtts = make_postAtts();
