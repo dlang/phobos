@@ -126,6 +126,762 @@ else version (Posix)
 else
     static assert(0);
 
+private enum isDirEntry(T) = is(Unconst!T == DirEntry);
+private enum isString(T) = is(immutable T == immutable C[], C) && is(C == char);
+private enum isConvertibleToStringButNoDirEntry(T) = !isDirEntry!T && isConvertibleToString!T;
+
+version (Windows) @safe unittest
+{
+    import std.path : absolutePath, buildPath, isAbsolute;
+
+    template lineNumberString(size_t line = __LINE__)
+    {
+        import std.conv : to;
+        enum lineNumberString = to!string(line);
+    }
+
+    {
+        import std.conv : to;
+        assert(lineNumberString!().to!size_t() == __LINE__);
+        assert(lineNumberString!().to!size_t() == __LINE__);
+    }
+
+    /++
+        Saves the current working directory,
+        changes it to `dir` before executing `callback`
+        and eventually restores the original working directory.
+
+        The provided callback is free to call `chdir()` as it needs.
+        This function will always restore the original working directory.
+     +/
+    static void runIn(string dir, void delegate() @safe callback)
+    {
+        const origWD = getcwd();
+        assert(origWD.isAbsolute);
+
+        chdir(dir);
+        scope (exit) chdir(origWD); // always(!) restore the original working directory
+
+        callback();
+    }
+
+    static void warnAbout(string msg, string file = __FILE__, size_t line = __LINE__) @trusted
+    {
+        import std.stdio : stderr;
+        stderr.writefln!"%s(%s): %s"(file, line, msg);
+    }
+
+    string parent = deleteme().absolutePath;
+    string root = parent.buildPath("r");
+    mkdirRecurse(root);
+    scope (exit) rmdirRecurse(parent);
+
+    string nirvana = parent.buildPath("nirvana");
+    mkdir(nirvana);
+
+    mkdirRecurse(root.buildPath("1", "2"));
+    mkdirRecurse(root.buildPath("3", "4"));
+    mkdirRecurse(root.buildPath("3", "5", "6"));
+
+    // DirEntry backwards compatibility test
+    runIn(root, {
+        runIn(nirvana, () {
+            foreach(entry; ".".dirEntries(SpanMode.shallow))
+            {
+                // This does not make sense on its own but asserts that
+                // existing (quirky) code works like it did in the past.
+                assert(absolutePath(entry.name        ) == nirvana.buildPath(entry.name));
+                assert(absolutePath(cast(string) entry) == nirvana.buildPath(entry.name));
+            }
+        });
+    });
+
+    // DirEntry existance test
+    runIn(root, {
+        auto entry = ".".dirEntries(SpanMode.shallow).front;
+        assert(exists(entry));
+        runIn(nirvana, () {
+            assert(exists(entry));
+        });
+
+        const file2 = "3/5/6";
+        auto entry2 = DirEntry(file2);
+        runIn(nirvana, () {
+            assert(!exists(file2));
+            assert( exists(entry2));
+        });
+    });
+
+    // Directory tree traversal test
+    runIn(root, {
+        static void test(SpanMode spanMode, out int[7] found) @safe
+        {
+            found[] = 0;
+            foreach(DirEntry entry; ".".dirEntries(spanMode))
+            {
+                assert(entry.exists);
+
+                enum switchCase(char c, char idx) = `case '` ~ c ~ `': ++found [` ~ idx ~ `]; break;`;
+                switch (entry.name[$-1])
+                {
+                    mixin(switchCase!('1', '0'));
+                    mixin(switchCase!('2', '1'));
+                    mixin(switchCase!('3', '2'));
+                    mixin(switchCase!('4', '3'));
+                    mixin(switchCase!('5', '4'));
+                    mixin(switchCase!('6', '5'));
+                    default:
+                        assert(false, "Unexpected directory entry: " ~ entry.name);
+                }
+            }
+        }
+
+        int[7] found;
+
+        test(SpanMode.depth, found);
+        assert(found[0] == 1);
+        assert(found[1] == 1);
+        assert(found[2] == 1);
+        assert(found[3] == 1);
+        assert(found[4] == 1);
+        assert(found[5] == 1);
+
+        test(SpanMode.breadth, found);
+        assert(found[0] == 1);
+        assert(found[1] == 1);
+        assert(found[2] == 1);
+        assert(found[3] == 1);
+        assert(found[4] == 1);
+        assert(found[5] == 1);
+
+        test(SpanMode.shallow, found);
+        assert(found[0] == 1);
+        assert(found[1] == 0);
+        assert(found[2] == 1);
+        assert(found[3] == 0);
+        assert(found[4] == 0);
+        assert(found[5] == 0);
+    });
+
+    // Path determination test
+    runIn(root, {
+        import std.path : asAbsolutePath, asNormalizedPath;
+
+        const string relative = "1";
+        const string absolute = absolutePath(relative);
+
+        const entry = DirEntry(relative);
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+            assert(equal(
+                absolutePath(entry).asNormalizedPath,
+                absolute.asNormalizedPath
+            ));
+            assert(equal(
+                asAbsolutePath(entry).asNormalizedPath,
+                absolute.asNormalizedPath
+            ));
+        });
+    });
+
+    // Path determination test
+    runIn(root, {
+        import std.path : asRelativePath, relativePath, asNormalizedPath;
+
+        const string relative = "1";
+        const string absolute = absolutePath(relative);
+        const string expected = relativePath(absolute, nirvana);
+
+        const entry = DirEntry(relative);
+
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+            assert(equal(  relativePath(entry          ), expected));
+            assert(equal(  relativePath(entry, getcwd()), expected));
+            assert(equal(asRelativePath(entry, getcwd()), expected));
+        });
+    });
+
+    // Path normalization test
+    runIn(root, {
+        import std.path : asNormalizedPath, buildNormalizedPath;
+        import std.range : array;
+
+        const string relative = "./3/4/../5/../5/6";
+        assert(!isAbsolute(relative));
+
+        assert(!isAbsolute(buildNormalizedPath(relative)));
+        assert(!isAbsolute(asNormalizedPath(relative).array));
+
+        const entry = DirEntry(relative);
+        runIn(nirvana, {
+            import std.algorithm.comparison : equal;
+
+            static immutable expected = buildNormalizedPath("../r/3/5/6");
+            assert(buildNormalizedPath(entry)              == expected);
+            assert(buildNormalizedPath(entry, "../6")      == expected);
+            assert(buildNormalizedPath(entry, "../6", ".") == expected);
+            assert(equal(asNormalizedPath(entry), expected));
+
+            assert(!isAbsolute(buildNormalizedPath(entry)));
+            assert(!isAbsolute(asNormalizedPath(entry).array));
+        });
+    });
+
+    // Renaming tests
+    runIn(root, {
+        // string-based renaming
+        {
+            rename("1", "x");
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            rename("x", "1");
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        // regular DirEntry renaming
+        {
+            auto de1 = DirEntry("1");
+            rename(de1, "x");
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            rename(deX, "1");
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        // DirEntry renaming with `chdir()`
+        {
+            auto de1 = DirEntry("1");
+            runIn(nirvana, {
+                rename(de1, root.buildPath("x"));
+            });
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            runIn(nirvana, {
+                rename(deX, root.buildPath("1"));
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        // string-based path to `DirEntry` renaming with `chdir()`
+        {
+            auto de1 = DirEntry("1");
+            rename("1", "x");
+
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            runIn(nirvana, {
+                rename(root.buildPath("x"), de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        // `const` variation
+        {
+            const string rp1 = "1";
+            const string rpX = "x";
+            const string ap1 = absolutePath(rp1);
+            const string apX = absolutePath(rpX);
+            const de1 = DirEntry("1");
+            rename("1", "x");
+            const deX = DirEntry("x");
+
+            runIn(nirvana, {
+                rename(apX, de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+
+            runIn(nirvana, {
+                rename(de1, apX);
+            });
+            runIn(nirvana, {
+                rename(deX, ap1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+        // Dual-DirEntry renaming with `chdir()`
+        {
+            auto de1 = DirEntry("1");
+            runIn(nirvana, {
+                rename(de1, root.buildPath("x"));
+            });
+            assert(!"1".exists);
+            assert( "x".exists);
+
+            auto deX = DirEntry("x");
+            runIn(nirvana, {
+                rename(deX, de1);
+            });
+            assert( "1".exists);
+            assert(!"x".exists);
+        }
+    });
+
+    // Copying tests
+    runIn(parent, {
+        const string copyingDir = "dir_" ~ lineNumberString!();
+        mkdir(copyingDir);
+        scope (exit) rmdirRecurse(copyingDir);
+
+        runIn(copyingDir, {
+            const string path1 = lineNumberString!() ~ ".f00";
+            const string path2 = lineNumberString!() ~ ".f01";
+            const string path1Abs = absolutePath(path1);
+            const string path2Abs = absolutePath(path2);
+
+            static immutable demoData = "foobar\nOachkatzlschwoaf\n";
+            write(path1, demoData);
+            write(path2, "-");
+
+            const entry1 = DirEntry(path1);
+            const entry2 = DirEntry(path2);
+
+            // Overwriting files with copies
+            {
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(entry1, path2Abs);
+                });
+                assert(readText(path2) == demoData);
+
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(path1Abs, entry2);
+                });
+                assert(readText(path2) == demoData);
+
+                write(path2, "-");
+                runIn(nirvana, {
+                    copy(entry1, entry2);
+                });
+                assert(readText(path2) == demoData);
+            }
+
+            // Creating new files through copying
+            {
+                remove(path2);
+                runIn(nirvana, {
+                    copy(entry1, path2Abs);
+                });
+                assert(readText(path2) == demoData);
+
+                remove(path2);
+                runIn(nirvana, {
+                    copy(path1Abs, entry2);
+                });
+                assert(readText(path2) == demoData);
+
+                remove(path2);
+                runIn(nirvana, {
+                    copy(entry1, entry2);
+                });
+                assert(readText(path2) == demoData);
+            }
+        });
+    });
+
+    // Removal test
+    runIn(root, {
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        scope (failure) { if (file.exists) remove(file); }
+
+        auto entry = DirEntry(file);
+        assert(file.exists);
+
+        runIn(nirvana, {
+            assert( entry.exists);
+            remove( entry);
+            assert(!entry.exists);
+        });
+
+        assert(!file.exists);
+    });
+
+    // File-size querying test
+    runIn(root, {
+        const string file = "1/2/test_" ~ lineNumberString!();
+        static immutable data = cast(immutable(ubyte)[]) "foobar";
+        write(file, data);
+        scope (exit) remove(file);
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            assert(getSize(entry) == data.length);
+        });
+    });
+
+    // File-time querying test
+    runIn(root, {
+        import std.datetime : Clock, SysTime;
+        import std.stdio : stderr;
+
+        const now = Clock.currTime();
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        scope (failure) { if (file.exists) remove(file); }
+
+        auto entry = DirEntry(file);
+        SysTime accessTime, modificationTime;
+        runIn(nirvana, {
+            getTimes(entry, accessTime, modificationTime);
+
+            if (accessTime < now)
+                warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
+            if (modificationTime < now)
+                warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
+        });
+
+        runIn(nirvana, {
+            assert(timeLastModified(entry) == modificationTime);
+        });
+
+        remove(file);
+        assert(!file.exists);
+
+        runIn(nirvana, {
+            // non-existent file
+            assert(timeLastModified(entry, now) == now);
+        });
+    });
+
+    // Windows-only file-time querying test
+    version (Windows) runIn(root, {
+        import std.datetime : Clock, SysTime;
+        import std.stdio : stderr;
+
+        auto now = Clock.currTime();
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        scope (exit) remove(file);
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            SysTime creationTime, accessTime, modificationTime;
+            getTimesWin(entry, creationTime, accessTime, modificationTime);
+
+            if (creationTime < now)
+                warnAbout("Unexpected creation time; probably caused by time-sync or filesystem.");
+            if (accessTime < now)
+                warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
+            if (modificationTime < now)
+                warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
+        });
+    });
+
+    // File-time application test
+    runIn(root, {
+        import std.datetime : Clock, dur, SysTime;
+        import std.stdio : stderr;
+
+        const oneYear = 900.dur!"days";
+        const now = Clock.currTime();
+        const thePast = now - oneYear;
+        const theFuture = now + oneYear;
+
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        scope (exit) remove(file);
+
+        auto entry = DirEntry(file);
+        runIn(nirvana, {
+            setTimes(entry, thePast, theFuture);
+        });
+
+        SysTime accessTime, modificationTime;
+        getTimes(entry, accessTime, modificationTime);
+
+        if (accessTime != thePast)
+            warnAbout("Unexpected access time; probably caused by time-sync or filesystem.");
+        if (modificationTime != theFuture)
+            warnAbout("Unexpected modification time; probably caused by time-sync or filesystem.");
+    });
+
+    // Attribute querying test
+    runIn(root, {
+        const string path = "1/2";
+        auto entry = DirEntry(path);
+
+        runIn(nirvana, {
+            const   attributes = getAttributes(entry);
+            assert( attributes.attrIsDir);
+            assert(!attributes.attrIsFile);
+
+            const   linkAttributes = getLinkAttributes(entry);
+            assert( linkAttributes.attrIsDir);
+            assert(!linkAttributes.attrIsFile);
+        });
+    });
+
+    // Attribute appliance test
+    runIn(root, {
+        import std.conv : octal;
+
+        const string file = "1/2/test_" ~ lineNumberString!();
+        write(file, "…");
+        auto entry = DirEntry(file);
+
+        runIn(nirvana, {
+            const attributes0 = getAttributes(entry);
+            version (Posix)
+                const attributes1 = (attributes0 & uint(octal!"37777777000")) | octal!"400";
+            version (Windows)
+                const attributes1 = attributes0 | FILE_ATTRIBUTE_READONLY;
+
+            setAttributes(entry, attributes1);
+            scope (exit) setAttributes(entry, attributes0);
+
+            assert(getAttributes(entry) == attributes1);
+        });
+
+        remove(file);
+    });
+
+    // Type identification test
+    runIn(root, {
+        const string filePath = "1/2/test_" ~ lineNumberString!();
+        const string dirPath = "3/4";
+        write(filePath, "…");
+        scope (exit) remove(filePath);
+
+        const fileEntry = DirEntry(filePath);
+        const dirEntry = DirEntry(dirPath);
+
+        runIn(nirvana, {
+            assert( isFile   (fileEntry));
+            assert(!isDir    (fileEntry));
+            assert(!isSymlink(fileEntry));
+            assert(!isFile   ( dirEntry));
+            assert( isDir    ( dirEntry));
+            assert(!isSymlink( dirEntry));
+        });
+    });
+
+    // Working directory change test
+    runIn(root, {
+        const string dirPath = "3/5";
+
+        const string sentinel = "sentinel_" ~ lineNumberString!();
+        const string sentinelPath = dirPath.buildPath(sentinel);
+        write(sentinelPath, "…");
+        scope (exit) remove(sentinelPath);
+
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            chdir(dirEntry);
+            assert(sentinel.exists);
+            assert(sentinel.isFile);
+        });
+    });
+
+    // Directory creation test
+    runIn(root, {
+        const string dirPath = "3/5/test_" ~ lineNumberString!();
+        mkdir(dirPath);
+
+        const dirEntry = DirEntry(dirPath);
+        rmdir(dirPath);
+        assert(!dirPath.exists);
+
+        runIn(nirvana, {
+            mkdir(dirEntry);
+        });
+        assert(dirPath.exists);
+        rmdir(dirPath);
+    });
+
+    // Directory tree creation test
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string treeRoot = "tree_" ~ lineNumberString!();
+        mkdir(treeRoot);
+        scope (exit) { if (treeRoot.exists) rmdirRecurse(treeRoot); }
+
+        const string treeBranch1 = treeRoot ~ "/ab/cd/ef";
+        const string treeBranch2 = treeRoot ~ "/ab/gh";
+        const string treeBranch3 = treeRoot ~ "/ij";
+        mkdirRecurse(treeBranch1);
+        mkdirRecurse(treeBranch2);
+        mkdirRecurse(treeBranch3);
+        const entry1 = DirEntry(treeBranch1);
+        const entry2 = DirEntry(treeBranch2);
+        const entry3 = DirEntry(treeBranch3);
+
+        rmdirRecurse(treeRoot);
+        assert(!treeRoot.exists);
+        assert(!treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert(!treeBranch3.exists);
+
+        runIn(nirvana, {
+            mkdirRecurse(entry1);
+            mkdirRecurse(entry2);
+            mkdirRecurse(entry3);
+        });
+
+        assert(treeRoot.exists);
+        assert(treeBranch1.exists);
+        assert(treeBranch2.exists);
+        assert(treeBranch3.exists);
+    });
+
+    // Directory removal test
+    runIn(root, {
+        const string dirPath = "3/5/test_" ~ lineNumberString!();
+        mkdir(dirPath);
+
+        assert(dirPath.exists);
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            rmdir(dirEntry);
+        });
+        assert(!dirPath.exists);
+    });
+
+    // Directory tree non-removal test
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string dirPath = "3";
+        assert(dirPath.exists);
+        const dirEntry = DirEntry(dirPath);
+        runIn(nirvana, {
+            assertThrown(rmdir(dirEntry));
+        });
+        assert(dirPath.exists);
+    });
+
+    // Directory tree removal test
+    runIn(root, {
+        import std.exception : assertThrown;
+
+        const string treeRoot = "tree_" ~ lineNumberString!();
+        mkdir(treeRoot);
+
+        const string treeBranch1 = treeRoot ~ "/ab/cd/ef";
+        const string treeBranch2 = treeRoot ~ "/ab/gh";
+        const string treeBranch3 = treeRoot ~ "/ij";
+        const string treeBranch4 = treeRoot ~ "/ij/kl.mno";
+
+        mkdirRecurse(treeBranch1);
+        mkdirRecurse(treeBranch2);
+        mkdirRecurse(treeBranch3);
+        write       (treeBranch4, "…");
+
+        assert(treeBranch1.exists);
+        assert(treeBranch2.exists);
+        assert(treeBranch3.exists);
+        assert(treeBranch4.exists);
+
+        const entryRoot = DirEntry(treeRoot);
+        const entryBranch2 = DirEntry(treeBranch2);
+
+        runIn(nirvana, {
+            rmdirRecurse(entryBranch2);
+        });
+        assert( treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert( treeBranch3.exists);
+        assert( treeBranch4.exists);
+        assert( treeRoot.exists);
+
+        runIn(nirvana, {
+            assertThrown(rmdir(entryRoot));
+            rmdirRecurse(entryRoot);
+        });
+        assert(!treeBranch1.exists);
+        assert(!treeBranch2.exists);
+        assert(!treeBranch3.exists);
+        assert(!treeBranch4.exists);
+        assert(!treeRoot.exists);
+    });
+
+    // Disk space querying test
+    runIn(root, {
+        const string path1 = "test1_" ~ lineNumberString!();
+        const string path2 = "test2_" ~ lineNumberString!();
+        mkdir(path1);
+        scope (exit) rmdir(path1);
+        mkdir(path2);
+        scope (exit) { if (path2.exists) rmdir(path2); }
+
+        const entry1 = DirEntry(path1);
+        const entry2 = DirEntry(path2);
+
+        rmdir(path2);
+
+        runIn(nirvana, {
+            import std.exception : assertThrown;
+
+            assert(getAvailableDiskSpace(entry1) >= 0);
+            assertThrown(getAvailableDiskSpace(entry2));
+        });
+    });
+
+    // Slurping test
+    runIn(root, {
+        const string filePath = "1/test_" ~ lineNumberString!();
+        write(filePath, "10\r\n20");
+        scope (exit) remove(filePath);
+
+        auto entry = DirEntry(filePath);
+        runIn(nirvana, () @trusted {
+            assert(slurp!(int)(entry, "%d") == [10, 20]);
+        });
+    });
+
+    // Mild chaos directory tree traversal test
+    runIn(root, {
+        auto iterator = ".".dirEntries(SpanMode.shallow);
+
+        int found1 = 0;
+        int found3 = 0;
+        int foundOthers = 0;
+
+        runIn(nirvana, {
+            foreach (DirEntry entry; iterator)
+            {
+                switch (entry.name[$-1])
+                {
+                    case '1':
+                        ++found1;
+                        break;
+                    case '3':
+                        ++found3;
+                        break;
+                    default:
+                        ++foundOthers;
+                        break;
+                }
+                chdir(parent);
+            }
+        });
+
+        assert(found1 == 1);
+        assert(found3 == 1);
+        assert(foundOthers == 0);
+    });
+
+    // Chaotic directory tree traversal test
+    runIn(root, {
+        // <https://github.com/dlang/phobos/issues/9584>
+        foreach (DirEntry entry; ".".dirEntries("*", SpanMode.shallow))
+            if (entry.isDir)
+                foreach (DirEntry subEntry; entry.dirEntries("*", SpanMode.shallow))
+                    if (subEntry.isDir)
+                        chdir(subEntry);
+    });
+}
+
 // Purposefully not documented. Use at your own risk
 @property string deleteme() @safe
 {
@@ -940,9 +1696,38 @@ if ((isSomeFiniteCharInputRange!RF || isSomeString!RF) && !isConvertibleToString
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
 if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, RF, RT);
-    rename!Types(from, to);
+    static if (isDirEntry!RF && isDirEntry!RT)
+    {
+        version (Windows)
+            return rename(from.absoluteName, to.absoluteName);
+        else
+            return rename(from.name, to.name);
+    }
+    else static if (isDirEntry!RF)
+    {
+        alias Types = AliasSeq!(string, convertToString!RT);
+
+        version (Windows)
+            return rename!Types(from.absoluteName, to);
+        else
+            return rename!Types(from.name, to);
+    }
+    else static if (isDirEntry!RT)
+    {
+        alias Types = AliasSeq!(convertToString!RF, string);
+
+        version (Windows)
+            return rename!Types(from, to.absoluteName);
+        else
+            return rename!Types(from, to.name);
+    }
+    else
+    {
+        import std.meta : staticMap;
+
+        alias Types = staticMap!(convertToString, RF, RT);
+        rename!Types(from, to);
+    }
 }
 
 @safe unittest
@@ -1036,9 +1821,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void remove(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     remove!(StringTypeOf!R)(name);
+}
+
+/// ditto
+void remove(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return remove(name.absoluteName);
+    else
+        return remove(name.name);
 }
 
 ///
@@ -1184,9 +1979,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 ulong getSize(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getSize!(StringTypeOf!R)(name);
+}
+
+/// ditto
+ulong getSize(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getSize(name.absoluteName);
+    else
+        return getSize(name.name);
 }
 
 @safe unittest
@@ -1289,9 +2094,21 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
+}
+
+/// ditto
+void getTimes(R)(auto ref R name,
+              out SysTime accessTime,
+              out SysTime modificationTime)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getTimes(name.absoluteName, accessTime, modificationTime);
+    else
+        return getTimes(name.name, accessTime, modificationTime);
 }
 
 ///
@@ -1426,9 +2243,18 @@ else version (Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-    if (isConvertibleToString!R)
+    if (isConvertibleToStringButNoDirEntry!R)
     {
         getTimesWin!(StringTypeOf!R)(name, fileCreationTime, fileAccessTime, fileModificationTime);
+    }
+
+    void getTimesWin(R)(auto ref R name,
+                        out SysTime fileCreationTime,
+                        out SysTime fileAccessTime,
+                        out SysTime fileModificationTime)
+    if (isDirEntry!R)
+    {
+        return getTimesWin(name.absoluteName, fileCreationTime, fileAccessTime, fileModificationTime);
     }
 }
 
@@ -1564,9 +2390,21 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
+}
+
+/// ditto
+void setTimes(R)(auto ref R name,
+              SysTime accessTime,
+              SysTime modificationTime)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return setTimes(name.absoluteName, accessTime, modificationTime);
+    else
+        return setTimes(name.name, accessTime, modificationTime);
 }
 
 private void setTimesImpl(scope const(char)[] names, scope const(FSChar)* namez,
@@ -1716,9 +2554,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 SysTime timeLastModified(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return timeLastModified!(StringTypeOf!R)(name);
+}
+
+/// ditto
+SysTime timeLastModified(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return timeLastModified(name.absoluteName);
+    else
+        return timeLastModified(name.name);
 }
 
 ///
@@ -1772,7 +2620,7 @@ else
 --------------------
 +/
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-if (isSomeFiniteCharInputRange!R)
+if (isSomeFiniteCharInputRange!R && !isDirEntry!R)
 {
     version (Windows)
     {
@@ -1795,6 +2643,16 @@ if (isSomeFiniteCharInputRange!R)
                returnIfMissing :
                statTimeToStdTime!'m'(statbuf);
     }
+}
+
+/// ditto
+SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return timeLastModified(name.absoluteName, returnIfMissing);
+    else
+        return timeLastModified(name.name, returnIfMissing);
 }
 
 ///
@@ -1939,9 +2797,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 bool exists(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return exists!(StringTypeOf!R)(name);
+}
+
+/// ditto
+bool exists(R)(auto ref const R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return exists(name.absoluteName);
+    version (Posix)
+        return exists(name.name);
 }
 
 ///
@@ -2069,9 +2937,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 uint getAttributes(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getAttributes!(StringTypeOf!R)(name);
+}
+
+/// ditto
+uint getAttributes(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getAttributes(name.absoluteName);
+    else
+        return getAttributes(name.name);
 }
 
 /// getAttributes with a file
@@ -2158,9 +3036,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 uint getLinkAttributes(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
+}
+
+/// ditto
+uint getLinkAttributes(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return getLinkAttributes(name.absoluteName);
+    else
+        return getLinkAttributes(name.name);
 }
 
 ///
@@ -2274,9 +3162,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return setAttributes!(StringTypeOf!R)(name, attributes);
+}
+
+/// ditto
+void setAttributes(R)(auto ref R name, uint attributes)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return setAttributes(name.absoluteName, attributes);
+    else
+        return setAttributes(name.name, attributes);
 }
 
 @safe unittest
@@ -2363,9 +3261,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isDir(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return name.isDir!(StringTypeOf!R);
+}
+
+/// ditto
+@property bool isDir(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isDir(name.absoluteName);
+    else
+        return isDir(name.name);
 }
 
 ///
@@ -2537,9 +3445,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isFile(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return isFile!(StringTypeOf!R)(name);
+}
+
+/// ditto
+@property bool isFile(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isFile(name.absoluteName);
+    else
+        return isFile(name.name);
 }
 
 ///
@@ -2712,9 +3630,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 @property bool isSymlink(R)(auto ref R name)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return name.isSymlink!(StringTypeOf!R);
+}
+
+/// ditto
+@property bool isSymlink(R)(auto ref R name)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return isSymlink(name.absoluteName);
+    else
+        return isSymlink(name.name);
 }
 
 @safe unittest
@@ -2910,9 +3838,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void chdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void chdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return chdir(pathname.absoluteName);
+    else
+        return chdir(pathname.name);
 }
 
 ///
@@ -2987,9 +3925,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void mkdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     return mkdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void mkdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return mkdir(pathname.absoluteName);
+    else
+        return mkdir(pathname.name);
 }
 
 @safe unittest
@@ -3065,8 +4013,17 @@ void mkdirRecurse(scope const(char)[] pathname) @safe
     }
     if (!baseName(pathname).empty)
     {
-        ensureDirExists(pathname);
+        cast(void) ensureDirExists(pathname);
     }
+}
+
+/// ditto
+void mkdirRecurse(scope const DirEntry pathname) @safe
+{
+    version (Windows)
+        return mkdirRecurse(pathname.absoluteName);
+    else
+        return mkdirRecurse(pathname.name);
 }
 
 ///
@@ -3183,9 +4140,19 @@ if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
 
 /// ditto
 void rmdir(R)(auto ref R pathname)
-if (isConvertibleToString!R)
+if (isConvertibleToStringButNoDirEntry!R)
 {
     rmdir!(StringTypeOf!R)(pathname);
+}
+
+/// ditto
+void rmdir(R)(auto ref R pathname)
+if (isDirEntry!R)
+{
+    version (Windows)
+        return rmdir(pathname.absoluteName);
+    else
+        return rmdir(pathname.name);
 }
 
 @safe unittest
@@ -3306,11 +4273,18 @@ version (Posix) @safe unittest
         $(LREF FileException) on error.
   +/
 version (StdDdoc) string readLink(R)(R link)
-if (isSomeFiniteCharInputRange!R || isConvertibleToString!R);
+if (isSomeFiniteCharInputRange!R || isConvertibleToString!R || isDirEntry!R);
 else version (Posix) string readLink(R)(R link)
-if (isSomeFiniteCharInputRange!R || isConvertibleToString!R)
+if (isSomeFiniteCharInputRange!R || isConvertibleToString!R || isDirEntry!R)
 {
-    static if (isConvertibleToString!R)
+    static if (isDirEntry!R)
+    {
+        version (Windows) // hypothetically, currently ruled out by `version (Posix)`
+            return readLink(link.absoluteName);
+        else
+            return readLink(link.name);
+    }
+    else static if (isConvertibleToString!R)
     {
         return readLink!(convertToString!R)(link);
     }
@@ -3653,7 +4627,7 @@ version (StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
+            private this(string name, string absolutePrefix, in WIN32_FIND_DATAW *fd);
         }
         else version (Posix)
         {
@@ -3815,12 +4789,14 @@ else version (Windows)
         {
             import std.datetime.systime : FILETIMEToSysTime;
 
-            if (!path.exists())
+            scope const effectivePath = (path == "") ? "." : path;
+            if (!effectivePath.exists())
                 throw new FileException(path, "File does not exist");
 
             _name = path;
+            this.absolutizeName();
 
-            with (getFileAttributesWin(path))
+            with (getFileAttributesWin(_name))
             {
                 _size = makeUlong(nFileSizeLow, nFileSizeHigh);
                 _timeCreated = FILETIMEToSysTime(&ftCreationTime);
@@ -3830,7 +4806,7 @@ else version (Windows)
             }
         }
 
-        private this(string path, WIN32_FIND_DATAW *fd) @trusted
+        private this(string path, string absolutePrefix, WIN32_FIND_DATAW *fd) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
@@ -3846,11 +4822,44 @@ else version (Windows)
             _timeLastAccessed = FILETIMEToSysTime(&fd.ftLastAccessTime);
             _timeLastModified = FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
+
+            if (absolutePrefix is null)
+                this.absolutizeName();
+            else
+                _absolutePrefix = absolutePrefix;
+        }
+
+        private void absolutizeName() pure return scope
+        {
+            import std.path : absolutePath;
+
+            if (_name == "")
+            {
+                _name = absolutePath(".");
+                _absolutePrefix = _name;
+            }
+
+            const rel = _name;
+            alias abs = _name;
+            _name = _name.absolutePath;
+            const idx = abs.length - rel.length;
+
+            if (idx == 0)
+                return; // Keep prefix `null`.
+
+            _absolutePrefix = abs[0 .. idx];
+            _name = abs;
+        }
+
+        package @property string absoluteName() const pure nothrow return scope
+        {
+            return _name;
         }
 
         @property string name() const pure nothrow return scope
         {
-            return _name;
+            import std.string : chompPrefix;
+            return _name.chompPrefix(_absolutePrefix);
         }
 
         @property bool isDir() const pure nothrow scope
@@ -3903,6 +4912,7 @@ else version (Windows)
 
     private:
         string _name; /// The file or directory represented by this DirEntry.
+        string _absolutePrefix; /// Optional absolute directory path that has been prepended to `_name`.
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -4251,11 +5261,40 @@ if (isSomeFiniteCharInputRange!RF && !isConvertibleToString!RF &&
 
 /// ditto
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
-if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT || isDirEntry!RF || isDirEntry!RT)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, RF, RT);
-    copy!Types(from, to, preserve);
+    static if (isDirEntry!RF && isDirEntry!RT)
+    {
+        version (Windows)
+            return copy(from.absoluteName, to.absoluteName);
+        else
+            return copy(from.name, to.name);
+    }
+    else static if (isDirEntry!RF)
+    {
+        alias Types = AliasSeq!(string, Unconst!(convertToString!RT));
+
+        version (Windows)
+            return copy!Types(from.absoluteName, to);
+        else
+            return copy!Types(from.name, to);
+    }
+    else static if (isDirEntry!RT)
+    {
+        alias Types = AliasSeq!(Unconst!(convertToString!RF), string);
+
+        version (Windows)
+            return copy!Types(from, to.absoluteName);
+        else
+            return copy!Types(from, to.name);
+    }
+    else
+    {
+        import std.meta : staticMap;
+
+        alias Types = staticMap!(convertToString, RF, RT);
+        copy!Types(from, to, preserve);
+    }
 }
 
 ///
@@ -4467,9 +5506,9 @@ void rmdirRecurse(ref scope DirEntry de) @safe
     if (de.isSymlink)
     {
         version (Windows)
-            rmdir(de.name);
+            rmdir(de);
         else
-            remove(de.name);
+            remove(de);
     }
     else
     {
@@ -4479,14 +5518,14 @@ void rmdirRecurse(ref scope DirEntry de) @safe
         // be @trusted
         () @trusted {
             // all children, recursively depth-first
-            foreach (DirEntry e; dirEntries(de.name, SpanMode.depth, false))
+            foreach (DirEntry e; dirEntries(de, SpanMode.depth, false))
             {
-                attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
+                attrIsDir(e.linkAttributes) ? rmdir(e) : remove(e);
             }
         }();
 
         // the dir itself
-        rmdir(de.name);
+        rmdir(de);
     }
 }
 ///ditto
@@ -4637,7 +5676,7 @@ private struct DirIteratorImpl
     DirEntry _cur;
     DirHandle[] _stack;
     DirEntry[] _stashed; //used in depth first mode
-    string _pathPrefix = null;
+    version (Windows) string _absolutePrefix = null;
 
     //stack helpers
     void pushExtra(DirEntry de)
@@ -4669,7 +5708,8 @@ private struct DirIteratorImpl
             HANDLE h;
         }
 
-        bool stepIn(string directory) @safe
+        bool stepIn(Path)(Path directory) @safe
+        if (isString!Path)
         {
             import std.path : chainPath;
             auto searchPattern = chainPath(directory, "*.*");
@@ -4683,6 +5723,12 @@ private struct DirIteratorImpl
             cenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack ~= DirHandle(directory, h);
             return toNext(false, &_findinfo);
+        }
+
+        bool stepIn(Path)(Path directory)
+        if (isDirEntry!Path)
+        {
+            return this.stepIn(directory.absoluteName);
         }
 
         bool next()
@@ -4711,7 +5757,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, _absolutePrefix, findinfo);
             return true;
         }
 
@@ -4754,6 +5800,11 @@ private struct DirIteratorImpl
             return next();
         }
 
+        bool stepIn(DirEntry directory)
+        {
+            return this.stepIn(directory.name);
+        }
+
         bool next() @trusted
         {
             if (_stack.length == 0)
@@ -4793,18 +5844,44 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(const DirEntry entry, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
         _followSymlink = followSymlink;
 
+        version (Windows)
+        {
+            const pathname = entry.absoluteName;
+            _absolutePrefix = entry._absolutePrefix;
+        }
+        else
+        {
+            const pathname = entry.name;
+        }
+
+        this.initialStepIn(pathname);
+    }
+
+    version (Windows) { /* Leaving this overload available on Windows has the tendency to introduce regressions. */ }
+    else
+    {
+        this(string pathname, SpanMode mode, bool followSymlink)
+        {
+            _mode = mode;
+            _followSymlink = followSymlink;
+            this.initialStepIn(pathname);
+        }
+    }
+
+    private void initialStepIn(string pathname)
+    {
         if (stepIn(pathname))
         {
             if (_mode == SpanMode.depth)
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4834,7 +5911,7 @@ private struct DirIteratorImpl
                 while (mayStepIn())
                 {
                     auto thisDir = _cur;
-                    if (stepIn(_cur.name))
+                    if (stepIn(_cur))
                     {
                         pushExtra(thisDir);
                     }
@@ -4848,7 +5925,7 @@ private struct DirIteratorImpl
         case SpanMode.breadth:
             if (mayStepIn())
             {
-                if (!stepIn(_cur.name))
+                if (!stepIn(_cur))
                     while (!empty && !next()){}
             }
             else
@@ -4876,10 +5953,21 @@ struct _DirIterator(bool useDIP1000)
 private:
     SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
 
-    this(string pathname, SpanMode mode, bool followSymlink) @trusted
+    this(Path)(Path pathname, SpanMode mode, bool followSymlink) @trusted
+    if (isString!Path || isConvertibleToStringButNoDirEntry!Path)
     {
-        impl = typeof(impl)(pathname, mode, followSymlink);
+        version (Windows)
+            impl = typeof(impl)(DirEntry(pathname), mode, followSymlink);
+        else
+            impl = typeof(impl)(pathname, mode, followSymlink);
     }
+
+    this(Path)(Path entry, SpanMode mode, bool followSymlink) @trusted
+    if (isDirEntry!Path)
+    {
+        impl = typeof(impl)(entry, mode, followSymlink);
+    }
+
 public:
     @property bool empty() @trusted { return impl.empty; }
     @property DirEntry front() @trusted { return impl.front; }
@@ -4997,8 +6085,17 @@ scan("");
 
 // For some reason, doing the same alias-to-a-template trick as with DirIterator
 // does not work here.
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, SpanMode mode, bool followSymlink = true)
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, SpanMode mode, bool followSymlink = true)
+if (isString!Path || isConvertibleToStringButNoDirEntry!Path)
+{
+    return _DirIterator!useDIP1000(path, mode, followSymlink);
+}
+
+/// ditto
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (const Path path, SpanMode mode, bool followSymlink = true)
+if (isDirEntry!Path)
 {
     return _DirIterator!useDIP1000(path, mode, followSymlink);
 }
@@ -5109,9 +6206,10 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
 }
 
 /// Ditto
-auto dirEntries(bool useDIP1000 = dip1000Enabled)
-    (string path, string pattern, SpanMode mode,
+auto dirEntries(Path, bool useDIP1000 = dip1000Enabled)
+    (Path path, string pattern, SpanMode mode,
     bool followSymlink = true)
+if (isString!Path || isConvertibleToString!Path || isDirEntry!Path)
 {
     import std.algorithm.iteration : filter;
     import std.path : globMatch, baseName;
@@ -5276,6 +6374,15 @@ slurp(Types...)(string filename, scope const(char)[] format)
         app.put(toAdd);
     }
     return app.data;
+}
+
+/// ditto
+auto slurp(Types...)(const DirEntry filename, scope const(char)[] format)
+{
+    version (Windows)
+        return slurp!(Types)(filename.absoluteName, format);
+    else
+        return slurp!(Types)(filename.name, format);
 }
 
 ///
@@ -5497,6 +6604,15 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
         }
     }
     else static assert(0, "Unsupported platform");
+}
+
+/// ditto
+ulong getAvailableDiskSpace(scope const DirEntry path) @safe
+{
+    version (Windows)
+        return getAvailableDiskSpace(path.absoluteName);
+    else
+        return getAvailableDiskSpace(path.name);
 }
 
 ///
