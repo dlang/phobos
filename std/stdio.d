@@ -5239,7 +5239,7 @@ enum StdFileHandle: string
 }
 
 // Undocumented but public because the std* handles are aliasing it.
-@property ref File makeGlobal(StdFileHandle _iob)()
+@property ref File makeGlobal(StdFileHandle _iob)() @trusted
 {
     __gshared File.Impl impl;
     __gshared File result;
