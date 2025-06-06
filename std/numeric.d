@@ -3733,15 +3733,15 @@ public:
         }
         else if (range.length == 1)
         {
-            static if (isComplexLike!(ElementType!R))
-			{
-                buf[0].re = range[0].re;
-                buf[0].im = range[0].im;
-            }
-            else
-			{
+            static if (isNumeric!(ElementType!R))
+            {
                 buf[0].re = range[0];
                 buf[0].im = 0;
+            }
+            else
+            {
+                buf[0].re = range[0].re;
+                buf[0].im = range[0].im;
             }
             return;
         }
@@ -4145,19 +4145,19 @@ if (isComplexLike!(ElementType!Ret))
 in (range.length == 2)
 in (buf.length == 2)
 {
-    static if (isComplexLike!(ElementType!R)) 
-	{
-        buf[0].re = range[0].re + range[1].re;
-        buf[0].im = range[0].im + range[1].im;
-        buf[1].re = range[0].re - range[1].re;
-        buf[1].im = range[0].im - range[1].im;
-    }
-    else 
-	{
+    static if (isNumeric!(ElementType!R))
+    {
         buf[0].re = range[0] + range[1];
         buf[0].im = 0;
         buf[1].re = range[0] - range[1];
         buf[1].im = 0;
+    }
+    else
+    {
+        buf[0].re = range[0].re + range[1].re;
+        buf[0].im = range[0].im + range[1].im;
+        buf[1].re = range[0].re - range[1].re;
+        buf[1].im = range[0].im - range[1].im;
     }
 }
 
