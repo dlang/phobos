@@ -3374,7 +3374,7 @@ alias lookup_t = float;
 final class Fft
 {
 private:
-    FFTImpl impl;
+    FFT impl;
     void enforceSize(R)(R range) const
     {
         import std.conv : text;
@@ -3389,7 +3389,7 @@ public:
      */
     this(size_t size)
     {
-        this.impl = FFTImpl(size);
+        this.impl = FFT(size);
     }
 
     @property size_t size() const => impl.size;
@@ -3463,8 +3463,6 @@ public:
     }
 }
 
-alias FFT = FFTImpl;
-
 /**A struct for performing fast Fourier transforms of power of two sizes.
  * This class encapsulates a large amount of state that is reusable when
  * performing multiple FFTs of sizes smaller than or equal to that specified
@@ -3476,7 +3474,7 @@ alias FFT = FFTImpl;
  * References:
  * $(HTTP en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
  */
-struct FFTImpl
+struct FFT
 {
     import core.bitop : bsf;
     import std.algorithm.iteration : map;
@@ -3813,7 +3811,7 @@ public:
     }
 
     ///
-    @disable this(ref FFTImpl);
+    @disable this(ref FFT);
 
     ///
     ~this() @nogc nothrow
@@ -3971,28 +3969,28 @@ public:
  */
 Complex!F[] fft(F = double, R)(R range)
 {
-    auto fftObj = FFTImpl(range.length);
+    auto fftObj = FFT(range.length);
     return fftObj.compute!(F, R)(range);
 }
 
 /// ditto
 void fft(Ret, R)(R range, Ret buf)
 {
-    auto fftObj = FFTImpl(range.length);
+    auto fftObj = FFT(range.length);
     return fftObj.compute!(Ret, R)(range, buf);
 }
 
 /// ditto
 Complex!F[] inverseFft(F = double, R)(R range)
 {
-    auto fftObj = FFTImpl(range.length);
+    auto fftObj = FFT(range.length);
     return fftObj.computeInverse!(F, R)(range);
 }
 
 /// ditto
 void inverseFft(Ret, R)(R range, Ret buf)
 {
-    auto fftObj = FFTImpl(range.length);
+    auto fftObj = FFT(range.length);
     return fftObj.computeInverse!(Ret, R)(range, buf);
 }
 
