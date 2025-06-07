@@ -3487,7 +3487,7 @@ public:
     static size_t lookupTableSize(size_t fftSize) @nogc nothrow => fftSize*2;
 
     ///
-    unittest
+    @system unittest
     {
         import std.complex : Complex;
         enum size = 8;
@@ -3861,7 +3861,7 @@ public:
      */
     this(size_t size) @nogc nothrow
     {
-        import core.stdc.stdlib;
+        import core.stdc.stdlib : malloc;
         import core.exception : onOutOfMemoryError;
         if (size == 0)
         {
@@ -3875,7 +3875,7 @@ public:
             {
                 onOutOfMemoryError();
             }
-            this(pStorage[0..bufferSize]);
+            this(pStorage[0 .. bufferSize]);
         }
     }
 
@@ -3912,7 +3912,7 @@ public:
          * The index of the `i`th lookup is `2^^i` and the length is also `2^^i`.
          */
 
-        memSpace[0..2] = float.nan;
+        memSpace[0 .. 2] = float.nan;
 
         auto lastRow = memSpace[$ - size .. $];
         lastRow[0] = 0;  // -sin(0) == 0.
@@ -3956,7 +3956,7 @@ public:
     ///
     ~this() @nogc nothrow
     {
-        import core.stdc.stdlib;
+        import core.stdc.stdlib : free;
         free(pStorage);
     }
 
