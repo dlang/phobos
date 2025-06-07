@@ -3357,7 +3357,8 @@ if (!isIntegral!T &&
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "isClose(inverseFft(fft(arr)), arr)" test even for
 // size 2 ^^ 22.
-private alias lookup_t = float;
+/// Value type for `FFT` lookup table
+alias lookup_t = float;
 
 /**A class for performing fast Fourier transforms of power of two sizes.
  * This class encapsulates a large amount of state that is reusable when
@@ -3372,19 +3373,272 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import core.bitop : bsf;
-    import std.algorithm.iteration : map;
-    import std.array : uninitializedArray;
-
 private:
-    immutable lookup_t[][] negSinLookup;
-
+    FFTImpl impl;
     void enforceSize(R)(R range) const
     {
         import std.conv : text;
         assert(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
+
+public:
+    /**Create an `Fft` object for computing fast Fourier transforms of
+     * power of two sizes of `size` or smaller.  `size` must be a
+     * power of two.
+     */
+    this(size_t size)
+    {
+        this.impl = FFTImpl(size);
+    }
+
+    @property size_t size() const => impl.size;
+
+    /**Compute the Fourier transform of range using the $(BIGOH N log N)
+     * Cooley-Tukey Algorithm.  `range` must be a random-access range with
+     * slicing and a length equal to `size` as provided at the construction of
+     * this object.  The contents of range can be either  numeric types,
+     * which will be interpreted as pure real values, or complex types with
+     * properties or members `.re` and `.im` that can be read.
+     *
+     * Note:  Pure real FFTs are automatically detected and the relevant
+     *        optimizations are performed.
+     *
+     * Returns:  An array of complex numbers representing the transformed data in
+     *           the frequency domain.
+     *
+     * Conventions: The exponent is negative and the factor is one,
+     *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
+     */
+    Complex!F[] fft(F = double, R)(R range) const
+    if (isFloatingPoint!F && isRandomAccessRange!R)
+    {
+        enforceSize(range);
+        return impl.compute(range);
+    }
+
+    /**Same as the overload, but allows for the results to be stored in a user-
+     * provided buffer.  The buffer must be of the same length as range, must be
+     * a random-access range, must have slicing, and must contain elements that are
+     * complex-like.  This means that they must have a .re and a .im member or
+     * property that can be both read and written and are floating point numbers.
+     */
+    void fft(Ret, R)(R range, Ret buf) const
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    in (buf.length == range.length)
+    {
+        enforceSize(range);
+        impl.compute(range, buf);
+    }
+
+    /**
+     * Computes the inverse Fourier transform of a range.  The range must be a
+     * random access range with slicing, have a length equal to the size
+     * provided at construction of this object, and contain elements that are
+     * either of type std.complex.Complex or have essentially
+     * the same compile-time interface.
+     *
+     * Returns:  The time-domain signal.
+     *
+     * Conventions: The exponent is positive and the factor is 1/N, i.e.,
+     *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
+     */
+    Complex!F[] inverseFft(F = double, R)(R range) const
+    if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
+    {
+        enforceSize(range);
+        return impl.computeInverse(range);
+    }
+
+    /**
+     * Inverse FFT that allows a user-supplied buffer to be provided.  The buffer
+     * must be a random access range with slicing, and its elements
+     * must be some complex-like type.
+     */
+    void inverseFft(Ret, R)(R range, Ret buf) const
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    {
+        enforceSize(range);
+        impl.computeInverse(range, buf);
+    }
+}
+
+/**A struct for performing fast Fourier transforms of power of two sizes.
+ * This class encapsulates a large amount of state that is reusable when
+ * performing multiple FFTs of sizes smaller than or equal to that specified
+ * in the constructor. This results in substantial speedups when performing
+ * multiple FFTs with a known maximum size.  However,
+ * a free function API is provided for convenience if you need to perform a
+ * one-off FFT.
+ *
+ * References:
+ * $(HTTP en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
+ */
+struct FFT
+{
+private:
+
+    alias Impl = SafeRefCounted!(FFTImpl, RefCountedAutoInitialize.no);
+    Impl impl;
+
+public:
+
+    /// Returns the size of a lookup table required for the given FFT size.
+    static size_t lookupTableSize(size_t fftSize) @nogc nothrow => fftSize*2;
+
+    ///
+    @system unittest
+    {
+        import std.complex : Complex;
+        enum size = 8;
+        float[size] arr = [1,2,3,4,5,6,7,8];
+        Complex!float[size] fft1;
+
+        lookup_t[FFT.lookupTableSize(size)] buff;
+        auto fft = FFT(buff);
+
+        fft.compute(arr[], fft1[]);
+    }
+
+    /**Create an `FFT` object for computing fast Fourier transforms of
+     * power of two sizes of `size` or smaller.  `size` must be a
+     * power of two.
+     */
+    this(size_t size) @nogc nothrow
+    {
+        this.impl = Impl(size);
+    }
+
+    /**This constructor takes a preallocated buffer for a lookup table.
+     * Use `lookupTableSize` to calculate the required buffer size.
+     *
+     * Unsafe because the `memSpace` buffer will be cast to `immutable`.
+     */
+    this(return scope lookup_t[] memSpace) @nogc nothrow
+    in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
+            "Can only do FFTs on ranges with a size that is a power of two.")
+    {
+        this.impl = Impl(memSpace);
+    }
+
+    @property size_t size() const @nogc nothrow
+    {
+        if (impl.refCountedStore.isInitialized)
+        {
+            return impl.borrow!((const ref fft) => fft.size);
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    /**Compute the Fourier transform of range using the $(BIGOH N log N)
+     * Cooley-Tukey Algorithm.  `range` must be a random-access range with
+     * slicing and a length equal to `size` as provided at the construction of
+     * this object.  The contents of range can be either  numeric types,
+     * which will be interpreted as pure real values, or complex types with
+     * properties or members `.re` and `.im` that can be read.
+     *
+     * Note:  Pure real FFTs are automatically detected and the relevant
+     *        optimizations are performed.
+     *
+     * Returns:  An array of complex numbers representing the transformed data in
+     *           the frequency domain.
+     *
+     * Conventions: The exponent is negative and the factor is one,
+     *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
+     */
+    Complex!F[] compute(F = double, R)(R range) const
+    if (isFloatingPoint!F && isRandomAccessRange!R)
+    in (range.length <= size, "FFT size mismatch.")
+    {
+        if (impl.refCountedStore.isInitialized)
+        {
+            return impl.borrow!((const ref fft) => fft.compute(range));
+        }
+        else
+        {
+            return FFTImpl(0).compute(range);
+        }
+    }
+
+    /**Same as the overload, but allows for the results to be stored in a user-
+     * provided buffer.  The buffer must be of the same length as range, must be
+     * a random-access range, must have slicing, and must contain elements that are
+     * complex-like.  This means that they must have a .re and a .im member or
+     * property that can be both read and written and are floating point numbers.
+     */
+    void compute(Ret, R)(R range, Ret buf) const
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    in (range.length <= size, "FFT size mismatch.")
+    in (buf.length == range.length)
+    {
+        if (impl.refCountedStore.isInitialized)
+        {
+            impl.borrow!((const ref fft) => fft.compute(range, buf));
+        }
+        else
+        {
+            return FFTImpl(0).compute(range, buf);
+        }
+    }
+
+    /**
+     * Computes the inverse Fourier transform of a range.  The range must be a
+     * random access range with slicing, have a length equal to the size
+     * provided at construction of this object, and contain elements that are
+     * either of type std.complex.Complex or have essentially
+     * the same compile-time interface.
+     *
+     * Returns:  The time-domain signal.
+     *
+     * Conventions: The exponent is positive and the factor is 1/N, i.e.,
+     *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
+     */
+    Complex!F[] computeInverse(F = double, R)(R range) const
+    if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
+    in (range.length <= size, "FFT size mismatch.")
+    {
+        if (impl.refCountedStore.isInitialized)
+        {
+            impl.borrow!((const ref fft) => fft.computeInverse(range));
+        }
+        else
+        {
+            return FFTImpl(0).computeInverse(range);
+        }
+    }
+
+    /**
+     * Inverse FFT that allows a user-supplied buffer to be provided.  The buffer
+     * must be a random access range with slicing, and its elements
+     * must be some complex-like type.
+     */
+    void computeInverse(Ret, R)(R range, Ret buf) const
+    if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    in (range.length <= size, "FFT size mismatch.")
+    {
+        if (impl.refCountedStore.isInitialized)
+        {
+            impl.borrow!((const ref fft) => fft.computeInverse(range, buf));
+        }
+        else
+        {
+            return FFTImpl(0).computeInverse(range, buf);
+        }
+    }
+}
+
+
+private struct FFTImpl
+{
+    import core.bitop : bsf;
+    import std.algorithm.iteration : map;
+
+private:
+    lookup_t* pStorage;
+    immutable(lookup_t)[] table;
 
     void fftImpl(Ret, R)(Stride!R range, Ret buf) const
     in
@@ -3502,7 +3756,7 @@ private:
             auto oddsImag = OddToImaginary(range);
         }
 
-        fft(oddsImag, buf[0..$ / 2]);
+        compute(oddsImag, buf[0..$ / 2]);
         auto evenFft = buf[0..$ / 2];
         auto oddFft = buf[$ / 2..$];
         immutable halfN = evenFft.length;
@@ -3537,7 +3791,7 @@ private:
     do
     {
         immutable n = buf.length;
-        immutable localLookup = negSinLookup[bsf(n)];
+        immutable localLookup = table[n .. 2*n];
         assert(localLookup.length == n);
 
         immutable cosMask = n - 1;
@@ -3599,37 +3853,68 @@ private:
         }
     }
 
-    // This constructor is used within this module for allocating the
-    // buffer space elsewhere besides the GC heap.  It's definitely **NOT**
-    // part of the public API and definitely **IS** subject to change.
-    //
-    // Also, this is unsafe because the memSpace buffer will be cast
-    // to immutable.
-    //
-    // Public b/c of https://issues.dlang.org/show_bug.cgi?id=4636.
-    public this(lookup_t[] memSpace)
-    {
-        immutable size = memSpace.length / 2;
+public:
 
-        /* Create a lookup table of all negative sine values at a resolution of
-         * size and all smaller power of two resolutions.  This may seem
-         * inefficient, but having all the lookups be next to each other in
-         * memory at every level of iteration is a huge win performance-wise.
-         */
+    /**Create an `FFT` object for computing fast Fourier transforms of
+     * power of two sizes of `size` or smaller.  `size` must be a
+     * power of two.
+     */
+    this(size_t size) @nogc nothrow
+    {
+        import core.stdc.stdlib : malloc;
+        import core.exception : onOutOfMemoryError;
         if (size == 0)
+        {
+            this([]);
+        }
+        else
+        {
+            immutable bufferSize = 2*size;
+            this.pStorage = cast(lookup_t*) malloc(lookup_t.sizeof*bufferSize);
+            if (!this.pStorage)
+            {
+                onOutOfMemoryError();
+            }
+            this(pStorage[0 .. bufferSize]);
+        }
+    }
+
+    /**This constructor takes a preallocated buffer for a lookup table.
+     * The tablemust be twice as big as the desired FFT size.
+     *
+     * Unsafe because the `memSpace` buffer will be cast to `immutable`.
+     */
+    this(return scope lookup_t[] memSpace) @nogc nothrow
+    in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
+            "Can only do FFTs on ranges with a size that is a power of two.")
+    {
+        if (memSpace.length == 0)
         {
             return;
         }
 
-        assert(isPowerOf2(size),
-            "Can only do FFTs on ranges with a size that is a power of two.");
+        immutable size = memSpace.length / 2;
 
-        auto table = new lookup_t[][bsf(size) + 1];
+        /* Create a lookup table of all negative sine values at a resolution of
+         * size and all smaller power of two resolutions. This may seem
+         * inefficient, but having all the lookups be next to each other in
+         * memory at every level of iteration is a huge win performance-wise.
+         *
+         * Lookups are stored in a dense triangular array:
+         * [
+         *     nan, // never used
+         *     nan,
+         *     0, 0,
+         *     0, -1, 0, 1,
+         *     0, -0.7, -1, -0.7, 0, 0.7, 1, 0.7,
+         *     ...
+         * ]
+         * The index of the `i`th lookup is `2^^i` and the length is also `2^^i`.
+         */
 
-        table[$ - 1] = memSpace[$ - size..$];
-        memSpace = memSpace[0 .. size];
+        memSpace[0 .. 2] = float.nan;
 
-        auto lastRow = table[$ - 1];
+        auto lastRow = memSpace[$ - size .. $];
         lastRow[0] = 0;  // -sin(0) == 0.
         foreach (ptrdiff_t i; 1 .. size)
         {
@@ -3647,40 +3932,35 @@ private:
         }
 
         // Fill in all the other rows with strided versions.
-        foreach (i; 1 .. table.length - 1)
+        immutable tableSize = bsf(size) + 1;
+        foreach (i; 1 .. tableSize - 1)
         {
-            immutable strideLength = size / (2 ^^ i);
-            auto strided = Stride!(lookup_t[])(lastRow, strideLength);
-            table[i] = memSpace[$ - strided.length..$];
-            memSpace = memSpace[0..$ - strided.length];
+            immutable idx = 1 << i, len = 1 << i;
+            auto lookup = memSpace[idx .. idx+len];
 
+            immutable strideLength = size / (1 << i);
+            auto strided = Stride!(lookup_t[])(lastRow, strideLength);
             size_t copyIndex;
             foreach (elem; strided)
             {
-                table[i][copyIndex++] = elem;
+                lookup[copyIndex++] = elem;
             }
         }
 
-        negSinLookup = cast(immutable) table;
+        this.table = cast(immutable) memSpace;
     }
 
-public:
-    /**Create an `Fft` object for computing fast Fourier transforms of
-     * power of two sizes of `size` or smaller.  `size` must be a
-     * power of two.
-     */
-    this(size_t size)
+    ///
+    @disable this(ref FFTImpl);
+
+    ///
+    ~this() @nogc nothrow
     {
-        // Allocate all twiddle factor buffers in one contiguous block so that,
-        // when one is done being used, the next one is next in cache.
-        auto memSpace = uninitializedArray!(lookup_t[])(2 * size);
-        this(memSpace);
+        import core.stdc.stdlib : free;
+        free(pStorage);
     }
 
-    @property size_t size() const
-    {
-        return (negSinLookup is null) ? 0 : negSinLookup[$ - 1].length;
-    }
+    @property size_t size() const @nogc nothrow => table.length/2;
 
     /**Compute the Fourier transform of range using the $(BIGOH N log N)
      * Cooley-Tukey Algorithm.  `range` must be a random-access range with
@@ -3698,10 +3978,11 @@ public:
      * Conventions: The exponent is negative and the factor is one,
      *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
      */
-    Complex!F[] fft(F = double, R)(R range) const
+    Complex!F[] compute(F = double, R)(R range) const
     if (isFloatingPoint!F && isRandomAccessRange!R)
+    in (range.length <= size, "FFT size mismatch.")
     {
-        enforceSize(range);
+        import std.array : uninitializedArray;
         Complex!F[] ret;
         if (range.length == 0)
         {
@@ -3711,7 +3992,7 @@ public:
         // Don't waste time initializing the memory for ret.
         ret = uninitializedArray!(Complex!F[])(range.length);
 
-        fft(range,  ret);
+        compute(range,  ret);
         return ret;
     }
 
@@ -3721,12 +4002,11 @@ public:
      * complex-like.  This means that they must have a .re and a .im member or
      * property that can be both read and written and are floating point numbers.
      */
-    void fft(Ret, R)(R range, Ret buf) const
+    void compute(Ret, R)(R range, Ret buf) const
     if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    in (range.length <= size, "FFT size mismatch.")
+    in (buf.length == range.length)
     {
-        assert(buf.length == range.length);
-        enforceSize(range);
-
         if (range.length == 0)
         {
             return;
@@ -3779,10 +4059,11 @@ public:
      * Conventions: The exponent is positive and the factor is 1/N, i.e.,
      *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
      */
-    Complex!F[] inverseFft(F = double, R)(R range) const
+    Complex!F[] computeInverse(F = double, R)(R range) const
     if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
+    in (range.length <= size, "FFT size mismatch.")
     {
-        enforceSize(range);
+        import std.array : uninitializedArray;
         Complex!F[] ret;
         if (range.length == 0)
         {
@@ -3792,7 +4073,7 @@ public:
         // Don't waste time initializing the memory for ret.
         ret = uninitializedArray!(Complex!F[])(range.length);
 
-        inverseFft(range, ret);
+        computeInverse(range, ret);
         return ret;
     }
 
@@ -3801,13 +4082,12 @@ public:
      * must be a random access range with slicing, and its elements
      * must be some complex-like type.
      */
-    void inverseFft(Ret, R)(R range, Ret buf) const
+    void computeInverse(Ret, R)(R range, Ret buf) const
     if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    in (range.length <= size, "FFT size mismatch.")
     {
-        enforceSize(range);
-
         auto swapped = map!swapRealImag(range);
-        fft(swapped,  buf);
+        compute(swapped,  buf);
 
         immutable lenNeg1 = 1.0 / buf.length;
         foreach (ref elem; buf)
@@ -3819,22 +4099,6 @@ public:
     }
 }
 
-// This mixin creates an Fft object in the scope it's mixed into such that all
-// memory owned by the object is deterministically destroyed at the end of that
-// scope.
-private enum string MakeLocalFft = q{
-    import core.stdc.stdlib;
-    import core.exception : onOutOfMemoryError;
-
-    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
-                     [0 .. 2 * range.length];
-    if (!lookupBuf.ptr)
-        onOutOfMemoryError();
-
-    scope(exit) free(cast(void*) lookupBuf.ptr);
-    auto fftObj = scoped!Fft(lookupBuf);
-};
-
 /**Convenience functions that create an `Fft` object, run the FFT or inverse
  * FFT and return the result.  Useful for one-off FFTs.
  *
@@ -3845,29 +4109,29 @@ private enum string MakeLocalFft = q{
  */
 Complex!F[] fft(F = double, R)(R range)
 {
-    mixin(MakeLocalFft);
-    return fftObj.fft!(F, R)(range);
+    auto fftObj = FFTImpl(range.length);
+    return fftObj.compute!(F, R)(range);
 }
 
 /// ditto
 void fft(Ret, R)(R range, Ret buf)
 {
-    mixin(MakeLocalFft);
-    return fftObj.fft!(Ret, R)(range, buf);
+    auto fftObj = FFTImpl(range.length);
+    return fftObj.compute!(Ret, R)(range, buf);
 }
 
 /// ditto
 Complex!F[] inverseFft(F = double, R)(R range)
 {
-    mixin(MakeLocalFft);
-    return fftObj.inverseFft!(F, R)(range);
+    auto fftObj = FFTImpl(range.length);
+    return fftObj.computeInverse!(F, R)(range);
 }
 
 /// ditto
 void inverseFft(Ret, R)(R range, Ret buf)
 {
-    mixin(MakeLocalFft);
-    return fftObj.inverseFft!(Ret, R)(range, buf);
+    auto fftObj = FFTImpl(range.length);
+    return fftObj.computeInverse!(Ret, R)(range, buf);
 }
 
 @system unittest
@@ -3958,6 +4222,26 @@ void inverseFft(Ret, R)(R range, Ret buf)
     auto inv = inverseFft(fft1[]);
     assert(isClose(inv[].map!"a.re", arr[], 1e-6));
     assert(inv[].map!"a.im".maxElement < 1e-10);
+}
+
+// https://github.com/dlang/phobos/issues/10798
+@nogc nothrow @system unittest
+{
+    static struct C { float re, im; }
+
+    enum size = 8;
+    float[size] arr = [1,2,3,4,5,6,7,8];
+    C[size] fft1;
+    C[size] inv;
+
+    fft(arr[], fft1[]);
+    inverseFft(fft1[], inv[]);
+
+    lookup_t[FFT.lookupTableSize(size)] buff;
+    auto fft = FFT(buff);
+
+    fft.compute(arr[], fft1[]);
+    fft.computeInverse(fft1[], inv[]);
 }
 
 // Swaps the real and imaginary parts of a complex number.  This is useful
@@ -4158,7 +4442,7 @@ in (buf.length == 2)
         buf[0].im = range[0].im + range[1].im;
         buf[1].re = range[0].re - range[1].re;
         buf[1].im = range[0].im - range[1].im;
-    }
+}
 }
 
 // Hard-coded base case for FFT of size 4.  Doesn't work as well as the size
