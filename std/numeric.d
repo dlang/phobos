@@ -3381,19 +3381,6 @@ private:
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
 
-    // This constructor is used within this module for allocating the
-    // buffer space elsewhere besides the GC heap.  It's definitely **NOT**
-    // part of the public API and definitely **IS** subject to change.
-    //
-    // Also, this is unsafe because the memSpace buffer will be cast
-    // to immutable.
-    //
-    // Public b/c of https://issues.dlang.org/show_bug.cgi?id=4636.
-    public this(lookup_t[] memSpace)
-    {
-        this.impl = FFTImpl(memSpace);
-    }
-
 public:
     /**Create an `Fft` object for computing fast Fourier transforms of
      * power of two sizes of `size` or smaller.  `size` must be a
@@ -3941,22 +3928,6 @@ public:
     }
 }
 
-// This mixin creates an Fft object in the scope it's mixed into such that all
-// memory owned by the object is deterministically destroyed at the end of that
-// scope.
-private enum string MakeLocalFft = q{
-    import core.stdc.stdlib;
-    import core.exception : onOutOfMemoryError;
-
-    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
-                     [0 .. 2 * range.length];
-    if (!lookupBuf.ptr)
-        onOutOfMemoryError();
-
-    scope(exit) free(cast(void*) lookupBuf.ptr);
-    auto fftObj = scoped!Fft(lookupBuf);
-};
-
 /**Convenience functions that create an `Fft` object, run the FFT or inverse
  * FFT and return the result.  Useful for one-off FFTs.
  *
@@ -3967,28 +3938,28 @@ private enum string MakeLocalFft = q{
  */
 Complex!F[] fft(F = double, R)(R range)
 {
-    mixin(MakeLocalFft);
+    auto fftObj = FFTImpl(range.length);
     return fftObj.fft!(F, R)(range);
 }
 
 /// ditto
 void fft(Ret, R)(R range, Ret buf)
 {
-    mixin(MakeLocalFft);
+    auto fftObj = FFTImpl(range.length);
     return fftObj.fft!(Ret, R)(range, buf);
 }
 
 /// ditto
 Complex!F[] inverseFft(F = double, R)(R range)
 {
-    mixin(MakeLocalFft);
+    auto fftObj = FFTImpl(range.length);
     return fftObj.inverseFft!(F, R)(range);
 }
 
 /// ditto
 void inverseFft(Ret, R)(R range, Ret buf)
 {
-    mixin(MakeLocalFft);
+    auto fftObj = FFTImpl(range.length);
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
