@@ -3413,7 +3413,7 @@ public:
     if (isFloatingPoint!F && isRandomAccessRange!R)
     {
         enforceSize(range);
-        return impl.fft(range);
+        return impl.compute(range);
     }
 
     /**Same as the overload, but allows for the results to be stored in a user-
@@ -3427,7 +3427,7 @@ public:
     in (buf.length == range.length)
     {
         enforceSize(range);
-        impl.fft(range, buf);
+        impl.compute(range, buf);
     }
 
     /**
@@ -3446,7 +3446,7 @@ public:
     if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
     {
         enforceSize(range);
-        return impl.inverseFft(range);
+        return impl.computeInverse(range);
     }
 
     /**
@@ -3458,7 +3458,7 @@ public:
     if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     {
         enforceSize(range);
-        impl.inverseFft(range, buf);
+        impl.computeInverse(range, buf);
     }
 }
 
@@ -3587,7 +3587,7 @@ private:
             auto oddsImag = OddToImaginary(range);
         }
 
-        fft(oddsImag, buf[0..$ / 2]);
+        compute(oddsImag, buf[0..$ / 2]);
         auto evenFft = buf[0..$ / 2];
         auto oddFft = buf[$ / 2..$];
         immutable halfN = evenFft.length;
@@ -3807,7 +3807,7 @@ public:
      * Conventions: The exponent is negative and the factor is one,
      *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
      */
-    Complex!F[] fft(F = double, R)(R range) const
+    Complex!F[] compute(F = double, R)(R range) const
     if (isFloatingPoint!F && isRandomAccessRange!R)
     in (range.length <= size, "FFT size mismatch.")
     {
@@ -3821,7 +3821,7 @@ public:
         // Don't waste time initializing the memory for ret.
         ret = uninitializedArray!(Complex!F[])(range.length);
 
-        fft(range,  ret);
+        compute(range,  ret);
         return ret;
     }
 
@@ -3831,7 +3831,7 @@ public:
      * complex-like.  This means that they must have a .re and a .im member or
      * property that can be both read and written and are floating point numbers.
      */
-    void fft(Ret, R)(R range, Ret buf) const
+    void compute(Ret, R)(R range, Ret buf) const
     if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     in (range.length <= size, "FFT size mismatch.")
     in (buf.length == range.length)
@@ -3888,7 +3888,7 @@ public:
      * Conventions: The exponent is positive and the factor is 1/N, i.e.,
      *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
      */
-    Complex!F[] inverseFft(F = double, R)(R range) const
+    Complex!F[] computeInverse(F = double, R)(R range) const
     if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
     in (range.length <= size, "FFT size mismatch.")
     {
@@ -3902,7 +3902,7 @@ public:
         // Don't waste time initializing the memory for ret.
         ret = uninitializedArray!(Complex!F[])(range.length);
 
-        inverseFft(range, ret);
+        computeInverse(range, ret);
         return ret;
     }
 
@@ -3911,12 +3911,12 @@ public:
      * must be a random access range with slicing, and its elements
      * must be some complex-like type.
      */
-    void inverseFft(Ret, R)(R range, Ret buf) const
+    void computeInverse(Ret, R)(R range, Ret buf) const
     if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
     in (range.length <= size, "FFT size mismatch.")
     {
         auto swapped = map!swapRealImag(range);
-        fft(swapped,  buf);
+        compute(swapped,  buf);
 
         immutable lenNeg1 = 1.0 / buf.length;
         foreach (ref elem; buf)
@@ -3939,28 +3939,28 @@ public:
 Complex!F[] fft(F = double, R)(R range)
 {
     auto fftObj = FFTImpl(range.length);
-    return fftObj.fft!(F, R)(range);
+    return fftObj.compute!(F, R)(range);
 }
 
 /// ditto
 void fft(Ret, R)(R range, Ret buf)
 {
     auto fftObj = FFTImpl(range.length);
-    return fftObj.fft!(Ret, R)(range, buf);
+    return fftObj.compute!(Ret, R)(range, buf);
 }
 
 /// ditto
 Complex!F[] inverseFft(F = double, R)(R range)
 {
     auto fftObj = FFTImpl(range.length);
-    return fftObj.inverseFft!(F, R)(range);
+    return fftObj.computeInverse!(F, R)(range);
 }
 
 /// ditto
 void inverseFft(Ret, R)(R range, Ret buf)
 {
     auto fftObj = FFTImpl(range.length);
-    return fftObj.inverseFft!(Ret, R)(range, buf);
+    return fftObj.computeInverse!(Ret, R)(range, buf);
 }
 
 @system unittest
