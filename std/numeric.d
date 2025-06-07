@@ -3690,7 +3690,7 @@ public:
      * power of two sizes of `size` or smaller.  `size` must be a
      * power of two.
      */
-    this(size_t size)
+    this(size_t size) @nogc nothrow
     {
         import core.stdc.stdlib;
         import core.exception : onOutOfMemoryError;
@@ -3713,7 +3713,7 @@ public:
      *
      * Unsafe because the `memSpace` buffer will be cast to `immutable`.
      */
-    this(return scope lookup_t[] memSpace)
+    this(return scope lookup_t[] memSpace) @nogc nothrow
     in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
             "Can only do FFTs on ranges with a size that is a power of two.")
     {
@@ -3783,13 +3783,13 @@ public:
     @disable this(ref FFTImpl);
 
     ///
-    ~this() @nogc
+    ~this() @nogc nothrow
     {
         import core.stdc.stdlib;
         free(pStorage);
     }
 
-    @property size_t size() const => table.length/2;
+    @property size_t size() const @nogc nothrow => table.length/2;
 
     /**Compute the Fourier transform of range using the $(BIGOH N log N)
      * Cooley-Tukey Algorithm.  `range` must be a random-access range with
@@ -4049,6 +4049,28 @@ void inverseFft(Ret, R)(R range, Ret buf)
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568], 1e-4));
 
     auto inv = inverseFft(fft1[]);
+    assert(isClose(inv[].map!"a.re", arr[], 1e-6));
+    assert(inv[].map!"a.im".maxElement < 1e-10);
+}
+
+// https://github.com/dlang/phobos/issues/10798
+@nogc nothrow @system unittest
+{
+    import std.algorithm;
+    import std.range;
+    static struct C { float re, im; } // User-defined complex
+
+    float[8] arr = [1,2,3,4,5,6,7,8];
+    C[8] fft1;
+    fft(arr[], fft1[]);
+
+    float[8] re = [36.0, -4, -4, -4, -4, -4, -4, -4];
+    float[8] im = [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568];
+    assert(isClose(fft1[].map!"a.re", re[], 1e-4));
+    assert(isClose(fft1[].map!"a.im", im[], 1e-4));
+
+    C[8] inv;
+    inverseFft(fft1[], inv[]);
     assert(isClose(inv[].map!"a.re", arr[], 1e-6));
     assert(inv[].map!"a.im".maxElement < 1e-10);
 }
