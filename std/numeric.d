@@ -3483,6 +3483,21 @@ private:
 
 public:
 
+    /// Returns the size of a lookup table required for the given FFT size.
+    static size_t lookupTableSize(size_t fftSize) @nogc nothrow => fftSize*2;
+
+    ///
+    unittest {
+        enum size = 8;
+        float[size] arr = [1,2,3,4,5,6,7,8];
+        Complex!float[size] fft1;
+
+        lookup_t[FFT.lookupTableSize(size)] buff;
+        auto fft = FFT(buff);
+
+        fft.compute(arr[], fft1[]);
+    }
+
     /**Create an `FFT` object for computing fast Fourier transforms of
      * power of two sizes of `size` or smaller.  `size` must be a
      * power of two.
@@ -3493,7 +3508,7 @@ public:
     }
 
     /**This constructor takes a preallocated buffer for a lookup table.
-     * The table must be twice as big as the desired FFT size.
+     * Use `lookupTableSize` to calculate the required buffer size.
      *
      * Unsafe because the `memSpace` buffer will be cast to `immutable`.
      */
@@ -4210,14 +4225,15 @@ void inverseFft(Ret, R)(R range, Ret buf)
 {
     static struct C { float re, im; }
 
-    float[8] arr = [1,2,3,4,5,6,7,8];
-    C[8] fft1;
-    C[8] inv;
+    enum size = 8;
+    float[size] arr = [1,2,3,4,5,6,7,8];
+    C[size] fft1;
+    C[size] inv;
 
     fft(arr[], fft1[]);
     inverseFft(fft1[], inv[]);
 
-    lookup_t[16] buff;
+    lookup_t[FFT.lookupTableSize(size)] buff;
     auto fft = FFT(buff);
 
     fft.compute(arr[], fft1[]);
