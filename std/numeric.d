@@ -3869,7 +3869,7 @@ public:
         else
         {
             immutable bufferSize = 2*size;
-            this.pStorage = cast(lookup_t*)malloc(lookup_t.sizeof*bufferSize);
+            this.pStorage = cast(lookup_t*) malloc(lookup_t.sizeof*bufferSize);
             if (!this.pStorage)
             {
                 onOutOfMemoryError();
@@ -3946,7 +3946,7 @@ public:
             }
         }
 
-        this.table = cast(immutable)memSpace;
+        this.table = cast(immutable) memSpace;
     }
 
     ///
