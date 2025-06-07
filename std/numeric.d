@@ -3706,6 +3706,7 @@ public:
     this(size_t size)
     {
         import core.stdc.stdlib;
+        import core.exception : onOutOfMemoryError;
         if (size == 0)
         {
             this([]);
@@ -3713,6 +3714,9 @@ public:
         else {
             immutable bufferSize = 2*size;
             this.pStorage = cast(lookup_t*)malloc(lookup_t.sizeof*bufferSize);
+            if (!this.pStorage) {
+                onOutOfMemoryError();
+            }
             this(pStorage[0..bufferSize]);
         }
     }
