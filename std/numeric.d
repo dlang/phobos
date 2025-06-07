@@ -3487,7 +3487,8 @@ public:
     static size_t lookupTableSize(size_t fftSize) @nogc nothrow => fftSize*2;
 
     ///
-    unittest {
+    unittest
+    {
         enum size = 8;
         float[size] arr = [1,2,3,4,5,6,7,8];
         Complex!float[size] fft1;
@@ -3865,10 +3866,12 @@ public:
         {
             this([]);
         }
-        else {
+        else
+        {
             immutable bufferSize = 2*size;
             this.pStorage = cast(lookup_t*)malloc(lookup_t.sizeof*bufferSize);
-            if (!this.pStorage) {
+            if (!this.pStorage)
+            {
                 onOutOfMemoryError();
             }
             this(pStorage[0..bufferSize]);
