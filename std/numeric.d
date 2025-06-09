@@ -3994,7 +3994,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
     return fftObj.computeInverse!(Ret, R)(range, buf);
 }
 
-@system unittest
+pure @system unittest
 {
     import std.algorithm;
     import std.conv;
@@ -4065,7 +4065,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
 }
 
 // https://github.com/dlang/phobos/issues/10796
-@system unittest
+pure @system unittest
 {
     import std.algorithm;
     import std.range;
@@ -4085,7 +4085,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
 }
 
 // https://github.com/dlang/phobos/issues/10798
-@nogc nothrow @system unittest
+@nogc nothrow pure @system unittest
 {
     static struct C { float re, im; }
 
