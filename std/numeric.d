@@ -3544,6 +3544,14 @@ private:
         }
     }
 
+    this(return scope lookup_t[] memSpace) @nogc nothrow pure
+    in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
+            "Can only do FFTs on ranges with a size that is a power of two.")
+    {
+        fillLookupTable(memSpace);
+        this.table = cast(immutable) memSpace;
+    }
+
     void fftImpl(Ret, R)(Stride!R range, Ret buf) const
     in
     {
@@ -3759,8 +3767,10 @@ private:
 
 public:
 
-    /// Returns the size of a lookup table required for the given FFT size.
-    static size_t lookupTableSize(size_t fftSize) @nogc nothrow => fftSize*2;
+    /// Returns the size of a buffer required for the given FFT size.
+    static size_t requiredBufferSize(size_t fftSize) @nogc nothrow pure {
+        return lookup_t.sizeof*fftSize*2;
+    }
 
     ///
     @system unittest
@@ -3770,8 +3780,8 @@ public:
         float[size] arr = [1,2,3,4,5,6,7,8];
         Complex!float[size] fft1;
 
-        lookup_t[FFT.lookupTableSize(size)] buff;
-        auto fft = FFT(buff);
+        ubyte[FFT.requiredBufferSize(size)] buff;
+        auto fft = FFT(size, buff);
 
         fft.compute(arr[], fft1[]);
     }
@@ -3805,12 +3815,13 @@ public:
      *
      * Unsafe because the `memSpace` buffer will be cast to `immutable`.
      */
-    this(return scope lookup_t[] memSpace) @nogc nothrow pure
-    in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
+    this(size_t size, return scope void[] buffer) @nogc nothrow pure @system
+    in (size == 0 || isPowerOf2(size),
             "Can only do FFTs on ranges with a size that is a power of two.")
+    in (buffer.length == requiredBufferSize(size))
     {
-        fillLookupTable(memSpace);
-        this.table = cast(immutable) memSpace;
+        auto memSpace = cast(lookup_t[]) buffer;
+        this(memSpace);
     }
 
     ///
@@ -4100,8 +4111,8 @@ pure @system unittest
     fft(arr[], fft1[]);
     inverseFft(fft1[], inv[]);
 
-    lookup_t[FFT.lookupTableSize(size)] buff;
-    auto fft = FFT(buff);
+    ubyte[FFT.requiredBufferSize(size)] buff;
+    auto fft = FFT(size, buff);
 
     fft.compute(arr[], fft1[]);
     fft.computeInverse(fft1[], inv[]);
