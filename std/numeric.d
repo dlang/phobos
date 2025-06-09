@@ -3357,8 +3357,7 @@ if (!isIntegral!T &&
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "isClose(inverseFft(fft(arr)), arr)" test even for
 // size 2 ^^ 22.
-/// Value type for `FFT` lookup table
-alias lookup_t = float;
+private alias lookup_t = float;
 
 /**A class for performing fast Fourier transforms of power of two sizes.
  * This class encapsulates a large amount of state that is reusable when
