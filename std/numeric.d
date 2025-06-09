@@ -3719,9 +3719,9 @@ public:
      * power of two sizes of `size` or smaller.  `size` must be a
      * power of two.
      */
-    this(size_t size) @nogc nothrow
+    this(size_t size) @nogc nothrow pure
     {
-        import core.stdc.stdlib : malloc;
+        import core.memory : pureMalloc;
         import core.exception : onOutOfMemoryError;
         if (size == 0)
         {
@@ -3730,7 +3730,7 @@ public:
         else
         {
             immutable bufferSize = 2*size;
-            this.pStorage = cast(lookup_t*) malloc(lookup_t.sizeof*bufferSize);
+            this.pStorage = cast(lookup_t*) pureMalloc(lookup_t.sizeof*bufferSize);
             if (!this.pStorage)
             {
                 onOutOfMemoryError();
@@ -3744,7 +3744,7 @@ public:
      *
      * Unsafe because the `memSpace` buffer will be cast to `immutable`.
      */
-    this(return scope lookup_t[] memSpace) @nogc nothrow
+    this(return scope lookup_t[] memSpace) @nogc nothrow pure
     in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
             "Can only do FFTs on ranges with a size that is a power of two.")
     {
@@ -3814,13 +3814,13 @@ public:
     @disable this(ref FFT);
 
     ///
-    ~this() @nogc nothrow
+    ~this() @nogc nothrow pure
     {
-        import core.stdc.stdlib : free;
-        free(pStorage);
+        import core.memory : pureFree;
+        pureFree(pStorage);
     }
 
-    @property size_t size() const @nogc nothrow => table.length/2;
+    @property size_t size() const @nogc nothrow pure => table.length/2;
 
     /**Compute the Fourier transform of range using the $(BIGOH N log N)
      * Cooley-Tukey Algorithm.  `range` must be a random-access range with
@@ -4099,6 +4099,21 @@ void inverseFft(Ret, R)(R range, Ret buf)
 
     lookup_t[FFT.lookupTableSize(size)] buff;
     auto fft = FFT(buff);
+
+    fft.compute(arr[], fft1[]);
+    fft.computeInverse(fft1[], inv[]);
+}
+
+@nogc nothrow pure @system unittest
+{
+    static struct C { float re, im; }
+
+    enum size = 8;
+    float[size] arr = [1,2,3,4,5,6,7,8];
+    C[size] fft1;
+    C[size] inv;
+
+    immutable fft = FFT(size);
 
     fft.compute(arr[], fft1[]);
     fft.computeInverse(fft1[], inv[]);
