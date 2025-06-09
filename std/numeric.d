@@ -3767,8 +3767,14 @@ private:
 public:
 
     /// Returns the size of a buffer required for the given FFT size.
-    static size_t requiredBufferSize(size_t fftSize) @nogc nothrow pure @safe {
-        return lookup_t.sizeof*fftSize*2;
+    static size_t requiredBufferSize(size_t fftSize) @nogc nothrow pure @safe
+    {
+        import core.checkedint : mulu;
+        immutable nitems = fftSize*2;
+        bool overflow;
+        immutable nbytes = mulu(nitems, lookup_t.sizeof, overflow);
+        if (overflow) assert(false, "multiplication overflowed");
+        return nbytes;
     }
 
     ///
@@ -3790,7 +3796,7 @@ public:
      * power of two.
      */
     this(size_t size) @nogc nothrow pure @safe
-	in (size == 0 || isPowerOf2(size),
+    in (size == 0 || isPowerOf2(size),
             "Can only do FFTs on ranges with a size that is a power of two.")
     {
         import core.memory : pureMalloc;
