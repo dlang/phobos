@@ -3483,6 +3483,67 @@ private:
     lookup_t* pStorage;
     immutable(lookup_t)[] table;
 
+    /* Create a lookup table of all negative sine values at a resolution of
+     * size and all smaller power of two resolutions. This may seem
+     * inefficient, but having all the lookups be next to each other in
+     * memory at every level of iteration is a huge win performance-wise.
+     *
+     * Lookups are stored in a dense triangular array:
+     * [
+     *     nan, // never used
+     *     nan,
+     *     0, 0,
+     *     0, -1, 0, 1,
+     *     0, -0.7, -1, -0.7, 0, 0.7, 1, 0.7,
+     *     ...
+     * ]
+     * The index of the `i`th lookup is `2^^i` and the length is also `2^^i`.
+     */
+    static void fillLookupTable(scope lookup_t[] memSpace) @nogc nothrow pure
+    {
+    if (memSpace.length == 0)
+        {
+            return;
+        }
+
+        immutable size = memSpace.length / 2;
+
+        memSpace[0 .. 2] = float.nan;
+
+        auto lastRow = memSpace[$ - size .. $];
+        lastRow[0] = 0;  // -sin(0) == 0.
+        foreach (ptrdiff_t i; 1 .. size)
+        {
+            // The hard coded cases are for improved accuracy and to prevent
+            // annoying non-zeroness when stuff should be zero.
+
+            if (i == size / 4)
+                lastRow[i] = -1;  // -sin(pi / 2) == -1.
+            else if (i == size / 2)
+                lastRow[i] = 0;   // -sin(pi) == 0.
+            else if (i == size * 3 / 4)
+                lastRow[i] = 1;  // -sin(pi * 3 / 2) == 1
+            else
+                lastRow[i] = -sin(i * 2.0L * PI / size);
+        }
+
+        // Fill in all the other rows with strided versions.
+        immutable tableSize = bsf(size) + 1;
+        foreach (i; 1 .. tableSize - 1)
+        {
+            immutable idx = 1 << i, len = 1 << i;
+            auto lookup = memSpace[idx .. idx+len];
+
+            immutable strideLength = size / (1 << i);
+            auto strided = Stride!(lookup_t[])(lastRow, strideLength);
+            size_t copyIndex;
+            foreach (elem; strided)
+            {
+                lookup[copyIndex++] = elem;
+            }
+        }
+    }
+
     void fftImpl(Ret, R)(Stride!R range, Ret buf) const
     in
     {
@@ -3748,65 +3809,7 @@ public:
     in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
             "Can only do FFTs on ranges with a size that is a power of two.")
     {
-        if (memSpace.length == 0)
-        {
-            return;
-        }
-
-        immutable size = memSpace.length / 2;
-
-        /* Create a lookup table of all negative sine values at a resolution of
-         * size and all smaller power of two resolutions. This may seem
-         * inefficient, but having all the lookups be next to each other in
-         * memory at every level of iteration is a huge win performance-wise.
-         *
-         * Lookups are stored in a dense triangular array:
-         * [
-         *     nan, // never used
-         *     nan,
-         *     0, 0,
-         *     0, -1, 0, 1,
-         *     0, -0.7, -1, -0.7, 0, 0.7, 1, 0.7,
-         *     ...
-         * ]
-         * The index of the `i`th lookup is `2^^i` and the length is also `2^^i`.
-         */
-
-        memSpace[0 .. 2] = float.nan;
-
-        auto lastRow = memSpace[$ - size .. $];
-        lastRow[0] = 0;  // -sin(0) == 0.
-        foreach (ptrdiff_t i; 1 .. size)
-        {
-            // The hard coded cases are for improved accuracy and to prevent
-            // annoying non-zeroness when stuff should be zero.
-
-            if (i == size / 4)
-                lastRow[i] = -1;  // -sin(pi / 2) == -1.
-            else if (i == size / 2)
-                lastRow[i] = 0;   // -sin(pi) == 0.
-            else if (i == size * 3 / 4)
-                lastRow[i] = 1;  // -sin(pi * 3 / 2) == 1
-            else
-                lastRow[i] = -sin(i * 2.0L * PI / size);
-        }
-
-        // Fill in all the other rows with strided versions.
-        immutable tableSize = bsf(size) + 1;
-        foreach (i; 1 .. tableSize - 1)
-        {
-            immutable idx = 1 << i, len = 1 << i;
-            auto lookup = memSpace[idx .. idx+len];
-
-            immutable strideLength = size / (1 << i);
-            auto strided = Stride!(lookup_t[])(lastRow, strideLength);
-            size_t copyIndex;
-            foreach (elem; strided)
-            {
-                lookup[copyIndex++] = elem;
-            }
-        }
-
+        fillLookupTable(memSpace);
         this.table = cast(immutable) memSpace;
     }
 
