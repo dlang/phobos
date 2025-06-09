@@ -3498,7 +3498,7 @@ private:
      * ]
      * The index of the `i`th lookup is `2^^i` and the length is also `2^^i`.
      */
-    static void fillLookupTable(scope lookup_t[] memSpace) @nogc nothrow pure
+    static void fillLookupTable(scope lookup_t[] memSpace) @nogc nothrow pure @safe
     {
     if (memSpace.length == 0)
         {
@@ -3543,7 +3543,7 @@ private:
         }
     }
 
-    this(return scope lookup_t[] memSpace) @nogc nothrow pure
+    this(return scope lookup_t[] memSpace) @nogc nothrow pure @trusted
     in (memSpace.length == 0 || isPowerOf2(memSpace.length/2),
             "Can only do FFTs on ranges with a size that is a power of two.")
     {
@@ -3767,7 +3767,7 @@ private:
 public:
 
     /// Returns the size of a buffer required for the given FFT size.
-    static size_t requiredBufferSize(size_t fftSize) @nogc nothrow pure {
+    static size_t requiredBufferSize(size_t fftSize) @nogc nothrow pure @safe {
         return lookup_t.sizeof*fftSize*2;
     }
 
@@ -3789,7 +3789,9 @@ public:
      * power of two sizes of `size` or smaller.  `size` must be a
      * power of two.
      */
-    this(size_t size) @nogc nothrow pure
+    this(size_t size) @nogc nothrow pure @safe
+	in (size == 0 || isPowerOf2(size),
+            "Can only do FFTs on ranges with a size that is a power of two.")
     {
         import core.memory : pureMalloc;
         import core.exception : onOutOfMemoryError;
@@ -3799,13 +3801,12 @@ public:
         }
         else
         {
-            immutable bufferSize = 2*size;
-            this.pStorage = cast(lookup_t*) pureMalloc(lookup_t.sizeof*bufferSize);
-            if (!this.pStorage)
-            {
-                onOutOfMemoryError();
-            }
-            this(pStorage[0 .. bufferSize]);
+            immutable nbytes = requiredBufferSize(size);
+            this.pStorage = (() @trusted => cast(lookup_t*) pureMalloc(nbytes))();
+            if (!this.pStorage) { onOutOfMemoryError(); }
+            immutable nitems = nbytes/lookup_t.sizeof;
+            lookup_t[] memSpace = (() @trusted => this.pStorage[0 .. nitems])();
+            this(memSpace);
         }
     }
 
@@ -3827,13 +3828,13 @@ public:
     @disable this(ref FFT);
 
     ///
-    ~this() @nogc nothrow pure
+    ~this() @nogc nothrow pure @safe
     {
         import core.memory : pureFree;
-        pureFree(pStorage);
+        (() @trusted => pureFree(pStorage))();
     }
 
-    @property size_t size() const @nogc nothrow pure => table.length/2;
+    @property size_t size() const @nogc nothrow pure @safe => table.length/2;
 
     /**Compute the Fourier transform of range using the $(BIGOH N log N)
      * Cooley-Tukey Algorithm.  `range` must be a random-access range with
@@ -4117,7 +4118,7 @@ pure @system unittest
     fft.computeInverse(fft1[], inv[]);
 }
 
-@nogc nothrow pure @system unittest
+@nogc nothrow pure @safe unittest
 {
     static struct C { float re, im; }
 
@@ -4125,6 +4126,9 @@ pure @system unittest
     float[size] arr = [1,2,3,4,5,6,7,8];
     C[size] fft1;
     C[size] inv;
+
+    fft(arr[], fft1[]);
+    inverseFft(fft1[], inv[]);
 
     immutable fft = FFT(size);
 
