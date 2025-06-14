@@ -3463,7 +3463,7 @@ public:
 }
 
 /**A struct for performing fast Fourier transforms of power of two sizes.
- * This class encapsulates a large amount of state that is reusable when
+ * This struct encapsulates a large amount of state that is reusable when
  * performing multiple FFTs of sizes smaller than or equal to that specified
  * in the constructor. This results in substantial speedups when performing
  * multiple FFTs with a known maximum size.  However,
@@ -3818,8 +3818,6 @@ public:
 
     /**This constructor takes a preallocated buffer for a lookup table.
      * Use `lookupTableSize` to calculate the required buffer size.
-     *
-     * Unsafe because the `memSpace` buffer will be cast to `immutable`.
      */
     this(size_t size, return scope void[] buffer) @nogc nothrow pure @system
     in (size == 0 || isPowerOf2(size),
@@ -3981,11 +3979,6 @@ public:
 
 /**Convenience functions that create an `Fft` object, run the FFT or inverse
  * FFT and return the result.  Useful for one-off FFTs.
- *
- * Note:  In addition to convenience, these functions are slightly more
- *        efficient than manually creating an Fft object for a single use,
- *        as the Fft object is deterministically destroyed before these
- *        functions return.
  */
 Complex!F[] fft(F = double, R)(R range)
 {
