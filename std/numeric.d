@@ -4333,7 +4333,7 @@ in (buf.length == 2)
         buf[0].im = range[0].im + range[1].im;
         buf[1].re = range[0].re - range[1].re;
         buf[1].im = range[0].im - range[1].im;
-}
+    }
 }
 
 // Hard-coded base case for FFT of size 4.  Doesn't work as well as the size
