@@ -3959,7 +3959,7 @@ void inverseFft(Ret, R)(R range, Ret buf)
     return fftObj.computeInverse!(Ret, R)(range, buf);
 }
 
-pure @system unittest
+pure @safe unittest
 {
     import std.algorithm;
     import std.conv;
@@ -4030,7 +4030,7 @@ pure @system unittest
 }
 
 // https://github.com/dlang/phobos/issues/10796
-pure @system unittest
+pure @safe unittest
 {
     import std.algorithm;
     import std.range;
