@@ -3479,7 +3479,7 @@ struct FFT
     import std.algorithm.iteration : map;
 
 private:
-    lookup_t* pStorage;
+    immutable(lookup_t)* pStorage;
     immutable(lookup_t)[] table;
 
     /* Create a lookup table of all negative sine values at a resolution of
@@ -3808,11 +3808,12 @@ public:
         else
         {
             immutable nbytes = requiredBufferSize(size);
-            this.pStorage = (() @trusted => cast(lookup_t*) pureMalloc(nbytes))();
-            if (!this.pStorage) { onOutOfMemoryError(); }
+            auto p = (() @trusted => cast(lookup_t*) pureMalloc(nbytes))();
+            if (!p) { onOutOfMemoryError(); }
             immutable nitems = nbytes/lookup_t.sizeof;
-            lookup_t[] memSpace = (() @trusted => this.pStorage[0 .. nitems])();
+            lookup_t[] memSpace = (() @trusted => p[0 .. nitems])();
             this(memSpace);
+            this.pStorage = (() @trusted => cast(immutable) p)();
         }
     }
 
@@ -3835,7 +3836,7 @@ public:
     ~this() @nogc nothrow pure @safe
     {
         import core.memory : pureFree;
-        (() @trusted => pureFree(pStorage))();
+        (() @trusted => pureFree(cast(lookup_t*) pStorage))();
     }
 
     @property size_t size() const @nogc nothrow pure @safe => table.length/2;
