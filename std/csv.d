@@ -147,45 +147,54 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() @safe pure const
+    alias toString = typeof(super).toString; // pull into overload set
+
+    override void toString(scope void delegate(in char[]) sink) const
     {
-        return "(Row: " ~ to!string(row) ~
-              ", Col: " ~ to!string(col) ~ ") " ~ msg;
+        sink("(Row: ");
+        sink(to!string(row));
+        sink(", Col: ");
+        sink(to!string(col));
+        sink(") ");
+        super.toString(sink);
     }
 }
 
 ///
-@safe unittest
+@system unittest
 {
     import std.exception : collectException;
-    import std.algorithm.searching : count;
+    import std.algorithm.searching : count, startsWith, canFind;
     string text = "a,b,c\nHello,65";
     auto ex = collectException!CSVException(csvReader(text).count);
-    assert(ex.toString == "(Row: 0, Col: 0) Row 2's length 2 does not match previous length of 3.");
+    assert(ex.toString.startsWith("(Row: 0, Col: 0) ") &&
+        ex.toString.canFind("Row 2's length 2 does not match previous length of 3."));
 }
 
 ///
-@safe unittest
+@system unittest
 {
     import std.exception : collectException;
-    import std.algorithm.searching : count;
+    import std.algorithm.searching : count, startsWith, canFind;
     import std.typecons : Tuple;
     string text = "a,b\nHello,65";
     auto ex = collectException!CSVException(csvReader!(Tuple!(string,int))(text).count);
-    assert(ex.toString == "(Row: 1, Col: 2) Unexpected 'b' when converting from type string to type int");
+    assert(ex.toString.startsWith("(Row: 1, Col: 2) ") &&
+        ex.toString.canFind("Unexpected 'b' when converting from type string to type int"));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=24478
-@safe unittest
+@system unittest
 {
     import std.exception : collectException;
-    import std.algorithm.searching : count;
+    import std.algorithm.searching : count, startsWith, canFind;
     string text = "A, B\n1, 2, 3";
     auto ex = collectException!CSVException(csvReader!(string[string])(text, null).count);
-    assert(ex.toString == "(Row: 1, Col: 3) row contains more values than header");
+    assert(ex.toString.startsWith("(Row: 1, Col: 3) ") &&
+        ex.toString.canFind("row contains more values than header"));
 }
 
-@safe pure unittest
+@system unittest
 {
     import std.string;
     auto e1 = new Exception("Foobar");
@@ -202,6 +211,20 @@ class CSVException : Exception
     auto em = e3.toString();
     assert(em.indexOf("13") != -1);
     assert(em.indexOf("37") != -1);
+}
+
+// https://github.com/dlang/phobos/issues/10806
+@system unittest
+{
+    import std.exception : collectException;
+    import std.algorithm.searching : count, canFind;
+    string text = "a,b,c\nHello,65";
+    auto ex = collectException!CSVException(csvReader(text).count);
+    auto s1 = ex.toString();
+    string s2;
+    ex.toString((s) { s2 ~= s; });
+    assert(s1 == s2);
+    assert(s1.canFind("CSVException@"));
 }
 
 /**
