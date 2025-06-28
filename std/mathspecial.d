@@ -119,7 +119,6 @@ real logGamma(real x)
  */
 real sgnGamma(real x)
 {
-    import core.math : rndtol;
     /* Author: Don Clugston. */
     if (isNaN(x)) return x;
     if (x > 0) return 1.0;
@@ -128,7 +127,7 @@ real sgnGamma(real x)
         // Large negatives lose all precision
         return real.nan;
     }
-    long n = rndtol(x);
+    long n = cast(long) trunc(x);
     if (x == n)
     {
         return x == 0 ?  copysign(1, x) : real.nan;
@@ -141,6 +140,7 @@ real sgnGamma(real x)
     assert(sgnGamma(5.0) == 1.0);
     assert(isNaN(sgnGamma(-3.0)));
     assert(sgnGamma(-0.1) == -1.0);
+    assert(sgnGamma(-0.6) == -1.0);
     assert(sgnGamma(-55.1) == 1.0);
     assert(isNaN(sgnGamma(-real.infinity)));
     assert(isIdentical(sgnGamma(NaN(0xABC)), NaN(0xABC)));
