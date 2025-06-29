@@ -88,6 +88,14 @@ struct RBNode(V)
     private Node _right;
     private Node _parent;
 
+    private this(Node left, Node right, Node parent, V value)
+    {
+        this._left = left;
+        this._right = right;
+        this._parent = parent;
+        this.value = value;
+    }
+
     /**
      * The value held by this node
      */
@@ -2259,4 +2267,18 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     auto t = new RedBlackTree!(int, delegate(a, b) => a > b);
     t.insert([1, 3, 5, 4, 2]);
     assert(t[].equal([5, 4, 3, 2, 1]));
+}
+
+// struct with move constructor
+@safe unittest
+{
+    static struct S {
+        int i;
+        this(S s) { this.i = s.i; }
+        this(int i) { this.i = i; }
+        int opCmp(ref const S other) const @safe nothrow  { return i - other.i; }
+    }
+
+    auto tree = new RedBlackTree!(S, "a.i < b.i", false);
+    tree.insert(S(0));
 }
