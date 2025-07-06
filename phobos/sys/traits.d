@@ -63,9 +63,6 @@
               $(LREF isType)
               $(LREF isUnsignedInteger)
     ))
-    $(TR $(TD Aggregate Type traits) $(TD
-              $(LREF EnumMembers)
-    ))
     $(TR $(TD Traits testing for type conversions) $(TD
               $(LREF isImplicitlyConvertible)
               $(LREF isQualifierConvertible)
@@ -74,6 +71,9 @@
               $(LREF isEqual)
               $(LREF isSameSymbol)
               $(LREF isSameType)
+    ))
+    $(TR $(TD Function traits) $(TD
+              $(LREF ToFunctionType)
     ))
     $(TR $(TD Aggregate Type Traits) $(TD
               $(LREF FieldNames)
@@ -87,6 +87,8 @@
     $(TR $(TD General Types) $(TD
               $(LREF KeyType)
               $(LREF OriginalType)
+              $(LREF PropertyType)
+              $(LREF SymbolType)
               $(LREF ValueType)
     ))
     $(TR $(TD Traits for removing type qualfiers) $(TD
@@ -101,6 +103,7 @@
               $(LREF SharedOf)
     ))
     $(TR $(TD Misc) $(TD
+              $(LREF EnumMembers)
               $(LREF lvalueOf)
               $(LREF rvalueOf)
     ))
@@ -2575,6 +2578,216 @@ template isSameType(T)
     import phobos.sys.meta : AliasSeq, indexOf;
     alias Types = AliasSeq!(float, string, int, double);
     static assert(indexOf!(isSameType!int, Types) == 2);
+}
+
+/++
+    Converts a function type, function pointer type, or delegate type to the
+    corresponding function type.
+
+    For a function, the result is the same as the given type.
+
+    For a function pointer or delegate, the result is the same as it would be
+    for a function with the same return type, the same set of parameters, and
+    the same set of attributes.
+
+    Another way to look at it would be that it's the type that comes from
+    dereferencing the function pointer. And while it's not technically possible
+    to dereference a delegate, it's conceptually the same thing, since a
+    delegate is essentially a fat pointer to a function in the sense that it
+    contains a pointer to a function and a pointer to the function's context.
+    The result of ToFunctionType is the type of that function.
+
+    Note that code which has a symbol which is a function should use
+    $(LREF SymbolType) rather than $(K_TYPEOF) to get the type of the function
+    in order to avoid issues with regards to $(K_PROPERTY) (see the
+    documentation for $(LREF SymbolType) for details).
+
+    See_Also:
+        $(LREF SymbolType)
+  +/
+template ToFunctionType(T)
+if (is(T == return))
+{
+    // Function pointers.
+    static if (is(T == U*, U) && is(U == function))
+        alias ToFunctionType = U;
+    // Delegates.
+    else static if (is(T U == delegate))
+        alias ToFunctionType = U;
+    // Functions.
+    else
+        alias ToFunctionType = T;
+}
+
+///
+@safe unittest
+{
+    static string func(int) { return ""; }
+    auto funcPtr = &func;
+
+    static assert( is(ToFunctionType!(SymbolType!func) == SymbolType!func));
+    static assert( is(ToFunctionType!(SymbolType!funcPtr) == SymbolType!func));
+    static assert(!is(SymbolType!funcPtr == function));
+    static assert( is(ToFunctionType!(SymbolType!funcPtr) == function));
+
+    int var;
+    int funcWithContext(string) { return var; }
+    auto funcDel = &funcWithContext;
+
+    static assert( is(ToFunctionType!(SymbolType!funcWithContext) ==
+                      SymbolType!funcWithContext));
+    static assert( is(ToFunctionType!(SymbolType!funcDel) ==
+                      SymbolType!funcWithContext));
+    static assert( is(SymbolType!funcWithContext == function));
+    static assert(!is(SymbolType!funcDel == function));
+    static assert( is(SymbolType!funcDel == delegate));
+    static assert( is(ToFunctionType!(SymbolType!funcDel) == function));
+
+    static @property int prop() { return 0; }
+    static assert( is(SymbolType!prop == function));
+    static assert(!is(SymbolType!prop == delegate));
+    static assert( is(SymbolType!prop == return));
+    static assert( is(SymbolType!prop ==
+                      ToFunctionType!(int function() @property @safe pure
+                                                     nothrow @nogc)));
+    static assert( is(ToFunctionType!(SymbolType!prop) == SymbolType!prop));
+
+    // This is an example of why SymbolType should be used rather than typeof
+    // when using ToFunctionType (or getting the type of any symbol which might
+    // be a function when you want the actual type of the symbol and don't want
+    // to end up with its return type instead).
+    static assert( is(typeof(prop) == int));
+    static assert(!is(typeof(prop) == function));
+    static assert(!__traits(compiles, ToFunctionType!(typeof(prop))));
+
+    auto propPtr = &prop;
+    static assert(!is(typeof(propPtr) == function));
+    static assert(!is(SymbolType!propPtr == function));
+    //static assert( isFunctionPointer!(typeof(propPtr))); // commented out until isFunctionPointer is added
+    static assert( is(ToFunctionType!(SymbolType!propPtr) == function));
+
+    static assert( is(SymbolType!propPtr ==
+                      int function() @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(SymbolType!propPtr) ==
+                      int function() @property @safe pure nothrow @nogc));
+    static assert( is(ToFunctionType!(SymbolType!propPtr) ==
+                      ToFunctionType!(int function() @property @safe pure
+                                                     nothrow @nogc)));
+
+    @property void propWithContext(int i) { var += i; }
+    static assert( is(SymbolType!propWithContext == function));
+    static assert( is(SymbolType!propWithContext ==
+                      ToFunctionType!(void function(int) @property @safe pure
+                                                         nothrow @nogc)));
+    static assert( is(ToFunctionType!(SymbolType!propWithContext) ==
+                      SymbolType!propWithContext));
+
+    // typeof fails to compile with setter properties, complaining about there
+    // not being enough arguments, because it's treating the function as an
+    // expression - and since such an expression would call the function, the
+    // expression isn't valid if there aren't enough function arguments.
+    static assert(!__traits(compiles, typeof(propWithContext)));
+
+    auto propDel = &propWithContext;
+    static assert(!is(SymbolType!propDel == function));
+    static assert( is(SymbolType!propDel == delegate));
+    static assert( is(SymbolType!propDel == return));
+    static assert( is(ToFunctionType!(SymbolType!propDel) == function));
+    static assert( is(ToFunctionType!(SymbolType!propDel) ==
+                      SymbolType!propWithContext));
+
+    static assert( is(SymbolType!propDel ==
+                      void delegate(int) @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(SymbolType!propDel) ==
+                      void delegate(int) @property @safe pure nothrow @nogc));
+    static assert(!is(ToFunctionType!(SymbolType!propDel) ==
+                      void function(int) @property @safe pure nothrow @nogc));
+    static assert( is(ToFunctionType!(SymbolType!propDel) ==
+                      ToFunctionType!(void function(int) @property @safe pure
+                                                         nothrow @nogc)));
+
+    static struct S
+    {
+        string foo(int);
+        string bar(int, int);
+        @property void prop(string);
+    }
+
+    static assert( is(ToFunctionType!(SymbolType!(S.foo)) ==
+                      ToFunctionType!(string function(int))));
+    static assert( is(ToFunctionType!(SymbolType!(S.bar)) ==
+                      ToFunctionType!(string function(int, int))));
+    static assert( is(ToFunctionType!(SymbolType!(S.prop)) ==
+                      ToFunctionType!(void function(string) @property)));
+}
+
+@safe unittest
+{
+    // Unfortunately, in this case, we get linker errors when taking the address
+    // of the functions if we avoid inference by not giving function bodies.
+    // So if we don't want to list all of those attributes in the tests, we have
+    // to stop the inference in another way.
+    static int var;
+    static void killAttributes() @system { ++var; throw new Exception("message"); }
+
+    static struct S
+    {
+        int func1() { killAttributes(); return 0; }
+        void func2(int) { killAttributes(); }
+
+        static int func3() { killAttributes(); return 0; }
+        static void func4(int) { killAttributes(); }
+
+        @property int func5() { killAttributes(); return 0; }
+        @property void func6(int) { killAttributes(); }
+    }
+
+    static assert( is(SymbolType!(S.func1) == ToFunctionType!(int function())));
+    static assert( is(SymbolType!(S.func2) == ToFunctionType!(void function(int))));
+    static assert( is(SymbolType!(S.func3) == ToFunctionType!(int function())));
+    static assert( is(SymbolType!(S.func4) == ToFunctionType!(void function(int))));
+    static assert( is(SymbolType!(S.func5) == ToFunctionType!(int function() @property)));
+    static assert( is(SymbolType!(S.func6) == ToFunctionType!(void function(int) @property)));
+
+    static assert( is(ToFunctionType!(SymbolType!(S.func1)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(SymbolType!(S.func2)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(SymbolType!(S.func3)) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(SymbolType!(S.func4)) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(SymbolType!(S.func5)) == ToFunctionType!(int function() @property)));
+    static assert( is(ToFunctionType!(SymbolType!(S.func6)) ==
+                      ToFunctionType!(void function(int) @property)));
+
+    auto ptr1 = &S.init.func1;
+    auto ptr2 = &S.init.func2;
+    auto ptr3 = &S.func3;
+    auto ptr4 = &S.func4;
+    auto ptr5 = &S.init.func5;
+    auto ptr6 = &S.init.func6;
+
+    // For better or worse, static member functions can be accessed through
+    // instance of the type as well as through the type.
+    auto ptr3Instance = &S.init.func3;
+    auto ptr4Instance = &S.init.func4;
+
+    static assert( is(SymbolType!ptr1 == int delegate()));
+    static assert( is(SymbolType!ptr2 == void delegate(int)));
+    static assert( is(SymbolType!ptr3 == int function()));
+    static assert( is(SymbolType!ptr4 == void function(int)));
+    static assert( is(SymbolType!ptr5 == int delegate() @property));
+    static assert( is(SymbolType!ptr6 == void delegate(int) @property));
+
+    static assert( is(SymbolType!ptr3Instance == int function()));
+    static assert( is(SymbolType!ptr4Instance == void function(int)));
+
+    static assert( is(ToFunctionType!(SymbolType!ptr1) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(SymbolType!ptr2) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(SymbolType!ptr3) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(SymbolType!ptr4) == ToFunctionType!(void function(int))));
+    static assert( is(ToFunctionType!(SymbolType!ptr5) == ToFunctionType!(int function() @property)));
+    static assert( is(ToFunctionType!(SymbolType!ptr6) == ToFunctionType!(void function(int) @property)));
+
+    static assert( is(ToFunctionType!(SymbolType!ptr3Instance) == ToFunctionType!(int function())));
+    static assert( is(ToFunctionType!(SymbolType!ptr4Instance) == ToFunctionType!(void function(int))));
 }
 
 /++
@@ -5652,6 +5865,2951 @@ else
     class Derived : Base {}
     static assert(is(OriginalType!Base == Base));
     static assert(is(OriginalType!Derived == Derived));
+}
+
+/++
+    PropertyType evaluates to the type of the symbol as an expression (i.e. the
+    type of the expression when the symbol is used in an expression by itself),
+    and SymbolType evaluates to the type of the given symbol as a symbol (i.e.
+    the type of the symbol itself).
+
+    Unlike with $(K_TYPEOF), $(K_PROPERTY) has no effect on the result of
+    either PropertyType or SymbolType.
+
+    TLDR, PropertyType should be used when code is going to use a symbol as if
+    it were a getter property (without caring whether the symbol is a variable
+    or a function), and the code needs to know the type of that property and
+    $(I not) the type of the symbol itself (since with functions, they're not
+    the same thing). So, it's treating the symbol as an expression on its own
+    and giving the type of that expression rather than giving the type of the
+    symbol itself. And it's named PropertyType rather than something like
+    $(D ExpressionType), because it's used in situations where the code is
+    treating the symbol as a getter property, and it does not operate on
+    expressions in general. SymbolType should then be used in situations where
+    the code needs to know the type of the symbol itself.
+
+    As for why PropertyType and SymbolType are necessary, and $(K_TYPEOF) is
+    not sufficient, $(K_TYPEOF) gives both the types of symbols and the types
+    of expressions. When it's given something that's clearly an expression -
+    e.g. $(D typeof(foo + bar)) or $(D typeof(foo())), then the result is the
+    type of that expression. However, when $(K_TYPEOF) is given a symbol, what
+    $(K_TYPEOF) does depends on the symbol, which can make using it correctly
+    in generic code difficult.
+
+    For symbols that don't have types, naturally, $(K_TYPEOF) doesn't even
+    compile (e.g. $(D typeof(int)) won't compile, because in D, types don't
+    themselves have types), so the question is what happens with $(K_TYPEOF)
+    and symbols which do have types.
+
+    For symbols which have types and are not functions, what $(K_TYPEOF) does
+    is straightforward, because there is no difference between the type of the
+    symbol and the type of the expression - e.g. if $(D foo) is a variable of
+    type $(K_INT), then $(D typeof(foo)) would be $(K_INT), because the
+    variable itself is of type $(K_INT), and if the variable is used as an
+    expression (e.g. when it's returned from a function or passed to a
+    function), then that expression is also of type $(K_INT).
+
+    However, for functions (particularly functions which don't require
+    arguments), things aren't as straightforward. Should $(D typeof(foo)) give
+    the type of the function itself or the type of the expression? If parens
+    always had to be used when calling a function, then $(D typeof(foo)) would
+    clearly be the type of the function itself, whereas $(D typeof(foo()))
+    would be the type of the expression (which would be the return type of the
+    function so long as $(D foo) could be called with no arguments, and it
+    wouldn't compile otherwise, because the expression would be invalid).
+    However, because parens are optional when calling a function that has no
+    arguments, $(D typeof(foo)) is ambiguous. There's no way to know which the
+    programmer actually intended, but the compiler has to either make it an
+    error or choose between giving the type of the symbol or the type of the
+    expression.
+
+    So, the issue here is functions which can be treated as getter properties,
+    because they can be called without parens and thus syntactically look
+    exactly like a variable when they're used. Any function which requires
+    arguments (including when a function is used as a setter property) does not
+    have this problem, because it isn't a valid expression when used on its own
+    (it needs to be assigned to or called with parens in order to be a valid
+    expression).
+
+    What the compiler currently does when it encounters this ambiguity depends
+    on the $(K_PROPERTY) attribute. If the function does not have the
+    $(K_PROPERTY) attribute, then $(D typeof(foo)) will give the type of the
+    symbol - e.g. $(D int()) if the signature for $(D foo) were $(D int foo()).
+    However, if the function $(I does) have the $(K_PROPERTY) attribute, then
+    $(D typeof(foo)) will give the type of the expression. So, if $(D foo) were
+    $(D @property int foo()), then $(D typeof(foo)) would give $(K_INT) rather
+    than $(D int()). The idea behind this is that $(K_PROPERTY) functions are
+    supposed to act like variables, and using $(K_TYPEOF) on a variable of type
+    $(K_INT) would give $(K_INT), not $(D int()). So, with this behavior of
+    $(K_TYPEOF), a $(K_PROPERTY) function is closer to being a drop-in
+    replacement for a variable.
+
+    The problem with this though is two-fold. One, it means that $(K_TYPEOF)
+    cannot be relied on to give the type of the symbol when given a symbol on
+    its own, forcing code that needs the actual type of the symbol to work
+    around $(K_PROPERTY). And two, because parens are optional on functions
+    which can be called without arguments, whether the function is marked with
+    $(K_PROPERTY) or not is irrevelant to whether the symbol is going to be
+    used as if it were a variable, and so it's irrelevant to code that's trying
+    to get the type of the expression when the symbol is used like a getter
+    property. If optional parens were removed from the language (as was
+    originally the intent when $(K_PROPERTY) was introduced), then that would
+    fix the second problem, but it would still leave the first problem.
+
+    So, $(K_PROPERTY) is solving the problem in the wrong place. It's the code
+    doing the type introspection which needs to decide whether to get the type
+    of a symbol as if it were a getter property or whether to get the type of
+    the symbol itself. It's the type introspection code which knows which is
+    relevant for what it's doing, and a function could be used both in code
+    which needs to treat it as a getter property and in code which needs to get
+    the type of the symbol itself (e.g. because it needs to get the attributes
+    on the function).
+
+    All of this means that $(K_TYPEOF) by itself is unreliable when used on a
+    symbol. In practice, the programmer needs to indicate whether they want the
+    type of the symbol itself or the type of the symbol as a getter property in
+    an expression, and leaving it up to $(K_TYPEOF) is simply too error-prone.
+    So, ideally, $(K_TYPEOF) would be split up into two separate constructs,
+    but that would involve adding more keywords (and break a lot of existing
+    code if $(K_TYPEOF) were actually removed).
+
+    So, phobos.sys.traits provides SymbolType and PropertyType. They're both
+    traits that take a symbol and give the type for that symbol. However,
+    SymbolType gives the type of the symbol itself, whereas PropertyType gives
+    the type of the symbol as if it were used as a getter property in an
+    expression. Neither is affected by whether the symbol is marked with
+    $(K_PROPERTY). So, code that needs to get information about the symbol
+    itself should use SymbolType rather than $(K_TYPEOF) or PropertyType,
+    whereas code that needs to get the type of the symbol as a getter property
+    within an expression should use PropertyType.
+
+    The use of $(K_TYPEOF) should then be restricted to situations where code
+    is getting the type of an expression which isn't a symbol (or code where
+    it's already known that the symbol isn't a function). Also, since
+    template alias parameters only accept symbols, any expressions which aren't
+    symbols won't compile with SymbolType or PropertyType anyway.
+
+    SymbolType and PropertyType must be given a symbol which has a type (so,
+    not something like a type or an uninstantiated template). Symbols
+    which don't have types will fail the template constraint.
+
+    For both SymbolType and PropertyType, if they are given a symbol which has
+    a type, and that symbol is not a function, the result will be the same as
+    $(K_TYPEOF) (since in such cases, the type of the symbol and the type of
+    the expression are the same). The difference comes in with functions.
+
+    When SymbolType is given any symbol which is a function, the result will be
+    the type of the function itself regardless of whether the function is
+    marked with $(K_PROPERTY). This makes it so that in all situations where
+    the type of the symbol is needed, SymbolType can be used to get the type of
+    the symbol without having to worry about whether it's a function marked
+    with $(K_PROPERTY).
+
+    When PropertyType is given any function which can be used as a getter
+    property, the result will be the type of the symbol as an expression - i.e.
+    the return type of the function (in effect, this means that it treats all
+    functions as if they were marked with $(K_PROPERTY)). Whether the function
+    is actually marked with $(K_PROPERTY) or not is irrelevant.
+
+    If PropertyType is given any function which which cannot be used as a
+    getter property (i.e. it requires arguments or returns $(K_VOID)), the
+    template constraint will reject it, and PropertyType will fail to compile.
+    This is equivalent to what $(K_TYPEOF) does when it's given a $(K_PROPERTY)
+    function which is a setter, since it's not a valid expression on its own.
+
+    So, for $(D PropertyType!foo), if $(D foo) is a function, the result is
+    equivalent to $(D typeof(foo())) (and for non-functions, it's equivalent to
+    $(D typeof(foo))).
+
+    To summarize, SymbolType should be used when code needs to get the type of
+    the symbol itself; PropertyType should be used when code needs to get the
+    type of the symbol when it's used in an expression as a getter property
+    (generally because the code doesn't care whether the symbol is a variable
+    or a function); and $(K_TYPEOF) should be used when getting the type of an
+    expression which is not a symbol.
+
+    See_Also:
+        $(DDSUBLINK spec/type, typeof, The language spec for typeof)
+  +/
+template PropertyType(alias sym)
+if (is(typeof(sym)) && (!is(typeof(sym) == return) ||
+                        (is(typeof(sym())) && !is(typeof(sym()) == void))))
+{
+    // This handles functions which don't have a context pointer.
+    static if (is(typeof(&sym) == T*, T) && is(T == function))
+    {
+        // Note that we can't use is(T R == return) to get the return type,
+        // because the first overload isn't necessarily the getter function,
+        // and is(T R == return) will give us the first overload if the function
+        // doesn't have @property on it (whereas if it does have @property, it
+        // will give use the getter if there is one). However, we at least know
+        // that there's a getter function, because the template constraint
+        // validates that sym() compiles (and returns something) if it's a
+        // function, function pointer, or delegate.
+        alias PropertyType = typeof(sym());
+    }
+    // This handles functions which do have a context pointer.
+    else static if (is(typeof(&sym) T == delegate) && is(T R == return))
+    {
+        // See the comment above for why we can't get the return type the
+        // normal way.
+        alias PropertyType = typeof(sym());
+    }
+    // This handles everything which isn't a function.
+    else
+        alias PropertyType = typeof(sym);
+}
+
+/++ Ditto +/
+template SymbolType(alias sym)
+if (!is(sym))
+{
+    // This handles functions which don't have a context pointer.
+    static if (is(typeof(&sym) == T*, T) && is(T == function))
+        alias SymbolType = T;
+    // This handles functions which do have a context pointer.
+    else static if (is(typeof(&sym) T == delegate))
+        alias SymbolType = T;
+    // This handles everything which isn't a function.
+    else
+        alias SymbolType = typeof(sym);
+}
+
+///
+@safe unittest
+{
+    int i;
+    static assert( is(SymbolType!i == int));
+    static assert( is(PropertyType!i == int));
+    static assert( is(typeof(i) == int));
+
+    string str;
+    static assert( is(SymbolType!str == string));
+    static assert( is(PropertyType!str == string));
+    static assert( is(typeof(str) == string));
+
+    // ToFunctionType is used here to get around the fact that we don't have a
+    // way to write out function types in is expressions (whereas we can write
+    // out the type of a function pointer), which is a consequence of not being
+    // able to declare variables with a function type (as opposed to a function
+    // pointer type). That being said, is expressions are pretty much the only
+    // place where writing out a function type would make sense.
+
+    // The function type has more attributes than the function declaration,
+    // because the attributes are inferred for nested functions.
+
+    static string func() { return ""; }
+    static assert( is(SymbolType!func ==
+                      ToFunctionType!(string function()
+                                      @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!func == string));
+    static assert( is(typeof(func) == SymbolType!func));
+
+    int function() funcPtr;
+    static assert( is(SymbolType!funcPtr == int function()));
+    static assert( is(PropertyType!funcPtr == int function()));
+    static assert( is(typeof(funcPtr) == int function()));
+
+    int delegate() del;
+    static assert( is(SymbolType!del == int delegate()));
+    static assert( is(PropertyType!del == int delegate()));
+    static assert( is(typeof(del) == int delegate()));
+
+    @property static int prop() { return 0; }
+    static assert( is(SymbolType!prop ==
+                      ToFunctionType!(int function()
+                                      @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!prop == int));
+    static assert( is(typeof(prop) == PropertyType!prop));
+
+    // Functions which cannot be used as getter properties (i.e. they require
+    // arguments and/or return void) do not compile with PropertyType.
+    static int funcWithArg(int i) { return i; }
+    static assert( is(SymbolType!funcWithArg ==
+                      ToFunctionType!(int function(int)
+                                      @safe pure nothrow @nogc)));
+    static assert(!__traits(compiles, PropertyType!funcWithArg));
+    static assert( is(typeof(funcWithArg) == SymbolType!funcWithArg));
+
+    // Setter @property functions also don't work with typeof, because typeof
+    // gets the type of the expression rather than the type of the symbol when
+    // the symbol is a function with @property, and a setter property is not a
+    // valid expression on its own.
+    @property static void prop2(int) {}
+    static assert( is(SymbolType!prop2 ==
+                      ToFunctionType!(void function(int)
+                                      @property @safe pure nothrow @nogc)));
+    static assert(!__traits(compiles, PropertyType!prop2));
+    static assert(!__traits(compiles, typeof(prop2)));
+
+    // Expressions which aren't symbols don't work with alias parameters and
+    // thus don't work with SymbolType or PropertyType.
+    static assert(!__traits(compiles, PropertyType!(i + 42)));
+    static assert(!__traits(compiles, SymbolType!(i + 42)));
+    static assert( is(typeof(i + 42) == int));
+
+    // typeof will work with a function that takes arguments so long as it's
+    // used in a proper expression.
+    static assert( is(typeof(funcWithArg(42)) == int));
+    static assert( is(typeof(prop2 = 42) == void));
+    static assert( is(typeof(prop2(42)) == void));
+}
+
+/++
+    With templated types or functions, a specific instantiation should be
+    passed to SymbolType or PropertyType, not the symbol for the template
+    itself. If $(K_TYPEOF), SymbolType, or PropertyType is used on a template
+    (rather than an instantiation of the template), the result will be
+    $(K_VOID), because the template itself does not have a type.
+  +/
+@safe unittest
+{
+    static T func(T)() { return T.init; }
+
+    static assert(is(SymbolType!func == void));
+    static assert(is(PropertyType!func == void));
+    static assert(is(typeof(func) == void));
+
+    static assert(is(SymbolType!(func!int) ==
+                     ToFunctionType!(int function()
+                                     @safe pure nothrow @nogc)));
+    static assert(is(PropertyType!(func!int) == int));
+    static assert(is(typeof(func!int) == SymbolType!(func!int)));
+
+    static assert(is(SymbolType!(func!string) ==
+                     ToFunctionType!(string function()
+                                     @safe pure nothrow @nogc)));
+    static assert(is(PropertyType!(func!string) == string));
+    static assert(is(typeof(func!string) == SymbolType!(func!string)));
+}
+
+/++
+    If a function is overloaded, then when using it as a symbol to pass to
+    $(K_TYPEOF), the compiler typically selects the first overload. However, if
+    the functions are marked with $(K_PROPERTY), and one of the overloads is a
+    getter property, then $(K_TYPEOF) will select the getter property (or fail
+    to compile if they're all setter properties). This is because it's getting
+    the type of the function as an expression rather than doing introspection
+    on the function itself.
+
+    SymbolType always gives the type of the first overload (effectively ignoring
+    $(K_PROPERTY)), and PropertyType always gives the getter ovrerload
+    (effectively treating all functions as if they had $(K_PROPERTY)).
+
+    If code needs to get the symbol for a specific overload, then
+    $(DDSUBLINK spec/traits, getOverloads, $(D __traits(getOverloads, ...))
+    must be used.
+
+    In general, $(getOverloads) should be used when using SymbolType, since
+    there's no guarantee that the first one is the correct one (and often, code
+    will need to check all of the overloads), whereas with PropertyType, it
+    doesn't usually make sense to get specific overloads, because there can
+    only ever be one overload which works as a getter property, and using
+    PropertyType on the symbol for the function will give that overload if it's
+    present, regardless of which overload is first (and it will fail to compile
+    if there is no overload which can be called as a getter).
+  +/
+@safe unittest
+{
+    static struct S
+    {
+        string foo();
+        void foo(string);
+        bool foo(string, int);
+
+        @property void bar(int);
+        @property int bar();
+    }
+
+    {
+        static assert( is(SymbolType!(S.foo) ==
+                          ToFunctionType!(string function())));
+        static assert( is(PropertyType!(S.foo) == string));
+        static assert( is(typeof(S.foo) == SymbolType!(S.foo)));
+
+        alias overloads = __traits(getOverloads, S, "foo");
+
+        // string foo();
+        static assert( is(SymbolType!(overloads[0]) == function));
+        static assert( is(PropertyType!(overloads[0]) == string));
+        static assert( is(typeof(overloads[0]) == function));
+
+        static assert( is(SymbolType!(overloads[0]) ==
+                          ToFunctionType!(string function())));
+        static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+        // void foo(string);
+        static assert( is(SymbolType!(overloads[1]) == function));
+        static assert(!__traits(compiles, PropertyType!(overloads[1])));
+        static assert( is(typeof(overloads[1]) == function));
+
+        static assert( is(SymbolType!(overloads[1]) ==
+                          ToFunctionType!(void function(string))));
+        static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+        // void foo(string, int);
+        static assert( is(SymbolType!(overloads[2]) == function));
+        static assert(!__traits(compiles, PropertyType!(overloads[2])));
+        static assert( is(typeof(overloads[2]) == function));
+
+        static assert( is(SymbolType!(overloads[2]) ==
+                          ToFunctionType!(bool function(string, int))));
+        static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+    }
+    {
+        static assert( is(SymbolType!(S.bar) ==
+                          ToFunctionType!(void function(int) @property)));
+        static assert( is(PropertyType!(S.bar) == int));
+        static assert( is(typeof(S.bar) == PropertyType!(S.bar)));
+
+        alias overloads = __traits(getOverloads, S, "bar");
+
+        // @property void bar(int);
+        static assert( is(SymbolType!(overloads[0]) == function));
+        static assert(!__traits(compiles, PropertyType!(overloads[0])));
+        static assert(!__traits(compiles, typeof(overloads[0])));
+
+        static assert( is(SymbolType!(overloads[0]) ==
+                          ToFunctionType!(void function(int) @property)));
+
+        // @property int bar();
+        static assert( is(SymbolType!(overloads[1]) == function));
+        static assert( is(PropertyType!(overloads[1]) == int));
+        static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+
+        static assert( is(SymbolType!(overloads[1]) ==
+                          ToFunctionType!(int function() @property)));
+    }
+}
+
+@safe unittest
+{
+    {
+        string str;
+        int i;
+
+        static assert(!__traits(compiles, SymbolType!int));
+        static assert(!__traits(compiles, SymbolType!(str ~ "more str")));
+        static assert(!__traits(compiles, SymbolType!(i + 42)));
+        static assert(!__traits(compiles, SymbolType!(&i)));
+
+        static assert(!__traits(compiles, PropertyType!int));
+        static assert(!__traits(compiles, PropertyType!(str ~ "more str")));
+        static assert(!__traits(compiles, PropertyType!(i + 42)));
+        static assert(!__traits(compiles, PropertyType!(&i)));
+    }
+
+    static assert( is(SymbolType!42 == int));
+    static assert( is(SymbolType!"dlang" == string));
+
+    int var;
+
+    int funcWithContext() { return var; }
+    static assert( is(SymbolType!funcWithContext ==
+                      ToFunctionType!(int function()
+                                      @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!funcWithContext == int));
+    static assert( is(typeof(funcWithContext) == SymbolType!funcWithContext));
+
+    @property int propWithContext() { return var; }
+    static assert( is(SymbolType!propWithContext == function));
+    static assert( is(SymbolType!propWithContext ==
+                      ToFunctionType!(int function() @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!propWithContext == int));
+    static assert( is(typeof(propWithContext) == PropertyType!propWithContext));
+
+    // For those who might be confused by this sort of declaration, this is a
+    // property function which returns a function pointer that takes no
+    // arguments and returns int, which gets an even uglier signature when
+    // writing out the type for a pointer to such a property function.
+    static int function() propFuncPtr() @property { return null; }
+    static assert( is(SymbolType!propFuncPtr == function));
+    static assert( is(SymbolType!propFuncPtr ==
+                      ToFunctionType!(int function() function() @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!propFuncPtr == int function()));
+    static assert( is(typeof(propFuncPtr) == PropertyType!propFuncPtr));
+
+    static int delegate() propDel() @property { return null; }
+    static assert( is(SymbolType!propDel == function));
+    static assert( is(SymbolType!propDel ==
+                      ToFunctionType!(int delegate() function() @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!propDel == int delegate()));
+    static assert( is(typeof(propDel) == PropertyType!propDel));
+
+    int function() propFuncPtrWithContext() @property { ++var; return null; }
+    static assert( is(SymbolType!propFuncPtrWithContext == function));
+    static assert( is(SymbolType!propFuncPtrWithContext ==
+                      ToFunctionType!(int function() function() @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!propFuncPtrWithContext == int function()));
+    static assert( is(typeof(propFuncPtrWithContext) == PropertyType!propFuncPtrWithContext));
+
+    int delegate() propDelWithContext() @property { ++var; return null; }
+    static assert( is(SymbolType!propDelWithContext == function));
+    static assert( is(SymbolType!propDelWithContext ==
+                      ToFunctionType!(int delegate() function() @property @safe pure nothrow @nogc)));
+    static assert( is(PropertyType!propDelWithContext == int delegate()));
+    static assert( is(typeof(propDelWithContext) == PropertyType!propDelWithContext));
+
+    const int ci;
+    static assert( is(SymbolType!ci == const int));
+    static assert( is(PropertyType!ci == const int));
+    static assert( is(typeof(ci) == PropertyType!ci));
+
+    shared int si;
+    static assert( is(SymbolType!si == shared int));
+    static assert( is(PropertyType!si == shared int));
+    static assert( is(typeof(si) == PropertyType!si));
+
+    static struct S
+    {
+        int i;
+        @disable this(this);
+    }
+    static assert(!__traits(isCopyable, S));
+
+    S s;
+    static assert( is(SymbolType!s == S));
+    static assert( is(PropertyType!s == S));
+    static assert( is(typeof(s) == SymbolType!s));
+
+    static ref S foo();
+    static void bar(ref S);
+
+    static @property ref S bob();
+    static @property void sally(ref S);
+
+    // The aliases are due to https://github.com/dlang/dmd/issues/17505
+    // Apparently, aliases are special-cased to work with function pointer
+    // signatures which return by ref, and we can't do it elsewhere.
+    alias FooPtr = ref S function();
+    static assert( is(SymbolType!foo == ToFunctionType!FooPtr));
+    static assert( is(PropertyType!foo == S));
+    static assert( is(typeof(foo) == SymbolType!foo));
+
+    static assert( is(SymbolType!bar == ToFunctionType!(void function(ref S))));
+    static assert(!__traits(compiles, PropertyType!bar));
+    static assert( is(typeof(bar) == SymbolType!bar));
+
+    alias BobPtr = ref S function() @property;
+    static assert( is(SymbolType!bob == ToFunctionType!BobPtr));
+    static assert( is(PropertyType!bob == S));
+    static assert( is(typeof(bob) == S));
+    static assert( is(typeof(bob) == PropertyType!bob));
+
+    static assert( is(SymbolType!sally == ToFunctionType!(void function(ref S) @property)));
+    static assert(!__traits(compiles, PropertyType!sally));
+    static assert(!__traits(compiles, typeof(sally)));
+
+    string defaultArgs1(int i = 0);
+    void defaultArgs2(string, int i = 0);
+
+    static assert( is(SymbolType!defaultArgs1 == ToFunctionType!(string function(int))));
+    static assert( is(PropertyType!defaultArgs1 == string));
+    static assert( is(typeof(defaultArgs1) == SymbolType!defaultArgs1));
+
+    static assert( is(SymbolType!defaultArgs2 == ToFunctionType!(void function(string, int))));
+    static assert(!__traits(compiles, PropertyType!defaultArgs2));
+    static assert( is(typeof(defaultArgs2) == SymbolType!defaultArgs2));
+
+    @property string defaultArgsProp1(int i = 0);
+    @property void defaultArgsProp2(string, int i = 0);
+
+    static assert( is(SymbolType!defaultArgsProp1 == ToFunctionType!(string function(int) @property)));
+    static assert( is(PropertyType!defaultArgsProp1 == string));
+    static assert( is(typeof(defaultArgsProp1) == PropertyType!defaultArgsProp1));
+
+    static assert( is(SymbolType!defaultArgsProp2 == ToFunctionType!(void function(string, int) @property)));
+    static assert(!__traits(compiles, PropertyType!defaultArgsProp2));
+    static assert(!__traits(compiles, typeof(defaultArgsProp2)));
+
+    int returningSetter(string);
+    @property int returningSetterProp(string);
+
+    static assert( is(SymbolType!returningSetter == ToFunctionType!(int function(string))));
+    static assert(!__traits(compiles, PropertyType!returningSetter));
+    static assert( is(typeof(returningSetter) == SymbolType!returningSetter));
+
+    static assert( is(SymbolType!returningSetterProp == ToFunctionType!(int function(string) @property)));
+    static assert(!__traits(compiles, PropertyType!returningSetterProp));
+    static assert(!__traits(compiles, typeof(returningSetterProp)));
+}
+
+// These are for the next unittest block to test overloaded free functions (in
+// addition to the overloaded member functions and static functions that it
+// tests). That way, if there are any differences in how free functions and
+// member functions are handled, we'll catch those bugs (be they compiler bugs
+// or bugs in phobos.sys.traits).
+version (PhobosUnittest)
+{
+    private void modFunc1();
+    private void modFunc1(string);
+    private int modFunc1(string, int);
+
+    private int modFunc2();
+    private int modFunc2(string);
+    private string modFunc2(string, int);
+
+    private void modFunc3(int*);
+    private void modFunc3(float);
+    private string modFunc3(int a = 0);
+
+    private int modGetterFirst();
+    private void modGetterFirst(int);
+
+    private void modSetterFirst(int);
+    private int modSetterFirst();
+
+    private void modSetterOnly(string);
+    private void modSetterOnly(int);
+
+    private @property int modPropGetterFirst();
+    private @property void modPropGetterFirst(int);
+
+    private @property void modPropSetterFirst(int);
+    private @property int modPropSetterFirst();
+
+    private @property void modPropSetterOnly(string);
+    private @property void modPropSetterOnly(int);
+
+    private int function() @property modGetterFirstFuncPtr();
+    private void modGetterFirstFuncPtr(int function() @property);
+
+    private void modSetterFirstFuncPtr(int function() @property);
+    private int function() @property modSetterFirstFuncPtr();
+
+    private int function() @property modPropGetterFirstFuncPtr() @property;
+    private void modPropGetterFirstFuncPtr(int function() @property) @property;
+
+    private void modPropSetterFirstFuncPtr(int function() @property) @property;
+    private int function() @property modPropSetterFirstFuncPtr() @property;
+}
+
+@safe unittest
+{
+    // Note that with overloads without @property, typeof gives the first
+    // overload, whereas with overloads with @property, typeof gives the return
+    // type of the getter overload no matter where it is in the order.
+    // PropertyType needs to always give the getter overload whether @property
+    // is used or not, since that's the type of the symbol when used as a
+    // getter property in an expression.
+    {
+        alias module_ = __traits(parent, __traits(parent, {}));
+
+        // void modFunc1();
+        // void modFunc1(string);
+        // int modFunc1(string, int);
+        {
+            static assert( is(SymbolType!modFunc1 == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!modFunc1));
+            static assert( is(typeof(modFunc1) == SymbolType!modFunc1));
+
+            alias overloads = __traits(getOverloads, module_, "modFunc1");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(int function(string, int))));
+            static assert(!__traits(compiles, PropertyType!(overloads[2])));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // int modFunc2();
+        // int modFunc2(string);
+        // string modFunc2(string, int);
+        {
+            static assert( is(SymbolType!modFunc2 == ToFunctionType!(int function())));
+            static assert( is(PropertyType!modFunc2 == int));
+            static assert( is(typeof(modFunc2) == SymbolType!modFunc2));
+
+            alias overloads = __traits(getOverloads, module_, "modFunc2");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+            static assert( is(PropertyType!(overloads[0]) == int));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(string function(string, int))));
+            static assert(!__traits(compiles, PropertyType!(overloads[2])));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // void modFunc3(int*);
+        // void modFunc3(float);
+        // string modFunc3(int a = 0);
+        {
+            static assert( is(SymbolType!modFunc3 == ToFunctionType!(void function(int*))));
+            static assert( is(PropertyType!modFunc3 == string));
+            static assert( is(typeof(modFunc3) == SymbolType!modFunc3));
+
+            alias overloads = __traits(getOverloads, module_, "modFunc3");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int*))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(float))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(string function(int))));
+            static assert( is(PropertyType!(overloads[2]) == string));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // int modGetterFirst();
+        // void modGetterFirst(int);
+        {
+            static assert( is(SymbolType!modGetterFirst == ToFunctionType!(int function())));
+            static assert( is(PropertyType!modGetterFirst == int));
+            static assert( is(typeof(modGetterFirst) == SymbolType!modGetterFirst));
+
+            alias overloads = __traits(getOverloads, module_, "modGetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+            static assert( is(PropertyType!(overloads[0]) == int));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void modSetterFirst(int);
+        // int modSetterFirst();
+        {
+            static assert( is(SymbolType!modSetterFirst == ToFunctionType!(void function(int))));
+            static assert( is(PropertyType!modSetterFirst == int));
+            static assert( is(typeof(modSetterFirst) == SymbolType!modSetterFirst));
+
+            alias overloads = __traits(getOverloads, module_, "modSetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function())));
+            static assert( is(PropertyType!(overloads[1]) == int));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void modSetterOnly(string);
+        // void modSetterOnly(int);
+        {
+            static assert( is(SymbolType!modSetterOnly == ToFunctionType!(void function(string))));
+            static assert(!__traits(compiles, PropertyType!modSetterOnly));
+            static assert( is(typeof(modSetterOnly) == SymbolType!modSetterOnly));
+
+            alias overloads = __traits(getOverloads, module_, "modSetterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // @property int modPropGetterFirst();
+        // @property void modPropGetterFirst(int);
+        {
+            static assert( is(SymbolType!modPropGetterFirst == ToFunctionType!(int function() @property)));
+            static assert( is(PropertyType!modPropGetterFirst == int));
+            static assert( is(typeof(modPropGetterFirst) == PropertyType!modPropGetterFirst));
+
+            alias overloads = __traits(getOverloads, module_, "modPropGetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == int));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // @property void modPropSetterFirst(int);
+        // @property int modPropSetterFirst();
+        {
+            static assert( is(SymbolType!modPropSetterFirst == ToFunctionType!(void function(int) @property)));
+            static assert( is(PropertyType!modPropSetterFirst == int));
+            static assert( is(typeof(modPropSetterFirst) == PropertyType!modPropSetterFirst));
+
+            alias overloads = __traits(getOverloads, module_, "modPropSetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == int));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+
+        // @property void modPropSetterOnly(string);
+        // @property void modPropSetterOnly(int);
+        {
+            static assert( is(SymbolType!modPropSetterOnly == ToFunctionType!(void function(string) @property)));
+            static assert(!__traits(compiles, PropertyType!modPropSetterOnly));
+            static assert(!__traits(compiles, typeof(modPropSetterOnly)));
+
+            alias overloads = __traits(getOverloads, module_, "modPropSetterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof(overloads[1])));
+        }
+
+        // int function() @property modGetterFirstFuncPtr();
+        // void modGetterFirstFuncPtr(int function() @property);
+        {
+            static assert( is(SymbolType!modGetterFirstFuncPtr ==
+                              ToFunctionType!(int function() @property function())));
+            static assert( is(PropertyType!modGetterFirstFuncPtr == int function() @property));
+            static assert( is(typeof(modGetterFirstFuncPtr) == SymbolType!modGetterFirstFuncPtr));
+
+            alias overloads = __traits(getOverloads, module_, "modGetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function() @property function())));
+            static assert( is(PropertyType!(overloads[0]) == int function() @property));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int function() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void modSetterFirstFuncPtr(int function() @property);
+        // int function() @property modSetterFirstFuncPtr();
+        {
+            static assert( is(SymbolType!modSetterFirstFuncPtr ==
+                              ToFunctionType!(void function(int function() @property))));
+            static assert( is(PropertyType!modSetterFirstFuncPtr == int function() @property));
+            static assert( is(typeof(modSetterFirstFuncPtr) == SymbolType!modSetterFirstFuncPtr));
+
+            alias overloads = __traits(getOverloads, module_, "modSetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int function() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property function())));
+            static assert( is(PropertyType!(overloads[1]) == int function() @property));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // int function() @property modPropGetterFirstFuncPtr() @property;
+        // void modPropGetterFirstFuncPtr(int function() @property) @property;
+        {
+            static assert( is(SymbolType!modPropGetterFirstFuncPtr ==
+                              ToFunctionType!(int function() @property function() @property)));
+            static assert( is(PropertyType!modPropGetterFirstFuncPtr == int function() @property));
+            static assert( is(typeof(modPropGetterFirstFuncPtr) == PropertyType!modPropGetterFirstFuncPtr));
+
+            alias overloads = __traits(getOverloads, module_, "modPropGetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(int function() @property function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == int function() @property));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(void function(int function() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // void modPropSetterFirstFuncPtr(int function() @property) @property;
+        // int function() @property modPropSetterFirstFuncPtr() @property;
+        {
+            static assert( is(SymbolType!modPropSetterFirstFuncPtr ==
+                              ToFunctionType!(void function(int function() @property) @property)));
+            static assert( is(PropertyType!modPropSetterFirstFuncPtr == int function() @property));
+            static assert( is(typeof(modPropSetterFirstFuncPtr) == PropertyType!modPropSetterFirstFuncPtr));
+
+            alias overloads = __traits(getOverloads, module_, "modPropSetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(void function(int function() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(int function() @property function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == int function() @property));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+    }
+
+    {
+        static struct S
+        {
+            int[] arr1;
+            immutable bool[] arr2;
+
+            void foo();
+            static void bar();
+
+            long bob();
+            void sally(long);
+
+            @property long propGetter();
+            @property void propSetter(int[]);
+
+            static @property long staticPropGetter();
+            static @property void staticPropSetter(int[]);
+
+            void func1();
+            void func1(int[]);
+            long func1(int[], long);
+
+            long func2();
+            long func2(int[]);
+            int[] func2(int[], long);
+
+            void func3(long*);
+            void func3(real);
+            int[] func3(long a = 0);
+
+            long getterFirst();
+            void getterFirst(long);
+
+            void setterFirst(long);
+            long setterFirst();
+
+            void setterOnly(int[]);
+            void setterOnly(long);
+
+            static long staticGetterFirst();
+            static void staticGetterFirst(long);
+
+            static void staticSetterFirst(long);
+            static long staticSetterFirst();
+
+            static void staticSetterOnly(int[]);
+            static void staticSetterOnly(long);
+
+            @property long propGetterFirst();
+            @property void propGetterFirst(long);
+
+            @property void propSetterFirst(long);
+            @property long propSetterFirst();
+
+            @property void propSetterOnly(int[]);
+            @property void propSetterOnly(long);
+
+            static @property long staticPropGetterFirst();
+            static @property void staticPropGetterFirst(long);
+
+            static @property void staticPropSetterFirst(long);
+            static @property long staticPropSetterFirst();
+
+            static @property void staticPropSetterOnly(int[]);
+            static @property void staticPropSetterOnly(long);
+
+            long function() @property getterFirstFuncPtr();
+            void getterFirstFuncPtr(long function() @property);
+
+            void setterFirstFuncPtr(long function() @property);
+            long function() @property setterFirstFuncPtr();
+
+            long function() @property propGetterFirstFuncPtr() @property;
+            void propGetterFirstFuncPtr(long function() @property) @property;
+
+            void propSetterFirstFuncPtr(long function() @property) @property;
+            long function() @property propSetterFirstFuncPtr() @property;
+
+            static long delegate() @property staticGetterFirstDel();
+            static void staticGetterFirstDel(long delegate() @property);
+
+            static void staticSetterFirstDel(long delegate() @property);
+            static long delegate() @property staticSetterFirstDel();
+
+            static long delegate() @property staticPropGetterFirstDel() @property;
+            static void staticPropGetterFirstDel(long delegate() @property) @property;
+
+            static void staticPropSetterFirstDel(long delegate() @property) @property;
+            static long delegate() @property staticPropSetterFirstDel() @property;
+        }
+
+        // int[] arr1;
+        // immutable bool[] arr2;
+        static assert( is(SymbolType!(S.arr1) == int[]));
+        static assert( is(PropertyType!(S.arr1) == int[]));
+        static assert( is(typeof(S.arr1) == int[]));
+
+        static assert( is(SymbolType!(S.arr2) == immutable bool[]));
+        static assert( is(PropertyType!(S.arr2) == immutable bool[]));
+        static assert( is(typeof(S.arr2) == immutable bool[]));
+
+        // void foo();
+        static assert( is(SymbolType!(S.foo) == function));
+        static assert( is(SymbolType!(S.foo) == ToFunctionType!(void function())));
+        static assert(!__traits(compiles, PropertyType!(S.foo)));
+        static assert( is(typeof(S.foo) == SymbolType!(S.foo)));
+
+        //static void bar();
+        static assert( is(SymbolType!(S.bar) == function));
+        static assert( is(SymbolType!(S.bar) == ToFunctionType!(void function())));
+        static assert(!__traits(compiles, PropertyType!(S.bar)));
+        static assert( is(typeof(S.bar) == SymbolType!(S.bar)));
+
+        // long bob();
+        static assert( is(SymbolType!(S.bob) == function));
+        static assert( is(SymbolType!(S.bob) == ToFunctionType!(long function())));
+        static assert( is(PropertyType!(S.bob) == long));
+        static assert( is(typeof(S.bob) == SymbolType!(S.bob)));
+
+        // void sally(long);
+        static assert( is(SymbolType!(S.sally) == function));
+        static assert( is(SymbolType!(S.sally) == ToFunctionType!(void function(long))));
+        static assert(!__traits(compiles, PropertyType!(S.sally)));
+        static assert( is(typeof(S.sally) == SymbolType!(S.sally)));
+
+        // @property long propGetter();
+        static assert( is(SymbolType!(S.propGetter) == function));
+        static assert( is(SymbolType!(S.propGetter) == ToFunctionType!(long function() @property)));
+        static assert( is(PropertyType!(S.propGetter) == long));
+        static assert( is(typeof(S.propGetter) == PropertyType!(S.propGetter)));
+
+        // @property void propSetter(int[]);
+        static assert( is(SymbolType!(S.propSetter) == function));
+        static assert( is(SymbolType!(S.propSetter) == ToFunctionType!(void function(int[]) @property)));
+        static assert(!__traits(compiles, PropertyType!(S.propSetter)));
+        static assert(!__traits(compiles, typeof(S.propSetter)));
+
+        // static @property long staticPropGetter();
+        static assert( is(SymbolType!(S.staticPropGetter) == function));
+        static assert( is(SymbolType!(S.staticPropGetter) == ToFunctionType!(long function() @property)));
+        static assert( is(PropertyType!(S.staticPropGetter) == long));
+        static assert( is(typeof(S.staticPropGetter) == PropertyType!(S.staticPropGetter)));
+
+        // static @property void staticPropSetter(int[]);
+        static assert( is(SymbolType!(S.staticPropSetter) == function));
+        static assert( is(SymbolType!(S.staticPropSetter) == ToFunctionType!(void function(int[]) @property)));
+        static assert(!__traits(compiles, PropertyType!(S.staticPropSetter)));
+        static assert(!__traits(compiles, typeof(S.staticPropSetter)));
+
+        // void func1();
+        // void func1(int[]);
+        // long func1(int[], long);
+        {
+            static assert( is(SymbolType!(S.func1) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(S.func1)));
+            static assert( is(typeof((S.func1)) == SymbolType!(S.func1)));
+
+            alias overloads = __traits(getOverloads, S, "func1");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(long function(int[], long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[2])));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // long func2();
+        // long func2(int[]);
+        // int[] func2(int[], long);
+        {
+            static assert( is(SymbolType!(S.func2) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(S.func2) == long));
+            static assert( is(typeof((S.func2)) == SymbolType!(S.func2)));
+
+            alias overloads = __traits(getOverloads, S, "func2");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(overloads[0]) == long));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(int[] function(int[], long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[2])));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // void func3(long*);
+        // void func3(real);
+        // int[] func3(long a = 0);
+        {
+            static assert( is(SymbolType!(S.func3) == ToFunctionType!(void function(long*))));
+            static assert( is(PropertyType!(S.func3) == int[]));
+            static assert( is(typeof((S.func3)) == SymbolType!(S.func3)));
+
+            alias overloads = __traits(getOverloads, S, "func3");
+            static assert(overloads.length == 3);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long*))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(real))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+
+            static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(int[] function(long))));
+            static assert( is(PropertyType!(overloads[2]) == int[]));
+            static assert( is(typeof(overloads[2]) == SymbolType!(overloads[2])));
+        }
+
+        // long getterFirst();
+        // void getterFirst(long);
+        {
+            static assert( is(SymbolType!(S.getterFirst) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(S.getterFirst) == long));
+            static assert( is(typeof((S.getterFirst)) == SymbolType!(S.getterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "getterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(overloads[0]) == long));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void setterFirst(long);
+        // long setterFirst();
+        {
+            static assert( is(SymbolType!(S.setterFirst) == ToFunctionType!(void function(long))));
+            static assert( is(PropertyType!(S.setterFirst) == long));
+            static assert( is(typeof((S.setterFirst)) == SymbolType!(S.setterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "setterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(overloads[1]) == long));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void setterOnly(int[]);
+        // void setterOnly(long);
+        {
+            static assert( is(SymbolType!(S.setterOnly) == ToFunctionType!(void function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(S.setterOnly)));
+            static assert( is(typeof((S.setterOnly)) == SymbolType!(S.setterOnly)));
+
+            alias overloads = __traits(getOverloads, S, "setterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // long staticGetterFirst();
+        // void staticGetterFirst(long);
+        {
+            static assert( is(SymbolType!(S.staticGetterFirst) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(S.staticGetterFirst) == long));
+            static assert( is(typeof((S.staticGetterFirst)) == SymbolType!(S.staticGetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "staticGetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(overloads[0]) == long));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void staticSetterFirst(long);
+        // long staticSetterFirst();
+        {
+            static assert( is(SymbolType!(S.staticSetterFirst) == ToFunctionType!(void function(long))));
+            static assert( is(PropertyType!(S.staticSetterFirst) == long));
+            static assert( is(typeof((S.staticSetterFirst)) == SymbolType!(S.staticSetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "staticSetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function())));
+            static assert( is(PropertyType!(overloads[1]) == long));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void staticSetterOnly(int[]);
+        // void staticSetterOnly(long);
+        {
+            static assert( is(SymbolType!(S.staticSetterOnly) == ToFunctionType!(void function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(S.staticSetterOnly)));
+            static assert( is(typeof((S.staticSetterOnly)) == SymbolType!(S.staticSetterOnly)));
+
+            alias overloads = __traits(getOverloads, S, "staticSetterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int[]))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // @property long propGetterFirst();
+        // @property void propGetterFirst(long);
+        {
+            static assert( is(SymbolType!(S.propGetterFirst) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(S.propGetterFirst) == long));
+            static assert( is(typeof((S.propGetterFirst)) == PropertyType!(S.propGetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "propGetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == long));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // @property void propSetterFirst(long);
+        // @property long propSetterFirst();
+        {
+            static assert( is(SymbolType!(S.propSetterFirst) == ToFunctionType!(void function(long) @property)));
+            static assert( is(PropertyType!(S.propSetterFirst) == long));
+            static assert( is(typeof((S.propSetterFirst)) == PropertyType!(S.propSetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "propSetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == long));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+
+        // @property void propSetterOnly(int[]);
+        // @property void propSetterOnly(long);
+        {
+            static assert( is(SymbolType!(S.propSetterOnly) == ToFunctionType!(void function(int[]) @property)));
+            static assert(!__traits(compiles, PropertyType!(S.propSetterOnly)));
+            static assert(!__traits(compiles, typeof((S.propSetterOnly))));
+
+            alias overloads = __traits(getOverloads, S, "propSetterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int[]) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof(overloads[1])));
+        }
+
+        // @property long staticPropGetterFirst();
+        // @property void staticPropGetterFirst(long);
+        {
+            static assert( is(SymbolType!(S.staticPropGetterFirst) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(S.staticPropGetterFirst) == long));
+            static assert( is(typeof((S.staticPropGetterFirst)) == PropertyType!(S.staticPropGetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "staticPropGetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == long));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // @property void staticPropSetterFirst(long);
+        // @property long staticPropSetterFirst();
+        {
+            static assert( is(SymbolType!(S.staticPropSetterFirst) == ToFunctionType!(void function(long) @property)));
+            static assert( is(PropertyType!(S.staticPropSetterFirst) == long));
+            static assert( is(typeof((S.staticPropSetterFirst)) == PropertyType!(S.staticPropSetterFirst)));
+
+            alias overloads = __traits(getOverloads, S, "staticPropSetterFirst");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == long));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+
+        // @property void staticPropSetterOnly(int[]);
+        // @property void staticPropSetterOnly(long);
+        {
+            static assert( is(SymbolType!(S.staticPropSetterOnly) == ToFunctionType!(void function(int[]) @property)));
+            static assert(!__traits(compiles, PropertyType!(S.staticPropSetterOnly)));
+            static assert(!__traits(compiles, typeof((S.staticPropSetterOnly))));
+
+            alias overloads = __traits(getOverloads, S, "staticPropSetterOnly");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int[]) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof(overloads[1])));
+        }
+
+        // long function() @property getterFirstFuncPtr();
+        // void getterFirstFuncPtr(long function() @property);
+        {
+            static assert( is(SymbolType!(S.getterFirstFuncPtr) ==
+                              ToFunctionType!(long function() @property function())));
+            static assert( is(PropertyType!(S.getterFirstFuncPtr) == long function() @property));
+            static assert( is(typeof((S.getterFirstFuncPtr)) == SymbolType!(S.getterFirstFuncPtr)));
+
+            alias overloads = __traits(getOverloads, S, "getterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function() @property function())));
+            static assert( is(PropertyType!(overloads[0]) == long function() @property));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long function() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void setterFirstFuncPtr(long function() @property);
+        // long function() @property setterFirstFuncPtr();
+        {
+            static assert( is(SymbolType!(S.setterFirstFuncPtr) ==
+                              ToFunctionType!(void function(long function() @property))));
+            static assert( is(PropertyType!(S.setterFirstFuncPtr) == long function() @property));
+            static assert( is(typeof((S.setterFirstFuncPtr)) == SymbolType!(S.setterFirstFuncPtr)));
+
+            alias overloads = __traits(getOverloads, S, "setterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long function() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long function() @property function())));
+            static assert( is(PropertyType!(overloads[1]) == long function() @property));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // long function() @property propGetterFirstFuncPtr() @property;
+        // void propGetterFirstFuncPtr(long function() @property) @property;
+        {
+            static assert( is(SymbolType!(S.propGetterFirstFuncPtr) ==
+                              ToFunctionType!(long function() @property function() @property)));
+            static assert( is(PropertyType!(S.propGetterFirstFuncPtr) == long function() @property));
+            static assert( is(typeof((S.propGetterFirstFuncPtr)) == PropertyType!(S.propGetterFirstFuncPtr)));
+
+            alias overloads = __traits(getOverloads, S, "propGetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(long function() @property function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == long function() @property));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(void function(long function() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // void propSetterFirstFuncPtr(long function() @property) @property;
+        // long function() @property propSetterFirstFuncPtr() @property;
+        {
+            static assert( is(SymbolType!(S.propSetterFirstFuncPtr) ==
+                              ToFunctionType!(void function(long function() @property) @property)));
+            static assert( is(PropertyType!(S.propSetterFirstFuncPtr) == long function() @property));
+            static assert( is(typeof((S.propSetterFirstFuncPtr)) == PropertyType!(S.propSetterFirstFuncPtr)));
+
+            alias overloads = __traits(getOverloads, S, "propSetterFirstFuncPtr");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(void function(long function() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(long function() @property function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == long function() @property));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+
+        // long function() @property staticGetterFirstDel();
+        // void staticGetterFirstDel(long function() @property);
+        {
+            static assert( is(SymbolType!(S.staticGetterFirstDel) ==
+                              ToFunctionType!(long delegate() @property function())));
+            static assert( is(PropertyType!(S.staticGetterFirstDel) == long delegate() @property));
+            static assert( is(typeof((S.staticGetterFirstDel)) == SymbolType!(S.staticGetterFirstDel)));
+
+            alias overloads = __traits(getOverloads, S, "staticGetterFirstDel");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long delegate() @property function())));
+            static assert( is(PropertyType!(overloads[0]) == long delegate() @property));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(long delegate() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // void setterFirstDel(long function() @property);
+        // long function() @property setterFirstDel();
+        {
+            static assert( is(SymbolType!(S.staticSetterFirstDel) ==
+                              ToFunctionType!(void function(long delegate() @property))));
+            static assert( is(PropertyType!(S.staticSetterFirstDel) == long delegate() @property));
+            static assert( is(typeof((S.staticSetterFirstDel)) == SymbolType!(S.staticSetterFirstDel)));
+
+            alias overloads = __traits(getOverloads, S, "staticSetterFirstDel");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(long delegate() @property))));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(long delegate() @property function())));
+            static assert( is(PropertyType!(overloads[1]) == long delegate() @property));
+            static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+        }
+
+        // long function() @property staticPropGetterFirstDel() @property;
+        // void staticPropGetterFirstDel(long function() @property) @property;
+        {
+            static assert( is(SymbolType!(S.staticPropGetterFirstDel) ==
+                              ToFunctionType!(long delegate() @property function() @property)));
+            static assert( is(PropertyType!(S.staticPropGetterFirstDel) == long delegate() @property));
+            static assert( is(typeof((S.staticPropGetterFirstDel)) == PropertyType!(S.staticPropGetterFirstDel)));
+
+            alias overloads = __traits(getOverloads, S, "staticPropGetterFirstDel");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(long delegate() @property function() @property)));
+            static assert( is(PropertyType!(overloads[0]) == long delegate() @property));
+            static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(void function(long delegate() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[1])));
+            static assert(!__traits(compiles, typeof((overloads[1]))));
+        }
+
+        // void propSetterFirstDel(long function() @property) @property;
+        // long function() @property propSetterFirstDel() @property;
+        {
+            static assert( is(SymbolType!(S.staticPropSetterFirstDel) ==
+                              ToFunctionType!(void function(long delegate() @property) @property)));
+            static assert( is(PropertyType!(S.staticPropSetterFirstDel) == long delegate() @property));
+            static assert( is(typeof((S.staticPropSetterFirstDel)) == PropertyType!(S.staticPropSetterFirstDel)));
+
+            alias overloads = __traits(getOverloads, S, "staticPropSetterFirstDel");
+            static assert(overloads.length == 2);
+
+            static assert( is(SymbolType!(overloads[0]) ==
+                              ToFunctionType!(void function(long delegate() @property) @property)));
+            static assert(!__traits(compiles, PropertyType!(overloads[0])));
+            static assert(!__traits(compiles, typeof(overloads[0])));
+
+            static assert( is(SymbolType!(overloads[1]) ==
+                              ToFunctionType!(long delegate() @property function() @property)));
+            static assert( is(PropertyType!(overloads[1]) == long delegate() @property));
+            static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+        }
+    }
+    {
+        static interface I
+        {
+            void foo();
+            static void bar();
+
+            int func1();
+            void func1(int);
+
+            void func2(int);
+            int func2();
+
+            @property void prop1(int);
+            @property int prop1();
+
+            @property int prop2();
+            @property void prop2(int);
+
+            static @property string staticProp();
+            static @property void staticProp(real);
+
+            @property void extraProp(string);
+
+            int defaultArg1(string str = "foo");
+            void defaultArg1(int, string str = "foo");
+
+            void defaultArg2(int, string str = "foo");
+            int defaultArg2(string str = "foo");
+
+            @property int defaultArgProp1(string str = "foo");
+            @property void defaultArgProp1(int, string str = "foo");
+
+            @property void defaultArgProp2(int, string str = "foo");
+            @property int defaultArgProp2(string str = "foo");
+
+            string defaultArgInDerived1(int);
+            void defaultArgInDerived1(string, int);
+
+            void defaultArgInDerived2(string, int);
+            string defaultArgInDerived2(int);
+
+            @property string defaultArgInDerivedProp1(int);
+            @property void defaultArgInDerivedProp1(string, int);
+
+            @property void defaultArgInDerivedProp2(string, int);
+            @property string defaultArgInDerivedProp2(int);
+        }
+
+        {
+            // void foo()
+            static assert( is(SymbolType!(I.foo) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(I.foo)));
+            static assert( is(typeof(I.foo) == SymbolType!(I.foo)));
+
+            // static void bar()
+            static assert( is(SymbolType!(I.bar) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(I.bar)));
+            static assert( is(typeof(I.bar) == SymbolType!(I.bar)));
+
+            // int func1();
+            // void func1(int);
+            {
+                static assert( is(SymbolType!(I.func1) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(I.func1) == int));
+                static assert( is(typeof(I.func1) == SymbolType!(I.func1)));
+
+                alias overloads = __traits(getOverloads, I, "func1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // void func2(int);
+            // int func2();
+            {
+                static assert( is(SymbolType!(I.func2) == ToFunctionType!(void function(int))));
+                static assert( is(PropertyType!(I.func2) == int));
+                static assert( is(typeof(I.func2) == SymbolType!(I.func2)));
+
+                alias overloads = __traits(getOverloads, I, "func2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // @property void prop1(int);
+            // @property int prop1();
+            {
+                static assert( is(SymbolType!(I.prop1) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(I.prop1) == int));
+                static assert( is(typeof(I.prop1) == PropertyType!(I.prop1)));
+
+                alias overloads = __traits(getOverloads, I, "prop1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // @property int prop2();
+            // @property void prop2(int);
+            {
+                static assert( is(SymbolType!(I.prop2) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(I.prop2) == int));
+                static assert( is(typeof(I.prop2) == PropertyType!(I.prop2)));
+
+                alias overloads = __traits(getOverloads, I, "prop2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // static @property string staticProp();
+            // static @property void staticProp(real);
+            {
+                static assert( is(SymbolType!(I.staticProp) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(I.staticProp) == string));
+                static assert( is(typeof(I.staticProp) == PropertyType!(I.staticProp)));
+
+                alias overloads = __traits(getOverloads, I, "staticProp");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(real) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // @property void extraProp(string);
+            {
+                static assert( is(SymbolType!(I.extraProp) == ToFunctionType!(void function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(I.extraProp)));
+                static assert(!__traits(compiles, typeof(I.extraProp)));
+
+                alias overloads = __traits(getOverloads, I, "extraProp");
+                static assert(overloads.length == 1);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+            }
+
+            // int defaultArg1(string str = "foo");
+            // void defaultArg1(int, string str = "foo");
+            {
+                static assert( is(SymbolType!(I.defaultArg1) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(I.defaultArg1) == int));
+                static assert( is(typeof(I.defaultArg1) == SymbolType!(I.defaultArg1)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArg1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // void defaultArg2(int, string str = "foo");
+            // int defaultArg2(string str = "foo");
+            {
+                static assert( is(SymbolType!(I.defaultArg2) == ToFunctionType!(void function(int, string))));
+                static assert( is(PropertyType!(I.defaultArg2) == int));
+                static assert( is(typeof(I.defaultArg2) == SymbolType!(I.defaultArg2)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArg2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // @property int defaultArgProp1(string str = "foo");
+            // @property void defaultArgProp1(int, string str = "foo");
+            {
+                static assert( is(SymbolType!(I.defaultArgProp1) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(I.defaultArgProp1) == int));
+                static assert( is(typeof(I.defaultArgProp1) == PropertyType!(I.defaultArgProp1)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // @property void defaultArgProp2(int, string str = "foo");
+            // @property int defaultArgProp2(string str = "foo");
+            {
+                static assert( is(SymbolType!(I.defaultArgProp2) ==
+                                  ToFunctionType!(void function(int, string) @property)));
+                static assert( is(PropertyType!(I.defaultArgProp2) == int));
+                static assert( is(typeof(I.defaultArgProp2) == PropertyType!(I.defaultArgProp2)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // string defaultArgInDerived1(int);
+            // void defaultArgInDerived1(string, int);
+            {
+                static assert( is(SymbolType!(I.defaultArgInDerived1) == ToFunctionType!(string function(int))));
+                static assert(!__traits(compiles, PropertyType!(I.defaultArgInDerived1)));
+                static assert( is(typeof(I.defaultArgInDerived1) == SymbolType!(I.defaultArgInDerived1)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgInDerived1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // void defaultArgInDerived2(string, int);
+            // string defaultArgInDerived2(int);
+            {
+                static assert( is(SymbolType!(I.defaultArgInDerived2) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(I.defaultArgInDerived2)));
+                static assert( is(typeof(I.defaultArgInDerived2) == SymbolType!(I.defaultArgInDerived2)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgInDerived2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // @property string defaultArgInDerivedProp1(int);
+            // @property void defaultArgInDerivedProp1(string, int);
+            {
+                static assert( is(SymbolType!(I.defaultArgInDerivedProp1) ==
+                                  ToFunctionType!(string function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(I.defaultArgInDerivedProp1)));
+                static assert(!__traits(compiles, typeof(I.defaultArgInDerivedProp1)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgInDerivedProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+            }
+
+            // @property void defaultArgInDerivedProp2(string, int);
+            // @property string defaultArgInDerivedProp2(int);
+            {
+                static assert( is(SymbolType!(I.defaultArgInDerivedProp2) ==
+                                  ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(I.defaultArgInDerivedProp2)));
+                static assert(!__traits(compiles, typeof(I.defaultArgInDerivedProp2)));
+
+                alias overloads = __traits(getOverloads, I, "defaultArgInDerivedProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+        }
+
+        // For whatever reason, the virtual functions have to have bodies, or
+        // the linker complains, even though the functions aren't actually
+        // called anywhere, but having them implement the functions which are in
+        // the interface at least gets rid of the attribute inference.
+        static class C1 : I
+        {
+            shared int i;
+            string s;
+
+            override void foo() {}
+
+            // This shadows the one in the interface, and it has a different
+            // signature, so it makes sure that we're getting the right one.
+            static int bar();
+
+            final void baz();
+
+            override int func1() { return 0; }
+            override void func1(int) {}
+
+            override void func2(int) {}
+            override int func2() { return 0; }
+
+            override @property void prop1(int) {}
+            override @property int prop1() { return 0; }
+
+            override @property int prop2() { return 0; }
+            override @property void prop2(int) {}
+
+            override @property void extraProp(string) {}
+            @property bool extraProp() { return true; }
+
+            override int defaultArg1(string str = "foo") { return 42; }
+            override void defaultArg1(int, string str = "foo") {}
+
+            // This tests the case where the derived type doesn't provide
+            // default arguments even though the interface does.
+            override void defaultArg2(int, string str) {}
+            override int defaultArg2(string str) { return 42; }
+
+            override @property int defaultArgProp1(string str = "foo") { return 42; }
+            override @property void defaultArgProp1(int, string str = "foo") {}
+
+            // This tests the case where the derived type doesn't provide
+            // default arguments even though the interface does.
+            override @property void defaultArgProp2(int, string str) {}
+            override @property int defaultArgProp2(string str) { return 42; }
+
+            override string defaultArgInDerived1(int i = 0) { return ""; }
+            override void defaultArgInDerived1(string, int i = 0) {}
+
+            override void defaultArgInDerived2(string, int i = 0) {}
+            override string defaultArgInDerived2(int i = 0) { return ""; }
+
+            @property string defaultArgInDerivedProp1(int i = 0) { return ""; }
+            @property void defaultArgInDerivedProp1(string, int i = 0) {}
+
+            @property void defaultArgInDerivedProp2(string, int i = 0) {}
+            @property string defaultArgInDerivedProp2(int i = 0) { return ""; }
+        }
+
+        {
+            // shared int i;
+            // string s;
+            static assert( is(SymbolType!(C1.i) == shared int));
+            static assert( is(PropertyType!(C1.i) == shared int));
+            static assert( is(typeof(C1.i) == shared int));
+
+            static assert( is(SymbolType!(C1.s) == string));
+            static assert( is(PropertyType!(C1.s) == string));
+            static assert( is(typeof(C1.s) == string));
+
+            // override void foo()
+            static assert( is(SymbolType!(C1.foo) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(C1.foo)));
+            static assert( is(typeof(C1.foo) == SymbolType!(C1.foo)));
+
+            // static int bar()
+            static assert( is(SymbolType!(C1.bar) == ToFunctionType!(int function())));
+            static assert( is(PropertyType!(C1.bar) == int));
+            static assert( is(typeof(C1.bar) == SymbolType!(C1.bar)));
+
+            // void baz()
+            static assert( is(SymbolType!(C1.baz) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(C1.baz)));
+            static assert( is(typeof(C1.baz) == SymbolType!(C1.baz)));
+
+            // override int func1();
+            // override void func1(int);
+            {
+                static assert( is(SymbolType!(C1.func1) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(C1.func1) == int));
+                static assert( is(typeof(C1.func1) == SymbolType!(C1.func1)));
+
+                alias overloads = __traits(getOverloads, C1, "func1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override void func2(int);
+            // override int func2();
+            {
+                static assert( is(SymbolType!(C1.func2) == ToFunctionType!(void function(int))));
+                static assert( is(PropertyType!(C1.func2) == int));
+                static assert( is(typeof(C1.func2) == SymbolType!(C1.func2)));
+
+                alias overloads = __traits(getOverloads, C1, "func2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property void prop1(int);
+            // override @property int prop1();
+            {
+                static assert( is(SymbolType!(C1.prop1) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(C1.prop1) == int));
+                static assert( is(typeof(C1.prop1) == PropertyType!(C1.prop1)));
+
+                alias overloads = __traits(getOverloads, C1, "prop1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override @property int prop2();
+            // override @property void prop2(int);
+            {
+                static assert( is(SymbolType!(C1.prop2) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(C1.prop2) == int));
+                static assert( is(typeof(C1.prop2) == PropertyType!(C1.prop2)));
+
+                alias overloads = __traits(getOverloads, C1, "prop2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // Actually on I, not C1.
+            // static @property string staticProp();
+            // static @property void staticProp(real);
+            {
+                static assert( is(SymbolType!(C1.staticProp) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(C1.staticProp) == string));
+                static assert( is(typeof(C1.staticProp) == PropertyType!(C1.staticProp)));
+
+                alias overloads = __traits(getOverloads, C1, "staticProp");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(real) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // override @property void extraProp(string);
+            // @property bool extraProp() { return true; }
+            {
+                static assert( is(SymbolType!(C1.extraProp) == ToFunctionType!(void function(string) @property)));
+                static assert( is(PropertyType!(C1.extraProp) == bool));
+                static assert( is(typeof(C1.extraProp) == bool));
+
+                alias overloads = __traits(getOverloads, C1, "extraProp");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(bool function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == bool));
+                static assert( is(typeof(overloads[1]) == bool));
+            }
+
+            // override int defaultArg1(string str = "foo");
+            // override void defaultArg1(int, string str = "foo");
+            {
+                static assert( is(SymbolType!(C1.defaultArg1) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(C1.defaultArg1) == int));
+                static assert( is(typeof(C1.defaultArg1) == SymbolType!(C1.defaultArg1)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArg1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I provides default arguments, but C1 does not.
+            // override void defaultArg2(int, string);
+            // override int defaultArg2(string);
+            {
+                static assert( is(SymbolType!(C1.defaultArg2) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(C1.defaultArg2)));
+                static assert( is(typeof(C1.defaultArg2) == SymbolType!(C1.defaultArg2)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArg2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property int defaultArgProp1(string str = "foo");
+            // override @property void defaultArgProp1(int, string str = "foo");
+            {
+                static assert( is(SymbolType!(C1.defaultArgProp1) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(C1.defaultArgProp1) == int));
+                static assert( is(typeof(C1.defaultArgProp1) == PropertyType!(C1.defaultArgProp1)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // I provides default arguments, but C1 does not.
+            // override @property void defaultArgProp2(int, string str);
+            // override @property int defaultArgProp2(string str);
+            {
+                static assert( is(SymbolType!(C1.defaultArgProp2) ==
+                                  ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(C1.defaultArgProp2)));
+                static assert(!__traits(compiles, typeof(C1.defaultArgProp2)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C1 does.
+            // override string defaultArgInDerived1(int i = 0);
+            // override void defaultArgInDerived1(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C1.defaultArgInDerived1) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(C1.defaultArgInDerived1) == string));
+                static assert( is(typeof(C1.defaultArgInDerived1) == SymbolType!(C1.defaultArgInDerived1)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgInDerived1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C1 does.
+            // override void defaultArgInDerived2(string, int i = 0);
+            // override string defaultArgInDerived2(int i = 0);
+            {
+                static assert( is(SymbolType!(C1.defaultArgInDerived2) == ToFunctionType!(void function(string, int))));
+                static assert( is(PropertyType!(C1.defaultArgInDerived2) == string));
+                static assert( is(typeof(C1.defaultArgInDerived2) == SymbolType!(C1.defaultArgInDerived2)));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgInDerived2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C1 does.
+            // override @property string defaultArgInDerivedProp1(int i = 0);
+            // override @property void defaultArgInDerivedProp1(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C1.defaultArgInDerivedProp1) ==
+                                  ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(C1.defaultArgInDerivedProp1) == string));
+                static assert( is(typeof(C1.defaultArgInDerivedProp1) == string));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgInDerivedProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == string));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C1 does.
+            // override @property void defaultArgInDerivedProp2(string, int i = 0);
+            // override @property string defaultArgInDerivedProp2(int i = 0);
+            {
+                static assert( is(SymbolType!(C1.defaultArgInDerivedProp2) ==
+                                  ToFunctionType!(void function(string, int) @property)));
+                static assert( is(PropertyType!(C1.defaultArgInDerivedProp2) == string));
+                static assert( is(typeof(C1.defaultArgInDerivedProp2) == string));
+
+                alias overloads = __traits(getOverloads, C1, "defaultArgInDerivedProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == string));
+            }
+        }
+
+        // Changes the function order (and has different extraProps).
+        // It also provides default arguments when C1 does not.
+        static class C2 : I
+        {
+            real r;
+            bool b;
+            int* ptr;
+
+            @property long extraProp() { return 42; }
+            override @property void extraProp(string) {}
+            @property void extraProp(int) {}
+
+            override void foo() {}
+
+            @property string defaultArgInDerivedProp2(int i = 0) { return "dlang"; }
+            @property void defaultArgInDerivedProp2(string, int i = 0) {}
+
+            string defaultArgInDerived2(int i = 0) { return "dlang"; }
+            void defaultArgInDerived2(string, int i = 0) {}
+
+            void defaultArgInDerived1(string, int i = 0) {}
+            string defaultArgInDerived1(int i = 0) { return "dlang"; }
+
+            @property void defaultArgInDerivedProp1(string, int i = 0) {}
+            @property string defaultArgInDerivedProp1(int i = 0) { return "dlang"; }
+
+            override void defaultArg2(int, string str = "bar") {}
+            override int defaultArg2(string str = "bar") { return 0; }
+
+            override @property int defaultArgProp2(string str = "bar") { return 0; }
+            override @property void defaultArgProp2(int, string str = "bar") {}
+
+            override @property void defaultArgProp1(int, string str = "bar") {}
+            override @property int defaultArgProp1(string str = "bar") { return 0; }
+
+            override void defaultArg1(int, string str = "bar") {}
+            override int defaultArg1(string str = "bar") { return 0; }
+
+            override @property void prop2(int) {}
+            override @property int prop2() { return 0; }
+
+            override @property void prop1(int) {}
+            override @property int prop1() { return 0; }
+
+            override void func2(int) {}
+            override int func2() { return 0; }
+
+            override int func1() { return 0; }
+            override void func1(int) {}
+        }
+
+        {
+            // real r;
+            // bool b;
+            // int* ptr;
+
+            static assert( is(SymbolType!(C2.r) == real));
+            static assert( is(PropertyType!(C2.r) == real));
+            static assert( is(typeof(C2.r) == real));
+
+            static assert( is(SymbolType!(C2.b) == bool));
+            static assert( is(PropertyType!(C2.b) == bool));
+            static assert( is(typeof(C2.b) == bool));
+
+            static assert( is(SymbolType!(C2.ptr) == int*));
+            static assert( is(PropertyType!(C2.ptr) == int*));
+            static assert( is(typeof(C2.ptr) == int*));
+
+            // Actually on I, not C2.
+            // static @property string staticProp();
+            // static @property void staticProp(real);
+            {
+                static assert( is(SymbolType!(C2.staticProp) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(C2.staticProp) == string));
+                static assert( is(typeof(C2.staticProp) == PropertyType!(C2.staticProp)));
+
+                alias overloads = __traits(getOverloads, C2, "staticProp");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(real) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // @property long extraProp() { return 42; }
+            // override @property void extraProp(string) {}
+            // @property void extraProp(int) {}
+            {
+                static assert( is(SymbolType!(C2.extraProp) == ToFunctionType!(long function() @property)));
+                static assert( is(PropertyType!(C2.extraProp) == long));
+                static assert( is(typeof(C2.extraProp) == long));
+
+                alias overloads = __traits(getOverloads, C2, "extraProp");
+                static assert(overloads.length == 3);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == long));
+                static assert( is(typeof(overloads[0]) == long));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+
+                static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[2])));
+                static assert(!__traits(compiles, typeof(overloads[2])));
+            }
+
+            // override void foo()
+            static assert( is(SymbolType!(C2.foo) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(C2.foo)));
+            static assert( is(typeof(C2.foo) == SymbolType!(C2.foo)));
+
+            // I does not provide default arguments, but C2 does.
+            // @property string defaultArgInDerivedProp2(int i = 0);
+            // @property void defaultArgInDerivedProp2(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C2.defaultArgInDerivedProp2) ==
+                                  ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(C2.defaultArgInDerivedProp2) == string));
+                static assert( is(typeof(C2.defaultArgInDerivedProp2) == string));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgInDerivedProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == string));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // string defaultArgInDerived2(int i = 0);
+            // void defaultArgInDerived2(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C2.defaultArgInDerived2) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(C2.defaultArgInDerived2) == string));
+                static assert( is(typeof(C2.defaultArgInDerived2) == SymbolType!(C2.defaultArgInDerived2)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgInDerived2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // void defaultArgInDerived1(string, int i = 0);
+            // string defaultArgInDerived1(int i = 0);
+            {
+                static assert( is(SymbolType!(C2.defaultArgInDerived1) == ToFunctionType!(void function(string, int))));
+                static assert( is(PropertyType!(C2.defaultArgInDerived1) == string));
+                static assert( is(typeof(C2.defaultArgInDerived1) == SymbolType!(C2.defaultArgInDerived1)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgInDerived1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // @property void defaultArgInDerivedProp1(string, int i = 0);
+            // @property string defaultArgInDerivedProp1(int i = 0);
+            {
+                static assert( is(SymbolType!(C2.defaultArgInDerivedProp1) ==
+                                  ToFunctionType!(void function(string, int) @property)));
+                static assert( is(PropertyType!(C2.defaultArgInDerivedProp1) == string));
+                static assert( is(typeof(C2.defaultArgInDerivedProp1) == string));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgInDerivedProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == string));
+            }
+
+            // override void defaultArg2(int, string str = "bar");
+            // override int defaultArg2(string str = "bar");
+            {
+                static assert( is(SymbolType!(C2.defaultArg2) == ToFunctionType!(void function(int, string))));
+                static assert( is(PropertyType!(C2.defaultArg2) == int));
+                static assert( is(typeof(C2.defaultArg2) == SymbolType!(C2.defaultArg2)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArg2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property int defaultArgProp2(string str = "bar");
+            // override @property void defaultArgProp2(int, string str = "bar");
+            {
+                static assert( is(SymbolType!(C2.defaultArgProp2) ==
+                                  ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(C2.defaultArgProp2) == int));
+                static assert( is(typeof(C2.defaultArgProp2) == PropertyType!(C2.defaultArgProp2)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // override @property void defaultArgProp1(int, string str = "bar");
+            // override @property int defaultArgProp1(string str = "bar");
+            {
+
+                static assert( is(SymbolType!(C2.defaultArgProp1) ==
+                                  ToFunctionType!(void function(int, string) @property)));
+                static assert( is(PropertyType!(C2.defaultArgProp1) == int));
+                static assert( is(typeof(C2.defaultArgProp1) == PropertyType!(C2.defaultArgProp1)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArgProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override void defaultArg1(int, string str = "bar");
+            // override int defaultArg1(string str = "bar");
+            {
+                static assert( is(SymbolType!(C2.defaultArg1) == ToFunctionType!(void function(int, string))));
+                static assert( is(PropertyType!(C2.defaultArg1) == int));
+                static assert( is(typeof(C2.defaultArg1) == SymbolType!(C2.defaultArg1)));
+
+                alias overloads = __traits(getOverloads, C2, "defaultArg1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property void prop2(int);
+            // override @property int prop2();
+            {
+                static assert( is(SymbolType!(C2.prop2) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(C2.prop2) == int));
+                static assert( is(typeof(C2.prop2) == PropertyType!(C2.prop2)));
+
+                alias overloads = __traits(getOverloads, C2, "prop2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override @property void prop1(int);
+            // override @property int prop1();
+            {
+                static assert( is(SymbolType!(C2.prop1) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(C2.prop1) == int));
+                static assert( is(typeof(C2.prop1) == PropertyType!(C2.prop1)));
+
+                alias overloads = __traits(getOverloads, C2, "prop1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override void func2(int);
+            // override int func2();
+            {
+                static assert( is(SymbolType!(C2.func2) == ToFunctionType!(void function(int))));
+                static assert( is(PropertyType!(C2.func2) == int));
+                static assert( is(typeof(C2.func2) == SymbolType!(C2.func2)));
+
+                alias overloads = __traits(getOverloads, C2, "func2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override int func1();
+            // override void func1(int);
+            {
+                static assert( is(SymbolType!(C2.func1) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(C2.func1) == int));
+                static assert( is(typeof(C2.func1) == SymbolType!(C2.func1)));
+
+                alias overloads = __traits(getOverloads, C2, "func1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+        }
+
+        static class C3 : C2
+        {
+            const(short)* ptr;
+        }
+
+        {
+            // real r; (from C2)
+            // bool b; (from C2)
+            // const(short)* ptr; (shadows C2.ptr)
+            static assert( is(SymbolType!(C3.r) == real));
+            static assert( is(PropertyType!(C3.r) == real));
+            static assert( is(typeof(C3.r) == real));
+
+            static assert( is(SymbolType!(C3.b) == bool));
+            static assert( is(PropertyType!(C3.b) == bool));
+            static assert( is(typeof(C3.b) == bool));
+
+            static assert( is(SymbolType!(C3.ptr) == const(short)*));
+            static assert( is(PropertyType!(C3.ptr) == const(short)*));
+            static assert( is(typeof(C3.ptr) == const(short)*));
+
+            // Actually on I, not C3.
+            // static @property string staticProp();
+            // static @property void staticProp(real);
+            {
+                static assert( is(SymbolType!(C3.staticProp) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(C3.staticProp) == string));
+                static assert( is(typeof(C3.staticProp) == PropertyType!(C3.staticProp)));
+
+                alias overloads = __traits(getOverloads, C3, "staticProp");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(real) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // @property long extraProp() { return 42; }
+            // override @property void extraProp(string) {}
+            // @property void extraProp(int) {}
+            {
+                static assert( is(SymbolType!(C3.extraProp) == ToFunctionType!(long function() @property)));
+                static assert( is(PropertyType!(C3.extraProp) == long));
+                static assert( is(typeof(C3.extraProp) == long));
+
+                alias overloads = __traits(getOverloads, C3, "extraProp");
+                static assert(overloads.length == 3);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(long function() @property)));
+                static assert( is(PropertyType!(overloads[0]) == long));
+                static assert( is(typeof(overloads[0]) == long));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+
+                static assert( is(SymbolType!(overloads[2]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[2])));
+                static assert(!__traits(compiles, typeof(overloads[2])));
+            }
+
+            // override void foo()
+            static assert( is(SymbolType!(C3.foo) == ToFunctionType!(void function())));
+            static assert(!__traits(compiles, PropertyType!(C3.foo)));
+            static assert( is(typeof(C3.foo) == SymbolType!(C3.foo)));
+
+            // I does not provide default arguments, but C2 does.
+            // @property string defaultArgInDerivedProp2(int i = 0);
+            // @property void defaultArgInDerivedProp2(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C3.defaultArgInDerivedProp2) ==
+                                  ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(C3.defaultArgInDerivedProp2) == string));
+                static assert( is(typeof(C3.defaultArgInDerivedProp2) == string));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgInDerivedProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == string));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // string defaultArgInDerived2(int i = 0);
+            // void defaultArgInDerived2(string, int i = 0);
+            {
+                static assert( is(SymbolType!(C3.defaultArgInDerived2) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(C3.defaultArgInDerived2) == string));
+                static assert( is(typeof(C3.defaultArgInDerived2) == SymbolType!(C3.defaultArgInDerived2)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgInDerived2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[0]) == string));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // void defaultArgInDerived1(string, int i = 0);
+            // string defaultArgInDerived1(int i = 0);
+            {
+                static assert( is(SymbolType!(C3.defaultArgInDerived1) == ToFunctionType!(void function(string, int))));
+                static assert( is(PropertyType!(C3.defaultArgInDerived1) == string));
+                static assert( is(typeof(C3.defaultArgInDerived1) == SymbolType!(C3.defaultArgInDerived1)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgInDerived1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int))));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // I does not provide default arguments, but C2 does.
+            // @property void defaultArgInDerivedProp1(string, int i = 0);
+            // @property string defaultArgInDerivedProp1(int i = 0);
+            {
+                static assert( is(SymbolType!(C3.defaultArgInDerivedProp1) ==
+                                  ToFunctionType!(void function(string, int) @property)));
+                static assert( is(PropertyType!(C3.defaultArgInDerivedProp1) == string));
+                static assert( is(typeof(C3.defaultArgInDerivedProp1) == string));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgInDerivedProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(string, int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(string function(int) @property)));
+                static assert( is(PropertyType!(overloads[1]) == string));
+                static assert( is(typeof(overloads[1]) == string));
+            }
+
+            // override void defaultArg2(int, string str = "bar");
+            // override int defaultArg2(string str = "bar");
+            {
+                static assert( is(SymbolType!(C3.defaultArg2) == ToFunctionType!(void function(int, string))));
+                static assert( is(PropertyType!(C3.defaultArg2) == int));
+                static assert( is(typeof(C3.defaultArg2) == SymbolType!(C3.defaultArg2)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArg2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property int defaultArgProp2(string str = "bar");
+            // override @property void defaultArgProp2(int, string str = "bar");
+            {
+                static assert( is(SymbolType!(C3.defaultArgProp2) ==
+                                  ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(C3.defaultArgProp2) == int));
+                static assert( is(typeof(C3.defaultArgProp2) == PropertyType!(C3.defaultArgProp2)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgProp2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == PropertyType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert(!__traits(compiles, typeof(overloads[1])));
+            }
+
+            // override @property void defaultArgProp1(int, string str = "bar");
+            // override @property int defaultArgProp1(string str = "bar");
+            {
+
+                static assert( is(SymbolType!(C3.defaultArgProp1) ==
+                                  ToFunctionType!(void function(int, string) @property)));
+                static assert( is(PropertyType!(C3.defaultArgProp1) == int));
+                static assert( is(typeof(C3.defaultArgProp1) == PropertyType!(C3.defaultArgProp1)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArgProp1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string) @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override void defaultArg1(int, string str = "bar");
+            // override int defaultArg1(string str = "bar");
+            {
+                static assert( is(SymbolType!(C3.defaultArg1) == ToFunctionType!(void function(int, string))));
+                static assert( is(PropertyType!(C3.defaultArg1) == int));
+                static assert( is(typeof(C3.defaultArg1) == SymbolType!(C3.defaultArg1)));
+
+                alias overloads = __traits(getOverloads, C3, "defaultArg1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int, string))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function(string))));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override @property void prop2(int);
+            // override @property int prop2();
+            {
+                static assert( is(SymbolType!(C3.prop2) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(C3.prop2) == int));
+                static assert( is(typeof(C3.prop2) == PropertyType!(C3.prop2)));
+
+                alias overloads = __traits(getOverloads, C3, "prop2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override @property void prop1(int);
+            // override @property int prop1();
+            {
+                static assert( is(SymbolType!(C3.prop1) == ToFunctionType!(void function(int) @property)));
+                static assert( is(PropertyType!(C3.prop1) == int));
+                static assert( is(typeof(C3.prop1) == PropertyType!(C3.prop1)));
+
+                alias overloads = __traits(getOverloads, C3, "prop1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int) @property)));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert(!__traits(compiles, typeof(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function() @property)));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == PropertyType!(overloads[1])));
+            }
+
+            // override void func2(int);
+            // override int func2();
+            {
+                static assert( is(SymbolType!(C3.func2) == ToFunctionType!(void function(int))));
+                static assert( is(PropertyType!(C3.func2) == int));
+                static assert( is(typeof(C3.func2) == SymbolType!(C3.func2)));
+
+                alias overloads = __traits(getOverloads, C3, "func2");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[0])));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[1]) == int));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+
+            // override int func1();
+            // override void func1(int);
+            {
+                static assert( is(SymbolType!(C3.func1) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(C3.func1) == int));
+                static assert( is(typeof(C3.func1) == SymbolType!(C3.func1)));
+
+                alias overloads = __traits(getOverloads, C3, "func1");
+                static assert(overloads.length == 2);
+
+                static assert( is(SymbolType!(overloads[0]) == ToFunctionType!(int function())));
+                static assert( is(PropertyType!(overloads[0]) == int));
+                static assert( is(typeof(overloads[0]) == SymbolType!(overloads[0])));
+
+                static assert( is(SymbolType!(overloads[1]) == ToFunctionType!(void function(int))));
+                static assert(!__traits(compiles, PropertyType!(overloads[1])));
+                static assert( is(typeof(overloads[1]) == SymbolType!(overloads[1])));
+            }
+        }
+    }
+}
+
+// This is probably overkill, since it's arguably testing the compiler more
+// than it's testing SymbolType or ToFunctionType, but with various tests
+// either using inference for all attributes or not providing a body to avoid
+// it entirely, it seemed prudent to add some tests where the attributes being
+// inferred were better controlled, and it does help ensure that SymbolType
+// and ToFunctionType behave as expected in each case.
+@safe unittest
+{
+    static int var;
+
+    // Since these are actually called below (even if those functions aren't
+    // called) we can't play the trick of not providing a body to set all of
+    // the attributes, because we get linker errors when the functions below
+    // call these functions.
+    static void useGC() @safe pure nothrow { new int; }
+    static void throws() @safe pure @nogc { Exception e; throw e; }
+    static void impure() @safe nothrow @nogc { ++var; }
+    static void unsafe() @system pure nothrow @nogc { int i; int* ptr = &i; }
+
+    {
+        static void func() { useGC(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure nothrow)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @safe pure nothrow)));
+    }
+    {
+        static void func() { throws(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure @nogc)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @safe pure @nogc)));
+    }
+    {
+        static void func() { impure(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe nothrow @nogc)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @safe nothrow @nogc)));
+    }
+    {
+        static void func() { unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system pure nothrow @nogc)));
+
+        // Doubling the test shouldn't be necessary, but since the order of the
+        // attributes isn't supposed to matter, it seemed prudent to have at
+        // least one test that used a different order.
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @system pure nothrow @nogc)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @nogc nothrow pure @system)));
+    }
+    {
+        static void func() { useGC(); throws(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe pure)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @safe pure)));
+    }
+    {
+        static void func() { throws(); impure(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @safe @nogc)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @safe @nogc)));
+    }
+    {
+        static void func() { impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system nothrow @nogc)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @system nothrow @nogc)));
+    }
+    {
+        static void func() { useGC(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system pure nothrow)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @system pure nothrow)));
+    }
+    {
+        static void func() { useGC(); throws(); impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @system)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @system)));
+    }
+    {
+        static void func() @trusted { useGC(); throws(); impure(); unsafe(); }
+        static assert( is(typeof(func) == ToFunctionType!(void function() @trusted)));
+        static assert( is(SymbolType!func == ToFunctionType!(void function() @trusted)));
+    }
 }
 
 /++
