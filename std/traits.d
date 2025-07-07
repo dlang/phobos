@@ -7682,6 +7682,8 @@ template isCallable(alias callable)
     static assert( isCallable!g);
     static assert( isCallable!S1);
     static assert( isCallable!S2);
+
+    static assert(!isCallable!((x) {}));
 }
 
 /// Overloaded functions and function templates instantiable with `!()`.
