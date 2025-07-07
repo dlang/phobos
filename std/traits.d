@@ -7612,7 +7612,7 @@ enum bool isSomeFunction(alias T) =
 Detect whether `T` is a callable object, which can be called with the
 function call operator `$(LPAREN)...$(RPAREN)`.
 
-$(NOTE IFTI is *not* attempted - see below.)
+$(NOTE Implicit Function Template Instantiation is *not* attempted - see below.)
  */
 template isCallable(alias callable)
 {
