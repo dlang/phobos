@@ -7611,6 +7611,8 @@ enum bool isSomeFunction(alias T) =
 /**
 Detect whether `T` is a callable object, which can be called with the
 function call operator `$(LPAREN)...$(RPAREN)`.
+
+$(NOTE IFTI is *not* attempted - see below.)
  */
 template isCallable(alias callable)
 {
@@ -7634,7 +7636,7 @@ template isCallable(alias callable)
     }
 }
 
-/// Functions, lambdas, and aggregate types with (static) opCall.
+/// Functions, function pointers, delegates, lambdas.
 @safe unittest
 {
     void f() { }
@@ -7643,6 +7645,18 @@ template isCallable(alias callable)
     static assert( isCallable!f);
     static assert( isCallable!g);
 
+    auto fp = &f;
+    static assert( isCallable!fp);
+    static assert( isCallable!((int x) {}));
+    static assert( isCallable!((x) {}));
+
+    int x;
+    static assert(!isCallable!x);
+}
+
+/// Aggregate types with (static) opCall.
+@safe unittest
+{
     class C { int opCall(int) { return 0; } }
     auto c = new C;
     struct S { static int opCall(int) { return 0; } }
@@ -7657,7 +7671,7 @@ template isCallable(alias callable)
     static assert(!isCallable!I);
 }
 
-/// Templates
+/// Template functions are only detected if they are instantiable with `!()`.
 @safe unittest
 {
     void f()() { }
@@ -7671,7 +7685,7 @@ template isCallable(alias callable)
     static assert( isCallable!S2);
 }
 
-/// Overloaded functions and function templates.
+/// Overloaded functions and function templates instantiable with `!()`.
 @safe unittest
 {
     static struct Wrapper
