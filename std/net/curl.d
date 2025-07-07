@@ -2424,13 +2424,20 @@ struct HTTP
             import std.string : indexOf, chomp;
             import std.uni : toLower;
             import std.exception : assumeUnique;
+            import std.utf : UTFException;
 
             // Wrap incoming callback in order to separate http status line from
             // http headers.  On redirected requests there may be several such
             // status lines. The last one is the one recorded.
+
+            // Local copies of the required fields so as not to capture all of this
+            auto headersInPtr = &headersIn;
+            auto statusPtr = &status;
+            auto charsetPtr = &charset;
+            auto onStatus = onReceiveStatusLine;
+
             auto dg = (in char[] header)
             {
-                import std.utf : UTFException;
                 try
                 {
                     if (header.empty)
@@ -2440,11 +2447,11 @@ struct HTTP
                     }
                     if (header.startsWith("HTTP/"))
                     {
-                        headersIn.clear();
-                        if (parseStatusLine(header, status))
+                        headersInPtr.clear();
+                        if (parseStatusLine(header, *statusPtr))
                         {
-                            if (onReceiveStatusLine != null)
-                                onReceiveStatusLine(status);
+                            if (onStatus !is null)
+                                onStatus(*statusPtr);
                         }
                         return;
                     }
@@ -2458,15 +2465,15 @@ struct HTTP
                     {
                         auto io = indexOf(fieldContent, "charset=", No.caseSensitive);
                         if (io != -1)
-                            charset = fieldContent[io + "charset=".length .. $].findSplit(";")[0].idup;
+                            *charsetPtr = fieldContent[io + "charset=".length .. $].findSplit(";")[0].idup;
                     }
                     if (!m[1].empty && callback !is null)
                         callback(fieldName, fieldContent);
-                    headersIn[fieldName] = fieldContent.idup;
+                    (*headersInPtr)[fieldName] = fieldContent.idup;
                 }
                 catch (UTFException e)
                 {
-                    //munch it - a header should be all ASCII, any "wrong UTF" is broken header
+                    // munch it - a header should be all ASCII, any "wrong UTF" is broken header
                 }
             };
 
