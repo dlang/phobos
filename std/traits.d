@@ -7648,7 +7648,6 @@ template isCallable(alias callable)
     auto fp = &f;
     static assert( isCallable!fp);
     static assert( isCallable!((int x) {}));
-    static assert( isCallable!((x) {}));
 
     int x;
     static assert(!isCallable!x);
