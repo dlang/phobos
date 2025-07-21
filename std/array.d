@@ -1073,14 +1073,6 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     }
 }
 
-// from rt/lifetime.d
-private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
-
-// from rt/tracegc.d
-version (D_ProfileGC)
-private extern (C) void[] _d_newarrayUTrace(string file, size_t line,
-    string funcname, const scope TypeInfo ti, size_t length) pure nothrow;
-
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
@@ -1131,18 +1123,19 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
               which will inform the GC how to destroy the items in the block
               when it gets collected.
 
-              _d_newarrayU returns a void[], but with the length set according
-              to E.sizeof.
+              _d_newarrayU returns a E[], with the length set according to
+              to the size parameter.
             +/
+            enum isShared = is (E == shared);
             version (D_ProfileGC)
             {
                 // FIXME: file, line, function should be propagated from the
                 // caller, not here.
-                *(cast(void[]*)&ret) = _d_newarrayUTrace(__FILE__, __LINE__,
-                    __FUNCTION__, typeid(E[]), size);
+                ret = _d_newarrayUTrace!E(size, isShared,
+                    __FILE__, __LINE__, __FUNCTION__);
             }
             else
-                *(cast(void[]*)&ret) = _d_newarrayU(typeid(E[]), size);
+                ret = _d_newarrayU!E(size, isShared);
             static if (minimallyInitialized && hasIndirections!E)
                 // _d_newarrayU would have asserted if the multiplication below
                 // had overflowed, so we don't have to check it again.
