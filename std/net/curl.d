@@ -2425,11 +2425,14 @@ struct HTTP
             import std.uni : toLower;
             import std.exception : assumeUnique;
 
+            auto self = cast(void*)&this;
+
             // Wrap incoming callback in order to separate http status line from
             // http headers.  On redirected requests there may be several such
             // status lines. The last one is the one recorded.
             auto dg = (in char[] header)
             {
+                auto this_ = cast(Impl*)self;
                 import std.utf : UTFException;
                 try
                 {
@@ -2440,11 +2443,11 @@ struct HTTP
                     }
                     if (header.startsWith("HTTP/"))
                     {
-                        headersIn.clear();
-                        if (parseStatusLine(header, status))
+                        this_.headersIn.clear();
+                        if (parseStatusLine(header, this_.status))
                         {
-                            if (onReceiveStatusLine != null)
-                                onReceiveStatusLine(status);
+                            if (this_.onReceiveStatusLine != null)
+                                this_.onReceiveStatusLine(this_.status);
                         }
                         return;
                     }
@@ -2458,11 +2461,11 @@ struct HTTP
                     {
                         auto io = indexOf(fieldContent, "charset=", No.caseSensitive);
                         if (io != -1)
-                            charset = fieldContent[io + "charset=".length .. $].findSplit(";")[0].idup;
+                            this_.charset = fieldContent[io + "charset=".length .. $].findSplit(";")[0].idup;
                     }
                     if (!m[1].empty && callback !is null)
                         callback(fieldName, fieldContent);
-                    headersIn[fieldName] = fieldContent.idup;
+                    this_.headersIn[fieldName] = fieldContent.idup;
                 }
                 catch (UTFException e)
                 {
