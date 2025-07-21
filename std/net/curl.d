@@ -2432,7 +2432,7 @@ struct HTTP
             // status lines. The last one is the one recorded.
             auto dg = (in char[] header)
             {
-                auto this_ = cast(Impl*)self;
+                auto this_ = cast(Impl*) self;
                 import std.utf : UTFException;
                 try
                 {
