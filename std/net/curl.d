@@ -2425,7 +2425,7 @@ struct HTTP
             import std.uni : toLower;
             import std.exception : assumeUnique;
 
-            auto self = cast(void*)&this;
+            scope void* self = cast(void*) &this;
 
             // Wrap incoming callback in order to separate http status line from
             // http headers.  On redirected requests there may be several such
