@@ -73,6 +73,10 @@
               $(LREF isSameType)
     ))
     $(TR $(TD Function traits) $(TD
+              $(LREF isDelegate)
+              $(LREF isFunction)
+              $(LREF isFunctionPointer)
+              $(LREF isReturn)
               $(LREF ToFunctionType)
     ))
     $(TR $(TD Aggregate Type Traits) $(TD
@@ -2581,6 +2585,492 @@ template isSameType(T)
 }
 
 /++
+    Evaluates to $(K_TRUE) ifthe given type is a delegate (and to $(K_FALSE)
+    otherwise).
+
+    This is equivalent to $(D is(T == delegate)), so most code shouldn't use
+    it. It's intended to be used in conjunction with templates that take a
+    template predicate - such as those in $(MREF phobos, sys, meta).
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a delegate.
+
+    Whether taking the address of a function results in a function pointer or a
+    delegate depends on whether the result includes a context pointer.
+
+    Taking the address of a free function or a $(K_STATIC) function gives a
+    function pointer. Taking the address of a non-$(K_STATIC) nested function
+    gives a delegate. And the potentially confusing one is non-$(K_STATIC)
+    member functions, because whether taking their address results in a
+    function pointer or a delegate depends on whether the address is taken via
+    the type or via an instance.
+
+    See the documentation for $(LREF SymbolType) and $(LREF PropertyType) to
+    see the quirks involving $(K_PROPERTY) and why either $(LREF SymbolType) or
+    $(LREF PropertyType) should be used rather than $(K_TYPEOF) to get the type
+    of a symbol.
+
+    See_Also:
+        $(LREF isFunction)
+        $(LREF isFunctionPointer)
+        $(LREF isReturn)
+        $(LREF PropertyType)
+        $(LREF SymbolType)
+        $(LREF ToFunctionType)
+  +/
+enum isDelegate(T) = is(T == delegate);
+
+///
+@safe unittest
+{
+    int var;
+    static assert(!isDelegate!(SymbolType!var));
+    static assert(!isDelegate!(PropertyType!var));
+    static assert(!isDelegate!(typeof(&var)));
+    static assert(!is(SymbolType!var == delegate));
+    static assert(!is(PropertType!var == delegate));
+    static assert(!is(typeof(&var) == delegate));
+
+    static void func() {}
+    static assert(!isDelegate!(SymbolType!func));
+    static assert(!isDelegate!(typeof(&func)));
+    static assert(!is(SymbolType!func == delegate));
+    static assert(!is(typeof(&func) == delegate));
+
+    void funcWithContext() { ++var; }
+    static assert(!isDelegate!(SymbolType!funcWithContext));
+    static assert( isDelegate!(typeof(&funcWithContext)));
+    static assert(!is(SymbolType!funcWithContext == delegate));
+    static assert( is(typeof(&funcWithContext) == delegate));
+
+    int function() funcPtr;
+    static assert(!isDelegate!(SymbolType!funcPtr));
+    static assert(!isDelegate!(PropertyType!funcPtr));
+    static assert(!isDelegate!(typeof(&funcPtr)));
+    static assert(!is(SymbolType!funcPtr == delegate));
+    static assert(!is(PropertyType!funcPtr == delegate));
+    static assert(!is(typeof(&funcPtr) == delegate));
+
+    int delegate() del;
+    static assert( isDelegate!(SymbolType!del));
+    static assert( isDelegate!(PropertyType!del));
+    static assert(!isDelegate!(typeof(&del)));
+    static assert( is(SymbolType!del == delegate));
+    static assert( is(PropertyType!del == delegate));
+    static assert(!is(typeof(&del) == delegate));
+
+    @property static int prop() { return 0; }
+    static assert(!isDelegate!(SymbolType!prop));
+    static assert(!isDelegate!(PropertyType!prop));
+    static assert(!isDelegate!(typeof(&prop)));
+    static assert(!is(SymbolType!prop == delegate));
+    static assert(!is(PropertyType!prop == delegate));
+    static assert(!is(typeof(&prop) == delegate));
+
+    @property int propWithContext() { return var; }
+    static assert(!isDelegate!(SymbolType!propWithContext));
+    static assert(!isDelegate!(PropertyType!propWithContext));
+    static assert( isDelegate!(typeof(&propWithContext)));
+    static assert(!is(SymbolType!propWithContext == delegate));
+    static assert(!is(PropertyType!propWithContext == delegate));
+    static assert( is(typeof(&propWithContext) == delegate));
+
+    static int function() propFuncPtr() @property { return null; }
+    static assert(!isDelegate!(SymbolType!propFuncPtr));
+    static assert(!isDelegate!(PropertyType!propFuncPtr));
+    static assert(!isDelegate!(typeof(&propFuncPtr)));
+    static assert(!is(SymbolType!propFuncPtr == delegate));
+    static assert(!is(PropertyType!propFuncPtr == delegate));
+    static assert(!is(typeof(&propFuncPtr) == delegate));
+
+    static int delegate() propDel() @property { return null; }
+    static assert(!isDelegate!(SymbolType!propDel));
+    static assert( isDelegate!(PropertyType!propDel));
+    static assert(!isDelegate!(typeof(&propDel)));
+    static assert(!is(SymbolType!propDel == delegate));
+    static assert( is(PropertyType!propDel == delegate));
+    static assert(!is(typeof(&propDel) == delegate));
+
+    static struct S
+    {
+        void foo() {}
+    }
+    static assert(!isDelegate!(SymbolType!(S.foo)));
+    static assert(!isDelegate!(typeof(&S.foo)));
+    static assert( isDelegate!(typeof(&S.init.foo)));
+    static assert(!is(SymbolType!(S.foo) == delegate));
+    static assert(!is(typeof(&S.foo) == delegate));
+    static assert( is(typeof(&S.init.foo) == delegate));
+
+    struct HasContext
+    {
+        void foo() { ++var; }
+    }
+    static assert(!isDelegate!(SymbolType!(S.foo)));
+    static assert(!isDelegate!(typeof(&S.foo)));
+    static assert( isDelegate!(typeof(&S.init.foo)));
+    static assert(!is(SymbolType!(S.foo) == delegate));
+    static assert(!is(typeof(&S.foo) == delegate));
+    static assert( is(typeof(&S.init.foo) == delegate));
+}
+
+/++
+    Evaluates to $(K_TRUE) if the given type is a function (and to $(K_FALSE)
+    otherwise).
+
+    This is equivalent to $(D is(T == function)), so most code shouldn't use
+    it. It's intended to be used in conjunction with templates that take a
+    template predicate - such as those in $(MREF phobos, sys, meta).
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a function.
+
+    It's not currently possible in D to type out the type of a function on its
+    own, so normally, the only way to get a function type is to get the type of
+    a symbol which is a function. However, $(LREF ToFunctionType) can be used
+    to convert a function pointer type to a function type for code that needs
+    that, though that's likely only to come up in $(K_IS) expressions.
+
+    See the documentation for $(LREF SymbolType) and $(LREF PropertyType) to
+    see the quirks involving $(K_PROPERTY) and why either $(LREF SymbolType) or
+    $(LREF PropertyType) should be used rather than $(K_TYPEOF) to get the type
+    of a symbol.
+
+    See_Also:
+        $(LREF isDelegate)
+        $(LREF isFunctionPointer)
+        $(LREF isReturn)
+        $(LREF PropertyType)
+        $(LREF SymbolType)
+        $(LREF ToFunctionType)
+  +/
+enum isFunction(T) = is(T == function);
+
+///
+@safe unittest
+{
+    int var;
+    static assert(!isFunction!(SymbolType!var));
+    static assert(!isFunction!(PropertyType!var));
+    static assert(!isFunction!(typeof(&var)));
+    static assert(!is(SymbolType!var == function));
+    static assert(!is(PropertType!var == function));
+    static assert(!is(typeof(&var) == function));
+
+    static void func() {}
+    static assert( isFunction!(SymbolType!func));
+    static assert(!isFunction!(typeof(&func)));
+    static assert( is(SymbolType!func == function));
+    static assert(!is(typeof(&func) == function));
+
+    void funcWithContext() { ++var; }
+    static assert( isFunction!(SymbolType!funcWithContext));
+    static assert(!isFunction!(typeof(&funcWithContext)));
+    static assert( is(SymbolType!funcWithContext == function));
+    static assert(!is(typeof(&funcWithContext) == function));
+
+    int function() funcPtr;
+    static assert(!isFunction!(SymbolType!funcPtr));
+    static assert(!isFunction!(PropertyType!funcPtr));
+    static assert(!isFunction!(typeof(&funcPtr)));
+    static assert(!is(SymbolType!funcPtr == function));
+    static assert(!is(PropertyType!funcPtr == function));
+    static assert(!is(typeof(&funcPtr) == function));
+
+    int delegate() del;
+    static assert(!isFunction!(SymbolType!del));
+    static assert(!isFunction!(PropertyType!del));
+    static assert(!isFunction!(typeof(&del)));
+    static assert(!is(SymbolType!del == function));
+    static assert(!is(PropertyType!del == function));
+    static assert(!is(typeof(&del) == function));
+
+    // It's possible to get the pointers to the function and the context from a
+    // delegate in @system code.
+    static assert( isFunctionPointer!(typeof(SymbolType!del.funcptr)));
+    static assert( is(typeof(SymbolType!del.ptr) == void*));
+
+    @property static int prop() { return 0; }
+    static assert( isFunction!(SymbolType!prop));
+    static assert(!isFunction!(PropertyType!prop));
+    static assert(!isFunction!(typeof(&prop)));
+    static assert( is(SymbolType!prop == function));
+    static assert(!is(PropertyType!prop == function));
+    static assert(!is(typeof(&prop) == function));
+
+    @property int propWithContext() { return var; }
+    static assert( isFunction!(SymbolType!propWithContext));
+    static assert(!isFunction!(PropertyType!propWithContext));
+    static assert(!isFunction!(typeof(&propWithContext)));
+    static assert( is(SymbolType!propWithContext == function));
+    static assert(!is(PropertyType!propWithContext == function));
+    static assert(!is(typeof(&propWithContext) == function));
+
+    static int function() propFuncPtr() @property { return null; }
+    static assert( isFunction!(SymbolType!propFuncPtr));
+    static assert(!isFunction!(PropertyType!propFuncPtr));
+    static assert(!isFunction!(typeof(&propFuncPtr)));
+    static assert( is(SymbolType!propFuncPtr == function));
+    static assert(!is(PropertyType!propFuncPtr == function));
+    static assert(!is(typeof(&propFuncPtr) == function));
+
+    static int delegate() propDel() @property { return null; }
+    static assert( isFunction!(SymbolType!propDel));
+    static assert(!isFunction!(PropertyType!propDel));
+    static assert(!isFunction!(typeof(&propDel)));
+    static assert( is(SymbolType!propDel == function));
+    static assert(!is(PropertyType!propDel == function));
+    static assert(!is(typeof(&propDel) == function));
+
+    static struct S
+    {
+        void foo() {}
+    }
+    static assert( isFunction!(SymbolType!(S.foo)));
+    static assert(!isFunction!(typeof(&S.foo)));
+    static assert(!isFunction!(typeof(&S.init.foo)));
+    static assert( is(SymbolType!(S.foo) == function));
+    static assert(!is(typeof(&S.foo) == function));
+    static assert(!is(typeof(&S.init.foo) == function));
+
+    struct HasContext
+    {
+        void foo() { ++var; }
+    }
+    static assert( isFunction!(SymbolType!(S.foo)));
+    static assert(!isFunction!(typeof(&S.foo)));
+    static assert(!isFunction!(typeof(&S.init.foo)));
+    static assert( is(SymbolType!(S.foo) == function));
+    static assert(!is(typeof(&S.foo) == function));
+    static assert(!is(typeof(&S.init.foo) == function));
+}
+
+/++
+    Evaluates to $(K_TRUE) if the given type is a function pointer (and to
+    $(K_FALSE) otherwise).
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a function pointer.
+
+    Whether taking the address of a function results in a function pointer or a
+    delegate depends on whether the result includes a context pointer.
+
+    Taking the address of a free function or a $(K_STATIC) function gives a
+    function pointer. Taking the address of a non-$(K_STATIC) nested function
+    gives a delegate. And the potentially confusing one is non-$(K_STATIC)
+    member functions, because whether taking their address results in a
+    function pointer or a delegate depends on whether the address is taken via
+    the type or via an instance.
+
+    See the documentation for $(LREF SymbolType) and $(LREF PropertyType) to
+    see the quirks involving $(K_PROPERTY) and why either $(LREF SymbolType) or
+    $(LREF PropertyType) should be used rather than $(K_TYPEOF) to get the type
+    of a symbol.
+
+    See_Also:
+        $(LREF isDelegate)
+        $(LREF isFunction)
+        $(LREF isReturn)
+        $(LREF PropertyType)
+        $(LREF SymbolType)
+        $(LREF ToFunctionType)
+  +/
+enum isFunctionPointer(T) = is(T == U*, U) && is(U == function);
+
+///
+@safe unittest
+{
+    int var;
+    static assert(!isFunctionPointer!(SymbolType!var));
+    static assert(!isFunctionPointer!(PropertyType!var));
+    static assert(!isFunctionPointer!(typeof(&var)));
+
+    static void func() {}
+    static assert(!isFunctionPointer!(SymbolType!func));
+    static assert( isFunctionPointer!(typeof(&func)));
+
+    void funcWithContext() { ++var; }
+    static assert(!isFunctionPointer!(SymbolType!funcWithContext));
+    static assert(!isFunctionPointer!(typeof(&funcWithContext)));
+
+    int function() funcPtr;
+    static assert( isFunctionPointer!(SymbolType!funcPtr));
+    static assert( isFunctionPointer!(PropertyType!funcPtr));
+    static assert(!isFunctionPointer!(typeof(&funcPtr)));
+
+    int delegate() del;
+    static assert(!isFunctionPointer!(SymbolType!del));
+    static assert(!isFunctionPointer!(PropertyType!del));
+    static assert(!isFunctionPointer!(typeof(&del)));
+
+    // It's possible to get the pointers to the function and the context from a
+    // delegate in @system code.
+    static assert( isFunctionPointer!(typeof(SymbolType!del.funcptr)));
+    static assert( is(typeof(SymbolType!del.ptr) == void*));
+
+    @property static int prop() { return 0; }
+    static assert(!isFunctionPointer!(SymbolType!prop));
+    static assert(!isFunctionPointer!(PropertyType!prop));
+    static assert( isFunctionPointer!(typeof(&prop)));
+
+    @property int propWithContext() { return var; }
+    static assert(!isFunctionPointer!(SymbolType!propWithContext));
+    static assert(!isFunctionPointer!(PropertyType!propWithContext));
+    static assert(!isFunctionPointer!(typeof(&propWithContext)));
+
+    static int function() propFuncPtr() @property { return null; }
+    static assert(!isFunctionPointer!(SymbolType!propFuncPtr));
+    static assert( isFunctionPointer!(PropertyType!propFuncPtr));
+    static assert( isFunctionPointer!(typeof(&propFuncPtr)));
+
+    static int delegate() propDel() @property { return null; }
+    static assert(!isFunctionPointer!(SymbolType!propDel));
+    static assert(!isFunctionPointer!(PropertyType!propDel));
+    static assert( isFunctionPointer!(typeof(&propDel)));
+
+    static struct S
+    {
+        void foo() {}
+    }
+    static assert(!isFunctionPointer!(SymbolType!(S.foo)));
+    static assert( isFunctionPointer!(typeof(&S.foo)));
+    static assert(!isFunctionPointer!(typeof(&S.init.foo)));
+
+    struct HasContext
+    {
+        void foo() { ++var; }
+    }
+    static assert(!isFunctionPointer!(SymbolType!(S.foo)));
+    static assert( isFunctionPointer!(typeof(&S.foo)));
+    static assert(!isFunctionPointer!(typeof(&S.init.foo)));
+}
+
+/++
+    Evaluates to $(K_TRUE) if the given type is a function, function pointer,
+    or delegate (and to $(K_FALSE) otherwise).
+
+    This is equivalent to $(D is(T == return)), so most code shouldn't use
+    it. It's intended to be used in conjunction with templates that take a
+    template predicate - such as those in $(MREF phobos, sys, meta).
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be a function, function pointer, or delegate.
+
+    See the documentation for $(LREF SymbolType) and $(LREF PropertyType) to
+    see the quirks involving $(K_PROPERTY) and why either $(LREF SymbolType) or
+    $(LREF PropertyType) should be used rather than $(K_TYPEOF) to get the type
+    of a symbol.
+
+    See_Also:
+        $(LREF isDelegate)
+        $(LREF isFunction)
+        $(LREF isFunctionPointer)
+        $(LREF PropertyType)
+        $(LREF SymbolType)
+        $(LREF ToFunctionType)
+  +/
+enum isReturn(T) = is(T == return);
+
+///
+@safe unittest
+{
+    int var;
+    static assert(!isReturn!(SymbolType!var));
+    static assert(!isReturn!(PropertyType!var));
+    static assert(!isReturn!(typeof(&var)));
+    static assert(!is(SymbolType!var == return));
+    static assert(!is(PropertType!var == return));
+    static assert(!is(typeof(&var) == return));
+
+    static void func() {}
+    static assert( isReturn!(SymbolType!func));
+    static assert( isReturn!(typeof(&func)));
+    static assert( is(SymbolType!func == return));
+    static assert( is(typeof(&func) == return));
+
+    void funcWithContext() { ++var; }
+    static assert( isReturn!(SymbolType!funcWithContext));
+    static assert( isReturn!(typeof(&funcWithContext)));
+    static assert( is(SymbolType!funcWithContext == return));
+    static assert( is(typeof(&funcWithContext) == return));
+
+    int function() funcPtr;
+    static assert( isReturn!(SymbolType!funcPtr));
+    static assert( isReturn!(PropertyType!funcPtr));
+    static assert(!isReturn!(typeof(&funcPtr)));
+    static assert( is(SymbolType!funcPtr == return));
+    static assert( is(PropertyType!funcPtr == return));
+    static assert(!is(typeof(&funcPtr) == return));
+
+    int delegate() del;
+    static assert( isReturn!(SymbolType!del));
+    static assert( isReturn!(PropertyType!del));
+    static assert(!isReturn!(typeof(&del)));
+    static assert( is(SymbolType!del == return));
+    static assert( is(PropertyType!del == return));
+    static assert(!is(typeof(&del) == return));
+
+    // It's possible to get the pointers to the function and the context from a
+    // delegate in @system code.
+    static assert( isFunctionPointer!(typeof(SymbolType!del.funcptr)));
+    static assert( is(typeof(SymbolType!del.ptr) == void*));
+
+    @property static int prop() { return 0; }
+    static assert( isReturn!(SymbolType!prop));
+    static assert(!isReturn!(PropertyType!prop));
+    static assert( isReturn!(typeof(&prop)));
+    static assert( is(SymbolType!prop == return));
+    static assert(!is(PropertyType!prop == return));
+    static assert( is(typeof(&prop) == return));
+
+    @property int propWithContext() { return var; }
+    static assert( isReturn!(SymbolType!propWithContext));
+    static assert(!isReturn!(PropertyType!propWithContext));
+    static assert( isReturn!(typeof(&propWithContext)));
+    static assert( is(SymbolType!propWithContext == return));
+    static assert(!is(PropertyType!propWithContext == return));
+    static assert( is(typeof(&propWithContext) == return));
+
+    static int function() propFuncPtr() @property { return null; }
+    static assert( isReturn!(SymbolType!propFuncPtr));
+    static assert( isReturn!(PropertyType!propFuncPtr));
+    static assert( isReturn!(typeof(&propFuncPtr)));
+    static assert( is(SymbolType!propFuncPtr == return));
+    static assert( is(PropertyType!propFuncPtr == return));
+    static assert( is(typeof(&propFuncPtr) == return));
+
+    static int delegate() propDel() @property { return null; }
+    static assert( isReturn!(SymbolType!propDel));
+    static assert( isReturn!(PropertyType!propDel));
+    static assert( isReturn!(typeof(&propDel)));
+    static assert( is(SymbolType!propDel == return));
+    static assert( is(PropertyType!propDel == return));
+    static assert( is(typeof(&propDel) == return));
+
+    static struct S
+    {
+        void foo() {}
+    }
+    static assert( isReturn!(SymbolType!(S.foo)));
+    static assert( isReturn!(typeof(&S.foo)));
+    static assert( isReturn!(typeof(&S.init.foo)));
+    static assert( is(SymbolType!(S.foo) == return));
+    static assert( is(typeof(&S.foo) == return));
+    static assert( is(typeof(&S.init.foo) == return));
+
+    struct HasContext
+    {
+        void foo() { ++var; }
+    }
+    static assert( isReturn!(SymbolType!(S.foo)));
+    static assert( isReturn!(typeof(&S.foo)));
+    static assert( isReturn!(typeof(&S.init.foo)));
+    static assert( is(SymbolType!(S.foo) == return));
+    static assert( is(typeof(&S.foo) == return));
+    static assert( is(typeof(&S.init.foo) == return));
+}
+
+/++
     Converts a function type, function pointer type, or delegate type to the
     corresponding function type.
 
@@ -2663,7 +3153,7 @@ if (is(T == return))
     auto propPtr = &prop;
     static assert(!is(typeof(propPtr) == function));
     static assert(!is(SymbolType!propPtr == function));
-    //static assert( isFunctionPointer!(typeof(propPtr))); // commented out until isFunctionPointer is added
+    static assert( isFunctionPointer!(typeof(propPtr)));
     static assert( is(ToFunctionType!(SymbolType!propPtr) == function));
 
     static assert( is(SymbolType!propPtr ==
@@ -2705,6 +3195,13 @@ if (is(T == return))
     static assert( is(ToFunctionType!(SymbolType!propDel) ==
                       ToFunctionType!(void function(int) @property @safe pure
                                                          nothrow @nogc)));
+
+    // Delegates have a funcptr property and a ptr property (which can only be
+    // used in @system code) which give the pointer to the function and the
+    // pointer to the context respectively.
+    static assert( is(ToFunctionType!(SymbolType!propDel) ==
+                      typeof(*SymbolType!propDel.funcptr)));
+    static assert( is(typeof(SymbolType!propDel.ptr) == void*));
 
     static struct S
     {
