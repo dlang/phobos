@@ -3999,8 +3999,8 @@ if (isBidirectionalRange!R)
         `range` with `n` elements dropped
 
     See_Also:
-        $(REF popFrontExcatly, std, range, primitives),
-        $(REF popBackExcatly, std, range, primitives)
+        $(REF popFrontExactly, std, range, primitives),
+        $(REF popBackExactly, std, range, primitives)
 +/
 R dropExactly(R)(R range, size_t n)
 if (isInputRange!R)
