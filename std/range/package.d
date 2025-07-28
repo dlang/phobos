@@ -3883,8 +3883,8 @@ pure @safe nothrow @nogc unittest
 /++
     `drop` is a convenience function which calls
     $(REF popFrontN, std, range, primitives)`(range, n)` and returns `range`.
-    Unlike `popFrontN`, the range argument is not passed by `ref`, so it will
-    not be mutated.
+    Unlike `popFrontN`, the range argument is not passed by `ref`, so
+    it may not be mutated.
 
     `drop` makes it easier to pop elements from a range rvalue
     and then pass it to another function within a single expression,
@@ -4038,8 +4038,8 @@ if (isBidirectionalRange!R)
 /++
     `dropOne` is a convenience function which calls
     `range.popFront()` and returns `range`.
-    Unlike `popFront`, the range argument is not passed by `ref`, so it will
-    not be mutated.
+    Unlike `popFront`, the range argument is not passed by `ref`, so
+    it may not be mutated.
 
     `dropOne` makes it easier to pop an element from a range rvalue
     and then pass it to another function within a single expression,
