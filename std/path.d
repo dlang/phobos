@@ -96,7 +96,7 @@ $(TR $(TD Other) $(TD
 module std.path;
 
 
-import std.file : getcwd;
+import std.file : DirEntry, getcwd;
 static import std.meta;
 import std.range;
 import std.traits;
@@ -1774,6 +1774,23 @@ if (isSomeChar!C)
     return result.array;
 }
 
+/// ditto
+immutable(char)[] buildNormalizedPath(const DirEntry path0, const(char[])[] paths...)
+    @safe
+{
+    version (Windows)
+    {
+        const name = path0.name;
+        if (name.isAbsolute)
+            return buildNormalizedPath!char(name ~ paths);
+
+        const arg0 = relativePath(path0.absoluteName, getcwd());
+        return buildNormalizedPath!char(arg0 ~ paths);
+    }
+    else
+        return buildNormalizedPath!char(path0 ~ paths);
+}
+
 ///
 @safe unittest
 {
@@ -1813,6 +1830,7 @@ if (isSomeChar!C)
     assert(buildNormalizedPath("", null) == "");
     assert(buildNormalizedPath(null, "") == "");
     assert(buildNormalizedPath!(char)(null, null) == "");
+    assert(buildNormalizedPath!(char)() == "");
 
     version (Posix)
     {
@@ -2077,10 +2095,27 @@ if (isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 auto asNormalizedPath(R)(return scope auto ref R path)
-if (isConvertibleToString!R)
+if (isConvertibleToString!R && !is(Unconst!R == DirEntry))
 {
     return asNormalizedPath!(StringTypeOf!R)(path);
+}
+
+/// ditto
+auto asNormalizedPath(R)(return scope auto ref R path)
+if (is(Unconst!R == DirEntry))
+{
+    version (Windows)
+    {
+        const name = path.name;
+        if (name.isAbsolute)
+            return asNormalizedPath(name);
+
+        return asNormalizedPath(relativePath(path.absoluteName, getcwd()));
+    }
+    else
+        return asNormalizedPath(path.name);
 }
 
 @safe unittest
@@ -2761,6 +2796,14 @@ string absolutePath(return scope const string path, lazy string base = getcwd())
     return chainPath(baseVar, path).array;
 }
 
+/// ditto
+version (Windows) // There's a chance this cannot be made pure on Posix.
+string absolutePath(return scope const DirEntry path, lazy string base = getcwd())
+    @safe pure
+{
+    return absolutePath(path.absoluteName, base);
+}
+
 ///
 @safe unittest
 {
@@ -2861,9 +2904,18 @@ if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 }
 
 auto asAbsolutePath(R)(auto ref R path)
-if (isConvertibleToString!R)
+if (isConvertibleToString!R && !is(Unconst!R == DirEntry))
 {
     return asAbsolutePath!(StringTypeOf!R)(path);
+}
+
+auto asAbsolutePath(R)(auto ref scope const R path)
+if (is(R == DirEntry))
+{
+    version (Windows)
+        return asAbsolutePath(path.absoluteName);
+    else
+        return asAbsolutePath(path.name);
 }
 
 @system unittest
@@ -2922,6 +2974,15 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 
     import std.conv : to;
     return asRelativePath!cs(path, baseVar).to!string;
+}
+
+string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
+    (const DirEntry path, lazy string base = getcwd())
+{
+    version (Windows)
+        return relativePath!cs(path.absoluteName, base);
+    else
+        return relativePath!cs(path.name, base);
 }
 
 ///
@@ -3099,9 +3160,24 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (auto ref R1 path, auto ref R2 base)
 if (isConvertibleToString!R1 || isConvertibleToString!R2)
 {
-    import std.meta : staticMap;
-    alias Types = staticMap!(convertToString, R1, R2);
-    return asRelativePath!(cs, Types)(path, base);
+    enum r1IsDirEntry = is(Unconst!R1 == DirEntry);
+
+    static if (r1IsDirEntry)
+    {
+        import std.meta : AliasSeq;
+
+        alias Types = AliasSeq!(string, convertToString!R2);
+        version (Windows)
+            return asRelativePath!(cs, Types)(path.absoluteName, base);
+        else
+            return asRelativePath!(cs, Types)(path.name, base);
+    }
+    else
+    {
+        import std.meta : staticMap;
+        alias Types = staticMap!(convertToString, R1, R2);
+        return asRelativePath!(cs, Types)(path, base);
+    }
 }
 
 @safe unittest
