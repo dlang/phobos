@@ -2614,37 +2614,37 @@ public:
             immutable tv_sec = toUnixTime!(typeof(timespec.tv_sec))();
             immutable fracHNSecs = removeUnitsFromHNSecs!"seconds"(_stdTime - 621_355_968_000_000_000L);
             immutable tv_nsec = cast(typeof(timespec.tv_nsec))convert!("hnsecs", "nsecs")(fracHNSecs);
-            return timespec(tv_sec, tv_nsec);
+            return timespec(tv_sec: tv_sec, tv_nsec: tv_nsec);
         }
 
         @safe unittest
         {
             import core.time;
-            assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeSpec() == timespec(0, 0));
-            assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(0, 900));
-            assert(SysTime(DateTime(1970, 1, 1), hnsecs(10), UTC()).toTimeSpec() == timespec(0, 1000));
-            assert(SysTime(DateTime(1970, 1, 1), usecs(7), UTC()).toTimeSpec() == timespec(0, 7000));
+            assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeSpec() == timespec(tv_sec: 0, tv_nsec: 0));
+            assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(tv_sec: 0, tv_nsec: 900));
+            assert(SysTime(DateTime(1970, 1, 1), hnsecs(10), UTC()).toTimeSpec() == timespec(tv_sec: 0, tv_nsec: 1000));
+            assert(SysTime(DateTime(1970, 1, 1), usecs(7), UTC()).toTimeSpec() == timespec(tv_sec: 0, tv_nsec: 7000));
 
-            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toTimeSpec() == timespec(1, 0));
-            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(1, 900));
-            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), hnsecs(10), UTC()).toTimeSpec() == timespec(1, 1000));
-            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), usecs(7), UTC()).toTimeSpec() == timespec(1, 7000));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toTimeSpec() == timespec(tv_sec: 1, tv_nsec: 0));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(tv_sec: 1, tv_nsec: 900));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), hnsecs(10), UTC()).toTimeSpec() == timespec(tv_sec: 1, tv_nsec: 1000));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), usecs(7), UTC()).toTimeSpec() == timespec(tv_sec: 1, tv_nsec: 7000));
 
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC()).toTimeSpec() ==
-                   timespec(0, -100));
+                   timespec(tv_sec: 0, tv_nsec: -100));
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), hnsecs(9_999_990), UTC()).toTimeSpec() ==
-                   timespec(0, -1000));
+                   timespec(tv_sec: 0, tv_nsec: -1000));
 
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), usecs(999_999), UTC()).toTimeSpec() ==
-                   timespec(0, -1_000));
+                   timespec(tv_sec: 0, tv_nsec: -1_000));
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), usecs(999), UTC()).toTimeSpec() ==
-                   timespec(0, -999_001_000));
+                   timespec(tv_sec: 0, tv_nsec: -999_001_000));
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), msecs(999), UTC()).toTimeSpec() ==
-                   timespec(0, -1_000_000));
+                   timespec(tv_sec: 0, tv_nsec: -1_000_000));
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toTimeSpec() ==
-                   timespec(-1, 0));
+                   timespec(tv_sec: -1, tv_nsec: 0));
             assert(SysTime(DateTime(1969, 12, 31, 23, 59, 58), usecs(17), UTC()).toTimeSpec() ==
-                   timespec(-1, -999_983_000));
+                   timespec(tv_sec: -1, tv_nsec: -999_983_000));
 
             static void testScope(scope ref SysTime st) @safe
             {
