@@ -237,10 +237,7 @@ private
         enum methodCall = (args.length == 0)
             ? `matched.` ~ methodName
             : `matched.` ~ methodName ~ `(args)`;
-        enum handler(T) = `(ref scope `
-            ~ __traits(fullyQualifiedName, T)
-                .chomp(".CharDev") /+ quick'n'dirty workaround +/
-            ~ ` matched) @safe => ` ~ methodCall;
+        enum handler(T) = `(ref scope ` ~ __traits(fullyQualifiedName, T) ~ ` matched) @safe => ` ~ methodCall;
         enum handlers = `AliasSeq!(` ~ [staticMap!(handler, EntropySourceHandle.Inner.Types)].join(",\n") ~ `)`;
 
         return source.match!(mixin(handlers));
@@ -851,72 +848,75 @@ static:
     }
 
     version(Posix)
-    struct CharDev(EntropySourceID sourceID, string path)
+    template CharDevImpl(EntropySourceID sourceID, string path)
     {
-        import core.stdc.stdio : FILE, fclose, fopen, fread;
-
-        private
+        struct CharDev
         {
-            enum string _path = path ~ "\0";
-            FILE* _file = null;
-        }
+            import core.stdc.stdio : FILE, fclose, fopen, fread;
 
-    @nogc nothrow @safe:
+            private
+            {
+                enum string _path = path ~ "\0";
+                FILE* _file = null;
+            }
 
-        enum id = sourceID;
+        @nogc nothrow @safe:
 
-        EntropyStatus open() scope @trusted
-        {
-            _file = fopen(_path.ptr, "r");
+            enum id = sourceID;
 
-            if (_file is null)
-                return EntropyStatus.unavailable;
+            EntropyStatus open() scope @trusted
+            {
+                _file = fopen(_path.ptr, "r");
 
-            return EntropyStatus.ok;
-        }
+                if (_file is null)
+                    return EntropyStatus.unavailable;
 
-        void close() scope @trusted
-        {
-            if (_file is null)
-                return;
+                return EntropyStatus.ok;
+            }
 
-            fclose(_file);
-        }
+            void close() scope @trusted
+            {
+                if (_file is null)
+                    return;
 
-        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
-        {
-            if (_file is null)
-                return EntropyStatus.unavailable;
+                fclose(_file);
+            }
 
-            const bytesRead = fread(buffer.ptr, 1, buffer.length, _file);
-            if (bytesRead != buffer.length)
-                return EntropyStatus.readError;
+            EntropyStatus getEntropy(scope void[] buffer) scope @trusted
+            {
+                if (_file is null)
+                    return EntropyStatus.unavailable;
 
-            return EntropyStatus.ok;
-        }
+                const bytesRead = fread(buffer.ptr, 1, buffer.length, _file);
+                if (bytesRead != buffer.length)
+                    return EntropyStatus.readError;
 
-        static string getErrorMessage(EntropyStatus status)
-        {
-            if (status == EntropyStatus.unavailable)
-                return "getEntropy(): `" ~ path ~ "` is unavailable.";
-            if (status == EntropyStatus.readError)
-                return "getEntropy(): Reading from `" ~ path ~ "` failed.";
+                return EntropyStatus.ok;
+            }
 
-            return null;
+            static string getErrorMessage(EntropyStatus status)
+            {
+                if (status == EntropyStatus.unavailable)
+                    return "getEntropy(): `" ~ path ~ "` is unavailable.";
+                if (status == EntropyStatus.readError)
+                    return "getEntropy(): Reading from `" ~ path ~ "` failed.";
+
+                return null;
+            }
         }
     }
 
     version(Posix)
-    alias CharDevURandom = CharDev!(
+    alias CharDevURandom = CharDevImpl!(
         EntropySourceID.charDevURandom,
         "/dev/urandom",
-    );
+    ).CharDev;
 
     version(Posix)
-    alias CharDevRandom = CharDev!(
+    alias CharDevRandom = CharDevImpl!(
         EntropySourceID.charDevRandom,
         "/dev/random",
-    );
+    ).CharDev;
 
     version(linux)
     struct Getrandom
