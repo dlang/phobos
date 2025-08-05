@@ -31,6 +31,8 @@
 module std.internal.entropy;
 
 import std.meta;
+import std.sumtype;
+import std.typecons;
 
 version (OSX)
     version = Darwin;
@@ -40,6 +42,215 @@ else version (TVOS)
     version = Darwin;
 else version (WatchOS)
     version = Darwin;
+
+version (Darwin) mixin entropyImpl!(
+    EntropySource.arc4random,
+    Implementation.ARC4Random,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (DragonFlyBSD) mixin entropyImpl!(
+    EntropySourceID.getentropy,
+    Implementation.Getentropy,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (FreeBSD) mixin entropyImpl!(
+    EntropySourceID.getentropy,
+    Implementation.Getentropy,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (linux) mixin entropyImpl!(
+    EntropySourceID.getrandom,
+    Implementation.Getrandom,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (NetBSD) mixin entropyImpl!(
+    EntropySourceID.arc4random,
+    Implementation.ARC4Random,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (OpenBSD) mixin entropyImpl!(
+    EntropySourceID.arc4random,
+    Implementation.ARC4Random,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (Posix) mixin entropyImpl!(
+    EntropySourceID.charDevURandom,
+    Implementation.CharDevURandom,
+    Implementation.CharDevRandom,
+);
+else version (Windows) mixin entropyImpl!(
+    EntropySourceID.bcryptGenRandom,
+    Implementation.BCryptGenRandom,
+);
+else mixin entropyImpl!(
+    EntropySourceID.none,
+);
+
+/+
+    Building blocks and implementation helpers
+ +/
+private
+{
+    /++
+        A “Chunks” implementation that works with `void[]`.
+     +/
+    struct VoidChunks
+    {
+        void[] _data;
+        size_t _chunkSize;
+
+    @nogc nothrow pure @safe:
+
+        this(void[] data, size_t chunkSize)
+        {
+            _data = data;
+            _chunkSize = chunkSize;
+        }
+
+        bool empty() const
+        {
+            return _data.length == 0;
+        }
+
+        inout(void)[] front() inout
+        {
+            if (_data.length < _chunkSize)
+                return _data;
+
+            return _data[0 .. _chunkSize];
+        }
+
+        void popFront()
+        {
+            if (_data.length <= _chunkSize)
+            {
+                _data = null;
+                return;
+            }
+
+            _data = _data[_chunkSize .. $];
+        }
+    }
+
+    template isValidSupportedSource(alias SupportedSource)
+    {
+        enum isValidSupportedSource = (
+            is(SupportedSource == struct) &&
+            is(typeof(SupportedSource.id) == EntropySourceID) &&
+            SupportedSource.id != EntropySourceID.tryAll &&
+            SupportedSource.id != EntropySourceID.none
+        );
+    }
+
+    /++
+        `getEntropyImpl()` implementation helper.
+        To be instantiated and mixed in with platform-specific configuration.
+
+        Params:
+            defaultSource = Default entropy source of the platform
+            SupportedSources = Sequence of `SrcFunPair`
+                               representing the supported sources of the platform
+    +/
+    mixin template entropyImpl(EntropySourceID defaultSource, SupportedSources...)
+    if (allSatisfy!(isValidSupportedSource, SupportedSources))
+    {
+    private:
+        /// Preconfigured entropy source preset of the platform.
+        enum defaultEntropySource = defaultSource;
+
+        alias _InnerEntropySourceHandle = SumType!(
+            Implementation.None,
+            SupportedSources,
+        );
+
+    @nogc nothrow @safe:
+
+        EntropyStatus _openEntropySourceImpl(out EntropySourceHandle.Inner handle) @safe
+        {
+            switch (_entropySource)
+            {
+                static foreach (Source; SupportedSources)
+                {{
+                    case Source.id:
+                        auto  source = Source();
+                        const status = source.open();
+                        () @trusted { handle = EntropySourceHandle.Inner(source); }();
+                        return status;
+                }}
+
+                case EntropySourceID.tryAll:
+                {
+                    const status = _tryOpenEntropySources(handle);
+                    handle.saveSourceForNextUse();
+                    return status;
+                }
+
+                case EntropySourceID.none:
+                    auto none = Implementation.None();
+                    () @trusted { handle = EntropySourceHandle.Inner(none); }();
+                    return none.open();
+
+                default:
+                    return EntropyStatus.unavailablePlatform;
+            }
+        }
+
+        EntropyStatus openEntropySourceImpl(out EntropySourceHandle.InnerRefCounted handle) @safe
+        {
+            EntropySourceHandle.Inner innerHandle;
+            const status = _openEntropySourceImpl(innerHandle);
+            handle = safeRefCounted(innerHandle);
+
+            return status;
+        }
+
+        EntropyStatus _tryOpenEntropySources(out EntropySourceHandle.Inner handle) @safe
+        {
+            static foreach (Source; SupportedSources)
+            {{
+                auto  source = Source();
+                const status = source.open();
+                if (status == EntropyStatus.ok)
+                {
+                    () @trusted { handle = EntropySourceHandle.Inner(source); }();
+                    return status;
+                }
+            }}
+
+            auto fallback = Implementation.None();
+            () @trusted { handle = EntropySourceHandle.Inner(fallback); }();
+            return fallback.open();
+        }
+    }
+
+    auto matchCall(string methodName, Args...)(ref scope EntropySourceHandle.Inner source, Args args) @nogc @safe
+    {
+        import std.array : join;
+        import std.string : chomp;
+
+        enum methodCall = (args.length == 0)
+            ? `matched.` ~ methodName
+            : `matched.` ~ methodName ~ `(args)`;
+        enum handler(T) = `(ref scope `
+            ~ __traits(fullyQualifiedName, T)
+                .chomp(".CharDev") /+ quick'n'dirty workaround +/
+            ~ ` matched) @safe => ` ~ methodCall;
+        enum handlers = `AliasSeq!(` ~ [staticMap!(handler, EntropySourceHandle.Inner.Types)].join(",\n") ~ `)`;
+
+        return source.match!(mixin(handlers));
+    }
+
+    auto borrowMatchCall(string methodName, Args...)(EntropySourceHandle.InnerRefCounted source, Args args) @nogc @safe
+    {
+        return source.borrow!((EntropySourceHandle.Inner borrowed) => matchCall!methodName(borrowed, args));
+    }
+}
 
 // Self-test: Detect potentially unsuitable default entropy source.
 @safe unittest
@@ -119,6 +330,56 @@ else version (WatchOS)
 
 // Flagship function
 /++
+    Opens a handle to an applicable system CSPRNG.
+ +/
+EntropyStatus openEntropySource(out EntropySourceHandle handle) @safe
+{
+    EntropySourceHandle.InnerRefCounted innerHandle;
+    const status = openEntropySourceImpl(innerHandle);
+    handle = EntropySourceHandle(innerHandle);
+    return status;
+}
+
+// Flagship function
+EntropyStatus getEntropy(EntropySourceHandle source, scope void[] buffer) @safe
+{
+    return source.handle.borrowMatchCall!"getEntropy"(buffer);
+}
+
+string getErrorMessage(EntropySourceHandle source, EntropyStatus status) @safe
+{
+    static string genericErrorMessage(EntropyStatus status)
+    {
+        if (status == EntropyStatus.unavailable ||
+            status == EntropyStatus.unavailableLibrary)
+            return "getEntropy(): An entropy source was unavailable.";
+        if (status == EntropyStatus.unavailablePlatform)
+            return "getEntropy(): The requested entropy source is not supported on this platform.";
+        if (status == EntropyStatus.readError)
+            return "getEntropy(): Could not retrieve entropy from the selected source.";
+
+        return "getEntropy(): An unknown error occurred.";
+    }
+
+    const msg = source.handle.borrowMatchCall!"getErrorMessage"(status);
+    if (msg is null)
+        return genericErrorMessage(status);
+
+    return msg;
+}
+
+EntropySourceID id(EntropySourceHandle source) @safe
+{
+    return source.handle.borrowMatchCall!"id"();
+}
+
+private EntropySourceID id(EntropySourceHandle.Inner source) @safe
+{
+    return source.matchCall!"id"();
+}
+
+// Legacy flagship function
+/++
     Retrieves random data from an applicable system CSPRNG.
 
     Params:
@@ -140,7 +401,13 @@ else version (WatchOS)
  +/
 EntropyResult getEntropy(scope void[] buffer) @safe
 {
-    return getEntropyImpl(buffer);
+    EntropySourceHandle handle;
+    const statusOpen = openEntropySource(handle);
+    if (statusOpen != EntropyStatus.ok)
+        return EntropyResult(statusOpen, handle.id);
+
+    const statusGet = handle.getEntropy(buffer);
+    return EntropyResult(statusGet, handle.id);
 }
 
 ///
@@ -222,7 +489,7 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
 
     It might be useful in cases where the default entropy source — as chosen by
     the maintainer of the used compiler package — is unavailable on a system.
-    Usually, `EntropySource.tryAll` will be the most reasonable option
+    Usually, `EntropySourceID.tryAll` will be the most reasonable option
     in such cases.
 
     Params:
@@ -233,10 +500,10 @@ EntropyResult getEntropy(scope void* buffer, size_t length) @system
     ---
     // Using `forceEntropySource` almost always is a bad idea.
     // As a rule of thumb, this SHOULD NOT be done.
-    forceEntropySource(EntropySource.none);
+    forceEntropySource(EntropySourceID.none);
     ---
  +/
-void forceEntropySource(EntropySource source) @safe
+void forceEntropySource(EntropySourceID source) @safe
 {
     _entropySource = source;
 }
@@ -269,7 +536,7 @@ void forceEntropySource(EntropySource source) @safe
         The recommended way to check for success is through the `isOK()`
         helper function.
  +/
-EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source) @system
+EntropyResult getEntropy(scope void* buffer, size_t length, EntropySourceID source) @system
 {
     const sourcePrevious = _entropySource;
     scope (exit) _entropySource = sourcePrevious;
@@ -283,8 +550,8 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
 {
     ubyte[4] bytes;
 
-    // `EntropySource.none` always fails.
-    assert(!getEntropy(bytes.ptr, bytes.length, EntropySource.none).isOK);
+    // `EntropySourceID.none` always fails.
+    assert(!getEntropy(bytes.ptr, bytes.length, EntropySourceID.none).isOK);
 }
 
 /++
@@ -292,7 +559,7 @@ EntropyResult getEntropy(scope void* buffer, size_t length, EntropySource source
 
     (No actual low-level entropy sources are provided on purpose.)
  +/
-enum EntropySource
+enum EntropySourceID
 {
     /// Implements a $(I hunting) strategy for finding an entropy source that
     /// is available at runtime.
@@ -340,11 +607,11 @@ enum EntropySource
 ///
 enum EntropyStatus
 {
-    /// success
-    ok = 0,
-
     /// catch-all error
     unknownError = 1,
+
+    /// success
+    ok = 0,
 
     /// An entropy source was unavailable.
     unavailable,
@@ -360,17 +627,17 @@ enum EntropyStatus
 }
 
 /++
-    Status report returned by `getEntropy` functions.
+    Status report returned by legacy `getEntropy` functions.
 
     Use the `isOK` helper function to test for success.
  +/
 struct EntropyResult
 {
     ///
-    EntropyStatus status;
+    EntropyStatus status = EntropyStatus.unknownError;
 
     ///
-    EntropySource source;
+    EntropySourceID source;
 
     /++
         Returns:
@@ -381,12 +648,12 @@ struct EntropyResult
         if (status == EntropyStatus.ok)
             return "getEntropy(): OK.";
 
-        if (source == EntropySource.none)
+        if (source == EntropySourceID.none)
         {
             if (status == EntropyStatus.unavailable)
                 return "getEntropy(): Error - No suitable entropy source was available.";
         }
-        else if (source == EntropySource.getrandom)
+        else if (source == EntropySourceID.getrandom)
         {
             if (status == EntropyStatus.unavailableLibrary)
                 return "getEntropy(): `dlopen(\"libc\")` failed.";
@@ -395,26 +662,26 @@ struct EntropyResult
             if (status == EntropyStatus.readError)
                 return "getEntropy(): `getrandom()` failed.";
         }
-        else if (source == EntropySource.getentropy)
+        else if (source == EntropySourceID.getentropy)
         {
             if (status == EntropyStatus.readError)
                 return "getEntropy(): `getentropy()` failed.";
         }
-        else if (source == EntropySource.charDevURandom)
+        else if (source == EntropySourceID.charDevURandom)
         {
             if (status == EntropyStatus.unavailable)
                 return "getEntropy(): `/dev/urandom` is unavailable.";
             if (status == EntropyStatus.readError)
                 return "getEntropy(): Reading from `/dev/urandom` failed.";
         }
-        else if (source == EntropySource.charDevURandom)
+        else if (source == EntropySourceID.charDevURandom)
         {
             if (status == EntropyStatus.unavailable)
                 return "getEntropy(): `/dev/random` is unavailable.";
             if (status == EntropyStatus.readError)
                 return "getEntropy(): Reading from `/dev/random` failed.";
         }
-        else if (source == EntropySource.bcryptGenRandom)
+        else if (source == EntropySourceID.bcryptGenRandom)
         {
             if (status == EntropyStatus.unavailableLibrary)
                 return "getEntropy(): `LoadLibraryA(\"Bcrypt.dll\")` failed.";
@@ -508,280 +775,212 @@ pragma(inline, true) void crashOnError(const EntropyResult value) pure @safe
     assert(false, value.toString());
 }
 
-/+
-    Building blocks and implementation helpers
+/++
+    Depending on the underlying implementation, this handle might only be a dummy.
+    Some implementations build upon handles themselves,
+    hence this generic wrapper has to provide support for doing so.
  +/
-private
+struct EntropySourceHandle
 {
-    /++
-        A “Chunks” implementation that works with `void[]`.
-     +/
-    struct VoidChunks
+    private
     {
-        void[] _data;
-        size_t _chunkSize;
-
-    @nogc nothrow pure @safe:
-
-        this(void[] data, size_t chunkSize)
-        {
-            _data = data;
-            _chunkSize = chunkSize;
-        }
-
-        bool empty() const
-        {
-            return _data.length == 0;
-        }
-
-        inout(void)[] front() inout
-        {
-            if (_data.length < _chunkSize)
-                return _data;
-
-            return _data[0 .. _chunkSize];
-        }
-
-        void popFront()
-        {
-            if (_data.length <= _chunkSize)
-            {
-                _data = null;
-                return;
-            }
-
-            _data = _data[_chunkSize .. $];
-        }
-    }
-
-    struct SrcFunPair(EntropySource source, alias func)
-    {
-        enum  src = source;
-        alias fun = func;
-    }
-
-    template isValidSupportedSource(SupportedSource)
-    {
-        enum isValidSupportedSource = (
-            is(SupportedSource == SrcFunPair!Args, Args...) &&
-            SupportedSource.src != EntropySource.tryAll &&
-            SupportedSource.src != EntropySource.none
+        alias Inner = _InnerEntropySourceHandle;
+        alias InnerRefCounted = SafeRefCounted!(
+            EntropySourceHandle.Inner,
+            RefCountedAutoInitialize.no
         );
     }
 
-    /++
-        `getEntropyImpl()` implementation helper.
-        To be instantiated and mixed in with platform-specific configuration.
-
-        Params:
-            defaultSource = Default entropy source of the platform
-            SupportedSources = Sequence of `SrcFunPair`
-                               representing the supported sources of the platform
-    +/
-    mixin template entropyImpl(EntropySource defaultSource, SupportedSources...)
-    if (allSatisfy!(isValidSupportedSource, SupportedSources))
+    private
     {
-    private:
-        /// Preconfigured entropy source preset of the platform.
-        enum defaultEntropySource = defaultSource;
+        InnerRefCounted handle;
+    }
 
-        EntropyResult getEntropyImpl(scope void[] buffer) @safe
-        {
-            switch (_entropySource)
-            {
-                static foreach (source; SupportedSources)
-                {
-                    case source.src:
-                        return source.fun(buffer);
-                }
-
-            case EntropySource.tryAll:
-                {
-                    const result = _tryEntropySources(buffer);
-                    result.saveSourceForNextUse();
-                    return result;
-                }
-
-            case EntropySource.none:
-                return getEntropyViaNone(buffer);
-
-            default:
-                return EntropyResult(EntropyStatus.unavailablePlatform, _entropySource);
-            }
-        }
-
-        EntropyResult _tryEntropySources(scope void[] buffer) @safe
-        {
-            EntropyResult result;
-
-            static foreach (source; SupportedSources)
-            {
-                result = source.fun(buffer);
-                if (!result.isUnavailable)
-                    return result;
-            }
-
-            result = EntropyResult(
-                EntropyStatus.unavailable,
-                EntropySource.none,
-            );
-
-            return result;
-        }
+    private this(InnerRefCounted handle) @nogc nothrow pure @safe
+    {
+        this.handle = handle;
     }
 }
 
-version (Darwin) mixin entropyImpl!(
-    EntropySource.arc4random,
-    SrcFunPair!(EntropySource.arc4random, getEntropyViaARC4Random),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (DragonFlyBSD) mixin entropyImpl!(
-    EntropySource.getentropy,
-    SrcFunPair!(EntropySource.getentropy, getEntropyViaGetentropy),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (FreeBSD) mixin entropyImpl!(
-    EntropySource.getentropy,
-    SrcFunPair!(EntropySource.getentropy, getEntropyViaGetentropy),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (linux) mixin entropyImpl!(
-    EntropySource.getrandom,
-    SrcFunPair!(EntropySource.getrandom, getEntropyViaGetrandom),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (NetBSD) mixin entropyImpl!(
-    EntropySource.arc4random,
-    SrcFunPair!(EntropySource.arc4random, getEntropyViaARC4Random),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (OpenBSD) mixin entropyImpl!(
-    EntropySource.arc4random,
-    SrcFunPair!(EntropySource.arc4random, getEntropyViaARC4Random),
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (Posix) mixin entropyImpl!(
-    EntropySource.charDevURandom,
-    SrcFunPair!(EntropySource.charDevURandom, getEntropyViaCharDevURandom),
-    SrcFunPair!(EntropySource.charDevRandom, getEntropyViaCharDevRandom),
-);
-else version (Windows) mixin entropyImpl!(
-    EntropySource.bcryptGenRandom,
-    SrcFunPair!(EntropySource.bcryptGenRandom, getEntropyViaBCryptGenRandom),
-);
-else mixin entropyImpl!(
-    EntropySource.none,
-);
-
 private
 {
-    static EntropySource _entropySource = defaultEntropySource;
+    static EntropySourceID _entropySource = defaultEntropySource;
 
-    void saveSourceForNextUse(const EntropyResult result) @safe
+    void saveSourceForNextUse(EntropySourceHandle.Inner source) @safe
     {
-        if (!result.isOK)
+        if (source.id == EntropySourceID.none)
             return;
 
-        _entropySource = result.source;
+        _entropySource = source.id;
     }
 }
 
-version (all)
+private struct Implementation
 {
-private:
+static:
 
-    EntropyResult getEntropyViaNone(scope void[]) @safe
+    version(all)
+    struct None
     {
-        return EntropyResult(EntropyStatus.unavailable, EntropySource.none);
-    }
-}
+        enum id = EntropySourceID.none;
 
-version (Posix)
-{
-private:
+    @nogc nothrow @safe:
 
-    EntropyResult getEntropyViaCharDevURandom(scope void[] buffer) @trusted
-    {
-        const status = getEntropyViaCharDev(buffer, "/dev/urandom".ptr);
-        return EntropyResult(status, EntropySource.charDevURandom);
-    }
-
-    EntropyResult getEntropyViaCharDevRandom(scope void[] buffer) @trusted
-    {
-        const status = getEntropyViaCharDev(buffer, "/dev/random".ptr);
-        return EntropyResult(status, EntropySource.charDevRandom);
-    }
-
-    EntropyStatus getEntropyViaCharDev(scope void[] buffer, const(char)* charDevName) @system
-    {
-        import core.stdc.stdio : fclose, fopen, fread;
-
-        auto charDev = fopen(charDevName, "r");
-        if (charDev is null)
-            return EntropyStatus.unavailable;
-
-        scope (exit)
-            fclose(charDev);
-
-        const bytesRead = fread(buffer.ptr, 1, buffer.length, charDev);
-        if (bytesRead != buffer.length)
-            return EntropyStatus.readError;
-
-        return EntropyStatus.ok;
-    }
-}
-
-version (linux)
-{
-private:
-
-    EntropyResult getEntropyViaGetrandom(scope void[] buffer) @trusted
-    {
-        const status = syscallGetrandom(buffer, 0);
-        return EntropyResult(status, EntropySource.getrandom);
-    }
-
-    EntropyStatus syscallGetrandom(scope void[] buffer, uint flags) @system
-    {
-        import core.sys.linux.errno : EINTR, ENOSYS, errno;
-        import core.sys.linux.sys.syscall : SYS_getrandom;
-        import core.sys.linux.unistd : syscall;
-
-        while (buffer.length > 0)
+        EntropyStatus open() scope
         {
-            const got = syscall(SYS_getrandom, buffer.ptr, buffer.length, flags);
-
-            if (got == -1)
-            {
-                switch (errno)
-                {
-                case EINTR:
-                    break; // That’s fine.
-                case ENOSYS:
-                    return EntropyStatus.unavailable;
-                default:
-                    return EntropyStatus.readError;
-                }
-            }
-
-            if (got > 0)
-                buffer = buffer[got .. $];
+            return EntropyStatus.unavailable;
         }
 
-        return EntropyStatus.ok;
-    }
-}
+        void close() scope
+        {
+            // no-op
+        }
 
-// BSD
-private
-{
+        EntropyStatus getEntropy(scope void[]) scope
+        {
+            return EntropyStatus.unavailable;
+        }
+
+        static string getErrorMessage(EntropyStatus status)
+        {
+            if (status == EntropyStatus.unavailable)
+                return "getEntropy(): Error - No suitable entropy source was available.";
+
+            return null;
+        }
+    }
+
+    version(Posix)
+    struct CharDev(EntropySourceID sourceID, string path)
+    {
+        import core.stdc.stdio : FILE, fclose, fopen, fread;
+
+        private
+        {
+            enum string _path = path ~ "\0";
+            FILE* _file = null;
+        }
+
+    @nogc nothrow @safe:
+
+        enum id = sourceID;
+
+        EntropyStatus open() scope @trusted
+        {
+            _file = fopen(_path.ptr, "r");
+
+            if (_file is null)
+                return EntropyStatus.unavailable;
+
+            return EntropyStatus.ok;
+        }
+
+        void close() scope @trusted
+        {
+            if (_file is null)
+                return;
+
+            fclose(_file);
+        }
+
+        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
+        {
+            if (_file is null)
+                return EntropyStatus.unavailable;
+
+            const bytesRead = fread(buffer.ptr, 1, buffer.length, _file);
+            if (bytesRead != buffer.length)
+                return EntropyStatus.readError;
+
+            return EntropyStatus.ok;
+        }
+
+        static string getErrorMessage(EntropyStatus status)
+        {
+            if (status == EntropyStatus.unavailable)
+                return "getEntropy(): `" ~ path ~ "` is unavailable.";
+            if (status == EntropyStatus.readError)
+                return "getEntropy(): Reading from `" ~ path ~ "` failed.";
+
+            return null;
+        }
+    }
+
+    version(Posix)
+    alias CharDevURandom = CharDev!(
+        EntropySourceID.charDevURandom,
+        "/dev/urandom",
+    );
+
+    version(Posix)
+    alias CharDevRandom = CharDev!(
+        EntropySourceID.charDevRandom,
+        "/dev/random",
+    );
+
+    version(linux)
+    struct Getrandom
+    {
+
+        enum id = EntropySourceID.getrandom;
+
+    @nogc nothrow @safe:
+
+        EntropyStatus open() scope
+        {
+            return EntropyStatus.ok;
+        }
+
+        void close() scope
+        {
+            // no-op
+        }
+
+        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
+        {
+            return syscallGetrandom(buffer, 0);
+        }
+
+        private EntropyStatus syscallGetrandom(scope void[] buffer, uint flags) scope @system
+        {
+            import core.sys.linux.errno : EINTR, ENOSYS, errno;
+            import core.sys.linux.sys.syscall : SYS_getrandom;
+            import core.sys.linux.unistd : syscall;
+
+            while (buffer.length > 0)
+            {
+                const got = syscall(SYS_getrandom, buffer.ptr, buffer.length, flags);
+
+                if (got == -1)
+                {
+                    switch (errno)
+                    {
+                    case EINTR:
+                        break; // That’s fine.
+                    case ENOSYS:
+                        return EntropyStatus.unavailable;
+                    default:
+                        return EntropyStatus.readError;
+                    }
+                }
+
+                if (got > 0)
+                    buffer = buffer[got .. $];
+            }
+
+            return EntropyStatus.ok;
+        }
+
+        static string getErrorMessage(EntropyStatus status)
+        {
+            if (status == EntropyStatus.readError)
+                return "getEntropy(): `syscall(SYS_getrandom, …)` failed.";
+
+            return null;
+        }
+    }
+
+    // BSD
     version (Darwin)
         version = SecureARC4Random;
     version (DragonFlyBSD)
@@ -794,25 +993,54 @@ private
         version = SecureARC4Random;
 
     version (SecureARC4Random)
+    struct ARC4Random
     {
-        EntropyResult getEntropyViaARC4Random(scope void[] buffer) @trusted
+    @nogc nothrow @safe:
+
+        EntropyStatus open() scope
         {
-            arc4random_buf(buffer.ptr, buffer.length);
-            return EntropyResult(EntropyStatus.ok, EntropySource.arc4random);
+            return EntropyStatus.ok;
         }
 
-        private extern(C) void arc4random_buf(scope void* buf, size_t nbytes) @system;
+        void close() scope
+        {
+            // no-op
+        }
+
+        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
+        {
+            arc4random_buf(buffer.ptr, buffer.length);
+            return EntropyStatus.ok;
+        }
+
+        private static
+        {
+            extern(C) void arc4random_buf(scope void* buf, size_t nbytes) @system;
+        }
+
+        static string getErrorMessage(EntropyStatus status)
+        {
+            // `arc4random_buf()` will always succeed (or segfault).
+            return null;
+        }
     }
 
     version (UseGetentropy)
+    struct Getentropy
     {
-        EntropyResult getEntropyViaGetentropy(scope void[] buffer) @trusted
+    @nogc nothrow @safe:
+
+        EntropyStatus open() scope
         {
-            const status = callGetentropy(buffer);
-            return EntropyResult(status, EntropySource.getentropy);
+            return EntropyStatus.ok;
         }
 
-        private EntropyStatus callGetentropy(scope void[] buffer) @system
+        void close() scope
+        {
+            // no-op
+        }
+
+        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
         {
             /+
                 genentropy(3):
@@ -828,91 +1056,98 @@ private
             return EntropyStatus.ok;
         }
 
-        private extern(C) int getentropy(scope void* buf, size_t buflen) @system;
-    }
-}
-
-version (Windows)
-{
-    import core.sys.windows.bcrypt : BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG;
-    import core.sys.windows.windef : HMODULE, PUCHAR, ULONG;
-    import core.sys.windows.ntdef : NT_SUCCESS;
-
-private:
-
-    EntropyResult getEntropyViaBCryptGenRandom(scope void[] buffer) @trusted
-    {
-        const loaded = loadBcrypt();
-        if (loaded != EntropyStatus.ok)
-            return EntropyResult(loaded, EntropySource.bcryptGenRandom);
-
-        const status = callBcryptGenRandom(buffer);
-        return EntropyResult(status, EntropySource.bcryptGenRandom);
-    }
-
-    EntropyStatus callBcryptGenRandom(scope void[] buffer) @system
-    {
-        foreach (chunk; VoidChunks(buffer, ULONG.max))
+        private static
         {
-            assert(chunk.length <= ULONG.max, "Bad chunk length.");
-
-            const gotRandom = ptrBCryptGenRandom(
-                null,
-                cast(PUCHAR) buffer.ptr,
-                cast(ULONG) buffer.length,
-                BCRYPT_USE_SYSTEM_PREFERRED_RNG,
-            );
-
-            if (!NT_SUCCESS(gotRandom))
-                return EntropyStatus.readError;
+            extern(C) int getentropy(scope void* buf, size_t buflen) @system;
         }
 
-        return EntropyStatus.ok;
+        static string getErrorMessage(EntropyStatus status)
+        {
+            if (status == EntropyStatus.readError)
+                return "getEntropy(): `getentropy()` failed.";
+
+            return null;
+        }
     }
 
-    static
+    version (Windows)
+    struct BCryptGenRandom
     {
-        HMODULE hBcrypt = null;
-        typeof(BCryptGenRandom)* ptrBCryptGenRandom;
-    }
+        import core.sys.windows.bcrypt : BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG;
+        import core.sys.windows.windef : HMODULE, PUCHAR, ULONG;
+        import core.sys.windows.ntdef : NT_SUCCESS;
 
-    EntropyStatus loadBcrypt() @system
-    {
-        import core.sys.windows.winbase : GetProcAddress, LoadLibraryA;
+        private
+        {
+            HMODULE _hBcrypt = null;
+            typeof(BCryptGenRandom)* _ptrBCryptGenRandom;
+        }
 
-        if (hBcrypt !is null)
+    @nogc nothrow @safe:
+
+        EntropyStatus open() scope @trusted
+        {
+            import core.sys.windows.winbase : GetProcAddress, LoadLibraryA;
+
+            if (_hBcrypt !is null)
+                return EntropyStatus.ok;
+
+            _hBcrypt = LoadLibraryA("bcrypt.dll");
+            if (!hBcrypt)
+                return EntropyStatus.unavailableLibrary;
+
+            _ptrBCryptGenRandom = cast(typeof(_ptrBCryptGenRandom)) GetProcAddress(_hBcrypt, "BCryptGenRandom");
+            if (!_ptrBCryptGenRandom)
+                return EntropyStatus.unavailable;
+
             return EntropyStatus.ok;
-
-        hBcrypt = LoadLibraryA("Bcrypt.dll");
-        if (!hBcrypt)
-            return EntropyStatus.unavailableLibrary;
-
-        ptrBCryptGenRandom = cast(typeof(ptrBCryptGenRandom)) GetProcAddress(hBcrypt, "BCryptGenRandom");
-        if (!ptrBCryptGenRandom)
-            return EntropyStatus.unavailable;
-
-        return EntropyStatus.ok;
-    }
-
-    // Will free `Bcrypt.dll`.
-    void freeBcrypt() @system
-    {
-        import core.sys.windows.winbase : FreeLibrary;
-
-        if (hBcrypt is null)
-            return;
-
-        if (!FreeLibrary(hBcrypt))
-        {
-            return; // Error
         }
 
-        hBcrypt = null;
-        ptrBCryptGenRandom = null;
-    }
+        void close() scope @trusted
+        {
+            import core.sys.windows.winbase : FreeLibrary;
 
-    static ~this() @system
-    {
-        freeBcrypt();
+            if (hBcrypt is null)
+                return;
+
+            if (!FreeLibrary(hBcrypt))
+                return; // Error
+
+            hBcrypt = null;
+            ptrBCryptGenRandom = null;
+        }
+
+
+        EntropyStatus getEntropy(scope void[] buffer) scope @trusted
+        {
+            foreach (chunk; VoidChunks(buffer, ULONG.max))
+            {
+                assert(chunk.length <= ULONG.max, "Bad chunk length.");
+
+                const gotRandom = _ptrBCryptGenRandom(
+                    null,
+                    cast(PUCHAR) buffer.ptr,
+                    cast(ULONG) buffer.length,
+                    BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+                );
+
+                if (!NT_SUCCESS(gotRandom))
+                    return EntropyStatus.readError;
+            }
+
+            return EntropyStatus.ok;
+        }
+
+        static string getErrorMessage(EntropyStatus status)
+        {
+            if (status == EntropyStatus.unavailableLibrary)
+                return "getEntropy(): `LoadLibraryA(\"bcrypt.dll\")` failed.";
+            if (status == EntropyStatus.unavailable)
+                return "getEntropy(): `GetProcAddress(hBcrypt , \"BCryptGenRandom\")` failed.";
+            if (status == EntropyStatus.readError)
+                return "getEntropy(): `BCryptGenRandom()` failed.";
+
+            return null;
+        }
     }
 }

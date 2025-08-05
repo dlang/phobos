@@ -1819,10 +1819,10 @@ how excellent the source of entropy is.
 {
     version (SeedUseGetEntropy)
     {
-        import std.internal.entropy : crashOnError, EntropySource, getEntropy;
+        import std.internal.entropy : crashOnError, EntropySourceID, getEntropy;
 
         uint buffer;
-        const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySource.tryAll))();
+        const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySourceID.tryAll))();
         crashOnError(status);
         return buffer;
     }
@@ -1877,10 +1877,10 @@ if (isUnsigned!UIntType)
         {
             version (SeedUseGetEntropy)
             {
-                import std.internal.entropy : crashOnError, EntropySource, getEntropy;
+                import std.internal.entropy : crashOnError, EntropySourceID, getEntropy;
 
                 UIntType buffer;
-                const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySource.tryAll))();
+                const status = (() @trusted => getEntropy(&buffer, buffer.sizeof, EntropySourceID.tryAll))();
                 crashOnError(status);
                 return buffer;
             }
