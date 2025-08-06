@@ -107,6 +107,7 @@
               $(LREF SharedOf)
     ))
     $(TR $(TD Misc) $(TD
+              $(LREF defaultInit)
               $(LREF EnumMembers)
               $(LREF lvalueOf)
               $(LREF rvalueOf)
@@ -1685,6 +1686,210 @@ if (__traits(isTemplate, Template))
     static assert(!isBar!int);
     static assert(!isBar!(foo!int));
     static assert(!isBar!(likeFoo!int));
+}
+
+/++
+    Evaluates to the default-initialized value of the given type.
+
+    defaultInit should be used in generic code in contexts where the
+    default-initialized value of a type is needed rather than that type's
+    $(D init) value.
+
+    For most types, the default-initialized value of a type $(I is) its
+    $(D init) value - i.e. for some type, $(D T), it would normally be
+    $(D T.init). However, there are some corner cases in the language where a
+    type's $(D init) value is not its default-initialized value. In particular,
+
+    1. If a type is a non-$(K_STATIC) nested struct, it has a context pointer
+       which refers to the scope in which it's declared. So, its
+       default-initialized value is its $(D init) value $(I plus) the value for
+       its context pointer. However, if such a nested struct is explicitly
+       initialized with just its $(D init) value instead of being
+       default-initialized or being constructed via a constructor, then its
+       context pointer is $(K_NULL), potentially leading to segfaults when the
+       object is used.
+    2. If a type is a struct for which default initialization has been disabled
+       using $(D @disable this();), then while its $(D init) value is still used
+       as the value of the object at the start of a constructor call (as is the
+       case with any struct), the struct cannot be default-initialized and must
+       instead be explicitly constructed. So, instead of $(D T.init) being the
+       default-initialized value, it's just the struct's initial state before
+       the constructor constructs the object, and the struct does not actually
+       have a default-initialized value.
+
+    In the case of #2, there is no default initialization for the struct,
+    whereas in the case of #1, there $(I is) default initialization for the
+    struct but only within the scope where the struct is declared. Outside of
+    that scope, the compiler does not have access to that scope and therefore
+    cannot iniitialize the context pointer with a value, so a compilation error
+    results. And so, either case can make it so that a struct cannot be
+    default-initialized.
+
+    In both cases, an instance of the struct can still be explicitly
+    initialized with its $(D init) value, but that will usually lead to
+    incorrect code, because either the object's context pointer will be
+    $(K_NULL), or it's a type which was designed with the idea that it would
+    only ever be explicitly constructed. So, while sometimes it's still
+    appropriate to explicitly use the $(D init) value (e.g. by default,
+    $(REF1 destroy, object) will set the object to its $(D init) value after
+    destroying it so that it's in a valid state to have its destructor called
+    afterwards in cases where the object is still going to be destroyed when it
+    leaves scope), in general, generic code which needs to explicitly
+    default-initialize a variable shouldn't use the type's $(D init) value.
+
+    For a type, $(D T), which is a struct which does not declare a $(K_STATIC)
+    $(D opCall), $(D T()) can be used instead of $(D T.init) to get the type's
+    default-initialized value, and unlike $(D T.init), it will fail to compile
+    if the object cannot actually be default-initialized (be it because it has
+    disabled default initialization, or because it's a nested struct outside of
+    the scope where that struct was declared). So, unlike $(D T.init), it
+    won't compile in cases where default initialization does not work, and thus
+    it can't accidentally be used to initialize a struct which cannot be
+    default-intiialized. Also, for nested structs, $(D T()) will initialize the
+    context pointer, unlike $(D T.init). So, using $(D T()) normally gives the
+    actual default-initialized value for the type or fails to compile if the
+    type cannot be default-initialized.
+
+    However, unfortunately, using $(D T()) does not work in generic code,
+    because it is legal for a struct to declare a $(K_STATIC) $(D opCall) which
+    takes no arguments, overriding the normal behavior of $(D T()) and making
+    it so that it's no longer the default-initialized value. Instead, it's
+    whatever $(K_STATIC) $(D opCall) returns, and $(K_STATIC) $(D opCall) can
+    return any type, not just $(D T), because even though it looks like a
+    constructor call, it's not actually a constructor call, and it can return
+    whatever the programmer felt like - including $(K_VOID). This means that
+    the only way to consistently get a default-initialized value for a type in
+    generic code is to actually declare a variable and not give it a value.
+
+    So, in order to work around that, defaultInit does that for you.
+    $(D defaultInit!Foo) evaluates to the default-initialized value of $(D Foo),
+    but unlike $(D Foo.init), it won't compile when $(D Foo) cannot be
+    default-initialized. And it won't get hijacked by $(K_STATIC) $(D opCall).
+
+    The downside to using such a helper template is that it will not work with
+    a nested struct even within the scope where that nested struct is declared
+    (since defaultInit is declared outside of that scope). So, code which needs
+    to get a default-initialized instance of a nested struct within the scope
+    where it's declared will either have to simply declare a variable and not
+    initialize it or use $(D T()) to explicitly get the default-initialized
+    value. And since this is within the code where the type is declared, it's
+    fully within the programmer's control to not declare a $(K_STATIC)
+    $(D opCall) for it. So, it shouldn't be a problem in practice.
+  +/
+template defaultInit(T)
+if (is(typeof({T t;})))
+{
+    // At present, simply using T.init should work, since all of the cases where
+    // it wouldn't won't get past the template constraint. However, it's
+    // possible that that will change at some point in the future, and this
+    // approach is guaranteed to give whatever the default-initialized value is
+    // regardless of whether it's T.init.
+    enum defaultInit = (){ T retval; return retval; }();
+}
+
+///
+@safe unittest
+{
+    static assert(defaultInit!int == 0);
+    static assert(defaultInit!bool == false);
+    static assert(defaultInit!(int*) is null);
+    static assert(defaultInit!(int[]) is null);
+    static assert(defaultInit!string is null);
+    static assert(defaultInit!(int[2]) == [0, 0]);
+
+    static struct S
+    {
+        int i = 42;
+    }
+    static assert(defaultInit!S == S(42));
+
+    static assert(defaultInit!Object is null);
+
+    interface I
+    {
+        bool foo();
+    }
+    static assert(defaultInit!I is null);
+
+    static struct NoDefaultInit
+    {
+        int i;
+        @disable this();
+    }
+
+    // It's not legal to default-initialize NoDefaultInit, because it has
+    // disabled default initialization.
+    static assert(!__traits(compiles, defaultInit!NoDefaultInit));
+
+    int var = 2;
+    struct Nested
+    {
+        int i = 40;
+
+        int foo()
+        {
+            return i + var;
+        }
+    }
+
+    // defaultInit doesn't have access to this scope and thus cannot
+    // initialize the nested struct.
+    static assert(!__traits(compiles, defaultInit!Nested));
+
+    // However, because Nested has no static opCall (and we know it doesn't
+    // because we're doing this in the same scope where Nested was declared),
+    // Nested() can be used to get the default-initialized value.
+    static assert(Nested() == Nested(40));
+
+    Nested nested;
+    assert(Nested() == nested);
+
+    // Both have properly initialized context pointers,
+    // whereas Nested.init does not.
+    assert(Nested().foo() == nested.foo());
+
+    // defaultInit does not get hijacked by static opCall.
+    static struct HasOpCall
+    {
+        int i;
+
+        static opCall()
+        {
+            return HasOpCall(42);
+        }
+
+        static opCall(int i)
+        {
+            HasOpCall retval;
+            retval.i = i;
+            return retval;
+        }
+    }
+
+    static assert(defaultInit!HasOpCall == HasOpCall(0));
+    static assert(HasOpCall() == HasOpCall(42));
+}
+
+@safe unittest
+{
+    static struct NoCopy
+    {
+        int i = 17;
+        @disable this(this);
+    }
+    static assert(defaultInit!NoCopy == NoCopy(17));
+
+    string function() funcPtr;
+    static assert(defaultInit!(SymbolType!funcPtr) is null);
+
+    string delegate() del;
+    static assert(defaultInit!(SymbolType!del) is null);
+
+    int function() @property propFuncPtr;
+    static assert(defaultInit!(SymbolType!propFuncPtr) is null);
+
+    int delegate() @property propDel;
+    static assert(defaultInit!(SymbolType!propDel) is null);
 }
 
 /++
@@ -6697,7 +6902,7 @@ if (!is(sym))
     $(DDSUBLINK spec/traits, getOverloads, $(D __traits(getOverloads, ...))
     must be used.
 
-    In general, $(getOverloads) should be used when using SymbolType, since
+    In general, $(D getOverloads) should be used when using SymbolType, since
     there's no guarantee that the first one is the correct one (and often, code
     will need to check all of the overloads), whereas with PropertyType, it
     doesn't usually make sense to get specific overloads, because there can
