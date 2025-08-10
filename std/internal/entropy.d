@@ -475,14 +475,14 @@ static:
         {
             import core.sys.windows.winbase : FreeLibrary;
 
-            if (hBcrypt is null)
+            if (_hBcrypt is null)
                 return;
 
-            if (!FreeLibrary(hBcrypt))
+            if (!FreeLibrary(_hBcrypt))
                 return; // Error
 
-            hBcrypt = null;
-            ptrBCryptGenRandom = null;
+            _hBcrypt = null;
+            _ptrBCryptGenRandom = null;
         }
 
         EntropyStatus getEntropy(scope void[] buffer) scope @trusted
