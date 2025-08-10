@@ -35,6 +35,15 @@ import std.sumtype;
 import std.traits;
 import std.typecons;
 
+version (OSX)
+    version = Darwin;
+else version (iOS)
+    version = Darwin;
+else version (TVOS)
+    version = Darwin;
+else version (WatchOS)
+    version = Darwin;
+
 // BSD
 version (Darwin)
     version = SecureARC4Random;
@@ -46,15 +55,6 @@ version (NetBSD)
     version = SecureARC4Random;
 version (OpenBSD)
     version = SecureARC4Random;
-
-version (OSX)
-    version = Darwin;
-else version (iOS)
-    version = Darwin;
-else version (TVOS)
-    version = Darwin;
-else version (WatchOS)
-    version = Darwin;
 
 ///
 enum EntropyStatus
