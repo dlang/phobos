@@ -461,7 +461,7 @@ static:
                 return EntropyStatus.ok;
 
             _hBcrypt = LoadLibraryA("bcrypt.dll");
-            if (!hBcrypt)
+            if (!_hBcrypt)
                 return EntropyStatus.unavailableLibrary;
 
             _ptrBCryptGenRandom = cast(typeof(_ptrBCryptGenRandom)) GetProcAddress(_hBcrypt, "BCryptGenRandom");
