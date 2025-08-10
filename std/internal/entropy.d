@@ -379,9 +379,9 @@ static:
             return EntropyStatus.ok;
         }
 
-        private static
+        private
         {
-            extern(C) void arc4random_buf(scope void* buf, size_t nbytes) @system;
+            extern(C) static void arc4random_buf(scope void* buf, size_t nbytes) @system;
         }
 
         static string getErrorMessage(EntropyStatus status)
@@ -423,9 +423,9 @@ static:
             return EntropyStatus.ok;
         }
 
-        private static
+        private
         {
-            extern(C) int getentropy(scope void* buf, size_t buflen) @system;
+            extern(C) static int getentropy(scope void* buf, size_t buflen) @system;
         }
 
         static string getErrorMessage(EntropyStatus status)
