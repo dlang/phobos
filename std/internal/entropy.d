@@ -35,6 +35,18 @@ import std.sumtype;
 import std.traits;
 import std.typecons;
 
+// BSD
+version (Darwin)
+    version = SecureARC4Random;
+version (DragonFlyBSD)
+    version = UseGetentropy;
+version (FreeBSD)
+    version = UseGetentropy;
+version (NetBSD)
+    version = SecureARC4Random;
+version (OpenBSD)
+    version = SecureARC4Random;
+
 version (OSX)
     version = Darwin;
 else version (iOS)
@@ -344,18 +356,6 @@ static:
             return null;
         }
     }
-
-    // BSD
-    version (Darwin)
-        version = SecureARC4Random;
-    version (DragonFlyBSD)
-        version = UseGetentropy;
-    version (FreeBSD)
-        version = UseGetentropy;
-    version (NetBSD)
-        version = SecureARC4Random;
-    version (OpenBSD)
-        version = SecureARC4Random;
 
     version (SecureARC4Random)
     @(EntropySourceID.arc4random)
