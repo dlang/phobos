@@ -154,14 +154,23 @@ real sgnGamma(real x)
  */
 real beta(real x, real y)
 {
-    if ((x+y)> MAXGAMMA)
+    if (x > MAXGAMMA || y > MAXGAMMA || (x+y)> MAXGAMMA)
     {
-        return exp(logGamma(x) + logGamma(y) - logGamma(x+y));
+        const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
+        return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
     } else return gamma(x) * gamma(y) / gamma(x+y);
 }
 
 @safe unittest
 {
+    assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
+    assert(beta(2*MAXGAMMA, -0.5) < 0);
+    assert(beta(-0.1, 2*MAXGAMMA) < 0);
+    assert(beta(-1.6, 2*MAXGAMMA) > 0);
+    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
+    assert(beta(-0., 2*MAXGAMMA) == -real.infinity);
+    assert(beta(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
+    assert(isNaN(beta(-1, 2*MAXGAMMA)));
     assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
 }
