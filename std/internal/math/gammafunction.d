@@ -615,6 +615,26 @@ real sgnGamma(in real x)
 }
 
 
+/* A method for computing B(x,y) when gamma would return infinity. It uses
+ * logGamma and exp instead.
+ */
+private pragma(inline, true) real betaLarge(in real x, in real y)
+{
+    const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
+    return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
+}
+
+@safe unittest
+{
+    assert(betaLarge(2*MAXGAMMA, -0.5) < 0);
+    assert(betaLarge(-0.1, 2*MAXGAMMA) < 0);
+    assert(betaLarge(-1.6, 2*MAXGAMMA) > 0);
+    assert(betaLarge(+0., 2*MAXGAMMA) == real.infinity);
+    assert(betaLarge(-0., 2*MAXGAMMA) == -real.infinity);
+    assert(betaLarge(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
+    assert(isNaN(betaLarge(-1, 2*MAXGAMMA)));
+}
+
 /** B(x,y)
  *
  * Params:
@@ -623,31 +643,16 @@ real sgnGamma(in real x)
  *
  * Returns:
  *   B(x,y) if it can be computed, otherwise $(NAN)
- *
- * Note:
- *   When x or y are large, it uses `logGamma` instead of `gamma` to compute B.
  */
 real beta(in real x, in real y)
 {
-    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA)
-    {
-        const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
-        return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
-    }
-
+    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA) return betaLarge(x, y);
     return gamma(x) * gamma(y) / gamma(x+y);
 }
 
 @safe unittest
 {
     assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
-    assert(beta(2*MAXGAMMA, -0.5) < 0);
-    assert(beta(-0.1, 2*MAXGAMMA) < 0);
-    assert(beta(-1.6, 2*MAXGAMMA) > 0);
-    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
-    assert(beta(-0., 2*MAXGAMMA) == -real.infinity);
-    assert(beta(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
-    assert(isNaN(beta(-1, 2*MAXGAMMA)));
     assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
 }
