@@ -114,39 +114,26 @@ real logGamma(real x)
 
 /** The sign of $(GAMMA)(x).
  *
- * Returns -1 if $(GAMMA)(x) < 0,  +1 if $(GAMMA)(x) > 0,
- * $(NAN) if sign is indeterminate.
+ * Params:
+ *   x = the argument of $(GAMMA)
  *
- * Note that this function can be used in conjunction with logGamma(x) to
- * evaluate gamma for very large values of x.
+ * Returns:
+ *   -1 if $(GAMMA)(x) < 0, +1 if $(GAMMA)(x) > 0, and $(NAN) if $(GAMMA)(x)
+ *   does not exist.
+ *
+ * Note:
+ *   This function can be used in conjunction with `logGamma` to evaluate
+ *   $(GAMMA)(x) when `gamma(x)` is too large to be represented as a `real`.
  */
-real sgnGamma(real x)
+pragma(inline, true) real sgnGamma(real x)
 {
-    /* Author: Don Clugston. */
-    if (isNaN(x)) return x;
-    if (x > 0) return 1.0;
-    if (x < -1/real.epsilon)
-    {
-        // Large negatives lose all precision
-        return real.nan;
-    }
-    long n = cast(long) trunc(x);
-    if (x == n)
-    {
-        return x == 0 ?  copysign(1, x) : real.nan;
-    }
-    return n & 1 ? 1.0 : -1.0;
+    return std.internal.math.gammafunction.sgnGamma(x);
 }
 
+///
 @safe unittest
 {
-    assert(sgnGamma(5.0) == 1.0);
-    assert(isNaN(sgnGamma(-3.0)));
-    assert(sgnGamma(-0.1) == -1.0);
-    assert(sgnGamma(-0.6) == -1.0);
-    assert(sgnGamma(-55.1) == 1.0);
-    assert(isNaN(sgnGamma(-real.infinity)));
-    assert(isIdentical(sgnGamma(NaN(0xABC)), NaN(0xABC)));
+    assert(sgnGamma(10_000) == 1);
 }
 
 /** Beta function
@@ -155,27 +142,15 @@ real sgnGamma(real x)
  *
  * beta(x, y) = ($(GAMMA)(x) * $(GAMMA)(y)) / $(GAMMA)(x + y)
  */
-real beta(real x, real y)
+pragma(inline, true) real beta(real x, real y)
 {
-    if (x > MAXGAMMA || y > MAXGAMMA || (x+y)> MAXGAMMA)
-    {
-        const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
-        return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
-    } else return gamma(x) * gamma(y) / gamma(x+y);
+    return std.internal.math.gammafunction.beta(x, y);
 }
 
+///
 @safe unittest
 {
-    assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
-    assert(beta(2*MAXGAMMA, -0.5) < 0);
-    assert(beta(-0.1, 2*MAXGAMMA) < 0);
-    assert(beta(-1.6, 2*MAXGAMMA) > 0);
-    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
-    assert(beta(-0., 2*MAXGAMMA) == -real.infinity);
-    assert(beta(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
-    assert(isNaN(beta(-1, 2*MAXGAMMA)));
-    assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
-    assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+    assert(beta(1, 2) == 0.5);
 }
 
 /** Digamma function, $(PSI)(x)
