@@ -579,6 +579,80 @@ real logGamma(real x)
 }
 
 
+/** sgn($(GAMMA)(x))
+ *
+ * Params:
+ *   x = the argument of $(GAMMA)
+ *
+ * Returns:
+ *   -1 if $(GAMMA)(x) < 0, +1 if $(GAMMA)(x) > 0, and $(NAN) if $(GAMMA)(x)
+ *   does not exist.
+ *
+ * Authors: Don Clugston
+ */
+real sgnGamma(in real x)
+{
+    if (isNaN(x)) return x;
+    if (x > 0) return 1.0;
+
+    // -x is so large that x + 1 is indistinguishable from x.
+    if (x < -1 / real.epsilon) return real.nan;
+
+    const n = trunc(x);
+    if (x == n) return x == 0 ? copysign(1, x) : real.nan;
+    return cast(long) n & 1 ? 1.0 : -1.0;
+}
+
+@safe unittest
+{
+    assert(sgnGamma(5.0) == 1.0);
+    assert(isNaN(sgnGamma(-3.0)));
+    assert(sgnGamma(-0.1) == -1.0);
+    assert(sgnGamma(-0.6) == -1.0);
+    assert(sgnGamma(-55.1) == 1.0);
+    assert(isNaN(sgnGamma(-real.infinity)));
+    assert(isIdentical(sgnGamma(NaN(0xABC)), NaN(0xABC)));
+}
+
+
+/** B(x,y)
+ *
+ * Params:
+ *   x = the first argument of B
+ *   y = the second argument of B
+ *
+ * Returns:
+ *   B(x,y) if it can be computed, otherwise $(NAN)
+ *
+ * Note:
+ *   When x or y are large, it uses `logGamma` instead of `gamma` to compute B.
+ */
+real beta(in real x, in real y)
+{
+    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA)
+    {
+        const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
+        return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
+    }
+
+    return gamma(x) * gamma(y) / gamma(x+y);
+}
+
+@safe unittest
+{
+    assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
+    assert(beta(2*MAXGAMMA, -0.5) < 0);
+    assert(beta(-0.1, 2*MAXGAMMA) < 0);
+    assert(beta(-1.6, 2*MAXGAMMA) > 0);
+    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
+    assert(beta(-0., 2*MAXGAMMA) == -real.infinity);
+    assert(beta(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
+    assert(isNaN(beta(-1, 2*MAXGAMMA)));
+    assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
+    assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+}
+
+
 private {
 /*
  * These value can be calculated like this:
