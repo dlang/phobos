@@ -37,6 +37,7 @@
  *      SUB = $1<sub>$2</sub>
  *      BIGSUM = $(BIG &Sigma; <sup>$2</sup><sub>$(SMALL $1)</sub>)
  *      CHOOSE = $(BIG &#40;) <sup>$(SMALL $1)</sup><sub>$(SMALL $2)</sub> $(BIG &#41;)
+ *      CEIL = &#8968;$1&#8969;
  *      PLUSMN = &plusmn;
  *      MNPLUS = &mnplus;
  *      INFIN = &infin;
@@ -44,10 +45,11 @@
  *      MNPLUSINF = &mnplus;&infin;
  *      PI = &pi;
  *      LT = &lt;
+ *      LE = &le;
  *      GT = &gt;
  *      SQRT = &radic;
  *      HALF = &frac12;
- *
+ *      COMPLEX = &#8450;
  *
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
@@ -136,11 +138,42 @@ pragma(inline, true) real sgnGamma(real x)
     assert(sgnGamma(10_000) == 1);
 }
 
-/** Beta function
+/** Beta function, B(x,y)
  *
- * The beta function is defined as
+ * Mathematically, if x $(GT) 0 and y $(GT) 0 then
+ * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (l-t), y-1)dt. Through analytic continuation, it
+ * is extended to $(COMPLEX)$(SUP 2) where it can be expressed in terms of $(GAMMA)(z).
  *
- * beta(x, y) = ($(GAMMA)(x) * $(GAMMA)(y)) / $(GAMMA)(x + y)
+ * B(x,y) = $(GAMMA)(x)$(GAMMA)(y) / $(GAMMA)(x+y).
+ *
+ * This implementation restricts x and y to the set of real numbers.
+ *
+ * Params:
+ *   x = the first argument of B
+ *   y = the second argument of B
+ *
+ * Returns:
+ *   It returns B(x,y) if it can be computed, otherwise $(NAN).
+ *
+ * $(TABLE_SV
+ *   $(TR $(TH x)                                   $(TH y)                $(TH beta(x, y))   )
+ *   $(TR $(TD $(NAN))                              $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD -$(INFIN))                           $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD integer $(LT) 0)                     $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD noninteger and x+y even $(LE) 0)     $(TD noninteger)       $(TD -0)           )
+ *   $(TR $(TD noninteger and x+y odd $(LE) 0)      $(TD noninteger)       $(TD +0)           )
+ *   $(TR $(TD +0)                                  $(TD positive finite)  $(TD +$(INFIN))    )
+ *   $(TR $(TD +0)                                  $(TD +$(INFIN))        $(TD $(NAN))       )
+ *   $(TR $(TD $(GT) 0)                             $(TD +$(INFIN))        $(TD +0)           )
+ *   $(TR $(TD -0)                                  $(TD +0)               $(TD $(NAN))       )
+ *   $(TR $(TD -0)                                  $(TD $(GT) 0)          $(TD -$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0, $(CEIL x) odd)   $(TD +$(INFIN))        $(TD -$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0, $(CEIL x) even)  $(TD +$(INFIN))        $(TD +$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0)                  $(TD $(PLUSMN)0)       $(TD $(PLUSMNINF)) )
+ * )
+ *
+ * Since B(x,y) = B(y,x), if the table states that beta(x, y) is a special value, then beta(y, x) is
+ * one as well.
  */
 pragma(inline, true) real beta(real x, real y)
 {
@@ -151,6 +184,21 @@ pragma(inline, true) real beta(real x, real y)
 @safe unittest
 {
     assert(beta(1, 2) == 0.5);
+    assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
+    assert(beta(3, 4) == beta(4, 3));
+    assert(isNaN(beta(-real.infinity, +0.)));
+    assert(isNaN(beta(-1, 2)));
+    assert(beta(-0.5, 0.5) is -0.0L);
+    assert(beta(-1.5, 0.5) is +0.0L);
+    assert(beta(+0., +0.) == +real.infinity);
+    assert(isNaN(beta(+0., +real.infinity)));
+    assert(beta(1, +real.infinity) is +0.0L);
+    assert(isNaN(beta(-0., +0.)));
+    assert(beta(-0., nextUp(+0.0L)) == -real.infinity);
+    assert(beta(-0.5, +real.infinity) == -real.infinity);
+    assert(beta(nextDown(-1.0L), real.infinity) == real.infinity);
+    assert(beta(nextDown(-0.0L), +0.) == +real.infinity);
+    assert(beta(-0.5, -0.) == -real.infinity);
 }
 
 /** Digamma function, $(PSI)(x)
