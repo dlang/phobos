@@ -1,0 +1,18 @@
+Add uuid v7 support to `std.uuid`
+
+Add uuid v7 support to the UUID type located in `std.uuid`.
+The first 48 bits of v7 stores the milliseconds since the unix epoch
+(1970-01-01), additionally 74 bit are used to store random data.
+
+Example:
+---
+SysTime st = DateTime(2025, 8, 19, 10, 38, 45);
+UUID u = UUID(st);
+SysTime o = u.v7Timestamp();
+assert(o == st);
+
+string s = u.toString();
+UUID u2 = UUID(s);
+SysTime o2 = u2.v7Timestamp();
+assert(o2 == st);
+---
