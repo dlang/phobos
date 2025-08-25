@@ -100,18 +100,18 @@ phobos.data
   | toml*
   | sdl*
   | zip
-phobos.crypto*
+phobos.crypto
   | digest
     | crc
     | murmurhash
-  | ecc
-  | hash
-    | sha
-    | hmac
-  | kdf
-  | random
-  | rsa
-  | symmetric
+  | ecc*
+  | hash*
+    | sha*
+    | hmac*
+  | kdf*
+  | random*
+  | rsa*
+  | symmetric*
 phobos.io
   | console (std.stdio)
   | stream* (iopipe)
