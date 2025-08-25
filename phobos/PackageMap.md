@@ -120,6 +120,7 @@ phobos.io
 phobos.text
   | ascii
   | encoding
+  | format
   | string
   | uni
   | utf
