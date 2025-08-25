@@ -23,7 +23,7 @@ Packages/Modules with an asterisk are new.
 
 ### Proposed Package Structure
 
-This map is not final.
+***This map is not final!***
 
 ```
 core.*
@@ -38,17 +38,11 @@ platform
 based
   | bigint
   | bitmanip
-  | checkedint
+  | checkedint (core.checkedint)
   | complex
   | compiler
-  | console (stdio)
-  | datetime
-    | date
-    | interval
-    | stopwatch
-    | systime
-    | timezone
-  | demangle
+  | console (std.stdio)
+  | demangle (core.demangle)
   | file
   | int128
   | math
@@ -64,12 +58,12 @@ based
     | special
     | numeric
   | meta
-  | optional* (typecons)
+  | optional* (std.typecons)
   | stdint
   | sumtype
   | system
+  | time (core.time)
   | traits
-  | variant
 phobos.sys
   | algorithm
     | comparison
@@ -79,7 +73,15 @@ phobos.sys
     | setops
     | sorting
   | array
+  | checkedint
   | conv
+  | datetime
+    | date
+    | interval
+    | stopwatch
+    | systime
+    | timezone
+  | demangle
   | exception
   | functional
   | meta
@@ -90,6 +92,7 @@ phobos.sys
   | signals
   | traits
   | uuid
+  | variant
 phobos.data
   | base64
   | csv
@@ -110,7 +113,7 @@ phobos.crypto*
   | rsa
   | symmetric
 phobos.io
-  | console (stdio)
+  | console (std.stdio)
   | stream* (iopipe)
   | mmfile
   | path
