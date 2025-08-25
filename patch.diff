@@ -1,0 +1,40 @@
+diff --git a/std/array.d b/std/array.d
+index 3ad9188ad..eebed4df3 100644
+--- a/std/array.d
++++ b/std/array.d
+@@ -5510,7 +5510,8 @@ version(unittest)
+         foreach (i; 0 .. 10)
+             arr.insertBack(NoCopy(i));
+ 
+-        foreach (i, val; arr[])
+-            assert(val.x == i);
++        int i = 0;
++        foreach (const ref val; arr)
++            assert(val.x == i++);
+     }
+ }
+\ No newline at end of file
+diff --git a/std/container/array.d b/std/container/array.d
+index f9f556b98..c7577a303 100644
+--- a/std/container/array.d
++++ b/std/container/array.d
+@@ -146,7 +146,8 @@ pure @system unittest
+ private struct RangeT(A)
+ {
+ 
+-    import std.traits : ElementType, Unqual;
++    import std.range.primitives : ElementType;
++    import std.traits : Unqual;
+     alias Elem = ElementType!A; 
+ 
+    
+@@ -661,7 +662,8 @@ size_t insertFront(Stuff)(Stuff stuff)
+ if (isImplicitlyConvertible!(Stuff, T) ||
+     isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+ {
+-    return insertBefore(this[0 .. 0], stuff);
++    import std.algorithm.mutation : move;
++    return insertBefore(this[0 .. 0], move(stuff));
+ }
+ 
+ 
