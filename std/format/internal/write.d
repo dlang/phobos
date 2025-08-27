@@ -2546,9 +2546,23 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
             {
                 // ignore hidden context pointer
             }
-            else static if (0 < i && T.tupleof[i-1].offsetof == T.tupleof[i].offsetof)
+            /* https://github.com/dlang/phobos/issues/10840
+             * handle possible bitfields by doing overlap comparisons
+             * using bit counts rather than byte counts.
+             * However, the overlap
+             * check in general does not take into account staggered unions.
+             * This can be fixed using the correct algorithm implemented in
+             * the compiler function dmd.declaration.isOverlappedWith().
+             * For the moment we will not change to that because the `#(overlap ...)` output
+             * needs to be re-thought, as it was never correct.
+             */
+            else static if (0 < i &&
+                            T.tupleof[i-1].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i-1]) ==
+                            T.tupleof[i  ].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i  ]))
             {
-                static if (i == T.tupleof.length - 1 || T.tupleof[i].offsetof != T.tupleof[i+1].offsetof)
+                static if (i == T.tupleof.length - 1 ||
+                            T.tupleof[i  ].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i  ]) !=
+                            T.tupleof[i+1].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i+1]))
                 {
                     enum el = separator ~ __traits(identifier, T.tupleof[i]) ~ "}";
                     put(w, el);
@@ -2559,7 +2573,9 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
                     put(w, el);
                 }
             }
-            else static if (i+1 < T.tupleof.length && T.tupleof[i].offsetof == T.tupleof[i+1].offsetof)
+            else static if (i+1 < T.tupleof.length &&
+                            T.tupleof[i  ].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i  ]) ==
+                            T.tupleof[i+1].offsetof * 8 + __traits(getBitfieldOffset,T.tupleof[i+1]))
             {
                 enum el = (i > 0 ? separator : "") ~ "#{overlap " ~ __traits(identifier, T.tupleof[i]);
                 put(w, el);
