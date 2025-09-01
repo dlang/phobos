@@ -4446,7 +4446,7 @@ if (isForwardRange!R && !isInfinite!R)
             return _original[_index];
         }
 
-        static if (is(typeof((cast(const R)_original)[_index])))
+        static if (__traits(compiles, (const R r) => r[0]))
         {
             /// ditto
             @property auto ref front() const
@@ -4484,8 +4484,8 @@ if (isForwardRange!R && !isInfinite!R)
             return _original[(n + _index) % _original.length];
         }
 
-        static if (is(typeof((cast(const R)_original)[_index])) &&
-                   is(typeof((cast(const R)_original).length)))
+        static if (__traits(compiles, (const R r) => r[0]) &&
+            __traits(compiles, (const R r) => r.length))
         {
             /// ditto
             auto ref opIndex(size_t n) const
@@ -4559,7 +4559,7 @@ if (isForwardRange!R && !isInfinite!R)
             return _current.front;
         }
 
-        static if (is(typeof((cast(const R)_current).front)))
+        static if (__traits(compiles, (const R r) => r.front))
         {
             /// ditto
             @property auto ref front() const
@@ -4946,6 +4946,23 @@ pure @safe unittest
         range.front = Handle(42);
         assert(called);
     }
+}
+
+// https://github.com/dlang/phobos/issues/10852
+@safe unittest
+{
+    // forward range
+    struct R
+    {
+        int i;
+        int front() => i;
+        bool empty() => i == 0;
+        void popFront() {--i;}
+        R save() => this;
+    }
+
+    auto r = R(10).cycle.take(20);
+    assert(r.array == [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
