@@ -120,7 +120,7 @@ module std.uuid;
     assert(id.empty);
 }
 
-import core.time : dur;
+import core.time : dur, MonoTimeImpl;
 import std.datetime.systime : SysTime;
 import std.datetime : Clock, DateTime, UTC;
 import std.range.primitives;
@@ -323,9 +323,51 @@ public struct UUID
          *   random = UUID V7 has 74 bits of random data, which rounds to 10 ubyte's.
          *    If no random data is given, random data is generated.
          */
+        @safe pure this(TMonoTime)(TMonoTime timestamp, ubyte[10] random = generateV7RandomData())
+        if (isInstanceOf!(MonoTimeImpl, TMonoTime))
+        {
+            import std.datetime;
+
+            TMonoTime epochStart = TMonoTime.zero + unixTimeToStdTime(0).seconds;
+            ulong epoch = (timestamp - epochStart).total!"msecs";
+            this(epoch, random);
+        }
+
+        /// ditto
         @safe pure this(SysTime timestamp, ubyte[10] random = generateV7RandomData())
         {
             ulong epoch = (timestamp - SysTime.fromUnixTime(0)).total!"msecs";
+            this(epoch, random);
+        }
+
+        ///
+        @system unittest
+        {
+            import core.time : Duration;
+            import std.datetime;
+
+            MonoTime mt = MonoTime.currTime;
+            MonoTime mt_epoch_start = MonoTime.zero + unixTimeToStdTime(0).seconds;
+            Duration mt_dur = mt - mt_epoch_start;
+
+            UUID u = UUID(mt);
+            Duration u_dur = u.v7Milliseconds().msecs;
+
+            assert(u_dur == mt_dur, mt.toString() ~ " | " ~ u.toString());
+        }
+
+        ///
+        @system unittest
+        {
+            import std.datetime : DateTime, SysTime;
+            SysTime st = DateTime(2025, 8, 19, 10, 38, 45);
+            UUID u = UUID(st);
+            SysTime o = u.v7Timestamp();
+            assert(o == st, st.toString() ~ " | " ~ o.toString());
+        }
+
+        private @safe pure this(long epoch, ubyte[10] random)
+        {
             this.data[6 .. $] = random[];
 
             this.data[0] = cast(ubyte)((epoch >> 40) & 0xFF);
@@ -338,16 +380,6 @@ public struct UUID
             // version and variant
             this.data[6] = (this.data[6] & 0x0F) | 0x70;
             this.data[8] = (this.data[8] & 0x3F) | 0x80;
-        }
-
-        ///
-        @system unittest
-        {
-            import std.datetime : DateTime, SysTime;
-            SysTime st = DateTime(2025, 8, 19, 10, 38, 45);
-            UUID u = UUID(st);
-            SysTime o = u.v7Timestamp();
-            assert(o == st, st.toString() ~ " | " ~ o.toString());
         }
 
         /**
@@ -561,18 +593,23 @@ public struct UUID
          * returns, otherwise and UUIDParsingException is thrown.
          */
         SysTime v7Timestamp() const {
+            return SysTime(DateTime(1970, 1, 1), UTC()) + dur!"msecs"(v7Milliseconds());
+        }
+
+        /// ditto
+        ulong v7Milliseconds() const {
             if (this.uuidVersion != Version.timestampRandom)
             {
                 throw new UUIDParsingException("The UUID is not of version" ~
                     " v7 therefore no timestamp exist", 0);
             }
-            ulong milli = (cast(ulong)(this.data[0]) << 40) |
+
+            return (cast(ulong)(this.data[0]) << 40) |
                    (cast(ulong)(this.data[1]) << 32) |
                    (cast(ulong)(this.data[2]) << 24) |
                    (cast(ulong)(this.data[3]) << 16) |
                    (cast(ulong)(this.data[4]) << 8)  |
                    (cast(ulong)(this.data[5]));
-            return SysTime(DateTime(1970, 1, 1), UTC()) + dur!"msecs"(milli);
         }
 
         /**
@@ -1384,7 +1421,8 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  */
 UUID timestampRandomUUID()
 {
-    return UUID(Clock.currTime());
+    import core.time : MonoTime;
+    return UUID(MonoTime.currTime);
 }
 
 ///
