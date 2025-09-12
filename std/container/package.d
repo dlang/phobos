@@ -9,6 +9,7 @@ To implement the different containers, both struct and class based
 approaches have been used. $(REF make, std,container,util) allows for
 uniform construction with either approach.
 
+$(RUNNABLE_EXAMPLE
 ---
 import std.container;
 // Construct a red-black tree and an array both containing the values 1, 2, 3.
@@ -16,15 +17,21 @@ import std.container;
 RedBlackTree!int rbTree = new RedBlackTree!int(1, 2, 3);
 // But `new` should not be used with Array
 Array!int array = Array!int(1, 2, 3);
+
 // `make` hides the differences
 RedBlackTree!int rbTree2 = make!(RedBlackTree!int)(1, 2, 3);
 Array!int array2 = make!(Array!int)(1, 2, 3);
+
+assert(rbTree == rbTree2);
+assert(array == array2);
 ---
+)
 
 Note that `make` can infer the element type from the given arguments.
 
 ---
 import std.container;
+
 auto rbTree = make!RedBlackTree(1, 2, 3); // RedBlackTree!int
 auto array = make!Array("1", "2", "3"); // Array!string
 ---
@@ -35,8 +42,11 @@ All containers have reference semantics, which means that after
 assignment both variables refer to the same underlying data.
 
 To make a copy of a container, use the `c.dup` container primitive.
+
+$(RUNNABLE_EXAMPLE
 ---
-import std.container, std.range;
+import std.algorithm, std.container, std.range;
+
 Array!int originalArray = make!(Array!int)(1, 2, 3);
 Array!int secondArray = originalArray;
 assert(equal(originalArray[], secondArray[]));
@@ -51,6 +61,7 @@ secondArray[0] = 1;
 // assert that originalArray has not been affected
 assert(originalArray[0] == 12);
 ---
+)
 
 $(B Attention:) If the container is implemented as a class, using an
 uninitialized instance can cause a null pointer dereference.
@@ -67,6 +78,7 @@ intializes itself upon use; however, up to this point the container will not
 have an identity and assignment does not create two references to the same
 data.
 
+$(RUNNABLE_EXAMPLE
 ---
 import std.container;
 
@@ -84,6 +96,8 @@ array1 = array2;
 array1.removeBack();
 assert(array2.empty);
 ---
+)
+
 It is therefore recommended to always construct containers using
 $(REF make, std,container,util).
 
@@ -147,9 +161,10 @@ these parameters $(B must) be obtained from the same container instance
 as the one being worked with. It is important to note that many generic range
 algorithms return the same range type as their input range.
 
+$(RUNNABLE_EXAMPLE
 ---
 import std.algorithm.comparison : equal;
-import std.algorithm.iteration : find;
+import std.algorithm.searching : find;
 import std.container;
 import std.range : take;
 
@@ -168,11 +183,13 @@ array.linearRemove(array[].find(2).take(1));
 
 assert(array[].equal([1, 3]));
 ---
+)
 
 When any $(MREF_ALTTEXT range, std, range) can be passed as an argument to
 a member function, the documention usually refers to the parameter's templated
 type as `Stuff`.
 
+$(RUNNABLE_EXAMPLE
 ---
 import std.algorithm.comparison : equal;
 import std.container;
@@ -186,6 +203,7 @@ array.insertBack(iota(3, 10));
 
 assert(array[].equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
 ---
+)
 
 $(H3 $(LNAME2 primitives, Container Primitives))
 
