@@ -3,9 +3,9 @@
 /**
 This module defines generic containers.
 
-Construction:
+$(H3 $(LNAME2 construction, Construction))
 
-To implement the different containers both struct and class based
+To implement the different containers, both struct and class based
 approaches have been used. $(REF make, std,container,util) allows for
 uniform construction with either approach.
 
@@ -29,7 +29,7 @@ auto rbTree = make!RedBlackTree(1, 2, 3); // RedBlackTree!int
 auto array = make!Array("1", "2", "3"); // Array!string
 ---
 
-Reference_semantics:
+$(H3 $(LNAME2 reference-semantics, Reference Semantics))
 
 All containers have reference semantics, which means that after
 assignment both variables refer to the same underlying data.
@@ -97,7 +97,7 @@ import std.container, std.range;
 auto arrOfArrs = make!Array(generate!(() => make!(Array!int)).take(10));
 ---
 
-Submodules:
+$(H3 $(LNAME2 submodules, Submodules))
 
 This module consists of the following submodules:
 
@@ -130,7 +130,7 @@ $(UL
     )
 )
 
-The_primary_range_of_a_container:
+$(H3 $(LNAME2 primary-range, The Primary Range of a Container))
 
 While some containers offer direct access to their elements e.g. via
 `opIndex`, `c.front` or `c.back`, access
@@ -187,7 +187,7 @@ array.insertBack(iota(3, 10));
 assert(array[].equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
 ---
 
-Container_primitives:
+$(H3 $(LNAME2 primitives, Container Primitives))
 
 Containers do not form a class hierarchy, instead they implement a
 common set of primitives (see table below). These primitives each guarantee
