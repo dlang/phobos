@@ -325,15 +325,14 @@ public struct UUID
          */
         @safe pure this(SysTime timestamp, ubyte[10] random = generateV7RandomData())
         {
-            ulong epoch = (timestamp - SysTime.fromUnixTime(0)).total!"msecs";
-            this.data[6 .. $] = random[];
+            import std.bitmanip : nativeToBigEndian;
 
-            this.data[0] = cast(ubyte)((epoch >> 40) & 0xFF);
-            this.data[1] = cast(ubyte)((epoch >> 32) & 0xFF);
-            this.data[2] = cast(ubyte)((epoch >> 24) & 0xFF);
-            this.data[3] = cast(ubyte)((epoch >> 16) & 0xFF);
-            this.data[4] = cast(ubyte)((epoch >> 8) & 0xFF);
-            this.data[5] = cast(ubyte)(epoch & 0xFF);
+            ubyte[8] epoch = (timestamp - SysTime.fromUnixTime(0))
+                .total!"msecs"
+                .nativeToBigEndian;
+
+            this.data[0 .. 6] = epoch[2 .. 8];
+            this.data[6 .. $] = random;
 
             // version and variant
             this.data[6] = (this.data[6] & 0x0F) | 0x70;
