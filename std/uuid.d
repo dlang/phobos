@@ -121,6 +121,7 @@ module std.uuid;
 }
 
 import core.time : dur;
+import std.bitmanip : bigEndianToNative, nativeToBigEndian;
 import std.datetime.systime : SysTime;
 import std.datetime : Clock, DateTime, UTC;
 import std.range.primitives;
@@ -326,13 +327,16 @@ public struct UUID
          *   random = UUID V7 has 74 bits of random data, which rounds to 10 ubyte's.
          *    If no random data is given, random data is generated.
          */
-        @safe pure this(SysTime timestamp, ubyte[10] random = generateV7RandomData())
+        @safe pure this(SysTime timestamp, ubyte[10] random = generateRandomData!10)
         {
-            import std.bitmanip : nativeToBigEndian;
+            ulong epoch = (timestamp - SysTime.fromUnixTime(0)).total!"msecs";
+            this(epoch, random);
+        }
 
-            ubyte[8] epoch = (timestamp - SysTime.fromUnixTime(0))
-                .total!"msecs"
-                .nativeToBigEndian;
+        /// ditto
+        @safe pure this(ulong epoch_msecs, ubyte[10] random = generateRandomData!10)
+        {
+            ubyte[8] epoch = epoch_msecs.nativeToBigEndian;
 
             this.data[0 .. 6] = epoch[2 .. 8];
             this.data[6 .. $] = random;
@@ -560,7 +564,7 @@ public struct UUID
 
         /**
          * If the UUID is of version 7 it has a timestamp that this function
-         * returns, otherwise and UUIDParsingException is thrown.
+         * returns, otherwise an UUIDParsingException is thrown.
          */
         SysTime v7Timestamp() const {
             if (this.uuidVersion != Version.timestampRandom)
@@ -575,6 +579,25 @@ public struct UUID
                    (cast(ulong)(this.data[4]) << 8)  |
                    (cast(ulong)(this.data[5]));
             return SysTime(DateTime(1970, 1, 1), UTC()) + dur!"msecs"(milli);
+        }
+
+        /**
+         * If the UUID is of version 7 it has a timestamp that this function
+         * returns as described in RFC 9562 (Method 3), otherwise an
+         * UUIDParsingException is thrown.
+         */
+        SysTime v7Timestamp_method3() const {
+            auto ret = v7Timestamp();
+
+            const ubyte[2] rand_a = [
+                data[6] & 0x0f, // masks version bits
+                data[7]
+            ];
+
+            const float hnsecs = rand_a.bigEndianToNative!ushort / MonotonicUUIDsFactory.subMsecsPart;
+            ret += dur!"hnsecs"(cast(ulong) hnsecs);
+
+            return ret;
         }
 
         /**
@@ -1381,6 +1404,149 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
     assert(u1.uuidVersion == UUID.Version.randomNumberBased);
 }
 
+///
+class MonotonicUUIDsFactory
+{
+    import core.sync.mutex : Mutex;
+    import core.time : Duration;
+    import std.datetime.stopwatch : StopWatch;
+
+    private shared Mutex mtx;
+    private StopWatch startTimePoint;
+
+    ///
+    this(in SysTime startTime = SysTime.fromUnixTime(0)) shared
+    {
+        this(Clock.currTime - startTime);
+    }
+
+    ///
+    this(in Duration timeElapsed, bool autostartDisabledForTesting = false) shared
+    {
+        mtx = new shared Mutex();
+
+        (cast() startTimePoint).setTimeElapsed = timeElapsed;
+
+        if (!autostartDisabledForTesting)
+            (cast() startTimePoint).start();
+    }
+
+    private auto peek() shared
+    {
+        mtx.lock();
+        scope(exit) mtx.unlock();
+
+        return (cast() startTimePoint).peek;
+    }
+
+    // hnsecs is 1/10_000 of millisecond
+    // rand_a size is 12 bits (4096 values)
+    private enum float subMsecsPart = 1.0f / 10_000 * 4096;
+
+    /**
+     * Returns a monotonic timestamp + random based UUIDv7
+     * as described in RFC 9562 (Method 3).
+     */
+    UUID createUUIDv7_method3(ubyte[8] externalRandom = generateRandomData!8) shared
+    {
+        const curr = peek.split!("msecs", "hnsecs");
+        const qhnsecs = cast(ushort) (curr.hnsecs * subMsecsPart);
+
+        ubyte[10] rand;
+
+        // Whole rand_a is 16 bit, but usable only 12 MSB.
+        // additional 4 less significant bits consumed
+        // by a version value
+        rand[0 .. 2] = qhnsecs.nativeToBigEndian;
+        rand[2 .. $] = externalRandom;
+
+        return UUID(curr.msecs, rand);
+    }
+}
+
+/// Generate monotone UUIDs
+@system unittest
+{
+    auto f = new shared MonotonicUUIDsFactory;
+
+    UUID[10] monotonic;
+
+    foreach (ref u; monotonic)
+        u = f.createUUIDv7_method3;
+}
+
+@system unittest
+{
+    import std.conv : to;
+    import std.datetime;
+
+    const currTime = SysTime(DateTime(2025, 9, 12, 21, 38, 45), UTC());
+    Duration d = currTime - SysTime.fromUnixTime(0) + dur!"msecs"(123);
+
+    auto f = new shared MonotonicUUIDsFactory(d, true);
+
+    const u1 = f.createUUIDv7_method3();
+    assert(u1.uuidVersion == UUID.Version.timestampRandom);
+
+    // sub-millisecond part zeroed
+    assert((u1.data[6] & 0b0000_1111) == 0);
+    assert(u1.data[7] == 0);
+
+    const uuidv7_milli_1 = u1.v7Timestamp;
+
+    {
+        const st = u1.v7Timestamp_method3;
+        assert(cast(DateTime) st == cast(DateTime) currTime, st.to!string);
+
+        const sp = st.fracSecs.split!("msecs", "usecs", "hnsecs");
+        assert(sp.msecs == 123, sp.to!string);
+        assert(sp.usecs == 0, sp.to!string);
+    }
+
+    // 0.3 usecs, but Method 3 precision is only 0.25 of usec,
+    // thus, expected value is 2
+    d += dur!"hnsecs"(3);
+    f = new shared MonotonicUUIDsFactory(d, true);
+
+    const u2 = f.createUUIDv7_method3();
+    const uuidv7_milli_2 = u2.v7Timestamp;
+    assert(uuidv7_milli_1 == uuidv7_milli_2);
+
+    {
+        const st = u2.v7Timestamp_method3;
+        assert(cast(DateTime) st == cast(DateTime) currTime, st.to!string);
+
+        const sp = st.fracSecs.split!("msecs", "usecs", "hnsecs");
+        assert(sp.msecs == 123, sp.to!string);
+        assert(sp.usecs == 0, sp.to!string);
+        assert(sp.hnsecs == 2, sp.to!string);
+    }
+}
+
+@system unittest
+{
+    import core.thread.osthread : Thread;
+    import std.datetime;
+
+    scope f = new shared MonotonicUUIDsFactory;
+
+    UUID[1000] uuids;
+
+    foreach (ref u; uuids)
+    {
+        // UUIDv7 Method 3 monotonicity is only guaranteed if UUIDs are
+        // generated slower than 2.5 microseconds
+        Thread.sleep(dur!("hnsecs")(25));
+        u = f.createUUIDv7_method3;
+    }
+
+    foreach (i; 1 .. uuids.length)
+    {
+        assert(uuids[i-1].v7Timestamp_method3 < uuids[i].v7Timestamp_method3);
+        assert(uuids[i-1].data[8 .. $] != uuids[i].data[8 .. $], "random parts are equal");
+    }
+}
+
 /**
  * This function returns a timestamp + random based UUID aka. uuid v7.
  */
@@ -1797,12 +1963,12 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
     ]);
 }
 
-private ubyte[10] generateV7RandomData() {
+private ubyte[Size] generateRandomData(ubyte Size)() {
     import std.random : Random, uniform, unpredictableSeed;
 
     auto rnd = Random(unpredictableSeed);
 
-    ubyte[10] bytes;
+    ubyte[Size] bytes;
     foreach (idx; 0 .. bytes.length)
     {
         bytes[idx] = uniform!(ubyte)(rnd);
