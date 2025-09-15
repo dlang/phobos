@@ -1513,6 +1513,7 @@ class MonotonicUUIDsFactory
 @system unittest
 {
     import core.thread.osthread : Thread;
+    import std.datetime;
 
     scope f = new shared MonotonicUUIDsFactory;
 
