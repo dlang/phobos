@@ -1945,16 +1945,11 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
 }
 
 private ubyte[Size] generateRandomData(ubyte Size)() {
-    import std.random : rndGen, Random, uniform, unpredictableSeed;
-
-    auto rnd = Random(unpredictableSeed!(ubyte)());
+    import std.internal.entropy : getEntropy, crashOnError;
 
     ubyte[Size] bytes;
-    foreach (idx; 0 .. bytes.length)
-    {
-        bytes[idx] = uniform!(ubyte)(rnd);
-        rnd.popFront();
-    }
+    getEntropy(bytes).crashOnError;
+
     return bytes;
 }
 
@@ -2053,4 +2048,24 @@ public class UUIDParsingException : Exception
     UUID u = UUID("0198c2b2-c5a8-7a0f-a1db-86aac7906c7b");
     auto d = DateTime(2025,8,19);
     assert((cast(DateTime) u.v7Timestamp()).year == d.year);
+}
+
+/// uuid v7 randomness check
+@system unittest
+{
+    import std.conv : to;
+    import std.datetime : Clock;
+    import std.format : format;
+
+    UUID[10_000] uuids;
+
+    foreach (ref u; uuids)
+        u = UUID(Clock.currTime);
+
+    foreach (i; 1 .. uuids.length)
+    {
+        assert(uuids[i-1].data[6 .. $] != uuids[i].data[6 .. $],
+            format("i=%d: random parts of adjacent v7 UUIDs are equal,\n%s\n%s", i, uuids[i-1], uuids[i])
+        );
+    }
 }
