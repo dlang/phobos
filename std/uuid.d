@@ -1512,17 +1512,23 @@ class MonotonicUUIDsFactory
 /// Generate monotone UUIDs
 @system unittest
 {
+    import core.thread.osthread : Thread;
+
     scope f = new shared MonotonicUUIDsFactory;
 
     UUID[1000] uuids;
 
     foreach (ref u; uuids)
+    {
+        // UUIDv7 Method 3 monotonicity is only guaranteed if UUIDs are
+        // generated slower than 2.5 microseconds
+        Thread.sleep(dur!("hnsecs")(25));
         u = f.createUUIDv7_method3;
+    }
 
     foreach (i; 1 .. uuids.length)
     {
-        //FIXME: disabled for attempt to fix Windows CI
-        //~ assert(uuids[i-1].v7Timestamp_method3 < uuids[i].v7Timestamp_method3);
+        assert(uuids[i-1].v7Timestamp_method3 < uuids[i].v7Timestamp_method3);
         assert(uuids[i-1].data[8 .. $] != uuids[i].data[8 .. $], "random parts are not equal");
     }
 }
