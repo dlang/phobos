@@ -1509,7 +1509,7 @@ class MonotonicUUIDsFactory
     }
 }
 
-/// Monotonicity check
+/// Generate monotone UUIDs
 @system unittest
 {
     scope f = new shared MonotonicUUIDsFactory;
