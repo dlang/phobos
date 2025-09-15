@@ -123,6 +123,8 @@ immutable
         sh, /// The SuperH architecture, 32-bit
         webAssembly, /// The WebAssembly virtual ISA (instruction set architecture), 32-bit
         alpha, /// The Alpha architecture
+        loongArch32, /// The LoongAtch architecture, 32-bit
+        loongArch64, /// The LoongArch architecture, 64-bit
         unknown, /// Unknown
     }
 
@@ -153,6 +155,8 @@ immutable
     else version (SH)       ISA instructionSetArchitecture = ISA.sh;
     else version (WebAssembly) ISA instructionSetArchitecture = ISA.webAssembly;
     else version (Alpha)    ISA instructionSetArchitecture = ISA.alpha;
+    else version (LoongArch32) ISA instructionSetArchitecture = ISA.loongArch32;
+    else version (loongArch64) ISA instructionSetArchitecture = ISA.loongArch64;
     else ISA instructionSetArchitecture = ISA.unknown;
 }
 
