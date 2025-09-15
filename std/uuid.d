@@ -1797,7 +1797,7 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
 private ubyte[10] generateV7RandomData() {
     import std.random : Random, uniform, unpredictableSeed;
 
-    auto rnd = Random(unpredictableSeed!(ubyte)());
+    auto rnd = Random(unpredictableSeed);
 
     ubyte[10] bytes;
     foreach (idx; 0 .. bytes.length)
@@ -1905,7 +1905,7 @@ public class UUIDParsingException : Exception
     assert((cast(DateTime) u.v7Timestamp()).year == d.year);
 }
 
-/// uuid randomness check
+/// uuid v7 randomness check
 @system unittest
 {
     import std.conv : to;
