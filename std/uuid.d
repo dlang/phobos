@@ -1529,7 +1529,7 @@ class MonotonicUUIDsFactory
     foreach (i; 1 .. uuids.length)
     {
         assert(uuids[i-1].v7Timestamp_method3 < uuids[i].v7Timestamp_method3);
-        assert(uuids[i-1].data[8 .. $] != uuids[i].data[8 .. $], "random parts are not equal");
+        assert(uuids[i-1].data[8 .. $] != uuids[i].data[8 .. $], "random parts are equal");
     }
 }
 
