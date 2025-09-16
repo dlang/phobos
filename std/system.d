@@ -57,6 +57,8 @@ immutable
     else version (NetBSD)  OS os = OS.netBSD;
     else version (OpenBSD) OS os = OS.openBSD;
     else version (DragonFlyBSD) OS os = OS.dragonFlyBSD;
+    else version (Solaris) OS os = OS.solaris;
+    else version (Android) OS os = OS.android;
     else version (Posix)   OS os = OS.otherPosix;
     else OS os = OS.unknown;
 
