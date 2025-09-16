@@ -6848,7 +6848,7 @@ pure @safe nothrow unittest
    range.
 
    $(DDOC_SECTION_H `in` operator and `contains`:)
-   `iota` over an integral/pointer defines the `in` operator from the right.
+   `iota` over an integral/pointer type defines the `in` operator from the right.
    `val in iota(...)` is true when `val` occurs in the range. When present, it takes
    `step` into account - `val` won't be considered
    contained if it falls between two consecutive elements of the range.
