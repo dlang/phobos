@@ -125,6 +125,7 @@ immutable
         alpha, /// The Alpha architecture
         loongArch32, /// The LoongAtch architecture, 32-bit
         loongArch64, /// The LoongArch architecture, 64-bit
+        xtensa, /// The Xtensa architecture, 32-bit
         unknown, /// Unknown
     }
 
@@ -157,6 +158,7 @@ immutable
     else version (Alpha)    ISA instructionSetArchitecture = ISA.alpha;
     else version (LoongArch32) ISA instructionSetArchitecture = ISA.loongArch32;
     else version (loongArch64) ISA instructionSetArchitecture = ISA.loongArch64;
+    else version (Xtensa)   ISA instructionSetArchitecture = ISA.xtensa;
     else ISA instructionSetArchitecture = ISA.unknown;
 }
 
