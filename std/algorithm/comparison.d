@@ -82,8 +82,12 @@ Returns:
     found value plus one is returned.
 
 See_Also:
-$(REF_ALTTEXT find, find, std,algorithm,searching) and $(REF_ALTTEXT canFind, canFind, std,algorithm,searching) for finding a value in a
-range.
+    $(UL
+    $(LI $(REF_SHORT find, std,algorithm,searching) and
+    $(REF_SHORT canFind, std,algorithm,searching) for finding a value in a range.)
+    $(LI $(REF_ALTTEXT `value in iota(start, end)`, iota, std,range) to find a value in
+    a particular interval.)
+    )
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
     (Value value, Values values)

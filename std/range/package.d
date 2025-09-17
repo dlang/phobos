@@ -6847,12 +6847,15 @@ pure @safe nothrow unittest
    user-defined types that support `++`, the range is an input
    range.
 
-   An integral iota also supports `in` operator from the right. It takes
-   the stepping into account, the integral won't be considered
-   contained if it falls between two consecutive values of the range.
-   `contains` does the same as in, but from lefthand side.
+   $(DDOC_SECTION_H `in` operator and `contains`:)
+   `iota` over an integral/pointer type defines the `in` operator from the right.
+   `val in iota(...)` is true when `val` occurs in the range. When present, it takes
+   `step` into account - `val` won't be considered
+   contained if it falls between two consecutive elements of the range.
+   The `contains` method does the same as `in`, but from the left-hand side.
 
     Example:
+    $(RUNNABLE_EXAMPLE
     ---
     void main()
     {
@@ -6879,6 +6882,7 @@ pure @safe nothrow unittest
         writeln();
     }
     ---
+    )
 */
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
