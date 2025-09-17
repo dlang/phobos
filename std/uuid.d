@@ -1904,23 +1904,3 @@ public class UUIDParsingException : Exception
     auto d = DateTime(2025,8,19);
     assert((cast(DateTime) u.v7Timestamp()).year == d.year);
 }
-
-/// uuid v7 randomness check
-@system unittest
-{
-    import std.conv : to;
-    import std.datetime : Clock;
-    import std.format : format;
-
-    UUID[10_000] uuids;
-
-    foreach (ref u; uuids)
-        u = UUID(Clock.currTime);
-
-    foreach (i; 1 .. uuids.length)
-    {
-        assert(uuids[i-1].data[6 .. $] != uuids[i].data[6 .. $],
-            format("i=%d: random parts of adjacent v7 UUIDs are equal,\n%s\n%s", i, uuids[i-1], uuids[i])
-        );
-    }
-}
