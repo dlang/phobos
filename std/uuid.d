@@ -318,6 +318,9 @@ public struct UUID
         /**
          * UUID V7 constructor
          *
+         * This implementation is not guaranteed to use a cryptographically secure PRNG.
+         * For more information please see: std.random.unpredictableSeed
+         *
          * Params:
          *   timestamp = the timestamp part of the UUID V7
          *   random = UUID V7 has 74 bits of random data, which rounds to 10 ubyte's.
@@ -1797,7 +1800,7 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
 private ubyte[10] generateV7RandomData() {
     import std.random : Random, uniform, unpredictableSeed;
 
-    auto rnd = Random(unpredictableSeed!(ubyte)());
+    auto rnd = Random(unpredictableSeed);
 
     ubyte[10] bytes;
     foreach (idx; 0 .. bytes.length)
