@@ -3111,13 +3111,10 @@ if (isDelegate!T)
     import std.format : formatValue;
 
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
-    version (linux)
-    {
-        FormatSpec!char f;
-        auto w = appender!string();
-        formatValue(w, &func, f);
-        assert(w.data.length >= 15 && w.data[0 .. 15] == "void delegate()");
-    }
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, &func, f);
+    assert(w.data.length >= 15 && w.data[0 .. 15] == "void delegate()");
 }
 
 // string elements are formatted like UTF-8 string literals.
