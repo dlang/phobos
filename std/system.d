@@ -1,4 +1,6 @@
 // Written in the D programming language.
+//
+// NOTE: This must be kept in sync with phobos/sys/system.d
 
 /**
  * Information about the target operating system, environment, and CPU.
@@ -39,6 +41,7 @@ immutable
         openBSD,   /// OpenBSD
         dragonFlyBSD, /// DragonFlyBSD
         solaris,   /// Solaris
+        haiku,     /// HaikuOS
         android,   /// Android
         otherPosix, /// Other Posix Systems
         unknown,   /// Unknown
@@ -58,7 +61,7 @@ immutable
     else version (OpenBSD) OS os = OS.openBSD;
     else version (DragonFlyBSD) OS os = OS.dragonFlyBSD;
     else version (Solaris) OS os = OS.solaris;
-    else version (Android) OS os = OS.android;
+    else version (Haiku) OS os = OS.haiku;
     else version (Posix)   OS os = OS.otherPosix;
     else OS os = OS.unknown;
 
