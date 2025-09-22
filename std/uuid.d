@@ -1386,7 +1386,7 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  */
 UUID timestampRandomUUID()
 {
-    return UUID(Clock.currTime());
+    return UUID(Clock.currTime(UTC()));
 }
 
 ///
