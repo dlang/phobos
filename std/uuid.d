@@ -1417,7 +1417,7 @@ class MonotonicUUIDsFactory
     ///
     this(in SysTime startTime = SysTime.fromUnixTime(0)) shared
     {
-        this(Clock.currTime - startTime);
+        this(Clock.currTime(UTC()) - startTime);
     }
 
     ///
