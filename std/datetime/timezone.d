@@ -3315,7 +3315,7 @@ version (StdDdoc)
 
         Clears the TZ environment variable.
       +/
-    void clearTZEnvVar() @safe nothrow;
+    void clearTZEnvVar() @safe nothrow @nogc;
 }
 else version (Posix)
 {
@@ -3330,12 +3330,12 @@ else version (Posix)
             auto value = asNormalizedPath(tzDatabaseName);
         else
             auto value = asNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
-        setenv("TZ", value.tempCString(), 1);
-        tzset();
+        if (setenv("TZ", value.tempCString(), 1) != -1)
+            tzset();
     }
 
 
-    void clearTZEnvVar() @trusted nothrow
+    void clearTZEnvVar() @trusted nothrow @nogc
     {
         import core.stdc.time : tzset;
         import core.sys.posix.stdlib : unsetenv;

@@ -93,6 +93,7 @@ import core.thread : ThreadID;
 
 version (Posix)
 {
+    import core.stdc.time;
     import core.sys.posix.sys.wait;
     import core.sys.posix.unistd;
 }
@@ -264,6 +265,8 @@ static:
             }
             if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
             {
+                if (name == "TZ")
+                    core.stdc.time.tzset();
                 return value;
             }
             // The default errno error message is very uninformative
@@ -299,7 +302,16 @@ static:
     void remove(scope const(char)[] name) @trusted nothrow @nogc
     {
         version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
-        else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
+        else version (Posix)
+        {
+            import std.datetime.timezone : clearTZEnvVar;
+            if (name == "TZ")
+            {
+                clearTZEnvVar();
+                return;
+            }
+            core.sys.posix.stdlib.unsetenv(name.tempCString());
+        }
         else static assert(0);
     }
 
