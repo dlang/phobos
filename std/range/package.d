@@ -86,7 +86,7 @@ $(BOOKTABLE ,
         $(TD Creates the range that results from discarding
         the first element from the given range.
     ))
-    $(TR $(TD $(D $(LREF dropBackOne)))
+    $(TR $(TD $(LREF dropBackOne))
         $(TD Creates the range that results from discarding
         the last element from the given range.
     ))
