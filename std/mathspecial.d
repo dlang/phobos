@@ -29,6 +29,7 @@
  *      NAN = $(RED NAN)
  *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
  *      GAMMA = &#915;
+ *      PSI = &Psi;
  *      THETA = &theta;
  *      INTEGRAL = &#8747;
  *      INTEGRATE = $(BIG &#8747;<sub>$(SMALL $1)</sub><sup>$2</sup>)
@@ -36,15 +37,19 @@
  *      SUB = $1<sub>$2</sub>
  *      BIGSUM = $(BIG &Sigma; <sup>$2</sup><sub>$(SMALL $1)</sub>)
  *      CHOOSE = $(BIG &#40;) <sup>$(SMALL $1)</sup><sub>$(SMALL $2)</sub> $(BIG &#41;)
+ *      CEIL = &#8968;$1&#8969;
  *      PLUSMN = &plusmn;
+ *      MNPLUS = &mnplus;
  *      INFIN = &infin;
  *      PLUSMNINF = &plusmn;&infin;
+ *      MNPLUSINF = &mnplus;&infin;
  *      PI = &pi;
  *      LT = &lt;
+ *      LE = &le;
  *      GT = &gt;
  *      SQRT = &radic;
  *      HALF = &frac12;
- *
+ *      COMPLEX = &#8450;
  *
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
@@ -111,81 +116,115 @@ real logGamma(real x)
 
 /** The sign of $(GAMMA)(x).
  *
- * Returns -1 if $(GAMMA)(x) < 0,  +1 if $(GAMMA)(x) > 0,
- * $(NAN) if sign is indeterminate.
+ * Params:
+ *   x = the argument of $(GAMMA)
  *
- * Note that this function can be used in conjunction with logGamma(x) to
- * evaluate gamma for very large values of x.
+ * Returns:
+ *   -1 if $(GAMMA)(x) < 0, +1 if $(GAMMA)(x) > 0, and $(NAN) if $(GAMMA)(x)
+ *   does not exist.
+ *
+ * Note:
+ *   This function can be used in conjunction with `logGamma` to evaluate
+ *   $(GAMMA)(x) when `gamma(x)` is too large to be represented as a `real`.
  */
-real sgnGamma(real x)
+pragma(inline, true) real sgnGamma(real x)
 {
-    /* Author: Don Clugston. */
-    if (isNaN(x)) return x;
-    if (x > 0) return 1.0;
-    if (x < -1/real.epsilon)
-    {
-        // Large negatives lose all precision
-        return real.nan;
-    }
-    long n = cast(long) trunc(x);
-    if (x == n)
-    {
-        return x == 0 ?  copysign(1, x) : real.nan;
-    }
-    return n & 1 ? 1.0 : -1.0;
+    return std.internal.math.gammafunction.sgnGamma(x);
 }
 
+///
 @safe unittest
 {
-    assert(sgnGamma(5.0) == 1.0);
-    assert(isNaN(sgnGamma(-3.0)));
-    assert(sgnGamma(-0.1) == -1.0);
-    assert(sgnGamma(-0.6) == -1.0);
-    assert(sgnGamma(-55.1) == 1.0);
-    assert(isNaN(sgnGamma(-real.infinity)));
-    assert(isIdentical(sgnGamma(NaN(0xABC)), NaN(0xABC)));
+    assert(sgnGamma(10_000) == 1);
 }
 
-/** Beta function
+/** Beta function, B(x,y)
  *
- * The beta function is defined as
+ * Mathematically, if x $(GT) 0 and y $(GT) 0 then
+ * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (l-t), y-1)dt. Through analytic continuation, it
+ * is extended to $(COMPLEX)$(SUP 2) where it can be expressed in terms of $(GAMMA)(z).
  *
- * beta(x, y) = ($(GAMMA)(x) * $(GAMMA)(y)) / $(GAMMA)(x + y)
+ * B(x,y) = $(GAMMA)(x)$(GAMMA)(y) / $(GAMMA)(x+y).
+ *
+ * This implementation restricts x and y to the set of real numbers.
+ *
+ * Params:
+ *   x = the first argument of B
+ *   y = the second argument of B
+ *
+ * Returns:
+ *   It returns B(x,y) if it can be computed, otherwise $(NAN).
+ *
+ * $(TABLE_SV
+ *   $(TR $(TH x)                                   $(TH y)                $(TH beta(x, y))   )
+ *   $(TR $(TD $(NAN))                              $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD -$(INFIN))                           $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD integer $(LT) 0)                     $(TD y)                $(TD $(NAN))       )
+ *   $(TR $(TD noninteger and x+y even $(LE) 0)     $(TD noninteger)       $(TD -0)           )
+ *   $(TR $(TD noninteger and x+y odd $(LE) 0)      $(TD noninteger)       $(TD +0)           )
+ *   $(TR $(TD +0)                                  $(TD positive finite)  $(TD +$(INFIN))    )
+ *   $(TR $(TD +0)                                  $(TD +$(INFIN))        $(TD $(NAN))       )
+ *   $(TR $(TD $(GT) 0)                             $(TD +$(INFIN))        $(TD +0)           )
+ *   $(TR $(TD -0)                                  $(TD +0)               $(TD $(NAN))       )
+ *   $(TR $(TD -0)                                  $(TD $(GT) 0)          $(TD -$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0, $(CEIL x) odd)   $(TD +$(INFIN))        $(TD -$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0, $(CEIL x) even)  $(TD +$(INFIN))        $(TD +$(INFIN))    )
+ *   $(TR $(TD noninteger $(LT) 0)                  $(TD $(PLUSMN)0)       $(TD $(PLUSMNINF)) )
+ * )
+ *
+ * Since B(x,y) = B(y,x), if the table states that beta(x, y) is a special value, then beta(y, x) is
+ * one as well.
  */
-real beta(real x, real y)
+pragma(inline, true) real beta(real x, real y)
 {
-    if (x > MAXGAMMA || y > MAXGAMMA || (x+y)> MAXGAMMA)
-    {
-        const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
-        return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
-    } else return gamma(x) * gamma(y) / gamma(x+y);
+    return std.internal.math.gammafunction.beta(x, y);
 }
 
+///
 @safe unittest
 {
-    assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
-    assert(beta(2*MAXGAMMA, -0.5) < 0);
-    assert(beta(-0.1, 2*MAXGAMMA) < 0);
-    assert(beta(-1.6, 2*MAXGAMMA) > 0);
-    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
-    assert(beta(-0., 2*MAXGAMMA) == -real.infinity);
-    assert(beta(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
-    assert(isNaN(beta(-1, 2*MAXGAMMA)));
-    assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
-    assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+    assert(beta(1, 2) == 0.5);
 }
 
-/** Digamma function
+/** Digamma function, $(PSI)(x)
  *
- *  The digamma function is the logarithmic derivative of the gamma function.
+ * $(PSI)(x), is the logarithmic derivative of the gamma function, $(GAMMA)(x).
  *
- *  digamma(x) = d/dx logGamma(x)
+ * $(PSI)(x) = $(SUP d)$(SUB /, dx) ln|$(GAMMA)(x)|  (the derivative of `logGamma(x)`)
  *
- *  See_Also: $(LREF logmdigamma), $(LREF logmdigammaInverse).
+ * Params:
+ *   x = the domain value
+ *
+ * Returns:
+ *   It returns $(PSI)(x).
+ *
+ * $(TABLE_SV
+ *   $(SVH x,             digamma(x)   )
+ *   $(SV  integer < 0,   $(NAN)       )
+ *   $(SV  $(PLUSMN)0.0,  $(MNPLUSINF) )
+ *   $(SV  +$(INFIN),     +$(INFIN)    )
+ *   $(SV  -$(INFIN),     $(NAN)       )
+ *   $(SV  $(NAN),        $(NAN)       )
+ * )
+ *
+ * See_Also: $(LREF logmdigamma), $(LREF logmdigammaInverse).
  */
 real digamma(real x)
 {
     return std.internal.math.gammafunction.digamma(x);
+}
+
+///
+@safe unittest
+{
+    const euler = 0.57721_56649_01532_86060_65121L;
+
+    assert(isClose(digamma(1), -euler));
+    assert(digamma(+0.) == -real.infinity);
+    assert(digamma(-0.) == +real.infinity);
+    assert(digamma(+real.infinity) == +real.infinity);
+    assert(isNaN(digamma(-1)));
+    assert(isNaN(digamma(-real.infinity)));
 }
 
 /** Log Minus Digamma function

@@ -23,6 +23,7 @@ $(TR $(TDNW Generating UUIDs)
      $(TD $(MYREF sha1UUID)
           $(MYREF randomUUID)
           $(MYREF md5UUID)
+          $(MYREF timestampRandomUUID)
           )
      )
 $(TR $(TDNW Using UUIDs)
@@ -119,6 +120,9 @@ module std.uuid;
     assert(id.empty);
 }
 
+import core.time : dur;
+import std.datetime.systime : SysTime;
+import std.datetime : Clock, DateTime, UTC;
 import std.range.primitives;
 import std.traits;
 
@@ -193,7 +197,9 @@ public struct UUID
             ///Version 4 (Random)
             randomNumberBased = 4,
             ///Version 5 (Name based + SHA-1)
-            nameBasedSHA1 = 5
+            nameBasedSHA1 = 5,
+            ///Version 7 (milliseconds since unix epoch + random)
+            timestampRandom = 7
         }
 
         union
@@ -307,6 +313,43 @@ public struct UUID
 
             //Too many arguments
             assert(!__traits(compiles, typeof(UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,1))));
+        }
+
+        /**
+         * UUID V7 constructor
+         *
+         * This implementation is not guaranteed to use a cryptographically secure PRNG.
+         * For more information please see: std.random.unpredictableSeed
+         *
+         * Params:
+         *   timestamp = the timestamp part of the UUID V7
+         *   random = UUID V7 has 74 bits of random data, which rounds to 10 ubyte's.
+         *    If no random data is given, random data is generated.
+         */
+        @safe pure this(SysTime timestamp, ubyte[10] random = generateV7RandomData())
+        {
+            import std.bitmanip : nativeToBigEndian;
+
+            ubyte[8] epoch = (timestamp - SysTime.fromUnixTime(0))
+                .total!"msecs"
+                .nativeToBigEndian;
+
+            this.data[0 .. 6] = epoch[2 .. 8];
+            this.data[6 .. $] = random;
+
+            // version and variant
+            this.data[6] = (this.data[6] & 0x0F) | 0x70;
+            this.data[8] = (this.data[8] & 0x3F) | 0x80;
+        }
+
+        ///
+        @system unittest
+        {
+            import std.datetime : DateTime, SysTime;
+            SysTime st = DateTime(2025, 8, 19, 10, 38, 45);
+            UUID u = UUID(st);
+            SysTime o = u.v7Timestamp();
+            assert(o == st, st.toString() ~ " | " ~ o.toString());
         }
 
         /**
@@ -516,6 +559,25 @@ public struct UUID
         }
 
         /**
+         * If the UUID is of version 7 it has a timestamp that this function
+         * returns, otherwise and UUIDParsingException is thrown.
+         */
+        SysTime v7Timestamp() const {
+            if (this.uuidVersion != Version.timestampRandom)
+            {
+                throw new UUIDParsingException("The UUID is not of version" ~
+                    " v7 therefore no timestamp exist", 0);
+            }
+            ulong milli = (cast(ulong)(this.data[0]) << 40) |
+                   (cast(ulong)(this.data[1]) << 32) |
+                   (cast(ulong)(this.data[2]) << 24) |
+                   (cast(ulong)(this.data[3]) << 16) |
+                   (cast(ulong)(this.data[4]) << 8)  |
+                   (cast(ulong)(this.data[5]));
+            return SysTime(DateTime(1970, 1, 1), UTC()) + dur!"msecs"(milli);
+        }
+
+        /**
          * RFC 4122 defines different internal data layouts for UUIDs.
          * Returns the format used by this UUID.
          *
@@ -601,6 +663,8 @@ public struct UUID
                 return Version.randomNumberBased;
             else if ((octet9 & 0xF0) == 0x50)
                 return Version.nameBasedSHA1;
+            else if ((octet9 & 0xF0) == 0x70)
+                return Version.timestampRandom;
             else
                 return Version.unknown;
         }
@@ -622,7 +686,7 @@ public struct UUID
                 0x40 : UUID.Version.randomNumberBased,
                 0x50 : UUID.Version.nameBasedSHA1,
                 0x60 : UUID.Version.unknown,
-                0x70 : UUID.Version.unknown,
+                0x70 : UUID.Version.timestampRandom,
                 0x80 : UUID.Version.unknown,
                 0x90 : UUID.Version.unknown,
                 0xa0 : UUID.Version.unknown,
@@ -1318,6 +1382,21 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 }
 
 /**
+ * This function returns a timestamp + random based UUID aka. uuid v7.
+ */
+UUID timestampRandomUUID()
+{
+    return UUID(Clock.currTime(UTC()));
+}
+
+///
+@system unittest
+{
+    UUID u = timestampRandomUUID();
+    assert(u.uuidVersion == UUID.Version.timestampRandom);
+}
+
+/**
  * This is a less strict parser compared to the parser used in the
  * UUID constructor. It enforces the following rules:
  *
@@ -1718,6 +1797,20 @@ enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
     ]);
 }
 
+private ubyte[10] generateV7RandomData() {
+    import std.random : Random, uniform, unpredictableSeed;
+
+    auto rnd = Random(unpredictableSeed);
+
+    ubyte[10] bytes;
+    foreach (idx; 0 .. bytes.length)
+    {
+        bytes[idx] = uniform!(ubyte)(rnd);
+        rnd.popFront();
+    }
+    return bytes;
+}
+
 /**
  * This exception is thrown if an error occurs when parsing a UUID
  * from a string.
@@ -1776,4 +1869,41 @@ public class UUIDParsingException : Exception
     assert(ex.input == "foo");
     assert(ex.position == 10);
     assert(ex.reason == UUIDParsingException.Reason.tooMuch);
+}
+
+/// uuidv7
+@system unittest
+{
+    import std.datetime : DateTime, SysTime;
+
+    SysTime st = DateTime(2025, 8, 19, 10, 38, 45);
+    UUID u = UUID(st);
+    assert(u.uuidVersion == UUID.Version.timestampRandom);
+    SysTime o = u.v7Timestamp();
+    assert(o == st, st.toString() ~ " | " ~ o.toString());
+    string s = u.toString();
+    UUID u2 = UUID(s);
+    SysTime o2 = u2.v7Timestamp();
+    assert(o2 == st, st.toString() ~ " | " ~ o2.toString());
+}
+
+@system unittest
+{
+    import std.datetime : SysTime;
+
+    UUID u = timestampRandomUUID();
+    assert(u.uuidVersion == UUID.Version.timestampRandom);
+
+    SysTime o = u.v7Timestamp();
+    assert(o.year > 2024);
+    assert(o.year < 3024);
+}
+
+/// uuid v7 generated by external tool
+@system unittest
+{
+    import std.datetime : DateTime, SysTime;
+    UUID u = UUID("0198c2b2-c5a8-7a0f-a1db-86aac7906c7b");
+    auto d = DateTime(2025,8,19);
+    assert((cast(DateTime) u.v7Timestamp()).year == d.year);
 }

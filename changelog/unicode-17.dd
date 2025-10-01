@@ -1,0 +1,16 @@
+std.uni has been upgraded from Unicode 16.0.0 to 17.0.0
+
+This Unicode update was released September 9, 2025, and adds new blocks with characters.
+See: https://www.unicode.org/versions/Unicode17.0.0/
+
+```
+import std;
+
+void main()
+{
+    const alphaCount = iota(0, dchar.max).filter!(std.uni.isAlpha).walkLength;
+    writeln(alphaCount);
+    // formerly: 142759
+    // now:      147421
+}
+```

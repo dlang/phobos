@@ -579,6 +579,305 @@ real logGamma(real x)
 }
 
 
+/** sgn($(GAMMA)(x))
+ *
+ * Params:
+ *   x = the argument of $(GAMMA)
+ *
+ * Returns:
+ *   -1 if $(GAMMA)(x) < 0, +1 if $(GAMMA)(x) > 0, and $(NAN) if $(GAMMA)(x)
+ *   does not exist.
+ *
+ * Authors: Don Clugston
+ */
+real sgnGamma(in real x)
+{
+    if (isNaN(x)) return x;
+    if (x > 0) return 1.0;
+
+    // -x is so large that x + 1 is indistinguishable from x.
+    if (x < -1 / real.epsilon) return real.nan;
+
+    const n = trunc(x);
+    if (x == n) return x == 0 ? copysign(1, x) : real.nan;
+    return cast(long) n & 1 ? 1.0 : -1.0;
+}
+
+@safe unittest
+{
+    assert(sgnGamma(5.0) == 1.0);
+    assert(isNaN(sgnGamma(-3.0)));
+    assert(sgnGamma(-0.1) == -1.0);
+    assert(sgnGamma(-0.6) == -1.0);
+    assert(sgnGamma(-55.1) == 1.0);
+    assert(isNaN(sgnGamma(-real.infinity)));
+    assert(isIdentical(sgnGamma(NaN(0xABC)), NaN(0xABC)));
+}
+
+
+/* A method for computing B(x,y) when gamma would return infinity. It uses
+ * logGamma and exp instead.
+ */
+private pragma(inline, true) real betaLarge(in real x, in real y)
+{
+    const sgnB = sgnGamma(x) * sgnGamma(y) / sgnGamma(x+y);
+    return sgnB * exp(logGamma(x) + logGamma(y) - logGamma(x+y));
+}
+
+@safe unittest
+{
+    assert(betaLarge(2*MAXGAMMA, -0.5) < 0);
+    assert(betaLarge(-0.1, 2*MAXGAMMA) < 0);
+    assert(betaLarge(-1.6, 2*MAXGAMMA) > 0);
+    assert(betaLarge(+0., 2*MAXGAMMA) == real.infinity);
+    assert(betaLarge(-0., 2*MAXGAMMA) == -real.infinity);
+    assert(betaLarge(-MAXGAMMA-1.5, MAXGAMMA+1) < 0);
+    assert(isNaN(betaLarge(-1, 2*MAXGAMMA)));
+}
+
+/** B(x,y)
+ *
+ * This computes B(x,y). It will use the formula when i$(GAMMA)(x)$(GAMMA)(y)/$(GAMMA)(x+y) when
+ * `gamma` can compute the $(GAMMA) terms, otherwise it will use `logGamma`.
+ *
+ * There are many edge cases that generate NaN instead of the actual value. The main algorithm works
+ * for most (x,y) pairs and only generates a NaN when it doesn't. In order to not penalize every
+ * computation with a bunch of branching logic, the main algorithm is used, and only if it results
+ * in a NaN will the edge cases be checked.
+ *
+ * Params:
+ *   x = the first argument of B
+ *   y = the second argument of B
+ *
+ * Returns:
+ *   B(x,y) if it can be computed, otherwise $(NAN)
+ */
+real beta(in real x, in real y)
+{
+    real res;
+
+    // the main algorithm
+    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA)
+    {
+        res = betaLarge(x, y);
+    }
+    else
+    {
+        res = gamma(x) * gamma(y) / gamma(x+y);
+
+        // There are several regions near the asymptotes and inflection lines
+        // gamma cannot be computed but logGamma can.
+        if (!isFinite(res)) res = betaLarge(x,y);
+    }
+
+    if (!isNaN(res)) return res;
+
+    // For valid NaN results, always return the response from the main algorithm
+    // in order to preserve signaling NaNs.
+
+    if (isNaN(x) || isNaN(y)) return res;
+
+    // Take advantage of the symmetry B(x,y) = B(y,x)
+    // smaller ≤ larger
+    const larger = cmp(x, y) >= 0 ? x : y;
+    const smaller = cmp(x, y) >= 0 ? y : x;
+    const sum = larger + smaller;
+
+    // in a quadrant of the (smaller,larger) cartesian plane
+    const inQ1 = cmp(smaller, +0.0L) >= 0;
+    const inQ2 = !inQ1 && cmp(larger, +0.0L) >= 0;
+    const inQ3 = !inQ1 && !inQ2;
+
+    const nextToSmallAxis = smaller == 0;
+    const nextToLargeAxis = larger == 0;
+    const nextToOrigin = nextToSmallAxis && nextToLargeAxis;
+
+    // on an asymptote, excluding the one at the axis
+    const onSmallAsymptote = smaller < 0 && smaller == trunc(smaller);
+    const onLargeAsymptote = larger < 0 && larger == trunc(larger);
+
+    // on an inflection line segment
+    const onInflection =
+        sum <= 0 && sum == trunc(sum) && !onSmallAsymptote && !onLargeAsymptote && !nextToOrigin;
+
+    // 1) Either is -∞, B = nan
+    if (larger == -real.infinity || smaller == -real.infinity) return res;
+
+    // 2) On an asymptote, B = nan
+    if (onSmallAsymptote || onLargeAsymptote) return res;
+
+    // 3) On an inflection line segment
+    if (onInflection) return copysign(0.0L, sgnGamma(smaller)*sgnGamma(larger));
+
+    if (inQ1)
+    {
+        // 4) On the larger axis and larger is finite, B = +∞
+        // 5) On the larger axis, and larger is +∞, B = nan
+        if (nextToSmallAxis) return larger < +real.infinity ? +real.infinity : res;
+
+        // 6) Not on the larger axis, and the larger is +∞, B = +0
+        if (!nextToSmallAxis && larger == +real.infinity) return +0.;
+    }
+
+    if (inQ2)
+    {
+        // 7) Next to the origin, B = nan
+        // 8) Next to the larger axis, but not the origin, B = -∞
+        if (nextToSmallAxis) return nextToOrigin ? res : -real.infinity;
+
+        // 9) Larger is +∞, B = ∞ * sgn(Γ(smaller))
+        if (larger == +real.infinity) return copysign(real.infinity, sgnGamma(smaller));
+
+        // 10) next to smaller axis, but not on an asymptote or at the origin,
+        //     B = +∞.
+        if (nextToLargeAxis && !onSmallAsymptote && !nextToOrigin) return +real.infinity;
+
+        // larger very large, case 9
+        // larger so large that ln|Γ(larger)| and ln|Γ(sum)| are too large to
+        // represent as reals. Thus they each are approximated as ∞, and the
+        // main algorithm resolves to NaN instead of ±∞.
+        if (sum > 1) return copysign(real.infinity, sgnGamma(smaller));
+    }
+
+    if (inQ3)
+    {
+        // 11) next to the smaller axis, but not on an asymptote, B = -∞.
+        if (nextToLargeAxis && !onSmallAsymptote) return -real.infinity;
+
+        // near origin, case 11
+        // -larger and -sum are so small that ln|Γ(larger)| and ln|Γ(sum)| are
+        // too large to be represented as reals. Thus they each are approximated
+        // as ∞, and the main algorithm resolves to NaN instead of -∞.
+        if (smaller > -0.25) return -real.infinity;
+    }
+
+    // Unknown case
+    return res;
+}
+
+@safe unittest
+{
+    assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+
+    // Test symmetry
+
+    // Test first quadrant
+    assert(beta(+0., 1) == +real.infinity);
+    assert(beta(nextUp(+0.0L), nextUp(+0.0L) > 0), "B(εₓ,ε𞁟) > 0");
+    assert(!isNaN(beta(nextUp(+0.0L), 1)), "B(ε,y), y > 0 should exist");
+    assert(beta(1, +real.infinity) is +0.0L, "lim{y→+∞} B(x,y) = 0⁺, x > 0");
+    assert(beta(1, 1) > 0);
+    assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
+    assert(beta(1, 2*MAXGAMMA) > 0);
+    assert(beta(+0., 2*MAXGAMMA) == real.infinity);
+    assert(beta(nextUp(+0.0L), 2*MAXGAMMA) > 0);
+
+    // Test second quadrant above inflection lines
+    assert(isNaN(beta(-0., +0.)), "lim{x→0⁻, y→0⁺} B(x,y) should not exist");
+    assert(beta(-0., real.infinity) == -real.infinity, "lim{x→0⁻, y→+∞} B(x,y) = -∞");
+    assert(isNaN(beta(-2, 3)));
+    assert(beta(-0.5, 1) < 0);
+    assert(beta(-1.5, 3) > 0);
+    assert(beta(nextDown(-0.0L), 1) < 0);
+    assert(beta(nextUp(-1.0L), 2) < 0);
+    assert(beta(nextUp(-0.5L), 0.5) < 0);
+    assert(beta(-0.5, nextUp(0.5L)) < 0);
+    assert(beta(-0.5, real.infinity) == -real.infinity);
+    assert(cmp(beta(nextDown(-0.0L), 2*nextUp(+0.0L)), -0.0L) <= 0);
+    assert(beta(nextUp(-1.0L), 1) < 0);
+    assert(beta(nextDown(-0.0L), +real.infinity) == -real.infinity);
+    assert(beta(nextDown(-0.0L), nextDown(+real.infinity)) < 0, "B(-ε,y) < 0, y large");
+    assert(
+        beta(nextUp(-1.0L), real.infinity) == -real.infinity, "lim{y→+∞} B(-n+ε, y) = -∞, n odd");
+    assert(beta(nextUp(-1.0L), nextDown(real.infinity)) < 0, "B(-n+ε, y) < 0, n odd, y large");
+    assert(beta(nextDown(-1.0L), 2) > 0);
+    assert(beta(nextUp(-2.0L), 3) > 0);
+    assert(beta(nextUp(-1.5L), 1.5) > 0);
+    assert(beta(-1.5, nextUp(1.5L)) > 0);
+    assert(beta(nextDown(-1.0L), nextDown(real.infinity)) > 0);
+    assert(
+        beta(nextUp(-2.0L), real.infinity) == real.infinity, "lim{y→+∞} B(-n+ε, y) = +∞, n even");
+    assert(beta(nextUp(-2.0L), nextDown(real.infinity)) > 0, "B(-n+ε, y) > 0, n even, y large");
+    assert(
+        beta(-1.5, real.infinity) == +real.infinity, "lim{y→+∞} B(x,y) = +∞, -n-1 < x < -n, n odd");
+
+    // Test second quadrant within inflection lines
+    assert(beta(nextDown(-1.0L), nextUp(nextUp(1.0L))) > 0);
+    assert(beta(nextUp(-2.0L), 2) > 0);
+    assert(beta(nextDown(-0.0L), +0.) == +real.infinity);
+    assert(isNaN(beta(-1, +0)), "lim{y→0⁺} B(-n,y), should not exist");
+    assert(beta(nextUp(-1.0L), +0.) == +real.infinity);
+    assert(beta(nextDown(-1.0L), +0.) == +real.infinity);
+    assert(isNaN(beta(-real.infinity, real.infinity)));
+    assert(beta(nextDown(-0.0L), nextUp(+0.0L)) is -0.0L);
+    assert(beta(nextUp(-1.0L), nextDown(1.0L)) is -0.0L);
+    assert(beta(nextDown(-1.0L), nextUp(1.0L)) is +0.0L);
+    assert(beta(-0.5, 0.25) > 0);
+    assert(beta(nextUp(-1.0L), 0.25) > 0);
+    assert(beta(-0.5, nextUp(+0.0L)) > 0);
+    assert(beta(nextDown(-0.5L), 0.5) >= 0);
+    assert(beta(-0.5, nextDown(0.5L)) >= 0);
+    assert(beta(nextUp(-1.0L), nextDown(nextDown(1.0L))) >= 0);
+    assert(beta(nextUp(-1.0L), nextUp(+0.0L)));
+    assert(beta(-1.5, 0.25) > 0);
+    assert(beta(nextUp(2.0L), 0.25) > 0);
+    assert(beta(-1.5, nextUp(+0.0L)) > 0);
+    assert(beta(nextDown(-1.5L), 0.5) >= 0);
+    assert(beta(-1.5, nextDown(0.5L)) >= 0);
+    assert(beta(nextUp(-2.0L), nextUp(+0.0L)) > 0);
+    assert(beta(nextUp(-2.0L), nextDown(nextDown(1.0L))) >= 0);
+    assert(beta(nextDown(nextDown(-1.0L)), nextUp(+0.0L)) >= 0);
+    assert(beta(-1.5, 1) < 0);
+    assert(beta(nextDown(-1.0L), 0.5) < 0);
+    assert(beta(nextUp(-2.0L), 1.5) < 0);
+    assert(beta(nextUp(-1.5L), 0.5) <= 0);
+    assert(beta(-1.5L, nextUp(0.5L)) <= 0);
+    assert(beta(nextDown(-1.5L), 1.5) <= 0);
+    assert(beta(-1.5, nextDown(1.5L)) <= 0);
+    assert(beta(nextDown(-1.0L), 2*(nextUp(+1.0L) - 1)) <= 0);
+    assert(beta(nextUp(-2.0L), 1.) <= 0);
+    assert(beta(nextUp(-2.0L), nextDown(nextDown(2.0L))) <= 0);
+    assert(beta(nextDown(-1.0L), 1.) <= 0);
+    assert(beta(-0.0L, 2*MAXGAMMA) == -real.infinity, "lim{x→0⁻} B(x,y) = -∞, y > MAXGAMMA");
+    assert(beta(nextDown(-0.0L), 2*MAXGAMMA) < 0, "B(-ε,y) < 0, y > MAXGAMMA");
+
+    // Test third quadrant
+    assert(beta(-0., -0.) == -real.infinity);
+    assert(isNaN(beta(-2, -0.5)));
+    assert(beta(-0.5, -0.) == -real.infinity);
+    assert(isNaN(beta(-1, -0.)));
+    assert(isNaN(beta(-real.infinity, -0.)));
+    assert(beta(nextDown(-0.0L), -0.) == -real.infinity);
+    assert(isNaN(beta(-1, -0.)));
+    assert(beta(nextUp(-1.0L), -0.) == -real.infinity);
+    assert(beta(nextDown(-1.0L), -0.) == -real.infinity);
+    assert(isNaN(beta(-1.5, -1)));
+    assert(isNaN(beta(-3, -1)));
+    assert(beta(-0.75, -0.25) == +0.);
+    assert(beta(nextUp(-1.0L), nextDown(1.0L) - 1) == +0., "B(-n+ε, -ε) = 0⁺, n odd");
+    assert(beta(nextDown(-1.0L), nextUp(1.0L)) == -0.);
+    assert(beta(-0.5, -0.25) < 0);
+    assert(beta(-0.5, nextDown(-0.0L)) < 0);
+    assert(beta(-0.5, nextUp(-0.5L)) <= 0);
+    assert(beta(nextDown(-0.0L), nextDown(-0.0L)) < 0, "B(-εₓ,-ε𞁟) < 0");
+    assert(beta(nextUp(nextUp(-1.0L)), nextDown(-0.0L)) <= 0);
+    assert(beta(-2.25, -1.25) < 0);
+    assert(beta(nextUp(-2.5L), -1.5) <= 0);
+    assert(beta(-2.5, nextDown(-1.0L)) < 0);
+    assert(beta(nextDown(-2.0L), -1.5) < 0);
+    assert(beta(nextDown(-2.0L), nextDown(-1.0L)) < 0);
+    assert(beta(nextUp(nextUp(-3.0L)), nextDown(-1.0L)) <= 0);
+    assert(beta(nextDown(-2.0L), nextUp(nextUp(-2.0L))) <= 0);
+    assert(beta(-2.75, -1.75) > 0);
+    assert(beta(nextDown(-2.5L), -1.5) >= 0);
+    assert(beta(nextUp(-3.0L), -1.5) > 0);
+    assert(beta(-2.5, nextUp(-2.0L)) > 0);
+    assert(beta(nextUp(-3.0L), nextUp(-2.0L)) > 0);
+    assert(beta(nextUp(-3.0L), nextDown(nextDown(-1.0L))) >= 0);
+    assert(beta(nextDown(nextDown(-2.0L)), nextUp(-2.0L)) >= 0);
+}
+
+
 private {
 /*
  * These value can be calculated like this:
@@ -1643,7 +1942,12 @@ real digamma(real x)
     negative = 0;
     nz = 0.0;
 
-    if ( x <= 0.0 )
+    if ( x == 0.0 )
+    {
+        return signbit(x) == 1 ? real.infinity : -real.infinity;
+    }
+
+    if ( x < 0.0 )
     {
         negative = 1;
         q = x;
@@ -1718,6 +2022,10 @@ done:
     assert(digamma(1.0)== -EULERGAMMA);
     assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
     assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA) >= real.mant_dig-7);
+    assert(digamma(-0.0) == real.infinity);
+    assert(!digamma(nextDown(-0.0)).isNaN());
+    assert(digamma(+0.0) == -real.infinity);
+    assert(!digamma(nextUp(+0.0)).isNaN());
     assert(digamma(-5.0).isNaN());
     assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
