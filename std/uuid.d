@@ -568,12 +568,15 @@ public struct UUID
                 throw new UUIDParsingException("The UUID is not of version" ~
                     " v7 therefore no timestamp exist", 0);
             }
-            ulong milli = (cast(ulong)(this.data[0]) << 40) |
-                   (cast(ulong)(this.data[1]) << 32) |
-                   (cast(ulong)(this.data[2]) << 24) |
-                   (cast(ulong)(this.data[3]) << 16) |
-                   (cast(ulong)(this.data[4]) << 8)  |
-                   (cast(ulong)(this.data[5]));
+
+            import std.bitmanip : bigEndianToNative;
+
+            ubyte[8] tmp = void;
+            tmp[0 .. 2] = 0;
+            tmp[2 .. 8] = data[0 .. 6];
+
+            ulong milli = tmp.bigEndianToNative!ulong;
+
             return SysTime(DateTime(1970, 1, 1), UTC()) + dur!"msecs"(milli);
         }
 
