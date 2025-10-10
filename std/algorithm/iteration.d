@@ -5547,7 +5547,7 @@ auto splitter(alias pred = "a == b",
               Range,
               Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
-        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
+        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range) && !(isForwardRange!Separator && (hasLength!Separator || isNarrowString!Separator)))
 {
     import std.algorithm.searching : find;
     import std.conv : unsigned;
@@ -6091,7 +6091,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.algorithm.searching : find;
     import std.conv : unsigned;
 
-    static struct Result
+    struct Result
     {
     private:
         Range _input;
@@ -6304,6 +6304,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     auto data = "i->am->pointing";
     auto words = splitter(data, sep);
     assert(words.equal([ "i", "am", "pointing" ]));
+}
+
+// https://github.com/dlang/phobos/issues/10760
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+    import std.typecons : Yes;
+    import std.algorithm.comparison : equal;
+
+    auto r = "16x16+0-2".splitter!((a, b) => "x+-".canFind(a), Yes.keepSeparators)("x");
+    assert(r.equal(["16", "x", "16", "+", "0", "-", "2"]));
 }
 
 /++
