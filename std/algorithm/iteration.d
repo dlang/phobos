@@ -5547,7 +5547,9 @@ auto splitter(alias pred = "a == b",
               Range,
               Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
-        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range) && !(isForwardRange!Separator && (hasLength!Separator || isNarrowString!Separator)))
+        && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range) &&
+        !(isForwardRange!Separator &&
+        (hasLength!Separator || isNarrowString!Separator)))
 {
     import std.algorithm.searching : find;
     import std.conv : unsigned;
@@ -5619,7 +5621,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             assert(!empty, "Attempting to fetch the front of an empty splitter.");
             static if (keepSeparators)
             {
-                if(_frontLength != _unComputed && !_wasSeparator) return _input[0 .. _frontLength];
+                if (_frontLength != _unComputed && !_wasSeparator) return _input[0 .. _frontLength];
                 if (!_wasSeparator)
                 {
                     _frontLength = _separatorLength;
