@@ -5619,6 +5619,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
             assert(!empty, "Attempting to fetch the front of an empty splitter.");
             static if (keepSeparators)
             {
+                if(_frontLength != _unComputed && !_wasSeparator) return _input[0 .. _frontLength];
                 if (!_wasSeparator)
                 {
                     _frontLength = _separatorLength;
@@ -6076,6 +6077,20 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
     assert("abXcdxef".splitter!"a.toLower == b"('x').equal(["ab", "cd", "ef"]));
     assert("abXcdxef".splitter!((a, b) => a.toLower == b)('x').equal(["ab", "cd", "ef"]));
+}
+
+// https://github.com/dlang/phobos/issues/10759
+@safe unittest
+{
+    import std.algorithm.iteration : splitter;
+    import std.algorithm.searching : canFind;
+    import std.range.primitives;
+    import std.typecons : Yes;
+
+    auto range = "16x13+0-2".splitter!((a, b) => "x+-".canFind(a), Yes.keepSeparators)(0);
+    assert(range.front == "16");
+    assert(range.front == "16");
+    assert(range.front == "16");
 }
 
 /// ditto
