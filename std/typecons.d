@@ -3814,13 +3814,16 @@ struct Nullable(T)
         assert(e != 12);
     }
 
-    size_t toHash() const @safe nothrow
+    static if (!isAggregateType!T || hasMember!(T, "toHash"))
     {
-        static if (__traits(compiles, .hashOf(_value.payload)))
-            return _isNull ? 0 : .hashOf(_value.payload);
-        else
-            // Workaround for when .hashOf is not both @safe and nothrow.
-            return _isNull ? 0 : typeid(T).getHash(&_value.payload);
+        size_t toHash() const @safe nothrow
+        {
+            static if (__traits(compiles, .hashOf(_value.payload)))
+                return _isNull ? 0 : .hashOf(_value.payload);
+            else
+                // Workaround for when .hashOf is not both @safe and nothrow.
+                return _isNull ? 0 : typeid(T).getHash(&_value.payload);
+        }
     }
 
     /**
@@ -4824,6 +4827,18 @@ auto nullable(T)(T t)
 {
     Nullable!(const(int*)) a;
     auto result = cast(immutable(Nullable!(int*))) a;
+}
+
+// https://github.com/dlang/phobos/issues/10758
+@safe unittest
+{
+    struct F
+    {
+        bool opEquals(ref const F rhs) const { return true; }
+    }
+
+    static assert(!__traits(compiles, bool[F]));
+    static assert(!__traits(compiles, bool[Nullable!F]));
 }
 
 /**
