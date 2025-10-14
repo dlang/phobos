@@ -26,7 +26,7 @@ You should
 To [build everything yourself](http://wiki.dlang.org/Building_DMD),
 there is a [description in the wiki](http://wiki.dlang.org/Building_DMD).
 
-Phobos is distributed under Boost Software Licence.
+Phobos is distributed under Boost Software License.
 See the [license file](LICENSE_1_0.txt).
 
 I Want to Contribute
