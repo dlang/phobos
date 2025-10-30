@@ -659,7 +659,7 @@ if (fun.length >= 1)
         foreach (f; _funs)
         {
             static assert(!is(typeof(f(RE.init)) == void),
-                    "Mapping function(s) must not return void: " ~ _funs.stringof);
+                    "Mapping function(s) must not return void.  Consider using `each`: " ~ _funs.stringof);
         }
 
         return MapResult!(_fun, Range)(r);
