@@ -654,6 +654,10 @@ private pragma(inline, true) real betaLarge(in real x, in real y)
  */
 real beta(in real x, in real y)
 {
+    // When one of the input parameters is NaN, return the NaN with the larger
+    // payload. This mimics the behavior of the + operator.
+    if (isNaN(x) || isNaN(y)) return getNaNPayload(x) >= getNaNPayload(y) ? x : y;
+
     real res;
 
     // the main algorithm
@@ -671,11 +675,6 @@ real beta(in real x, in real y)
     }
 
     if (!isNaN(res)) return res;
-
-    // For valid NaN results, always return the response from the main algorithm
-    // in order to preserve signaling NaNs.
-
-    if (isNaN(x) || isNaN(y)) return res;
 
     // Take advantage of the symmetry B(x,y) = B(y,x)
     // smaller ≤ larger
@@ -764,7 +763,10 @@ real beta(in real x, in real y)
 
 @safe unittest
 {
+    // Test NaN payload propagation
+    assert(isIdentical(beta(NaN(0xABC), 2), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+    assert(isIdentical(beta(NaN(0x1), NaN(0x2)), NaN(0x2)));
 
     // Test symmetry
 
