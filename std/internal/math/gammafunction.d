@@ -2110,12 +2110,14 @@ real logmdigammaInverse(real y)
     immutable maxY = logmdigamma(real.min_normal);
     assert(maxY > 0 && maxY <= real.max);
 
+    if (isNaN(y)) return y;
+
     if (y >= maxY)
     {
         //lim x->0 (log(x)-digamma(x))*x == 1
         return 1 / y;
     }
-    if (y < 0)
+    if (signbit(y) == 1)  // y is negative
     {
         return real.nan;
     }
@@ -2124,13 +2126,10 @@ real logmdigammaInverse(real y)
         //6.3.18
         return 0.5 / y;
     }
-    if (y > 0)
-    {
-        // x/2 <= logmdigamma(1 / x) <= x, x > 0
-        // calls logmdigamma ~6 times
-        return 1 / findRoot((real x) => logmdigamma(1 / x) - y, y,  2*y);
-    }
-    return y; //NaN
+
+    // x/2 <= logmdigamma(1 / x) <= x, x > 0
+    // calls logmdigamma ~6 times
+    return 1 / findRoot((real x) => logmdigamma(1 / x) - y, y,  2*y);
 }
 
 @safe unittest
@@ -2153,4 +2152,6 @@ real logmdigammaInverse(real y)
     assert(isClose(logmdigammaInverse(logmdigamma(1)), 1, 1e-15L));
     assert(isClose(logmdigammaInverse(logmdigamma(real.min_normal)), real.min_normal, 1e-15L));
     assert(isClose(logmdigammaInverse(logmdigamma(real.max/2)), real.max/2, 1e-15L));
+    assert(logmdigammaInverse(NaN(0x1)) is NaN(0x1));
+    assert(isNaN(logmdigammaInverse(-0.)));
 }
