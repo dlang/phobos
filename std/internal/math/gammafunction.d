@@ -711,28 +711,31 @@ real beta(in real x, in real y)
 
     if (inQ1)
     {
-        // 4) On the larger axis and larger is finite, B = +∞
-        // 5) On the larger axis, and larger is +∞, B = nan
+        // 4) At origin, B = +∞
+        if (nextToOrigin) return +real.infinity;
+
+        // 5) On the larger axis and larger is finite, B = +∞
+        // 6) On the larger axis, and larger is +∞, B = nan
         if (nextToSmallAxis) return larger < +real.infinity ? +real.infinity : res;
 
-        // 6) Not on the larger axis, and the larger is +∞, B = +0
+        // 7) Not on the larger axis, and the larger is +∞, B = +0
         if (!nextToSmallAxis && larger == +real.infinity) return +0.;
     }
 
     if (inQ2)
     {
-        // 7) Next to the origin, B = nan
-        // 8) Next to the larger axis, but not the origin, B = -∞
+        // 8) Next to the origin, B = nan
+        // 9) Next to the larger axis, but not the origin, B = -∞
         if (nextToSmallAxis) return nextToOrigin ? res : -real.infinity;
 
-        // 9) Larger is +∞, B = ∞ * sgn(Γ(smaller))
+        // 10) Larger is +∞, B = ∞ * sgn(Γ(smaller))
         if (larger == +real.infinity) return copysign(real.infinity, sgnGamma(smaller));
 
-        // 10) next to smaller axis, but not on an asymptote or at the origin,
+        // 11) next to smaller axis, but not on an asymptote or at the origin,
         //     B = +∞.
         if (nextToLargeAxis && !onSmallAsymptote && !nextToOrigin) return +real.infinity;
 
-        // larger very large, case 9
+        // larger very large, case 10
         // larger so large that ln|Γ(larger)| and ln|Γ(sum)| are too large to
         // represent as reals. Thus they each are approximated as ∞, and the
         // main algorithm resolves to NaN instead of ±∞.
@@ -741,10 +744,10 @@ real beta(in real x, in real y)
 
     if (inQ3)
     {
-        // 11) next to the smaller axis, but not on an asymptote, B = -∞.
+        // 12) next to the smaller axis, but not on an asymptote, B = -∞.
         if (nextToLargeAxis && !onSmallAsymptote) return -real.infinity;
 
-        // near origin, case 11
+        // near origin, case 12
         // -larger and -sum are so small that ln|Γ(larger)| and ln|Γ(sum)| are
         // too large to be represented as reals. Thus they each are approximated
         // as ∞, and the main algorithm resolves to NaN instead of -∞.
@@ -762,6 +765,7 @@ real beta(in real x, in real y)
     // Test symmetry
 
     // Test first quadrant
+    assert(beta(+0., +0.) == +real.infinity);
     assert(beta(+0., 1) == +real.infinity);
     assert(beta(nextUp(+0.0L), nextUp(+0.0L) > 0), "B(εₓ,ε𞁟) > 0");
     assert(!isNaN(beta(nextUp(+0.0L), 1)), "B(ε,y), y > 0 should exist");
