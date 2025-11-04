@@ -720,6 +720,10 @@ real beta(in real x, in real y)
 
         // 7) Not on the larger axis, and the larger is +∞, B = +0
         if (!nextToSmallAxis && larger == +real.infinity) return +0.;
+
+        // not on larger axis, but near origin, case 4, or larger is very large,
+        // case 7
+        if (!nextToSmallAxis) return larger < 1 ? +real.infinity : +0.;
     }
 
     if (inQ2)
@@ -767,8 +771,9 @@ real beta(in real x, in real y)
     // Test first quadrant
     assert(beta(+0., +0.) == +real.infinity);
     assert(beta(+0., 1) == +real.infinity);
-    assert(beta(nextUp(+0.0L), nextUp(+0.0L) > 0), "B(εₓ,ε𞁟) > 0");
+    assert(isClose(beta(nextUp(+0.0L), nextUp(+0.0L)), real.infinity), "B(εₓ,ε𞁟) ≲ +∞");
     assert(!isNaN(beta(nextUp(+0.0L), 1)), "B(ε,y), y > 0 should exist");
+    assert(isClose(beta(nextUp(+0.0L), nextDown(real.infinity)), +0.0L), "B(ε,y) ≳ 0, y large");
     assert(beta(1, +real.infinity) is +0.0L, "lim{y→+∞} B(x,y) = 0⁺, x > 0");
     assert(beta(1, 1) > 0);
     assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
