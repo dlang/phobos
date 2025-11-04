@@ -660,27 +660,27 @@ real beta(in real x, in real y)
 
     real res;
 
-    // the main algorithm
-    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA)
-    {
-        res = betaLarge(x, y);
-    }
-    else
-    {
-        res = gamma(x) * gamma(y) / gamma(x+y);
-
-        // There are several regions near the asymptotes and inflection lines
-        // gamma cannot be computed but logGamma can.
-        if (!isFinite(res)) res = betaLarge(x,y);
-    }
-
-    if (!isNaN(res)) return res;
-
     // Take advantage of the symmetry B(x,y) = B(y,x)
     // smaller ≤ larger
     const larger = cmp(x, y) >= 0 ? x : y;
     const smaller = cmp(x, y) >= 0 ? y : x;
     const sum = larger + smaller;
+
+    // the main algorithm
+    if (larger > MAXGAMMA || sum > MAXGAMMA)
+    {
+        res = betaLarge(smaller, larger);
+    }
+    else
+    {
+        res = gamma(smaller) * gamma(larger) / gamma(sum);
+
+        // There are several regions near the asymptotes and inflection lines
+        // gamma cannot be computed but logGamma can.
+        if (!isFinite(res)) res = betaLarge(smaller, larger);
+    }
+
+    if (!isNaN(res)) return res;
 
     // in a quadrant of the (smaller,larger) cartesian plane
     const inQ1 = cmp(smaller, +0.0L) >= 0;
@@ -769,6 +769,7 @@ real beta(in real x, in real y)
     assert(isIdentical(beta(NaN(0x1), NaN(0x2)), NaN(0x2)));
 
     // Test symmetry
+    assert(beta(1, 2) is beta(2, 1));
 
     // Test first quadrant
     assert(beta(+0., +0.) == +real.infinity);
