@@ -654,34 +654,33 @@ private pragma(inline, true) real betaLarge(in real x, in real y)
  */
 real beta(in real x, in real y)
 {
+    // When one of the input parameters is NaN, return the NaN with the larger
+    // payload. This mimics the behavior of the + operator.
+    if (isNaN(x) || isNaN(y)) return getNaNPayload(x) >= getNaNPayload(y) ? x : y;
+
     real res;
-
-    // the main algorithm
-    if (x > MAXGAMMA || y > MAXGAMMA || x + y > MAXGAMMA)
-    {
-        res = betaLarge(x, y);
-    }
-    else
-    {
-        res = gamma(x) * gamma(y) / gamma(x+y);
-
-        // There are several regions near the asymptotes and inflection lines
-        // gamma cannot be computed but logGamma can.
-        if (!isFinite(res)) res = betaLarge(x,y);
-    }
-
-    if (!isNaN(res)) return res;
-
-    // For valid NaN results, always return the response from the main algorithm
-    // in order to preserve signaling NaNs.
-
-    if (isNaN(x) || isNaN(y)) return res;
 
     // Take advantage of the symmetry B(x,y) = B(y,x)
     // smaller ≤ larger
     const larger = cmp(x, y) >= 0 ? x : y;
     const smaller = cmp(x, y) >= 0 ? y : x;
     const sum = larger + smaller;
+
+    // the main algorithm
+    if (larger > MAXGAMMA || sum > MAXGAMMA)
+    {
+        res = betaLarge(smaller, larger);
+    }
+    else
+    {
+        res = gamma(smaller) * gamma(larger) / gamma(sum);
+
+        // There are several regions near the asymptotes and inflection lines
+        // gamma cannot be computed but logGamma can.
+        if (!isFinite(res)) res = betaLarge(smaller, larger);
+    }
+
+    if (!isNaN(res)) return res;
 
     // in a quadrant of the (smaller,larger) cartesian plane
     const inQ1 = cmp(smaller, +0.0L) >= 0;
@@ -711,28 +710,35 @@ real beta(in real x, in real y)
 
     if (inQ1)
     {
-        // 4) On the larger axis and larger is finite, B = +∞
-        // 5) On the larger axis, and larger is +∞, B = nan
+        // 4) At origin, B = +∞
+        if (nextToOrigin) return +real.infinity;
+
+        // 5) On the larger axis and larger is finite, B = +∞
+        // 6) On the larger axis, and larger is +∞, B = nan
         if (nextToSmallAxis) return larger < +real.infinity ? +real.infinity : res;
 
-        // 6) Not on the larger axis, and the larger is +∞, B = +0
+        // 7) Not on the larger axis, and the larger is +∞, B = +0
         if (!nextToSmallAxis && larger == +real.infinity) return +0.;
+
+        // not on larger axis, but near origin, case 4, or larger is very large,
+        // case 7
+        if (!nextToSmallAxis) return larger < 1 ? +real.infinity : +0.;
     }
 
     if (inQ2)
     {
-        // 7) Next to the origin, B = nan
-        // 8) Next to the larger axis, but not the origin, B = -∞
+        // 8) Next to the origin, B = nan
+        // 9) Next to the larger axis, but not the origin, B = -∞
         if (nextToSmallAxis) return nextToOrigin ? res : -real.infinity;
 
-        // 9) Larger is +∞, B = ∞ * sgn(Γ(smaller))
+        // 10) Larger is +∞, B = ∞ * sgn(Γ(smaller))
         if (larger == +real.infinity) return copysign(real.infinity, sgnGamma(smaller));
 
-        // 10) next to smaller axis, but not on an asymptote or at the origin,
+        // 11) next to smaller axis, but not on an asymptote or at the origin,
         //     B = +∞.
         if (nextToLargeAxis && !onSmallAsymptote && !nextToOrigin) return +real.infinity;
 
-        // larger very large, case 9
+        // larger very large, case 10
         // larger so large that ln|Γ(larger)| and ln|Γ(sum)| are too large to
         // represent as reals. Thus they each are approximated as ∞, and the
         // main algorithm resolves to NaN instead of ±∞.
@@ -741,10 +747,10 @@ real beta(in real x, in real y)
 
     if (inQ3)
     {
-        // 11) next to the smaller axis, but not on an asymptote, B = -∞.
+        // 12) next to the smaller axis, but not on an asymptote, B = -∞.
         if (nextToLargeAxis && !onSmallAsymptote) return -real.infinity;
 
-        // near origin, case 11
+        // near origin, case 12
         // -larger and -sum are so small that ln|Γ(larger)| and ln|Γ(sum)| are
         // too large to be represented as reals. Thus they each are approximated
         // as ∞, and the main algorithm resolves to NaN instead of -∞.
@@ -757,14 +763,20 @@ real beta(in real x, in real y)
 
 @safe unittest
 {
+    // Test NaN payload propagation
+    assert(isIdentical(beta(NaN(0xABC), 2), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
+    assert(isIdentical(beta(NaN(0x1), NaN(0x2)), NaN(0x2)));
 
     // Test symmetry
+    assert(beta(1, 2) is beta(2, 1));
 
     // Test first quadrant
+    assert(beta(+0., +0.) == +real.infinity);
     assert(beta(+0., 1) == +real.infinity);
-    assert(beta(nextUp(+0.0L), nextUp(+0.0L) > 0), "B(εₓ,ε𞁟) > 0");
+    assert(isClose(beta(nextUp(+0.0L), nextUp(+0.0L)), real.infinity), "B(εₓ,ε𞁟) ≲ +∞");
     assert(!isNaN(beta(nextUp(+0.0L), 1)), "B(ε,y), y > 0 should exist");
+    assert(isClose(beta(nextUp(+0.0L), nextDown(real.infinity)), +0.0L), "B(ε,y) ≳ 0, y large");
     assert(beta(1, +real.infinity) is +0.0L, "lim{y→+∞} B(x,y) = 0⁺, x > 0");
     assert(beta(1, 1) > 0);
     assert(beta(0.6*MAXGAMMA, 0.5*MAXGAMMA) > 0);
