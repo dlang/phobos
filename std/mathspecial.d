@@ -310,7 +310,19 @@ real betaIncomplete(real a, real b, real x )
  *
  * See_Also: $(LREF beta) $(LREF betaIncomplete)
  */
-real betaIncompleteCompl(in real a, in real b, in real x)
+real betaIncompleteCompl(real a, real b, real x)
+in
+{
+    // allow NaN input to pass through so that it can be addressed by the
+    // internal NaN payload propagation logic
+    if (!isNaN(a) && !isNaN(b) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(signbit(b) == 0, "b must be positive");
+        assert(x >= 0 && x <= 1, "x must be in [0, 1]");
+    }
+}
+body
 {
     return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);
 }
