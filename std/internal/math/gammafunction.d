@@ -656,7 +656,7 @@ real beta(in real x, in real y)
 {
     // When one of the input parameters is NaN, return the NaN with the larger
     // payload. This mimics the behavior of the + operator.
-    if (isNaN(x) || isNaN(y)) return getNaNPayload(x) >= getNaNPayload(y) ? x : y;
+    if (isNaN(x) || isNaN(y)) return cmp(abs(x), abs(y)) >= 0 ? x : y;
 
     real res;
 
@@ -764,7 +764,7 @@ real beta(in real x, in real y)
 @safe unittest
 {
     // Test NaN payload propagation
-    assert(isIdentical(beta(NaN(0xABC), 2), NaN(0xABC)));
+    assert(isIdentical(beta(NaN(0x1), 7), NaN(0x1)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
     assert(isIdentical(beta(NaN(0x1), NaN(0x2)), NaN(0x2)));
 
