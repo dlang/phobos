@@ -264,30 +264,61 @@ real logmdigammaInverse(real x)
     return std.internal.math.gammafunction.logmdigammaInverse(x);
 }
 
-/** Incomplete beta integral
+/** Regularized incomplete beta function $(SUB I, x)(a,b)
  *
- * Returns regularized incomplete beta integral of the arguments, evaluated
- * from zero to x. The regularized incomplete beta function is defined as
+ * Mathematically, if a and b are positive real numbers, and 0 $(LE) x $(LE) 1, then
+ * $(SUB I, x)(a,b) = $(INTEGRATE 0, x)$(POWER t, a-1)$(POWER (1-t), b-1)dt/B(a,b) where B is the
+ * beta function. It is also the cumulative distribution function of the beta distribution.
  *
- * betaIncomplete(a, b, x) = $(GAMMA)(a + b) / ( $(GAMMA)(a) $(GAMMA)(b) ) *
- * $(INTEGRATE 0, x) $(POWER t, a-1)$(POWER (1-t), b-1) dt
+ * `betaIncomplete(a, b, x)` evaluates $(SUB I, `x`)(`a`,`b`).
  *
- * and is the same as the cumulative distribution function of the Beta
- * distribution.
+ * Params:
+ *   a = the first argument of B, must be positive
+ *   b = the second argument of B, must be positive
+ *   x = the fraction of integration completion from below, 0 $(LE) x $(LE) 1
  *
- * The domain of definition is 0 <= x <= 1.  In this
- * implementation a and b are restricted to positive values.
- * The integral from x to 1 may be obtained by the symmetry
- * relation
+ * Returns:
+ *   It returns $(SUB I, x)(a,b), an element of [0,1].
  *
- *    betaIncompleteCompl(a, b, x )  =  betaIncomplete( b, a, 1-x )
+ * Note:
+ *   The integral is evaluated by a continued fraction expansion or, when `b * x` is small, by a
+ *   power series.
  *
- * The integral is evaluated by a continued fraction expansion
- * or, when b * x is small, by a power series.
+ * See_Also: $(LREF beta) $(LREF betaIncompleteCompl)
  */
 real betaIncomplete(real a, real b, real x )
 {
     return std.internal.math.gammafunction.betaIncomplete(a, b, x);
+}
+
+/** Regularized incomplete beta function complement $(SUB I$(SUP C), x)(a,b)
+ *
+ * Mathematically, if a $(GT) 0, b $(GT) 0, and 0 $(LE) x $(LE) 1, then
+ * $(SUB I$(SUP C), x)(a,b) = $(INTEGRATE x, 1)$(POWER t, a-1)$(POWER (1-t), b-1)dt/B(a,b) where B
+ * is the beta function. It is also the complement of the cumulative distribution function of the
+ * beta distribution. It can be shown that $(SUB I$(SUP C), x)(a,b) = $(SUB I, 1-x)(b,a).
+ *
+ * `betaIncompleteCompl(a, b, x)` evaluates $(SUB I$(SUP C), `x`)(`a`,`b`).
+ *
+ * Params:
+ *   a = the first argument of B, must be positive
+ *   b = the second argument of B, must be positive
+ *   x = the fraction of integration completion from above, 0 $(LE) x $(LE) 1
+ *
+ * Returns:
+ *   It returns $(SUB I$(SUP C), x)(a,b), an element of [0,1].
+ *
+ * See_Also: $(LREF beta) $(LREF betaIncomplete)
+ */
+real betaIncompleteCompl(in real a, in real b, in real x)
+{
+    return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);
+}
+
+///
+@safe unittest
+{
+    assert(betaIncompleteCompl(.1, .2, 0) == betaIncomplete(.2, .1, 1));
 }
 
 /** Inverse of incomplete beta integral
