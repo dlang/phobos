@@ -322,7 +322,7 @@ in
         assert(x >= 0 && x <= 1, "x must be in [0, 1]");
     }
 }
-body
+do
 {
     return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);
 }
