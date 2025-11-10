@@ -77,6 +77,7 @@
               $(LREF isFunction)
               $(LREF isFunctionPointer)
               $(LREF isReturn)
+              $(LREF ReturnType)
               $(LREF ToFunctionType)
     ))
     $(TR $(TD Aggregate Type Traits) $(TD
@@ -3273,6 +3274,212 @@ enum isReturn(T) = is(T == return);
     static assert( is(SymbolType!(S.foo) == return));
     static assert( is(typeof(&S.foo) == return));
     static assert( is(typeof(&S.init.foo) == return));
+}
+
+/++
+    Evaluates to the return type of the given function type, function pointer
+    type, or delegate type.
+
+    Note that $(K_REF) is an attribute / storage class, not part of the type.
+    So, when the return type is marked with $(K_REF), $(K_REF) is an attribute
+    of the function and not part of the return type. $(LREF functionAttributes)
+    can be used to determine whether the return value is returned by $(K_REF).
+
+    Also note that in most cases, ReturnType is probably not the best solution.
+
+    In situations where a function is used as a getter property, then using
+    $(LREF PropertyType) would usually make more sense than using ReturnType,
+    particularly since in such a situation, the property could potentially be a
+    variable, which would not compile with ReturnType.
+
+    In situations where a function may be overloaded, it can often make more
+    sense to get the type of the expression where the function is called
+    instead of getting the return type of the function itself - e.g.
+    $(D typeof(foo(42))) instead of $(D ReturnType!(SymbolType!foo)), since
+    then that will automatically get the correct overload, whereas with
+    ReturnType, getting the return type of the correct overload would require
+    using $(D __traits(getOverloads, foo)) and then selecting the correct
+    overload. Getting the type of the actual function call can also can be less
+    verbose and require fewer template instantiations, since a function call is
+    clearly an expression and thus avoids the need for $(LREF SymbolType).
+
+    So, with functions which can be used as getter properties, it's often
+    better to use $(LREF PropertyType) than to use ReturnType, and with
+    functions which cannot be used as getter properties, it's often better to
+    simply get the type of the actual function call. So, ReturnType is
+    usually not the best choice, but there are of course situations where it's
+    exactly what's needed (e.g. if code already has the symbol or type for a
+    specific function overload and needs to get its return type).
+
+    See_Also:
+        $(LREF functionAttributes)
+        $(LREF PropertyType)
+        $(LREF SymbolType)
+  +/
+template ReturnType(T)
+if (is(T == return))
+{
+    static if (is(T R == return))
+        alias ReturnType = R;
+    else
+        static assert(false, "Somehow, ReturnType was instantiated with a type which has no return type");
+}
+
+///
+@safe unittest
+{
+    void foo();
+    static assert(is(ReturnType!(SymbolType!foo) == void));
+
+    int bar();
+    static assert(is(ReturnType!(SymbolType!bar) == int));
+
+    // ReturnType requires a type.
+    static assert(!__traits(compiles, ReturnType!bar));
+
+    // ReturnType requires a function type, function pointer type, or delegate
+    // type, so the result of PropertyType only works with it if the function
+    // returns such a type.
+    static assert(!__traits(compiles, ReturnType!(PropertyType!bar)));
+
+    string function(int) funcPtr;
+    static assert(is(ReturnType!(SymbolType!funcPtr) == string));
+
+    int delegate(string) del;
+    static assert(is(ReturnType!(SymbolType!del) == int));
+
+    int delegate(string) retDel();
+    static assert(is(ReturnType!(SymbolType!retDel) == int delegate(string)));
+    static assert(is(ReturnType!(PropertyType!retDel) == int));
+    static assert(is(ReturnType!(typeof(retDel)) == int delegate(string)));
+
+    @property int delegate(string) prop();
+    static assert(is(ReturnType!(SymbolType!prop) == int delegate(string)));
+    static assert(is(ReturnType!(PropertyType!prop) == int));
+    static assert(is(ReturnType!(typeof(prop)) == int));
+
+    ref int returnByRef();
+    static assert(is(ReturnType!(SymbolType!returnByRef) == int));
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        void foo(string);
+        bool foo(string, int);
+        string foo();
+
+        @property void bar(int);
+        @property int bar();
+    }
+
+    // SymbolType gives the type of the first overload, whereas PropertyType
+    // gives the type of the overload which can be used as a getter property
+    // (or fails to compile if there is no such overload). Of course, the
+    // result of PropertyType won't compile with ReturnType unless the property
+    // gives a function pointer or delegate.
+    // __traits(getOverloads, ...) can be used to get specific overloads (or to
+    // iterate through all of them).
+    {
+        static assert( is(ReturnType!(SymbolType!(S.foo)) == void));
+        static assert( is(PropertyType!(S.foo) == string));
+
+        static assert( is(typeof(S.init.foo("")) == void));
+        static assert( is(typeof(S.init.foo("", 42)) == bool));
+        static assert( is(typeof(S.init.foo()) == string));
+
+        alias overloads = __traits(getOverloads, S, "foo");
+
+        // string foo();
+        static assert( is(ReturnType!(SymbolType!(overloads[0])) == void));
+
+        // void foo(string);
+        static assert( is(ReturnType!(SymbolType!(overloads[1])) == bool));
+
+        // void foo(string, int);
+        static assert( is(ReturnType!(SymbolType!(overloads[2])) == string));
+    }
+    {
+        static assert( is(ReturnType!(SymbolType!(S.bar)) == void));
+        static assert( is(PropertyType!(S.bar) == int));
+
+        // Normal function call syntax can be used with @property functions
+        // (which is obviously not the intended way to use them, but it does
+        // provide a way to distinguish between overloads).
+        static assert( is(typeof(S.init.bar(42)) == void));
+        static assert( is(typeof(S.init.bar()) == int));
+
+        static assert( is(typeof(S.init.bar = 42) == void));
+        static assert( is(PropertyType!(S.init.bar) == int));
+
+        alias overloads = __traits(getOverloads, S, "bar");
+
+        // @property void bar(int);
+        static assert( is(ReturnType!(SymbolType!(overloads[0])) == void));
+
+        // @property int bar();
+        static assert( is(ReturnType!(SymbolType!(overloads[1])) == int));
+    }
+}
+
+@safe unittest
+{
+    int func1(string);
+    static assert(is(ReturnType!(SymbolType!func1) == int));
+    static assert(!__traits(compiles, ReturnType!func1));
+
+    const(int) func2(string);
+    static assert(is(ReturnType!(SymbolType!func2) == const int));
+
+    immutable(int) func3(string);
+    static assert(is(ReturnType!(SymbolType!func3) == immutable int));
+
+    shared(int) func4(string);
+    static assert(is(ReturnType!(SymbolType!func4) == shared int));
+
+    const(shared(int)) func5(string);
+    static assert(is(ReturnType!(SymbolType!func5) == const shared int));
+
+    ref int func6(string);
+    static assert(is(ReturnType!(SymbolType!func6) == int));
+
+    ref const(int) func7(string);
+    static assert(is(ReturnType!(SymbolType!func7) == const int));
+
+    static struct S
+    {
+        real foo();
+        real bar() const;
+        inout(real) baz() inout;
+        ref real func() shared;
+    }
+    static assert(is(ReturnType!(SymbolType!(S.foo)) == real));
+    static assert(is(ReturnType!(SymbolType!(S.bar)) == real));
+    static assert(is(ReturnType!(SymbolType!(S.baz)) == inout real));
+    static assert(is(ReturnType!(SymbolType!(S.func)) == real));
+
+    static class C
+    {
+        byte foo() { assert(0); }
+        byte bar() const { assert(0); }
+        inout(byte) baz() inout { assert(0); }
+        ref byte func() shared { assert(0); }
+    }
+    static assert(is(ReturnType!(SymbolType!(C.foo)) == byte));
+    static assert(is(ReturnType!(SymbolType!(C.bar)) == byte));
+    static assert(is(ReturnType!(SymbolType!(C.baz)) == inout byte));
+    static assert(is(ReturnType!(SymbolType!(C.func)) == byte));
+
+    static struct NoCopy
+    {
+        @disable this(this);
+    }
+    static assert(!__traits(isCopyable, NoCopy));
+
+    NoCopy retNC();
+    static assert(is(ReturnType!(SymbolType!retNC) == NoCopy));
 }
 
 /++
