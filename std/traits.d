@@ -1182,14 +1182,7 @@ if (isCallable!func)
     static assert(pstc.length == 4); // number of parameters
     static assert(pstc[0] == STC.ref_);
     static assert(pstc[1] == STC.out_);
-    version (none)
-    {
-        // TODO: When the DMD PR (dlang/dmd#11474) gets merged,
-        // remove the versioning and the second test
-        static assert(pstc[2] == STC.in_);
-        // This is the current behavior, before `in` is fixed to not be an alias
-        static assert(pstc[2] == STC.scope_);
-    }
+    static assert(pstc[2] == STC.in_);
     static assert(pstc[3] == STC.none);
 }
 
