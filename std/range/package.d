@@ -162,7 +162,7 @@ $(BOOKTABLE ,
         $(TD Similar to `recurrence`, except that a random-access range is
         created.
     ))
-    $(TR $(TD $(D $(LREF slide)))
+    $(TR $(TD $(LREF slide))
         $(TD Creates a range that returns a fixed-size sliding window
         over the original range. Unlike chunks,
         it advances a configurable number of items at a time,
