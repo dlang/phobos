@@ -842,6 +842,19 @@ public:
             return this.match!hashOf;
         }
     }
+
+    /**
+     * Returns the index of the current value's type in the `SumType`'s
+     * $(LREF Types).
+     *
+     * Note that $(LREF Types) does not include type qualifiers that are
+     * applied to the `SumType` itself. To obtain the properly-qualified type
+     * of a qualified `SumType`'s value, use $(REF CopyTypeQualifiers, std,traits).
+     */
+    size_t typeIndex() const
+    {
+        return tag;
+    }
 }
 
 // Construction
@@ -1575,6 +1588,59 @@ version (D_BetterC) {} else
 @safe unittest
 {
     static assert(SumType!int.sizeof == int.sizeof);
+}
+
+// typeIndex
+@safe unittest
+{
+    alias MySum = SumType!(int, string);
+
+    MySum a = 42;
+    MySum b = "hello";
+
+    assert(a.typeIndex == IndexOf!(int, MySum.Types));
+    assert(b.typeIndex == IndexOf!(string, MySum.Types));
+}
+
+// typeIndex with qualified SumTypes
+@safe unittest
+{
+    alias MySum = SumType!(int[], const int[], immutable int[]);
+
+    int[] a;
+    const int[] ca;
+    immutable int[] ia;
+
+    MySum s1 = a;
+    MySum s2 = ca;
+    MySum s3 = ia;
+
+    const MySum cs1 = s1;
+    const MySum cs2 = s2;
+    const MySum cs3 = s3;
+
+    // Copying a SumType doesn't change its typeIndex
+    assert(cs1.typeIndex == s1.typeIndex);
+    assert(cs2.typeIndex == s2.typeIndex);
+    assert(cs3.typeIndex == s3.typeIndex);
+
+    static bool isIndexOf(Target, Types...)(size_t i)
+    {
+        switch (i)
+        {
+            static foreach (tid, T; Types)
+                case tid: return is(T == Target);
+            default: return false;
+        }
+    }
+
+    // const(int[]) appears twice in ConstTypes.
+    // Both indices are valid return values for typeIndex.
+    alias ConstTypes = Map!(ConstOf, MySum.Types);
+
+    assert(isIndexOf!(const int[], ConstTypes)(cs1.typeIndex));
+    assert(isIndexOf!(const int[], ConstTypes)(cs2.typeIndex));
+    assert(isIndexOf!(immutable int[], ConstTypes)(cs3.typeIndex));
 }
 
 /// True if `T` is an instance of the `SumType` template, otherwise false.
