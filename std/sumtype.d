@@ -2729,13 +2729,18 @@ template has(T)
     bool has(Self)(auto ref Self self)
     if (isSumType!Self)
     {
-        return self.match!checkType;
-    }
+        import std.meta : ApplyLeft;
+        import std.traits : CopyTypeQualifiers;
 
-    // Helper to avoid redundant template instantiations
-    private bool checkType(Value)(ref Value value)
-    {
-        return is(Value == T);
+        alias AddQualifiers = ApplyLeft!(CopyTypeQualifiers, Self);
+        alias ValueTypes = Map!(AddQualifiers, Self.Types);
+
+        final switch (self.typeIndex)
+        {
+            static foreach (valueTid, Value; ValueTypes)
+                case valueTid:
+                    return is(Value == T);
+        }
     }
 }
 
@@ -2835,9 +2840,9 @@ template get(T)
         import std.typecons : No;
 
         static if (__traits(isRef, self))
-            return self.match!(getLvalue!(No.try_, T));
+            return self.getLvalue!(No.try_, T);
         else
-            return self.match!(getRvalue!(No.try_, T));
+            return self.getRvalue!(No.try_, T);
     }
 }
 
@@ -2945,9 +2950,9 @@ template tryGet(T)
         import std.typecons : Yes;
 
         static if (__traits(isRef, self))
-            return self.match!(getLvalue!(Yes.try_, T));
+            return self.getLvalue!(Yes.try_, T);
         else
-            return self.match!(getRvalue!(Yes.try_, T));
+            return self.getRvalue!(Yes.try_, T);
     }
 }
 
@@ -3073,48 +3078,81 @@ private template failedGetMessage(Expected, Actual)
 
 private template getLvalue(Flag!"try_" try_, T)
 {
-    ref T getLvalue(Value)(ref Value value)
+    ref T getLvalue(Self)(ref Self self)
+    if (isSumType!Self)
     {
-        static if (is(Value == T))
+        import std.meta : ApplyLeft;
+        import std.traits : CopyTypeQualifiers;
+
+        alias AddQualifiers = ApplyLeft!(CopyTypeQualifiers, Self);
+        alias ValueTypes = Map!(AddQualifiers, Self.Types);
+
+        final switch (self.typeIndex)
         {
-            return value;
-        }
-        else
-        {
-            static if (try_)
-                throw new MatchException(failedGetMessage!(T, Value));
-            else
-                assert(false, failedGetMessage!(T, Value));
+            static foreach (valueTid, Value; ValueTypes)
+            {
+                case valueTid:
+                    static if (is(Value == T))
+                    {
+                        return self.getByIndex!valueTid;
+                    }
+                    else
+                    {
+                        static if (try_)
+                            throw new MatchException(failedGetMessage!(T, Value));
+                        else
+                            assert(false, failedGetMessage!(T, Value));
+                    }
+            }
         }
     }
 }
 
 private template getRvalue(Flag!"try_" try_, T)
 {
-    T getRvalue(Value)(ref Value value)
+    T getRvalue(Self)(ref Self self)
+    if (isSumType!Self)
     {
-        static if (is(Value == T))
-        {
-            import core.lifetime : move;
+        import std.meta : ApplyLeft;
+        import std.traits : CopyTypeQualifiers;
 
-            // Move if possible; otherwise fall back to copy
-            static if (is(typeof(move(value))))
-            {
-                static if (isCopyable!Value)
-                    // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
-                    return __ctfe ? value : move(value);
-                else
-                    return move(value);
-            }
-            else
-                return value;
-        }
-        else
+        alias AddQualifiers = ApplyLeft!(CopyTypeQualifiers, Self);
+        alias ValueTypes = Map!(AddQualifiers, Self.Types);
+
+        final switch (self.typeIndex)
         {
-            static if (try_)
-                throw new MatchException(failedGetMessage!(T, Value));
-            else
-                assert(false, failedGetMessage!(T, Value));
+            static foreach (valueTid, Value; ValueTypes)
+            {
+                case valueTid:
+                    static if (is(Value == T))
+                    {
+                        import core.lifetime : move;
+
+                        // Move if possible; otherwise fall back to copy
+                        static if (is(typeof(move(self.getByIndex!valueTid))))
+                        {
+                            static if (isCopyable!Value)
+                            {
+                                // Workaround for https://issues.dlang.org/show_bug.cgi?id=21542
+                                if (__ctfe)
+                                    return self.getByIndex!valueTid;
+                                else
+                                    return move(self.getByIndex!valueTid);
+                            }
+                            else
+                                return move(self.getByIndex!valueTid);
+                        }
+                        else
+                            return self.getByIndex!valueTid;
+                    }
+                    else
+                    {
+                        static if (try_)
+                            throw new MatchException(failedGetMessage!(T, Value));
+                        else
+                            assert(false, failedGetMessage!(T, Value));
+                    }
+            }
         }
     }
 }
