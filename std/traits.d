@@ -9144,9 +9144,8 @@ enum isType(alias X) = is(X);
 
 /**
  * Detect whether symbol or type `X` is a function or function type.
- * This is different from finding
- * if a symbol is callable or satisfying `is(X == return)`. It finds
- * specifically if the symbol represents a normal function (or method) declaration, i.e.
+ * This is different from finding if a symbol is callable or satisfying `is(X == return)`.
+ * It finds specifically if the symbol represents a normal function (or method) declaration, i.e.
  * not a delegate or a function pointer.
  *
  * Returns:
