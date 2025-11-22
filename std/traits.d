@@ -9143,9 +9143,10 @@ enum isType(alias X) = is(X);
 }
 
 /**
- * Detect whether symbol or type `X` is a function. This is different that finding
- * if a symbol is callable or satisfying `is(X == function)`, it finds
- * specifically if the symbol represents a normal function declaration, i.e.
+ * Detect whether symbol or type `X` is a function or function type.
+ * This is different from finding
+ * if a symbol is callable or satisfying `is(X == return)`. It finds
+ * specifically if the symbol represents a normal function (or method) declaration, i.e.
  * not a delegate or a function pointer.
  *
  * Returns:
@@ -9163,10 +9164,10 @@ template isFunction(alias X)
         // x is a (nested) function symbol.
         enum isFunction = true;
     }
-    else static if (is(X T))
+    else static if (is(X))
     {
-        // x is a type.  Take the type of it and examine.
-        enum isFunction = is(T == function);
+        // x is a type
+        enum isFunction = is(X == function);
     }
     else
         enum isFunction = false;
@@ -9177,6 +9178,14 @@ template isFunction(alias X)
 {
     static void func(){}
     static assert(isFunction!func);
+    static assert(isFunction!(typeof(func)));
+
+    auto fp = &func; // function pointer
+    static assert(!isFunction!fp);
+
+    int i;
+    int f2() => i; // nested function
+    static assert(isFunction!f2);
 
     struct S
     {
