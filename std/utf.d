@@ -271,7 +271,8 @@ if (isSomeChar!Char)
     `'\uFFFE'` and `'\uFFFF'` are considered valid by `isValidDchar`,
     as they are permitted for internal use by an application, but they are
     not allowed for interchange by the Unicode standard.
-  +/
+    +/
+pragma(inline, true)
 bool isValidDchar(dchar c) pure nothrow @safe @nogc
 {
     return c < 0xD800 || (c > 0xDFFF && c <= 0x10FFFF);
@@ -325,6 +326,7 @@ Params:
 Returns:
     `true`, if `c` forms a valid code point.
  */
+pragma(inline, true)
 bool isValidCodepoint(Char)(Char c)
 if (isSomeChar!Char)
 {
