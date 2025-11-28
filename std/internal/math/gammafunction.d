@@ -944,15 +944,21 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  */
 real betaIncomplete(real aa, real bb, real xx )
 {
+    // If any parameters are NaN, return the NaN with the largest payload.
+    if (isNaN(aa) || isNaN(bb) || isNaN(xx))
+    {
+        // With cmp,
+        // -NaN(larger) < -NaN(smaller) < -inf < inf < NaN(smaller) < NaN(larger).
+        const largerParam = cmp(abs(aa), abs(bb)) >= 0 ? aa : bb;
+        return cmp(abs(xx), abs(largerParam)) >= 0 ? xx : largerParam;
+    }
+
     if ( !(aa>0 && bb>0) )
     {
-         if ( isNaN(aa) ) return aa;
-         if ( isNaN(bb) ) return bb;
          return real.nan; // domain error
     }
     if (!(xx>0 && xx<1.0))
     {
-        if (isNaN(xx)) return xx;
         if ( xx == 0.0L ) return 0.0;
         if ( xx == 1.0L )  return 1.0;
         return real.nan; // domain error
