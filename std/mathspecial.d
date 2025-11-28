@@ -280,6 +280,19 @@ real logmdigammaInverse(real x)
  * Returns:
  *   It returns $(SUB I, x)(a,b), an element of [0,1].
  *
+  * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH b)         $(TH x)        $(TH betaIncomplete(a, b, x)) )
+ *   $(TR $(TD negative)  $(TD b)         $(TD x)        $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD negative)  $(TD x)        $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(LT) 0)  $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(GT) 1)  $(TD $(NAN))                  )
+ *   $(TR $(TD +0)        $(TD +0)        $(TD (0,1))    $(TD $(NAN))                  )
+ *   $(TR $(TD $(INFIN))  $(TD $(INFIN))  $(TD (0,1))    $(TD $(NAN))                  )
+ * )
+ *
+ * If one or more of the input parameters are $(NAN), the one with the largest payload is returned.
+ * For equal payloads but with possibly different signs, the order of preference is x, a, b.
+ *
  * Note:
  *   The integral is evaluated by a continued fraction expansion or, when `b * x` is small, by a
  *   power series.
@@ -287,8 +300,31 @@ real logmdigammaInverse(real x)
  * See_Also: $(LREF beta) $(LREF betaIncompleteCompl)
  */
 real betaIncomplete(real a, real b, real x )
+in
+{
+    if (!isNaN(a) && !isNaN(b) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(signbit(b) == 0, "b must be positive");
+        assert(x >= 0 && x <= 1, "x must be in [0,1]");
+    }
+}
+out(i; isNaN(i) || (i >=0 && i <= 1))
+do
 {
     return std.internal.math.gammafunction.betaIncomplete(a, b, x);
+}
+
+///
+@safe unittest
+{
+    assert(betaIncomplete(1, 1, .5) == .5);
+    assert(betaIncomplete(+0., +0., 0) == 0);
+    assert(isNaN(betaIncomplete(+0., +0., .5)));
+    assert(isNaN(betaIncomplete(real.infinity, real.infinity, .5)));
+    assert(betaIncomplete(real.infinity, real.infinity, 1) == 1);
+    assert(betaIncomplete(NaN(0x1), 1, NaN(0x2)) is NaN(0x2));
+    assert(betaIncomplete(1, NaN(0x3), -NaN(0x3)) is -NaN(0x3));
 }
 
 /** Regularized incomplete beta function complement $(SUB I$(SUP C), x)(a,b)
@@ -308,6 +344,19 @@ real betaIncomplete(real a, real b, real x )
  * Returns:
  *   It returns $(SUB I$(SUP C), x)(a,b), an element of [0,1].
  *
+   * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH b)         $(TH x)        $(TH betaIncompleteCompl(a, b, x)) )
+ *   $(TR $(TD negative)  $(TD b)         $(TD x)        $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD negative)  $(TD x)        $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(LT) 0)  $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(GT) 1)  $(TD $(NAN))                       )
+ *   $(TR $(TD +0)        $(TD +0)        $(TD (0,1))    $(TD $(NAN))                       )
+ *   $(TR $(TD $(INFIN))  $(TD $(INFIN))  $(TD (0,1))    $(TD $(NAN))                       )
+ * )
+ *
+ * If one or more of the input parameters are $(NAN), the one with the largest payload is returned.
+ * For equal payloads but with possibly different signs, the order of preference is x, a, b.
+ *
  * See_Also: $(LREF beta) $(LREF betaIncomplete)
  */
 real betaIncompleteCompl(real a, real b, real x)
@@ -322,6 +371,7 @@ in
         assert(x >= 0 && x <= 1, "x must be in [0, 1]");
     }
 }
+out(i; isNaN(i) || (i >=0 && i <= 1))
 do
 {
     return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);

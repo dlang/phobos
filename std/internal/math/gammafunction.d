@@ -953,16 +953,23 @@ real betaIncomplete(real aa, real bb, real xx )
         return cmp(abs(xx), abs(largerParam)) >= 0 ? xx : largerParam;
     }
 
-    if ( !(aa>0 && bb>0) )
+    // domain errors
+    if (signbit(aa) == 1 || signbit(bb) == 1) return real.nan;
+    if (xx < 0.0L || xx > 1.0L) return real.nan;
+
+    // edge cases
+    if ( xx == 0.0L ) return 0.0L;
+    if ( xx == 1.0L )  return 1.0L;
+
+    // degenerate cases
+    if (aa is +0.0L || aa is real.infinity || bb is +0.0L || bb is real.infinity)
     {
-         return real.nan; // domain error
+        if (aa is +0.0L && bb is +0.0L) return real.nan;
+        if (aa is real.infinity && bb is real.infinity) return real.nan;
+        if (aa is +0.0L || bb is real.infinity) return 1.0L;
+        if (aa is real.infinity || bb is +0.0L) return 0.0L;
     }
-    if (!(xx>0 && xx<1.0))
-    {
-        if ( xx == 0.0L ) return 0.0;
-        if ( xx == 1.0L )  return 1.0;
-        return real.nan; // domain error
-    }
+
     if ( (bb * xx) <= 1.0L && xx <= 0.95L)
     {
         return betaDistPowerSeries(aa, bb, xx);
@@ -1335,11 +1342,23 @@ done:
     assert(isIdentical(betaIncompleteInv(2,NaN(0xABC),8), NaN(0xABC)));
     assert(isIdentical(betaIncompleteInv(2,3, NaN(0xABC)), NaN(0xABC)));
 
-    assert(isNaN(betaIncomplete(-1, 2, 3)));
+    assert(isNaN(betaIncomplete(-0., 1, .5)));
+    assert(isNaN(betaIncomplete(1, -0., .5)));
+    assert(isNaN(betaIncomplete(1, 1, -1)));
+    assert(isNaN(betaIncomplete(1, 1, 2)));
+
+    assert(betaIncomplete(+0., +0., 0) == 0);
+    assert(isNaN(betaIncomplete(+0., +0., .5)));
+    assert(betaIncomplete(+0., +0., 1) == 1);
+    assert(betaIncomplete(+0., 1, .5) == 1);
+    assert(betaIncomplete(1, +0., 0) == 0);
+    assert(betaIncomplete(1, +0., .5) == 0);
+    assert(betaIncomplete(1, real.infinity, .5) == 1);
+    assert(betaIncomplete(real.infinity, real.infinity, 0) == 0);
+    assert(isNaN(betaIncomplete(real.infinity, real.infinity, .5)));
 
     assert(betaIncomplete(1, 2, 0)==0);
     assert(betaIncomplete(1, 2, 1)==1);
-    assert(isNaN(betaIncomplete(1, 2, 3)));
     assert(betaIncompleteInv(1, 1, 0)==0);
     assert(betaIncompleteInv(1, 1, 1)==1);
 
