@@ -992,6 +992,7 @@ real betaIncomplete(real aa, real bb, real xx )
         b = aa;
         xc = xx;
         x = 1.0L - xx;
+        if (x == 1.0L) x = nextDown(x);
     }
     else
     {
@@ -1363,6 +1364,7 @@ done:
     assert(betaIncomplete(1, 2, 0)==0);
     assert(betaIncomplete(1, 2, 1)==1);
     assert(betaIncomplete(9.99999984824320730e+30, 9.99999984824320730e+30, 0.5) == 0.5L);
+    assert(betaIncomplete(1.17549435082228751e-38, 9.99999977819630836e+22, 9.99999968265522539e-22) == 1.0L);
     assert(betaIncompleteInv(1, 1, 0)==0);
     assert(betaIncompleteInv(1, 1, 1)==1);
 
@@ -1408,8 +1410,11 @@ done:
         assert(feqrel(betaIncompleteInv(0.01L, b1, 9e-26L), 0x1.549696104490aa9p-830L) >= real.mant_dig-10);
 
         // --- Problematic cases ---
-        // This is a situation where the series expansion fails to converge
-        assert( isNaN(betaIncompleteInv(0.12167L, 4.0640301659679627772e19L, 0.0813601L)));
+        // In the past, this was a situation where the series expansion failed
+        // to converge.
+        assert(!isNaN(betaIncompleteInv(0.12167L, 4.0640301659679627772e19L, 0.0813601L)));
+        // Using scipy, the result should be 1.683301919972747e-29.
+
         // This next result is almost certainly erroneous.
         // Mathematica states: "(cannot be determined by current methods)"
         assert(betaIncomplete(1.16251e20L, 2.18e39L, 5.45e-20L) == -real.infinity);
