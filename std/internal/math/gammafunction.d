@@ -970,6 +970,9 @@ real betaIncomplete(real aa, real bb, real xx )
         if (aa is real.infinity || bb is +0.0L) return 0.0L;
     }
 
+    // symmetry
+    if (aa == bb && xx == 0.5L) return 0.5L;
+
     if ( (bb * xx) <= 1.0L && xx <= 0.95L)
     {
         return betaDistPowerSeries(aa, bb, xx);
@@ -1359,6 +1362,7 @@ done:
 
     assert(betaIncomplete(1, 2, 0)==0);
     assert(betaIncomplete(1, 2, 1)==1);
+    assert(betaIncomplete(9.99999984824320730e+30, 9.99999984824320730e+30, 0.5) == 0.5L);
     assert(betaIncompleteInv(1, 1, 0)==0);
     assert(betaIncompleteInv(1, 1, 1)==1);
 
