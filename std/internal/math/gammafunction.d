@@ -1469,9 +1469,11 @@ done:
         assert(betaIncompleteInv(0.01L, 8e-48L, 9e-26L) == 1-real.epsilon);
 
         // Beware: a one-bit change in pow() changes almost all digits in the result!
+        // scipy says that this is 0.99999_99995_89020_6 (0x1.ffff_fffc_783f_2a7ap-1)
+        // in double precision.
         assert(feqrel(
             betaIncompleteInv(0x1.b3d151fbba0eb18p+1L, 1.2265e-19L, 2.44859e-18L),
-            0x1.c0110c8531d0952cp-1L
+            0x1.ffff_fffc_783f_2a7ap-1
         ) > 10);
         // This next case uncovered a one-bit difference in the FYL2X instruction
         // between Intel and AMD processors. This difference gets magnified by 2^^38.
@@ -1750,6 +1752,8 @@ real betaDistPowerSeries(real a, real b, real x )
         } else
             s = exp(t);
     }
+
+    if (s > 1.0L) return (s - 2*real.epsilon <= 1.0L) ? 1.0L : real.nan;
     return s;
 }
 
