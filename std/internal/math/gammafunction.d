@@ -1033,7 +1033,7 @@ real betaIncomplete(real aa, real bb, real xx )
         t *= pow(x,a);
         t /= a;
         t *= w;
-        t *= gamma(a+b) / (gamma(a) * gamma(b));
+        t /= beta(a, b);
     }
     else
     {
@@ -1621,8 +1621,7 @@ real betaDistPowerSeries(real a, real b, real x )
     u = a * log(x);
     if ( (a+b) < MAXGAMMA && fabs(u) < MAXLOG )
     {
-        t = gamma(a+b)/(gamma(a)*gamma(b));
-        s = s * t * pow(x,a);
+        s = s * pow(x,a) / beta(a, b);
     }
     else
     {
