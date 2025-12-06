@@ -1434,6 +1434,7 @@ done:
     assert(betaIncomplete(9.99999984824320730e+30, 9.99999984824320730e+30, 0.5) == 0.5L);
     assert(betaIncomplete(1.17549435082228751e-38, 9.99999977819630836e+22, 9.99999968265522539e-22) == 1.0L);
     assert(betaIncomplete(1.00000001954148138e-25, 1.00000001490116119e-01, 1.17549435082228751e-38) == 1.0L);
+    assert(isClose(betaIncomplete(9.99999983775159024e-18, 9.99999977819630836e+22, 1.00000001954148138e-25), 1.0L));
     assert(isClose(
         betaIncomplete(9.99999974737875164e-06, 9.99999998050644787e+18, 9.99999968265522539e-22),
         0.9999596214389047L));
@@ -1482,8 +1483,13 @@ done:
             2.225073858507201e-308,
             0,
             1e-40));
+
+        // scipy says that this is 8.068764506083944e-20 to double precision. Since this is a
+        // regression test where the original value isn't a known good value, I' updating the
+        // test value to the current generated value, which is closer to the scipy value.
         real a1 = 3.40483L;
-        assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113L) == 0x1.ba8c08108aaf5d14p-109L);
+        assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113L) == 0x1.2a867b1e12b9bdf0p-64L);
+
         real b1 = 2.82847e-25L;
         assert(feqrel(betaIncompleteInv(0.01L, b1, 9e-26L), 0x1.549696104490aa9p-830L) >= real.mant_dig-10);
 
@@ -1708,8 +1714,35 @@ real betaDistPowerSeries(real a, real b, real x )
     }
     else
     {
-        t = u + log(s) - logBeta(a, b);
+        if (abs(a*s - 1.0L) < 0.01L)
+        {
+            // Compute logGamma(a+b) - logGamma(b)
+            real lnGamma_apb_m_lnGamma_b;
 
+            if (b >= LN_GAMMA_STIRLING_LB)
+            {
+                const gamDiffApprox = a - a*log(b) + (0.5L - a - b)*log1p(a/b);
+
+                const gamDiffCorr
+                    = poly(1.0L/b^^2, logGammaStirlingCoeffs) / b
+                    - poly(1.0L/(a+b)^^2, logGammaStirlingCoeffs) / (a+b);
+
+                lnGamma_apb_m_lnGamma_b = -gamDiffApprox - gamDiffCorr;
+            }
+            else
+            {
+                lnGamma_apb_m_lnGamma_b = logGamma(a+b) - logGamma(b);
+            }
+
+            // Compute log(s) - logGamma(a)
+            const ln_s_m_lnGamma_a = log1p(a*s - 1.0L) - log(a) - logGamma(a);
+
+            t = lnGamma_apb_m_lnGamma_b + u + ln_s_m_lnGamma_a;
+        }
+        else
+        {
+            t = u + log(s) - logBeta(a, b);
+        }
 
         if ( t < MINLOG )
         {
