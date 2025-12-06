@@ -878,6 +878,14 @@ real beta(in real x, in real y)
 }
 
 
+/* This is the natural logarithm of the absolute value of the beta function.
+ */
+private real logBeta(real x, in real y)
+{
+    return logGamma(x) + logGamma(y) - logGamma(x+y);
+}
+
+
 private {
 /*
  * These value can be calculated like this:
@@ -1039,7 +1047,7 @@ real betaIncomplete(real aa, real bb, real xx )
     else
     {
         /* Resort to logarithms.  */
-        y += t + logGamma(a+b) - logGamma(a) - logGamma(b);
+        y += t - logBeta(a, b);
         y += log(w/a);
 
         t = exp(y);
@@ -1630,7 +1638,8 @@ real betaDistPowerSeries(real a, real b, real x )
     }
     else
     {
-        t = logGamma(a+b) - logGamma(a) - logGamma(b) + u + log(s);
+        t = u + log(s) - logBeta(a, b);
+
 
         if ( t < MINLOG )
         {
