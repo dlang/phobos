@@ -422,6 +422,13 @@ real gamma(real x)
         4.59084371199880305320475827592915200343410999829340L) >= real.mant_dig-1);
 }
 
+
+/* This is the lower bound on x for when the Stirling approximation can be used
+ * to compute ln(Γ(x)).
+ */
+private enum real LN_GAMMA_STIRLING_LB = 13.0L;
+
+
 /*****************************************************
  * Natural logarithm of gamma function.
  *
@@ -480,7 +487,7 @@ real logGamma(real x)
         return z;
     }
 
-    if ( x < 13.0L )
+    if ( x < LN_GAMMA_STIRLING_LB )
     {
         z = 1.0L;
         nx = floor( x +  0.5L );
