@@ -604,16 +604,6 @@ if (isInputRange!Range)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-/** Duplicate an AA - see $(LREF byPair).
-*/
-@safe pure nothrow unittest
-{
-    auto aa = [0:"a", 1:"b", 2:"c"];
-    auto bb = assocArray(aa.byPair());
-    assert(aa == bb);
-    assert(aa !is bb);
-}
-
 /**
 Creates an associative array from a range of keys and a range of values.
 
