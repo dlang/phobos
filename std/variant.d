@@ -1207,7 +1207,7 @@ public:
             auto arr = get!(A[]);
             foreach (ref e; arr)
             {
-                if (dg(e)) return 1;
+                if (auto r = dg(e)) return r;
             }
         }
         else static if (is(A == VariantN))
@@ -1219,7 +1219,7 @@ public:
                 // Variant when in fact they are only changing tmp.
                 auto tmp = this[i];
                 debug scope(exit) assert(tmp == this[i]);
-                if (dg(tmp)) return 1;
+                if (auto r = dg(tmp)) return r;
             }
         }
         else
