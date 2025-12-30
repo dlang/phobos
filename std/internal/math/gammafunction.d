@@ -1482,7 +1482,7 @@ done:
         // essentially double.min-normal.
         assert(isClose(
             betaIncompleteInv(0x1.ff1275ae5b939bcap-41L, 4.6713e18L, 0.0813601L),
-            2.225073858507201e-308,
+            2.225_073_858_507_201e-308L,
             0,
             1e-40));
 
