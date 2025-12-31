@@ -88,6 +88,25 @@ import std.traits;
 import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
+import std.algorithm.mutation : move;
+
+
+
+
+
+
+/** 
+ * Method to verify if a constructor is of move-only type or not
+ */
+
+private template needsMove(T)
+{
+    enum bool hasPostblit = __traits(hasMember, T, "__postblit");
+    static if (hasPostblit)
+        enum needsMove = __traits(isDisabled, T.__postblit);
+    else
+        enum needsMove = false;
+}
 /**
  * Allocates an array and initializes it with copies of the elements
  * of range `r`.
@@ -307,6 +326,10 @@ if (is(Range == U*, U) && isIterable!U && !isAutodecodableString!Range && !isInf
         return r.array;
     }
 }
+
+
+
+
 
 /**
 Convert a narrow autodecoding string to an array type that fully supports
@@ -1431,7 +1454,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
         immutable len = src.length;
         for (size_t i = len; i-- > 0;)
         {
-            dest[i] = src[i];
+            static if(needsMove!T)
+                move(dest[i],src[i]);
+            else
+                dest[i] = src[i];
         }
     }
 }
@@ -1531,17 +1557,29 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
                     static if (T.sizeof == char.sizeof)
                     {
                 case 4:
-                        ptr[3] = buf[3];
+                        static if(needsMove!T)
+                            move(ptr[3],buf[3]);
+                        else
+                            ptr[3] = buf[3];
                         goto case;
                 case 3:
-                        ptr[2] = buf[2];
+                        static if(needsMove!T)
+                            move(ptr[2],buf[2]);
+                        else
+                            ptr[2] = buf[2];
                         goto case;
                     }
                 case 2:
-                    ptr[1] = buf[1];
+                    static if(needsMove!T)
+                        move(ptr[1],buf[1]);
+                    else
+                        ptr[1] = buf[1];
                     goto case;
                 case 1:
-                    ptr[0] = buf[0];
+                    static if(needsMove!T)
+                        move(ptr[0],buf[0]);
+                    else
+                        ptr[0] = buf[0];
                 }
                 ptr += len;
                 return ptr;
@@ -1561,7 +1599,10 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
             if (__ctfe)
             {
                 for (size_t i = arr.length - gap; i; --i)
-                    arr[gap + i - 1] = arr[i - 1];
+                    static if(needsMove!T)
+                        move(arr[gap+i-1],arr[i-1]);
+                    else
+                        arr[gap + i - 1] = arr[i - 1];
             }
             else
                 memmove(arr.ptr + gap, arr.ptr, (arr.length - gap) * T.sizeof);
@@ -1941,6 +1982,7 @@ if (isDynamicArray!S)
         immutable len = s.length, nlen = n * len;
         for (size_t i = 0; i < nlen; i += len)
         {
+
             r[i .. i + len] = s[];
         }
     }
@@ -3637,7 +3679,7 @@ if (isDynamicArray!A)
     @property size_t length() const => (impl is null) ? 0 : impl.length;
 
     /**
-     * Use opSlice() from now on.
+     * Use () from now on.
      * Returns: The managed array.
      */
     @property inout(T)[] data() inout
@@ -3783,6 +3825,70 @@ if (isDynamicArray!A)
     app2.put([ 4, 5, 6 ]);
     assert(app2[] == [ 1, 2, 3, 4, 5, 6 ]);
 }
+
+//https://github.com/dlang/phobos/pull/8789 issue for InPLaceAppenders
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append characters one by one
+    auto a = appender!string();
+    foreach (c; "Dlang")
+        a.put(c);
+    assert(a[] == "Dlang");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append full strings
+    auto a = appender!string();
+    a.put("Hello");
+    a.put(", ");
+    a.put("world!");
+    assert(a[] == "Hello, world!");
+}
+
+
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append special characters
+    auto a = appender!string();
+    a.put("€"); // Euro sign (3 bytes in UTF-8)
+    a.put("✓");
+    assert(a[] == "€✓");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append with escape sequences
+    auto a = appender!string();
+    a.put("Line1\n");
+    a.put("Line2\tTabbed");
+    assert(a[] == "Line1\nLine2\tTabbed");
+}
+
+@safe pure nothrow unittest
+{
+    import std.array : appender;
+
+    // Append empty strings
+    auto a = appender!string();
+    a.put("");
+    a.put("non-empty");
+    a.put("");
+    assert(a[] == "non-empty");
+}
+
+
+
+
 
 package(std) struct InPlaceAppender(A)
 if (isDynamicArray!A)
@@ -5179,7 +5285,10 @@ if (isInputRange!T && is(ElementType!T : U))
         Unqual!U[n] ret;
         for (auto iter = a.take(n); !iter.empty; iter.popFront())
         {
-            ret[i] = iter.front;
+            static if(needsMove!T)
+                move(ret[i],iter.front);
+            else
+                ret[i] = iter.front;
             i++;
         }
 
@@ -5330,4 +5439,90 @@ version (StdUnittest) private void checkStaticArray(T, T1, T2)(T1 a, T2 b) nothr
 {
     static assert(is(T1 == T[T1.length]));
     assert(a == b, "a must be equal to b");
+}
+
+version(unittest)
+{
+    import std.container.array : Array;
+    import std.algorithm : equal;
+
+    struct NoCopy
+    {
+        int x;
+        @disable this(this);
+        this(int v) @safe pure nothrow @nogc { x = v; }
+
+         bool opEquals(ref const NoCopy rhs) const   
+            @safe pure nothrow @nogc
+         { return x == rhs.x; }
+    }
+
+    unittest
+    {
+        // Test basic insertBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(1));
+        arr.insertBack(NoCopy(2));
+        assert(arr.length == 2);
+        assert(arr[0].x == 1);
+        assert(arr[1].x == 2);
+    }
+/*
+    unittest
+    {
+        // Test front and back
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(10));
+        arr.insertBack(NoCopy(20));
+        assert(arr.front.x == 10);
+        assert(arr.back.x == 20);
+    }
+
+    unittest
+    {
+        // Test insertFront
+        Array!NoCopy arr;
+        arr.insertFront(NoCopy(5));
+        arr.insertFront(NoCopy(3));
+        assert(arr.length == 2);
+        assert(arr[0].x == 3);
+        assert(arr[1].x == 5);
+    }
+
+    unittest
+    {
+        // Test clear
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(7));
+        arr.insertBack(NoCopy(8));
+        arr.clear();
+        assert(arr.empty);
+    }
+
+    unittest
+    {
+        // Test popFront / popBack
+        Array!NoCopy arr;
+        arr.insertBack(NoCopy(100));
+        arr.insertBack(NoCopy(200));
+        arr.popFront();
+        assert(arr.length == 1);
+        assert(arr.front.x == 200);
+
+        arr.popBack();
+        assert(arr.empty);
+    }
+    */
+
+    unittest
+    {
+        // Regression: ensure moving works inside a loop
+        Array!NoCopy arr;
+        foreach (i; 0 .. 10)
+            arr.insertBack(NoCopy(i));
+
+        int i = 0;
+        foreach (const ref val; arr)
+            assert(val.x == i++);
+    }
 }
