@@ -420,7 +420,8 @@ private:
                     }
                     else
                     {
-                        A* p = new A;
+                        // object will be intialized later. Using ubyte buffer in case `this()` is disabled
+                        A* p = cast(A*) (new ubyte[A.sizeof]).ptr;
                     }
                     *cast(A**)&target.store = p;
                 }
@@ -668,6 +669,7 @@ switchStmtTupAssign:
                 static if (is(A == U[n], U, size_t n))
                     auto p = cast(A*) (new U[n]).ptr;
                 else
+                    // object will be intialized later. Using ubyte buffer in case `this()` is disabled
                     A* p = cast(A*) (new ubyte[A.sizeof]).ptr;
                 // Emplace will run the postblit of `A` us, no need to do it manually, then
                 copyEmplace(*zis, *p);
@@ -778,9 +780,10 @@ public:
             else
             {
                 static if (is(T == U[n], U, size_t n))
-                    auto p = cast(T*) (new U[n]).ptr;
+                    T* p = cast(T*) (new U[n]).ptr;
                 else
-                    auto p = new T;
+                    // object will be intialized later. Using ubyte buffer in case `this()` is disabled
+                    T* p = cast(T*) (new ubyte[T.sizeof]).ptr;
                 copyEmplace(rhs, *p);
                 *(cast(T**) &store) = p;
             }
@@ -3439,4 +3442,22 @@ unittest
     static foreach (size; AliasSeq!(1,100))
         static foreach (withPostblit; AliasSeq!(false, true))
             testValueSemantics!(S!(size, withPostblit));
+}
+
+@system
+unittest
+{
+    static struct S
+    {
+        int i;
+        ubyte[100] padding; // Variant must heap allocate this
+        @disable this();
+        this(int i)
+        {
+            this.i = i;
+        }
+    }
+
+    VariantN!32 v = VariantN!32(S(10));
+    v = VariantN!32(S(9));
 }
