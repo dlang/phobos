@@ -179,6 +179,7 @@ struct VariantN(size_t maxDataSize, AllowedTypesParam...)
     alias AllowedTypes = This2Variant!(VariantN, AllowedTypesParam);
 
 private:
+
     // Compute the largest practical size from maxDataSize
     struct SizeChecker
     {
@@ -199,6 +200,12 @@ private:
             //T.sizeof <= size &&
             (AllowedTypes.length == 0 || staticIndexOf!(T, AllowedTypes) >= 0);
     }
+
+    enum biggerThanSize(alias T) = T.sizeof > size;
+    enum needsPostblit = !AllowedTypes.length
+            || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes)
+            // if bigger than size, its stored by ref and needs to be copied
+            || anySatisfy!(biggerThanSize, AllowedTypes);
 
     // Each internal operation is encoded with an identifier. See
     // the "handler" function below.
@@ -662,27 +669,30 @@ switchStmtTupAssign:
             }
             break;
 
-        case OpID.postblit:
-            if (A.sizeof > size)
+            static if (needsPostblit)
             {
-                import core.lifetime : copyEmplace;
-                static if (is(A == U[n], U, size_t n))
-                    auto p = cast(A*) (new U[n]).ptr;
-                else
-                    // object will be intialized later. Using ubyte buffer in case `this()` is disabled
-                    A* p = cast(A*) (new ubyte[A.sizeof]).ptr;
-                // Emplace will run the postblit of `A` us, no need to do it manually, then
-                copyEmplace(*zis, *p);
-                *(cast(A**) pStore) = p;
+                case OpID.postblit:
+                    if (A.sizeof > size)
+                    {
+                        import core.lifetime : copyEmplace;
+                        static if (is(A == U[n], U, size_t n))
+                            auto p = cast(A*) (new U[n]).ptr;
+                        else
+                            // object will be intialized later. Using ubyte buffer in case `this()` is disabled
+                            A* p = cast(A*) (new ubyte[A.sizeof]).ptr;
+                        // Emplace will run the postblit of `A` us, no need to do it manually, then
+                        copyEmplace(*zis, *p);
+                        *(cast(A**) pStore) = p;
+                    }
+                    else
+                    {
+                        static if (hasElaborateCopyConstructor!A)
+                        {
+                            zis.__xpostblit();
+                        }
+                    }
+                    break;
             }
-            else
-            {
-                static if (hasElaborateCopyConstructor!A)
-                {
-                    zis.__xpostblit();
-                }
-            }
-            break;
 
         case OpID.destruct:
             static if (hasElaborateDestructor!A)
@@ -718,11 +728,7 @@ public:
     /** If a type is bigger than size, it is saved via pointer on the heap.
      * This means we must copy it in the postblit to preserve value semantics
      */
-    private enum biggerThanSize(alias T) = T.sizeof > size;
-    static if (!AllowedTypes.length
-            || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes)
-            || anySatisfy!(biggerThanSize, AllowedTypes)
-        )
+    static if (needsPostblit)
     {
         this(this)
         {
