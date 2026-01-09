@@ -662,9 +662,23 @@ switchStmtTupAssign:
             break;
 
         case OpID.postblit:
-            static if (hasElaborateCopyConstructor!A)
+            if (A.sizeof > size)
             {
-                zis.__xpostblit();
+                import core.lifetime : copyEmplace;
+                static if (is(A == U[n], U, size_t n))
+                    auto p = cast(A*) (new U[n]).ptr;
+                else
+                    A* p = cast(A*) (new ubyte[A.sizeof]).ptr;
+                // Emplace will run the postblit of `A` us, no need to do it manually, then
+                copyEmplace(*zis, *p);
+                *(cast(A**) pStore) = p;
+            }
+            else
+            {
+                static if (hasElaborateCopyConstructor!A)
+                {
+                    zis.__xpostblit();
+                }
             }
             break;
 
@@ -699,7 +713,14 @@ public:
         opAssign(value);
     }
 
-    static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
+    /** If a type is bigger than size, it is saved via pointer on the heap.
+     * This means we must copy it in the postblit to preserve value semantics
+     */
+    private enum biggerThanSize(alias T) = T.sizeof > size;
+    static if (!AllowedTypes.length
+            || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes)
+            || anySatisfy!biggerThanSize
+        )
     {
         this(this)
         {
@@ -3347,4 +3368,75 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     assert(test[0] == 1);
     test[1] = 10;
     assert(test[1] == 10);
+}
+
+// https://github.com/dlang/phobos/issues/10062
+// https://github.com/dlang/phobos/issues/9783
+@system
+unittest
+{
+    static struct S(size_t padding, bool withPostblit)
+    {
+        int* p;
+        ubyte[padding] _;
+
+        this(int* a)
+        {
+            p = a;
+        }
+
+        static if (withPostblit)
+        {
+            this(this)
+            {
+                p = new int(*p);
+            }
+
+            // Running destructor without postblit makes no sense, as all copies of the struct have a pointer to the same memory location
+            ~this()
+            {
+                // We can't assume that destructor runs exactly once, sometimes the GC will also run it
+                // assert(*p != 42);
+                *p = 42;
+            }
+        }
+    }
+
+    static void testPostblit(T)()
+    {
+        int buf = 1;
+        Variant v = T(&buf);
+        {
+            // Copy v: Must run postblit of Variant AND T
+            Variant v2 = v;
+            *(v2.peek!T.p) = 2;
+            assert(v.peek!T.p !is null);
+            assert(*(v.peek!T.p) == 1);
+        }
+        // Verify that destructor ran
+        assert(buf == 42);
+    }
+
+    static void testValueSemantics(T)()
+    {
+        int buf = 1;
+        Variant v = T(&buf);
+        {
+            int buf2 = 2;
+            // copy: We care that at least postblit of Variant run. Thus we change the *pointer*, not the int pointed to it here
+            Variant v2 = v;
+            v2.peek!T.p = &buf;
+            assert(v.peek!T.p !is null);
+            assert(v.peek!T.p != &buf2);
+            assert(*(v.peek!T.p) == 1);
+        }
+    }
+
+    testPostblit!(S!(1, true)); // S!1 fits in the `store`. This already used to work before this bugfix
+    testPostblit!(S!(100, true)); // S!100 object will be put on the heap and is special case
+
+    // OpID.postblit has different handling for big (heap) and small payloads as well as whether these have a postblit or not, so just cover all cases to be sure
+    static foreach (size; AliasSeq!(1,100))
+        static foreach (withPostblit; AliasSeq!(false, true))
+            testValueSemantics!(S!(size, withPostblit));
 }
