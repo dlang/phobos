@@ -517,6 +517,24 @@ private:
                 *result = (*zis)[index];
                 break;
             }
+            else static if (isInstanceOf!(Tuple, A))
+            {
+                size_t index = result.convertsTo!(int)
+                    ? result.get!(int) : result.get!(size_t);
+switchStmtTupIndex:
+                switch (index)
+                {
+                    static foreach (i; 0 .. A.length)
+                    {
+                        case i:
+                            *result = (*zis)[i];
+                            break switchStmtTupIndex;
+                    }
+                    default:
+                        throw new VariantException("Tuple index out of range");
+                }
+                break;
+            }
             else static if (isAssociativeArray!(A))
             {
                 *result = (*zis)[result.get!(typeof(A.init.keys[0]))];
@@ -535,6 +553,24 @@ private:
                 size_t index = args[1].convertsTo!(int)
                     ? args[1].get!(int) : args[1].get!(size_t);
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
+                break;
+            }
+            else static if (isInstanceOf!(Tuple, A))
+            {
+                size_t index = args[1].convertsTo!(int)
+                    ? args[1].get!(int) : args[1].get!(size_t);
+switchStmtTupAssign:
+                switch (index)
+                {
+                    static foreach (i; 0 .. A.length)
+                    {
+                        case i:
+                            (*zis)[i] = args[0].get!(typeof((*zis)[i]));
+                            break switchStmtTupAssign;
+                    }
+                    default:
+                        throw new VariantException("Tuple index out of range");
+                }
                 break;
             }
             else static if (isAssociativeArray!(A) && is(typeof((*zis)[A.init.keys[0]] = A.init.values[0])))
@@ -3302,4 +3338,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     assert(variant["three"] == 3);
     assert(variant["huge"] == Variant(h));
     +/
+}
+
+// https://github.com/dlang/phobos/issues/10429
+@system unittest
+{
+    Variant test = tuple(1,2);
+    assert(test[0] == 1);
+    test[1] = 10;
+    assert(test[1] == 10);
 }
