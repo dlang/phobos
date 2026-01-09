@@ -144,6 +144,13 @@ if (isTypeTuple!U)
         enum maxVariantAlignment = maxAlignment!(U);
 }
 
+// Each internal operation is encoded with an identifier. See
+// the "handler" function below.
+private enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
+        index, indexAssign, catAssign, copyOut, length,
+        apply, postblit, destruct }
+
+
 /**
  * Back-end type seldom used directly by user
  * code. Two commonly-used types using `VariantN` are:
@@ -206,12 +213,6 @@ private:
             || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes)
             // if bigger than size, its stored by ref and needs to be copied
             || anySatisfy!(biggerThanSize, AllowedTypes);
-
-    // Each internal operation is encoded with an identifier. See
-    // the "handler" function below.
-    enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
-            index, indexAssign, catAssign, copyOut, length,
-            apply, postblit, destruct }
 
     // state
     union
