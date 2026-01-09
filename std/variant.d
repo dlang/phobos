@@ -721,7 +721,7 @@ public:
     private enum biggerThanSize(alias T) = T.sizeof > size;
     static if (!AllowedTypes.length
             || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes)
-            || anySatisfy!biggerThanSize
+            || anySatisfy!(biggerThanSize, AllowedTypes)
         )
     {
         this(this)
@@ -3407,11 +3407,12 @@ unittest
 
     static void testPostblit(T)()
     {
+        alias V = VariantN!(32, T);
         int buf = 1;
-        Variant v = T(&buf);
+        auto v = V(T(&buf));
         {
             // Copy v: Must run postblit of Variant AND T
-            Variant v2 = v;
+            V v2 = v;
             *(v2.peek!T.p) = 2;
             assert(v.peek!T.p !is null);
             assert(*(v.peek!T.p) == 1);
@@ -3420,14 +3421,17 @@ unittest
         assert(buf == 42);
     }
 
-    static void testValueSemantics(T)()
+    static void testValueSemantics(alias S, ulong size, bool withPostblit)()
     {
+        alias T = S!(size, withPostblit);
+        alias V = VariantN!(32, T);
+        assert(__traits(hasPostblit, V) == (withPostblit || (size > 32)));
         int buf = 1;
-        Variant v = T(&buf);
+        auto v = V(T(&buf));
         {
             int buf2 = 2;
             // copy: We care that at least postblit of Variant run. Thus we change the *pointer*, not the int pointed to it here
-            Variant v2 = v;
+            V v2 = v;
             v2.peek!T.p = &buf;
             assert(v.peek!T.p !is null);
             assert(v.peek!T.p != &buf2);
@@ -3441,7 +3445,7 @@ unittest
     // OpID.postblit has different handling for big (heap) and small payloads as well as whether these have a postblit or not, so just cover all cases to be sure
     static foreach (size; AliasSeq!(1,100))
         static foreach (withPostblit; AliasSeq!(false, true))
-            testValueSemantics!(S!(size, withPostblit));
+            testValueSemantics!(S, size, withPostblit);
 }
 
 @system
