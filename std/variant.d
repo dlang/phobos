@@ -3347,3 +3347,18 @@ if (isAlgebraic!VariantType && Handler.length > 0)
             msg: "Variant: attempting to use incompatible types int and immutable(int)[]"
     );
 }
+
+// https://github.com/dlang/phobos/issues/9980
+@system unittest
+{
+    import std.stdio;
+    Variant[] top, bottom;
+	top = new Variant[](1);
+	bottom = new Variant[](1);
+
+	bottom[0] = "bar";
+	top[0] = bottom;
+	assert(top[0][0] == "bar");
+	top[0][0] = "foo";
+	assert(top[0][0] == "foo");
+}
