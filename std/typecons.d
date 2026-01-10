@@ -3704,16 +3704,44 @@ struct Nullable(T)
                     _value.payload > rhs.get ? 1 : 0;
     }
 
-    // Basic Null Comparison
+    // Basic `Nullable` comparison test
     @safe unittest
     {
         Nullable!int a = 5;
-        Nullable!int b = Nullable!int.init;
+        Nullable!int b = 0;
 
         assert(a > b);
         assert(b < a);
-        assert(a == a);
-        assert(b == b);
+
+        assert(a.opCmp(a) == 0); // Do not use `opEquals`, i.e. no `a == a`.
+        assert(b.opCmp(b) == 0); // ditto.
+    }
+
+    // Advanced `Nullable` comparison tests
+    @safe unittest
+    {
+        Nullable!int   a = 5;
+        Nullable!byte  b = 0;
+
+        assert(a > b);
+        assert(b < a);
+        assert(a.opCmp(a) == 0);
+        assert(b.opCmp(b) == 0);
+
+        Nullable!float f = 2;
+        assert(a > f);
+        assert(b < f);
+        assert(f.opCmp(f) == 0);
+
+        Nullable!short s = 5;
+        assert(a == s);
+
+        a.nullify();
+        assert(a.opCmp(s) != 0);
+        assert(a < b);
+
+        b.nullify();
+        assert(a.opCmp(b) == 0);
     }
 
     /**
