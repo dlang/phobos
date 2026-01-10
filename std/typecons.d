@@ -3695,33 +3695,13 @@ struct Nullable(T)
     int opCmp(Rhs)(auto ref Rhs rhs) const
     if (is(Rhs == Nullable!U, U) && is(typeof(this.get < rhs.get)))
     {
-        static if (is(Rhs == Nullable))
-        {
-            if (_isNull)
-                return rhs._isNull ? 0 : -1;
-            else if (rhs._isNull)
-                return 1;
-            else
-                return _value.payload < rhs._value.payload ? -1 :
-                       _value.payload > rhs._value.payload ? 1 : 0;
-        }
+        if (_isNull)
+            return rhs.isNull ? 0 : -1;
+        else if (rhs.isNull)
+            return 1;
         else
-        {
-            static if (is(typeof(rhs.isNull)))
-            {
-                if (_isNull)
-                    return rhs.isNull ? 0 : -1;
-                else if (rhs.isNull)
-                    return 1;
-                else
-                    return _value.payload < rhs.get ? -1 :
-                           _value.payload > rhs.get ? 1 : 0;
-            }
-            else
-            {
-                return _isNull ? -1 : (_value.payload < rhs ? -1 : (_value.payload > rhs ? 1 : 0));
-            }
-        }
+            return _value.payload < rhs.get ? -1 :
+                    _value.payload > rhs.get ? 1 : 0;
     }
 
     // Basic Null Comparison
