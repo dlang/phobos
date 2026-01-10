@@ -3699,9 +3699,12 @@ struct Nullable(T)
             return rhs.isNull ? 0 : -1;
         else if (rhs.isNull)
             return 1;
+        else if (_value.payload < rhs.get)
+            return -1;
+        else if (_value.payload > rhs.get)
+            return 1;
         else
-            return _value.payload < rhs.get ? -1 :
-                    _value.payload > rhs.get ? 1 : 0;
+            return 0;
     }
 
     // Basic `Nullable` comparison test
