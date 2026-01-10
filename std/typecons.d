@@ -3693,7 +3693,7 @@ struct Nullable(T)
     Returns:
         Negative if `this < rhs`, zero if equal, positive if `this > rhs`.
      */
-    int opCmp(Rhs)(auto ref Rhs rhs) const
+    int opCmp(this This, Rhs)(auto ref Rhs rhs)
     if (is(Rhs == Nullable!U, U) && is(typeof(this.get < rhs.get)))
     {
         if (_isNull)
@@ -11314,6 +11314,32 @@ unittest
     assert(s.get().i == 1);
     s = S(2);
     assert(s.get().i == 2);
+}
+
+/*
+    `Nullable` comparison with a user-defined type whose `opCmp` is not `const`
+
+    This tests for the following pitfall:
+        template `opCmp` is not callable using argument types `!()(Nullable!(NonConstOpCmp))`
+    This test cannot embedded into `Nullable` because of the following issue:
+        template instance `core.internal.traits._hasIndirections!(NonConstOpCmp)` recursive expansion
+ */
+@safe unittest
+{
+    static struct NonConstOpCmp
+    {
+        int value;
+
+        // non-const on purpose!
+        int opCmp(NonConstOpCmp b) => (this.value > b.value) - (this.value < b.value);
+    }
+
+    auto a = nullable(NonConstOpCmp(0));
+    auto b = nullable(NonConstOpCmp(1));
+    assert(a < b);
+
+    Nullable!NonConstOpCmp c;
+    assert(c < a);
 }
 
 /// The old version of $(LREF SafeRefCounted), before $(LREF borrow) existed.
