@@ -3720,7 +3720,7 @@ struct Nullable(T)
         assert(b.opCmp(b) == 0); // ditto.
     }
 
-    // Advanced `Nullable` comparison tests
+    // Advanced `Nullable` comparison test
     @safe unittest
     {
         Nullable!int   a = 5;
