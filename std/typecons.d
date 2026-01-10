@@ -3685,6 +3685,7 @@ struct Nullable(T)
 
     /**
      * Compares two Nullable values.
+     *
      * - If one is null and the other is not, the null one is considered smaller.
      * - If both are null, they are equal.
      * - If both are non-null, compares the payloads.
@@ -3735,8 +3736,8 @@ struct Nullable(T)
     // Advanced `Nullable` comparison test
     @safe unittest
     {
-        Nullable!int   a = 5;
-        Nullable!byte  b = 0;
+        Nullable!int  a = 5;
+        Nullable!byte b = 0;
 
         assert(a > b);
         assert(b < a);
