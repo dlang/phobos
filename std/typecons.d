@@ -3708,17 +3708,29 @@ struct Nullable(T)
             return 0;
     }
 
-    // Basic `Nullable` comparison test
+    /// Basic `Nullable` comparison test
     @safe unittest
     {
         Nullable!int a = 5;
         Nullable!int b = 0;
-
         assert(a > b);
         assert(b < a);
 
+        Nullable!int c;
+        assert(c < a);
+        assert(c < b);
+    }
+
+    // Not suitable for documentation.
+    @safe unittest
+    {
+        Nullable!int a = 5;
+        Nullable!int b = 0;
+        Nullable!int c;
         assert(a.opCmp(a) == 0); // Do not use `opEquals`, i.e. no `a == a`.
-        assert(b.opCmp(b) == 0); // ditto.
+        assert(b.opCmp(b) == 0);
+        assert(c.opCmp(c) == 0);
+        assert(b.opCmp(c) != 0);
     }
 
     // Advanced `Nullable` comparison test
