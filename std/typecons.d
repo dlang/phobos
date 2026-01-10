@@ -3684,13 +3684,14 @@ struct Nullable(T)
     private bool _isNull = true;
 
     /**
-     * Compares two Nullable values.
-     * - If one is null and the other is not, the null one is considered smaller.
-     * - If both are null, they are equal.
-     * - If both are non-null, compares the payloads.
-     *
-     * Returns:
-     *     Negative if `this < rhs`, zero if equal, positive if `this > rhs`.
+    Compares two Nullable values.
+
+    - If one is null and the other is not, the null one is considered smaller.
+    - If both are null, they are equal.
+    - If both are non-null, compares the payloads.
+
+    Returns:
+        Negative if `this < rhs`, zero if equal, positive if `this > rhs`.
      */
     int opCmp(Rhs)(auto ref Rhs rhs) const
     if (is(Rhs == Nullable!U, U) && is(typeof(this.get < rhs.get)))
