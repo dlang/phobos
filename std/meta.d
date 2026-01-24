@@ -220,17 +220,16 @@ alias Alias(alias a) = a;
 }
 
 /**
- * Returns the index of the first occurrence of `args[0]` in the
- * sequence `args[1 .. $]`. `args` may be types or compile-time values.
+ * Returns the index of the first occurrence of `A` in the
+ * sequence `args`. `A` and `args` may be types or compile-time values.
  * If not found, `-1` is returned.
  */
-template staticIndexOf(args...)
-if (args.length >= 1)
+template staticIndexOf(alias A, args...)
 {
     enum staticIndexOf =
     {
-        static foreach (idx, arg; args[1 .. $])
-            static if (isSame!(args[0], arg))
+        static foreach (idx, arg; args)
+            static if (isSame!(A, arg))
                 // `if (__ctfe)` is redundant here but avoids the "Unreachable code" warning.
                 if (__ctfe) return idx;
         return -1;
@@ -240,14 +239,9 @@ if (args.length >= 1)
 ///
 @safe unittest
 {
-    import std.stdio;
-
-    void foo()
-    {
-        writefln("The index of long is %s",
-                 staticIndexOf!(long, AliasSeq!(int, long, double)));
-        // prints: The index of long is 1
-    }
+    alias Types = AliasSeq!(int, long, double);
+    static assert(staticIndexOf!(long, Types) == 1);
+    static assert(staticIndexOf!(void, 0, "void", void) == 2);
 }
 
 @safe unittest
@@ -273,17 +267,16 @@ if (args.length >= 1)
 }
 
 /**
- * Returns an `AliasSeq` created from `args[1 .. $]` with the first occurrence,
- * if any, of `args[0]` removed.
+ * Returns an `AliasSeq` created from `args` with the first occurrence,
+ * if any, of `A` removed.
  */
-template Erase(args...)
-if (args.length >= 1)
+template Erase(alias A, args...)
 {
-    private enum pos = staticIndexOf!(args[0], args[1 .. $]);
+    private enum pos = staticIndexOf!(A, args);
     static if (pos < 0)
-        alias Erase = args[1 .. $];
+        alias Erase = args;
     else
-        alias Erase = AliasSeq!(args[1 .. pos + 1], args[pos + 2 .. $]);
+        alias Erase = AliasSeq!(args[0 .. pos], args[pos + 1 .. $]);
 }
 
 ///
@@ -307,15 +300,14 @@ if (args.length >= 1)
 
 
 /**
- * Returns an `AliasSeq` created from `args[1 .. $]` with all occurrences,
- * if any, of `args[0]` removed.
+ * Returns an `AliasSeq` created from `args` with all occurrences,
+ * if any, of `A` removed.
  */
-template EraseAll(args...)
-if (args.length >= 1)
+template EraseAll(alias A, args...)
 {
     alias EraseAll = AliasSeq!();
-    static foreach (arg; args[1 .. $])
-        static if (!isSame!(args[0], arg))
+    static foreach (arg; args)
+        static if (!isSame!(A, arg))
             EraseAll = AliasSeq!(EraseAll, arg);
 }
 
@@ -453,16 +445,16 @@ template Replace(alias T, alias U, Args...)
 }
 
 /**
- * Returns an `AliasSeq` created from `args[2 .. $]` with all occurrences
- * of `args[0]`, if any, replaced with `args[1]`.
+ * Returns an `AliasSeq` created from `args` with all occurrences
+ * of T, if found, replaced with U.
  */
-template ReplaceAll(args...)
+template ReplaceAll(alias T, alias U, args...)
 {
     alias ReplaceAll = AliasSeq!();
-    static foreach (arg; args[2 .. $])
+    static foreach (arg; args)
     {
-        static if (isSame!(args[0], arg))
-            ReplaceAll = AliasSeq!(ReplaceAll, args[1]);
+        static if (isSame!(T, arg))
+            ReplaceAll = AliasSeq!(ReplaceAll, U);
         else
             ReplaceAll = AliasSeq!(ReplaceAll, arg);
     }
