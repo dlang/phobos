@@ -3510,7 +3510,7 @@ public:
             if (checkError) checkError.setMinCapacity(n);
         }
 
-        int result = .select(n, fr, fw, fe, &timeout.ctimeval);
+        int result = .select(n, fr, fw, fe, timeout !is null ? &timeout.ctimeval : null);
 
         version (Windows)
         {
