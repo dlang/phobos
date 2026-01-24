@@ -175,9 +175,6 @@ alias AliasSeq(TList...) = TList;
  */
 alias Alias(alias a) = a;
 
-/// Ditto
-alias Alias(T) = T;
-
 ///
 @safe unittest
 {
@@ -220,32 +217,6 @@ alias Alias(T) = T;
     alias h = Alias!g;
     ++h;
     assert(g == 7);
-}
-
-package template OldAlias(alias a)
-{
-    static if (__traits(compiles, { alias x = a; }))
-        alias OldAlias = a;
-    else static if (__traits(compiles, { enum x = a; }))
-        enum OldAlias = a;
-    else
-        static assert(0, "Cannot alias " ~ a.stringof);
-}
-
-package template OldAlias(T)
-if (!isAggregateType!T || is(Unqual!T == T))
-{
-    alias OldAlias = T;
-}
-
-@safe unittest
-{
-    static struct Foo {}
-    //static assert(is(OldAlias!(const(Foo)) == const Foo));
-    static assert(is(OldAlias!(const(int)) == const(int)));
-    static assert(OldAlias!123 == 123);
-    enum abc = 123;
-    static assert(OldAlias!abc == 123);
 }
 
 /**
@@ -431,30 +402,26 @@ template NoDuplicates(args...)
 
 
 /**
- * Returns an `AliasSeq` created from TList with the first occurrence
+ * Returns an `AliasSeq` created from `Args` with the first occurrence
  * of T, if found, replaced with U.
  */
-template Replace(T, U, TList...)
+template Replace(alias T, alias U, Args...)
 {
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
+    static if (Args.length)
+    {
+        alias head = Args[0 .. 1]; // use unary sequence instead of Alias
+        alias tail = Args[1 .. $];
 
-/// Ditto
-template Replace(alias T, U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(T, alias U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
-}
-
-/// Ditto
-template Replace(alias T, alias U, TList...)
-{
-    alias Replace = GenericReplace!(T, U, TList).result;
+        static if (isSame!(T, head))
+            alias Replace = AliasSeq!(U, tail);
+        else
+            alias Replace = AliasSeq!(head,
+                Replace!(T, U, tail));
+    }
+    else
+    {
+        alias Replace = AliasSeq!();
+    }
 }
 
 ///
@@ -465,31 +432,6 @@ template Replace(alias T, alias U, TList...)
     alias TL = Replace!(long, char, Types);
     static assert(is(TL == AliasSeq!(int, char, long, int, float)));
 }
-
-// [internal]
-private template GenericReplace(args...)
-if (args.length >= 2)
-{
-    alias from  = OldAlias!(args[0]);
-    alias to    = OldAlias!(args[1]);
-    alias tuple = args[2 .. $];
-
-    static if (tuple.length)
-    {
-        alias head = OldAlias!(tuple[0]);
-        alias tail = tuple[1 .. $];
-
-        static if (isSame!(from, head))
-            alias result = AliasSeq!(to, tail);
-        else
-            alias result = AliasSeq!(head,
-                GenericReplace!(from, to, tail).result);
-    }
-    else
-    {
-        alias result = AliasSeq!();
-    }
- }
 
 @safe unittest
 {
@@ -1297,10 +1239,9 @@ private template staticMerge(alias cmp, uint mid, items...)
             staticMerge!(cmp, mid - run, items[run .. mid], items[mid + 1 .. $]));
 }
 
-private template isLessEq(alias cmp, Seq...)
-if (Seq.length == 2)
+private template isLessEq(alias cmp, alias A, alias B)
 {
-    private enum Result = cmp!(Seq[1], Seq[0]);
+    private enum Result = cmp!(B, A);
     static if (is(typeof(Result) == bool))
         enum isLessEq = !Result;
     else static if (is(typeof(Result) : int))
@@ -1451,11 +1392,6 @@ private template isSame(alias a, alias b)
     {
         enum isSame = __traits(isSame, a, b);
     }
-}
-// TODO: remove after https://github.com/dlang/dmd/pull/11320 and https://issues.dlang.org/show_bug.cgi?id=21889 are fixed
-private template isSame(A, B)
-{
-    enum isSame = is(A == B);
 }
 
 @safe unittest
