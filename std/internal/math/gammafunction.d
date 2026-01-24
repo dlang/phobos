@@ -245,10 +245,13 @@ real igammaTemmeLarge(real a, real x, bool compl)
     // Rₐ(𝜂) = [exp(-a𝜂²/2)/√(2𝜋a)]Sₐ(𝜂)
     const r = exp(-y)/sqrt(2.0L*PI*a) * poly(1.0L/a, workspace);
 
-    if (compl) {
+    if (compl)
+    {
         // Q(a,x) = erfc(+𝜂√(a/2))/2 + Rₐ(𝜂)
         return erfc(+sgn(sigma)*sqrt(y))/2.0L + r;
-    } else {
+    }
+    else
+    {
         // P(a,x) = erfc(-𝜂√(a/2))/2 - Rₐ(𝜂)
         return erfc(-sgn(sigma)*sqrt(y))/2.0L - r;
     }
