@@ -257,7 +257,7 @@ real igammaTemmeLarge(real a, real x, bool compl)
     }
 }
 
-unittest
+@safe unittest
 {
     // Values were generated using scipy, which restricts values to double precision.
     assert(feqrel(igammaTemmeLarge(25.0, 25.0, true), 0.47339_84685_56349_37L) >= double.mant_dig);
