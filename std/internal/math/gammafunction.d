@@ -137,12 +137,19 @@ real gammaStirling(real x)
 }
 
 /*
- * Helper function: Incomplete gamma function computed by Temme's expansion.
+ * Regularized incomplete gamma function computed by Temme's expansion. If
+ * `compl` is true, it computes the complement of the regularized incomplete
+ * gamma function instead.
+ *
+ * For a derivation of the algorithm, see A "Set of Algorithms for the
+ * Incomplete Gamma Functions", N. M. Temme, Probability in the Engineering and
+ * Informational Sciences, Volume 8, Issue 2, April 1994, pp. 291-307, DOI:
+ * https://doi.org/10.1017/S0269964800003417.
  *
  * This is a port of igamma_temme_large from Boost.
  *
  */
-real igammaTemmeLarge(real a, real x)
+real igammaTemmeLarge(real a, real x, bool compl)
 {
     static immutable real[][13] coef = [
         [ -0.333333333333333333333L, 0.0833333333333333333333L,
@@ -219,13 +226,12 @@ real igammaTemmeLarge(real a, real x)
 
     // avoid nans when one of the arguments is inf:
     if (x == real.infinity && a != real.infinity)
-        return 0;
-
+        return compl ? 0.0L : 1.0L;
     if (x != real.infinity && a == real.infinity)
-        return 1;
+        return compl ? 1.0L : 0.0L;
 
     real sigma = (x - a) / a;
-    real phi = sigma - log(sigma + 1);
+    real phi = sigma - log1p(sigma);
 
     real y = a * phi;
     real z = sqrt(2 * phi);
@@ -236,14 +242,40 @@ real igammaTemmeLarge(real a, real x)
     foreach (i; 0 .. coef.length)
         workspace[i] = poly(z, coef[i]);
 
-    real result = poly(1 / a, workspace);
-    result *= exp(-y) / sqrt(2 * PI * a);
-    if (x < a)
-        result = -result;
+    // Rₐ(𝜂) = [exp(-a𝜂²/2)/√(2𝜋a)]Sₐ(𝜂)
+    const r = exp(-y)/sqrt(2.0L*PI*a) * poly(1.0L/a, workspace);
 
-    result += erfc(sqrt(y)) / 2;
+    if (compl)
+    {
+        // Q(a,x) = erfc(+𝜂√(a/2))/2 + Rₐ(𝜂)
+        return erfc(+sgn(sigma)*sqrt(y))/2.0L + r;
+    }
+    else
+    {
+        // P(a,x) = erfc(-𝜂√(a/2))/2 - Rₐ(𝜂)
+        return erfc(-sgn(sigma)*sqrt(y))/2.0L - r;
+    }
+}
 
-    return result;
+@safe unittest
+{
+    // Values were generated using scipy, which restricts values to double precision.
+    assert(feqrel(igammaTemmeLarge(25.0, 25.0, true), 0.47339_84685_56349_37L) >= double.mant_dig);
+    assert(feqrel(igammaTemmeLarge(25.0, 26.0, true), 0.39592_65699_99828_5L) >= double.mant_dig);
+    assert(feqrel(igammaTemmeLarge(26.0, 25.0, true), 0.55292_14200_24414_8L) >= double.mant_dig);
+
+    assert(feqrel(igammaTemmeLarge(25.0, 25.0, false), 0.52660_15314_43650_6L) >= double.mant_dig);
+    assert(feqrel(igammaTemmeLarge(26.0, 25.0, false), 0.44707_85799_75585_2L) >= double.mant_dig);
+
+    assert(
+        feqrel(igammaTemmeLarge(30.0L,31.0L,true), 1.0L-igammaTemmeLarge(30.0L,31.0L,false))
+        >= real.mant_dig - 1);
+
+    assert(feqrel(igammaTemmeLarge(1e9, 1.1e9, false), 1.0) >= double.mant_dig);
+    assert(feqrel(igammaTemmeLarge(1.1e9, 1e9, false), 0.0) >= double.mant_dig);
+
+    assert(
+        feqrel(igammaTemmeLarge(1e6, 1e6 + 1.0, true), 0.49946_80772_57932_46L) >= double.mant_dig);
 }
 
 } // private
@@ -1660,6 +1692,9 @@ do
     if ( (x > 1.0L) && (x > a ) )
         return 1.0L - gammaIncompleteCompl(a,x);
 
+    if (a > 25.0L && abs(x-a) < 0.2L*a)
+        return igammaTemmeLarge(a, x, false);
+
     real ax = a * log(x) - x - logGamma(a);
 /+
     if ( ax < MINLOGL ) return 0; // underflow
@@ -1701,7 +1736,7 @@ do
     // log(x)-x = NaN when x = real.infinity
     const real MAXLOGL =  1.1356523406294143949492E4L;
     if (x > MAXLOGL)
-        return igammaTemmeLarge(a, x);
+        return igammaTemmeLarge(a, x, true);
 
     real ax = a * log(x) - x - logGamma(a);
 //const real MINLOGL = -1.1355137111933024058873E4L;
@@ -1909,6 +1944,9 @@ assert(fabs(gammaIncompleteComplInv(100, 0.8L) - 91.5013985848288L) < 0.000005L)
 assert(gammaIncomplete(1, 0)==0);
 assert(gammaIncompleteCompl(1, 0)==1);
 assert(gammaIncomplete(4545, real.infinity)==1);
+
+// Value was generated using scipy, which restricts values to double precision.
+assert(feqrel(gammaIncomplete(1e20, 1e20), 0.50000_00000_13298) >= double.mant_dig);
 
 // Values from Excel's (1-GammaDist(x, alpha, 1, TRUE))
 
