@@ -26,8 +26,8 @@ jobs:
             container_image: alpine:3.21
             host_dmd: ldmd2
           # macOS
-          - job_name: macOS 13 x64
-            os: macos-13
+          - job_name: macOS x64
+            os: macos-14
           # Windows
           - job_name: Windows x64
             os: windows-2022
