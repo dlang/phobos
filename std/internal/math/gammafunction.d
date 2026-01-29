@@ -22,6 +22,7 @@ module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
 import core.math : fabs, sin, sqrt;
+import std.algorithm: any, fold;
 
 pure:
 nothrow:
@@ -76,6 +77,34 @@ immutable real[8] logGammaDenominator = [
     -0x1.25e17184848c66d2p+22L, -0x1.301303b99a614a0ap+19L, -0x1.09e76ab41ae965p+15L,
     -0x1.00f95ced9e5f54eep+9L, 1.0L
 ];
+
+
+/* Given a set of real values where at least one of them is NaN, it returns the
+ * NaN with the largest payload. This implements the NaN handling policy
+ * followed by D operators that accept multiple floating point arguments.
+ *
+ * It preserves the sign of the NaN. Also, when multiple NaNs have the largest
+ * payload, it returns the leftmost one. This means that
+ * largestNaNPayload(-NaN(1), NaN(1)) returns -NaN(1), and
+ * largestNaNPayload(NaN(1), -NaN(1)) returns NaN(1).
+ *
+ * When none of the provided values are NaN, the result is undefined.
+ */
+real largestNaNPayload(real first, real[] rest ...)
+{
+    return fold!((a, b) => cmp(abs(a), abs(b)) >= 0 ? a : b)(rest, first);
+}
+
+@safe unittest
+{
+    assert(largestNaNPayload(NaN(0)) is NaN(0));
+    assert(largestNaNPayload(NaN(1), NaN(0)) is NaN(1));
+    assert(largestNaNPayload(NaN(2), NaN(3), NaN(1)) is NaN(3));
+    assert(largestNaNPayload(-10.0L, -real.nan, 1.0L) is -real.nan);
+    assert(largestNaNPayload(-NaN(1), NaN(1)) is -NaN(1));
+    assert(largestNaNPayload(NaN(1), -NaN(1)) is NaN(1));
+}
+
 
 /*
  * Helper function: Gamma function computed by Stirling's formula.
@@ -1012,14 +1041,7 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  */
 real betaIncomplete(real aa, real bb, real xx )
 {
-    // If any parameters are NaN, return the NaN with the largest payload.
-    if (isNaN(aa) || isNaN(bb) || isNaN(xx))
-    {
-        // With cmp,
-        // -NaN(larger) < -NaN(smaller) < -inf < inf < NaN(smaller) < NaN(larger).
-        const largerParam = cmp(abs(aa), abs(bb)) >= 0 ? aa : bb;
-        return cmp(abs(xx), abs(largerParam)) >= 0 ? xx : largerParam;
-    }
+    if (any!isNaN([aa, bb, xx])) return largestNaNPayload(xx, aa, bb);
 
     // domain errors
     if (signbit(aa) == 1 || signbit(bb) == 1) return real.nan;
