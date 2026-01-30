@@ -1784,14 +1784,6 @@ real betaDistPowerSeries(real a, real b, real x )
 /***************************************
  *  Incomplete gamma integral and its complement
  *
- * These functions are defined by
- *
- *   gammaIncomplete = ( $(INTEGRATE 0, x) $(POWER e, -t) $(POWER t, a-1) dt )/ $(GAMMA)(a)
- *
- *  gammaIncompleteCompl(a,x)   =   1 - gammaIncomplete(a,x)
- * = ($(INTEGRATE x, &infin;) $(POWER e, -t) $(POWER t, a-1) dt )/ $(GAMMA)(a)
- *
- * In this implementation both arguments must be positive.
  * The integral is evaluated by either a power series or
  * continued fraction expansion, depending on the relative
  * values of a and x.
@@ -1799,22 +1791,26 @@ real betaDistPowerSeries(real a, real b, real x )
 real gammaIncomplete(real a, real x )
 in
 {
-   assert(x >= 0);
-   assert(a > 0);
+    if (!any!isNaN([a, x]))
+    {
+        assert(x >= 0);
+        assert(signbit(a) == 0);
+    }
 }
 do
 {
-    /* left tail of incomplete gamma function:
-     *
-     *          inf.      k
-     *   a  -x   -       x
-     *  x  e     >   ----------
-     *           -     -
-     *          k=0   | (a+k+1)
-     *
-     */
-    if (x == 0)
-       return 0.0L;
+    // pass x first, so that if x and a are NaNs with the same payload but with
+    // opposite signs, return x.
+    if (any!isNaN([a, x])) return largestNaNPayload(x, a);
+
+    // domain violation
+    if (signbit(a) == 1 || x < 0.0L) return real.nan;
+
+    // edge cases
+    if (x == 0.0L) return 0.0L;
+    if (x is real.infinity) return 1.0L;
+    if (a is +0.0L) return 1.0L;
+    if (a is real.infinity) return 0.0L;
 
     if ( (x > 1.0L) && (x > a ) )
         return 1.0L - gammaIncompleteCompl(a,x);
@@ -1845,13 +1841,27 @@ do
 real gammaIncompleteCompl(real a, real x )
 in
 {
-   assert(x >= 0);
-   assert(a > 0);
+    if (!any!isNaN([a, x]))
+    {
+        assert(x >= 0);
+        assert(signbit(a) == 0);
+    }
 }
 do
 {
-    if (x == 0)
-        return 1.0L;
+    // pass x first, so that if x and a are NaNs with the same payload but with
+    // opposite signs, return x.
+    if (any!isNaN([a, x])) return largestNaNPayload(x, a);
+
+    // domain violation
+    if (signbit(a) == 1 || x < 0.0L) return real.nan;
+
+    // edge cases
+    if (x == 0.0L) return 1.0L;
+    if (x is real.infinity) return 0.0L;
+    if (a is +0.0L) return 0.0L;
+    if (a is real.infinity) return 1.0L;
+
     if ( (x < 1.0L) || (x < a) )
         return 1.0L - gammaIncomplete(a,x);
 
@@ -2061,6 +2071,18 @@ ihalve:
 
 @safe unittest
 {
+assert(gammaIncomplete(NaN(4), -NaN(4)) is -NaN(4));
+assert(!isNaN(gammaIncomplete(+0.0L, 1.0L)));
+assert(!isNaN(gammaIncomplete(1.0L, -0.0L)));
+assert(gammaIncomplete(+0.0L, 0.0L) == 0.0L);
+assert(gammaIncomplete(real.infinity, real.infinity) == 1.0L);
+
+assert(gammaIncompleteCompl(NaN(4), -NaN(4)) is -NaN(4));
+assert(!isNaN(gammaIncompleteCompl(+0.0L, 1.0L)));
+assert(!isNaN(gammaIncompleteCompl(1.0L, -0.0L)));
+assert(gammaIncompleteCompl(+0.0L, 0.0L) == 1.0L);
+assert(gammaIncompleteCompl(real.infinity, real.infinity) == 0.0L);
+
 //Values from Excel's GammaInv(1-p, x, 1)
 assert(fabs(gammaIncompleteComplInv(1, 0.5L) - 0.693147188044814L) < 0.00000005L);
 assert(fabs(gammaIncompleteComplInv(12, 0.99L) - 5.42818075054289L) < 0.00000005L);
