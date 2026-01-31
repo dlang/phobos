@@ -22,7 +22,8 @@ module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
 import core.math : fabs, sin, sqrt;
-import std.algorithm : any, fold;
+import std.algorithm.iteration : fold;
+import std.algorithm.searching : any;
 import std.range : only;
 
 pure:
