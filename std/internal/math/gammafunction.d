@@ -22,7 +22,8 @@ module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
 import core.math : fabs, sin, sqrt;
-import std.algorithm: any, fold;
+import std.algorithm : any, fold;
+import std.range : only;
 
 pure:
 nothrow:
@@ -1041,7 +1042,7 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  */
 real betaIncomplete(real aa, real bb, real xx )
 {
-    if (any!isNaN([aa, bb, xx])) return largestNaNPayload(xx, aa, bb);
+    if (only(aa, bb, xx).any!isNaN) return largestNaNPayload(xx, aa, bb);
 
     // domain errors
     if (signbit(aa) == 1 || signbit(bb) == 1) return real.nan;
@@ -1791,7 +1792,7 @@ real betaDistPowerSeries(real a, real b, real x )
 real gammaIncomplete(real a, real x )
 in
 {
-    if (!any!isNaN([a, x]))
+    if (!any!isNaN(only(a, x)))
     {
         assert(x >= 0);
         assert(signbit(a) == 0);
@@ -1801,7 +1802,7 @@ do
 {
     // pass x first, so that if x and a are NaNs with the same payload but with
     // opposite signs, return x.
-    if (any!isNaN([a, x])) return largestNaNPayload(x, a);
+    if (any!isNaN(only(a, x))) return largestNaNPayload(x, a);
 
     // domain violation
     if (signbit(a) == 1 || x < 0.0L) return real.nan;
@@ -1841,7 +1842,7 @@ do
 real gammaIncompleteCompl(real a, real x )
 in
 {
-    if (!any!isNaN([a, x]))
+    if (!any!isNaN(only(a, x)))
     {
         assert(x >= 0);
         assert(signbit(a) == 0);
@@ -1851,7 +1852,7 @@ do
 {
     // pass x first, so that if x and a are NaNs with the same payload but with
     // opposite signs, return x.
-    if (any!isNaN([a, x])) return largestNaNPayload(x, a);
+    if (any!isNaN(only(a, x))) return largestNaNPayload(x, a);
 
     // domain violation
     if (signbit(a) == 1 || x < 0.0L) return real.nan;
