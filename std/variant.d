@@ -929,6 +929,24 @@ public:
             alias R = shared Unqual!T;
         else
             alias R = Unqual!T;
+
+        /* Because Variant generally get flattened, so `Variant(Variant(4))` just wraps the value
+         * `4`, instead of `Variant(4)`, OpID.get will not always find VariantN in the allowed types,
+         * thus we must intercept it here.
+         * There might be exceptions to this rule when wrapping VariantN with different template
+         * parameters, but then opAssign will be called from the constructor and verify that the
+         * conversion is allowed.
+         */
+        static if (is(R == VariantN!(tsize, Types), size_t tsize, Types...) && tsize >= maxDataSize)
+        {
+            /* Casting away the qualifier of this Variant should be ok, the wrapped value
+             * and it's type will be unaffected. But some amount of casting is necessary,
+             * because the constructor will eventually call the handler function of `this`,
+             * which is a function pointer and thus doesn't support inout qualifier.
+             */
+            return T(cast(Unqual!(typeof(this)))this);
+        }
+
         auto buf = tuple(typeid(T), cast(R*)&result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
@@ -3348,27 +3366,68 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 {
     import std.exception : assertThrown;
 
-    struct Huge {
-        real a, b, c, d, e, f, g;
-    }
-    Huge h = {1,1,1,1,1,1,1};
+    // Huge: values bigger than size (32 bytes) get moved to the heap and treated differently
+    alias Huge = ubyte[32 + 1];
+    Huge h;
+    h[0] = 1;
     Variant variant = Variant([
             "one": Variant(1),
     ]);
-    // Testing that this doesn't segfault. Future work might make enable this
-    assertThrown!VariantException(variant["three"] = 3);
-    assertThrown!VariantException(variant["four"] = Variant(4));
-    /* Storing huge works too, value will moved to the heap
-    * Testing this as a regression test here as the AA handling code is still somewhat brittle and might add changes
-    * that depend payload size in the future
-    */
-    assertThrown!VariantException(variant["huge"] = Variant(h));
-    /+
+    variant["three"] = 3;
+    variant["four"] = Variant(4);
+    variant["huge"] = Variant(h);
     assert(variant["one"] == Variant(1));
     assert(variant["three"] == Variant(3));
     assert(variant["three"] == 3);
     assert(variant["huge"] == Variant(h));
-    +/
+    assert(variant["huge"] == h);
+}
+
+// https://github.com/dlang/phobos/issues/10431
+@system unittest
+{
+    int[] arr = [1,2];
+    Variant v = Variant(arr);
+    auto result = v.get!Variant;
+    // Reference stays intact
+    result[0] = 5;
+    // but the slice object is a different one
+    result ~= 3;
+    assert(arr == [5,2]);
+    assert(result == [5,2,3]);
+}
+
+// Verify that `get!Variant` doesn't cast away qualifier like "immutable" of wrapped reference type
+@system unittest
+{
+    import std.exception : assertThrown;
+    immutable(int[]) arr = [1,2];
+    Variant v = Variant(arr);
+    auto result = v.get!Variant;
+    // Note: Since get returns a copy, the qualifier of the array is stripped
+    // but the pointed-to data keeps it, so this is fine.
+    assert(result.type == typeid(immutable(int)[]));
+    assertThrown!VariantException(result[0] = 0);
+    // That said, appending still doesn't work and gives a nonsensical error message
+    assertThrown!(VariantException)(
+            result ~= 3,
+            msg: "Variant: attempting to use incompatible types int and immutable(int)[]"
+    );
+}
+
+// https://github.com/dlang/phobos/issues/9980
+@system unittest
+{
+    import std.stdio;
+    Variant[] top, bottom;
+	top = new Variant[](1);
+	bottom = new Variant[](1);
+
+	bottom[0] = "bar";
+	top[0] = bottom;
+	assert(top[0][0] == "bar");
+	top[0][0] = "foo";
+	assert(top[0][0] == "foo");
 }
 
 // https://github.com/dlang/phobos/issues/10429
