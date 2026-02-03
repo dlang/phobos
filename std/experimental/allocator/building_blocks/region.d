@@ -104,11 +104,6 @@ struct Region(ParentAllocator,
         this(cast(ubyte[]) (parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
-    /*
-    TODO: The postblit of `BasicRegion` should be disabled because such objects
-    should not be copied around naively.
-    */
-
     /**
     If `ParentAllocator` defines `deallocate`, the region defines a destructor
     that uses `ParentAllocator.deallocate` to free the memory chunk.
@@ -118,6 +113,13 @@ struct Region(ParentAllocator,
     {
         with (_impl) parent.deallocate(_begin[0 .. _end - _begin]);
     }
+
+    /**
+    `Region` deallocates on destruction (see above), therefore is not copyable.
+    */
+    static if (!is(ParentAllocator == NullAllocator)
+        && hasMember!(ParentAllocator, "deallocate"))
+    @disable this(this);
 
     /**
     Rounds the given size to a multiple of the `alignment`
