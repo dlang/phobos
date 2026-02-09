@@ -180,6 +180,11 @@ public:
         assert(cast(long) b2 == -0x01_02_03_04_05_06L);
     }
 
+    import std.int128 : Int128;
+    this(Int128 x) pure nothrow @safe {
+        this = BigInt(x.data.hi)*(BigInt(1)<<64) + BigInt(x.data.lo);
+    }
+
     /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow @safe
     if (isIntegral!T)
