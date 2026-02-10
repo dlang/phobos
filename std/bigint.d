@@ -240,37 +240,37 @@ public:
         BigInt re;
 
         x = Int128(0L);
-        b = BigInt(x);
+        b = x;
         re = BigInt(0L);
         assert(b == re);
 
         x = Int128(42L);
-        b = BigInt(x);
+        b = x;
         re = BigInt(42L);
         assert(b == re);
 
         x = Int128(-42L);
-        b = BigInt(x);
+        b = x;
         re = BigInt(-42L);
         assert(b == re);
 
         x = Int128(-1L);
-        b = BigInt(x);
+        b = x;
         re = BigInt(-1L);
         assert(b == re);
 
         x = (Int128(1L) << 100) + Int128(12345L);
-        b = BigInt(x);
+        b = x;
         re = (BigInt(1L) << 100) + BigInt(12345L);
         assert(b == re);
 
         x = -((Int128(1L) << 100) + Int128(12345L));
-        b = BigInt(x);
+        b = x;
         re = -((BigInt(1L) << 100) + BigInt(12345L));
         assert(b == re);
 
         x = Int128.min;
-        b = BigInt(x);
+        b = x;
         re = -(BigInt(1L) << 127);
         assert(b == re);
     }
