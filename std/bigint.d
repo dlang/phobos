@@ -217,7 +217,7 @@ public:
         // Now (hi, lo) is the positive magnitude
         if (hi != 0)
         {
-            ulong[2] mag = [cast(ulong)hi, lo];
+            ulong[2] mag = [cast(ulong) hi, lo];
             data.fromMagnitude(mag[]);
         }
         else
@@ -234,6 +234,7 @@ public:
     ///
     @safe unittest
     {
+        import std.int128;
         Int128 x;
         BigInt b;
         BigInt re;
