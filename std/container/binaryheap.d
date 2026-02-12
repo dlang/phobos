@@ -312,8 +312,8 @@ and $(D length == capacity), throws an exception.
         return 1;
     }
 
-/**
-Removes the largest element from the heap.
+    /**
+    Removes the largest element from the heap.
      */
     void removeFront()
     {
@@ -326,6 +326,8 @@ Removes the largest element from the heap.
             _store[_length - 1] = move(t1);
         }
         --_length;
+        // Break GC reachability of the removed element
+        _store[length] = typeof(_store[_length]).init;
         percolate(_store[], 0, _length);
     }
 
