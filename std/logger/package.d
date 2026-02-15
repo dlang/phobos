@@ -35,14 +35,14 @@ errorf("Logging %s the sharedLog %s its error LogLevel", "to", "with");
 critical("Logging to the"," sharedLog with its error LogLevel");
 fatal("Logging to the sharedLog with its fatal LogLevel");
 
-auto fLogger = new FileLogger("NameOfTheLogFile");
-fLogger.log("Logging to the fileLogger with its default LogLevel");
-fLogger.info("Logging to the fileLogger with its default LogLevel");
-fLogger.warning(5 < 6, "Logging to the fileLogger with its LogLevel.warning if 5 is less than 6");
-fLogger.warningf(5 < 6, "Logging to the fileLogger with its LogLevel.warning if %s is %s than 6", 5, "less");
-fLogger.critical("Logging to the fileLogger with its info LogLevel");
-fLogger.log(LogLevel.trace, 5 < 6, "Logging to the fileLogger"," with its default LogLevel if 5 is less than 6");
-fLogger.fatal("Logging to the fileLogger with its warning LogLevel");
+auto fileLogger = new FileLogger("NameOfTheLogFile");
+fileLogger.log("Logging to the fileLogger with its default LogLevel");
+fileLogger.info("Logging to the fileLogger with its default LogLevel");
+fileLogger.warning(5 < 6, "Logging to the fileLogger with its LogLevel.warning if 5 is less than 6");
+fileLogger.warningf(5 < 6, "Logging to the fileLogger with its LogLevel.warning if %s is %s than 6", 5, "less");
+fileLogger.critical("Logging to the fileLogger with its info LogLevel");
+fileLogger.log(LogLevel.trace, 5 < 6, "Logging to the fileLogger"," with its default LogLevel if 5 is less than 6");
+fileLogger.fatal("Logging to the fileLogger with its warning LogLevel");
 -------------
 Additionally, this example shows how a new `FileLogger` is created.
 Individual `Logger` and the global log functions share commonly named
