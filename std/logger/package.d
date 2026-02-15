@@ -24,6 +24,76 @@ This will print a message to the `stderr` device. The message will contain
 the filename, the line number, the name of the surrounding function, the time
 and the message.
 
+$(H4 Quickstart)
+
+$(B $(RED Pitfall:)) The $(B defaults) of this package are meant to be $(B reasonable for those who do $(I not) use logging).
+Users who intend to use logging are expected to set it up accordingly.
+
+The logging machinery is basically a pipeline.
+Convenience functions like `log()`, `info()` and `trace()` are on the very top end of it.
+When one calls `trace()`, it sends a log message with `LogLevel.trace` down the pipes.
+
+One of the first checks is for `globalLogLevel`, where any message of a lesser log level is filtered out;
+the default here is `LogLevel.all` which allows all log messages to be passed down further.
+
+Eventually, the logged message is passed into a logger which will perform an output operation.
+Keep in mind, loggers themselves also have an assigned log level they filter for.
+
+On default settings, a log message will eventually reach `sharedLog`;
+this one is a [FileLogger] writing to `stderr` with a threshold of `LogLevel.info`.
+This default was chosen because of concerns regarding spamming trace messages to unsuspecting downstream library users.
+
+As consequence of this design decision, the `LogLevel` of `FileLogger` needs to be adjusted
+in order to have `trace()` or `log()` actually print something.
+
+-------------
+import std.logger;
+
+void main() @system
+{
+    // `globalLogLevel` defaults to `LogLevel.all`.
+    // `sharedLog.logLevel` defaults to `LogLevel.info`.
+    assert(globalLogLevel == LogLevel.all);
+    assert((cast() sharedLog).logLevel == LogLevel.info);
+
+    // Log a few messages. These will be printed to `stderr` output.
+    info("Works out of the box.");
+    warning("Works out of the box.");
+    error("Works out of the box.");
+    critical("Works out of the box.");
+
+    // `log()` and `trace()` will not actually print anything as-is.
+    log("Does *not* work out of the box.");
+    trace("Does *not* work out of the box.");
+
+    // Enable trace logging output.
+    (cast() sharedLog).logLevel = LogLevel.trace;
+
+    // Emit a log message with `LogLevel.trace`.
+    trace("Tracing the World");
+
+    // Set the log level to the most permissive option, i.e. `LogLevel.all`.
+    (cast() sharedLog).logLevel = LogLevel.all;
+
+    // Emit a log message with `LogLevel.all`.
+    log("All aboard!");
+
+    // Logging a fatal message also throws an `Error`, i.e. crashes the program.
+    fatal("C u l8r, alligator!");
+}
+-------------
+
+$(H5 Rationale)
+
+$(UL
+    $(LI $(LINK2 https://bugzilla-archive.dlang.org/bugs/22532/, Bugzilla Issue 22532 (archived)))
+    $(LI $(LINK2 https://github.com/dlang/phobos/pull/8336, GitHub: dlang/phobos Pull request #8336))
+    $(LI $(LINK2 https://github.com/dlang/phobos/pull/8406, GitHub: dlang/phobos Pull request #8406))
+    $(LI $(LINK2 https://github.com/dlang/phobos/issues/10858, GitHub: dlang/phobos Issue #10858))
+)
+
+$(H3 Advanced Usage)
+
 More complex log call can go along the lines like:
 -------------
 log("Logging to the sharedLog with its default LogLevel");
