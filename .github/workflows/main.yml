@@ -28,6 +28,7 @@ jobs:
           # macOS
           - job_name: macOS x64
             os: macos-14
+            timeout-minutes: 60
           # Windows
           - job_name: Windows x64
             os: windows-2022
