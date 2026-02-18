@@ -109,6 +109,23 @@ private:
         // Don't bother about subnormals, they are not supported on most CPUs.
         //  SUBNORMAL_MASK = 0x02;
     }
+    else version (Solaris)
+    {
+        // Solaris <fenv.h> uses hardware-incompatible floating-point status flags.
+        // Use the <sys/fp.h> masks for 80387 control word or SSE/SSE2 MXCSR instead.
+        version (X86_Any)
+        {
+            enum : int
+            {
+                INEXACT_MASK    = 0x20,
+                UNDERFLOW_MASK  = 0x10,
+                OVERFLOW_MASK   = 0x08,
+                DIVBYZERO_MASK  = 0x04,
+                INVALID_MASK    = 0x01,
+                EXCEPTIONS_MASK = 0x3D,
+            }
+        }
+    }
     else
     {
         enum : int
@@ -502,6 +519,24 @@ nothrow @nogc:
             roundToZero    = 0x0C00,
             roundingMask   = roundToNearest | roundDown
                              | roundUp | roundToZero,
+        }
+    }
+    else version (Solaris)
+    {
+        // Solaris <fenv.h> uses hardware-incompatible floating-point status flags.
+        // Use the <sys/fp.h> rounding options in control word instead.
+
+        version (X86_Any)
+        {
+            enum : RoundingMode
+            {
+                roundToNearest = 0x000,
+                roundDown      = 0x400,
+                roundUp        = 0x800,
+                roundToZero    = 0xc00,
+                roundingMask   = roundToNearest | roundDown
+                                 | roundUp | roundToZero,
+            }
         }
     }
     else
