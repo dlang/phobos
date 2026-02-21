@@ -365,6 +365,8 @@ if (ranges.length >= 2 &&
     // For infinite ranges or non-forward ranges, we fall back to the old
     // implementation which expands an exponential number of templates.
     import std.typecons : tuple;
+    import std.algorithm : allSatisfy;
+    import std.range.primitives : hasLength;
 
     static struct Result
     {
@@ -412,6 +414,18 @@ if (ranges.length >= 2 &&
                 copy.current[i] = current[i].save;
             }
             return copy;
+        }
+        static if (allSatisfy!(hasLength, RR))
+        {
+            @property size_t length() const
+            {
+                size_t result = 1;
+                foreach (r; ranges)
+                {
+                    result *= r.length;
+                }
+                return result;
+            }
         }
     }
     static assert(isForwardRange!Result, Result.stringof ~ " must be a forward"
