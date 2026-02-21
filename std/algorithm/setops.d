@@ -433,7 +433,19 @@ if (ranges.length >= 2 &&
 
     return Result(ranges);
 }
+@safe unittest
+{
+    import std.algorithm.setops : cartesianProduct;
 
+    // 2 ranges
+    assert(cartesianProduct([1, 2], [3, 4]).length == 4);
+
+    // different sizes
+    assert(cartesianProduct([1, 2, 3], [4, 5]).length == 6);
+
+    // 3 ranges
+    assert(cartesianProduct([1, 2], [3, 4], [5]).length == 4);
+}
 // cartesian product of empty ranges should be empty
 // https://issues.dlang.org/show_bug.cgi?id=10693
 @safe unittest
