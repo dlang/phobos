@@ -417,7 +417,7 @@ if (ranges.length >= 2 &&
         }
         static if (allSatisfy!(hasLength, RR))
         {
-            @property size_t length() 
+            @property size_t length()
             {
                 size_t result = 1;
                 foreach (r; ranges)
