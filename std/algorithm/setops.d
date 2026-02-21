@@ -365,7 +365,7 @@ if (ranges.length >= 2 &&
     // For infinite ranges or non-forward ranges, we fall back to the old
     // implementation which expands an exponential number of templates.
     import std.typecons : tuple;
-    import std.algorithm : allSatisfy;
+    import std.meta : allSatisfy;
     import std.range.primitives : hasLength;
 
     static struct Result
