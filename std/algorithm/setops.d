@@ -365,59 +365,78 @@ if (ranges.length >= 2 &&
     // For infinite ranges or non-forward ranges, we fall back to the old
     // implementation which expands an exponential number of templates.
     import std.typecons : tuple;
+    import std.range.primitives : hasLength;
+    import std.algorithm : allSatisfy;
 
     static struct Result
+{
+    RR ranges;
+    RR current;
+    bool empty = true;
+
+    this(RR _ranges)
     {
-        RR ranges;
-        RR current;
-        bool empty = true;
-
-        this(RR _ranges)
+        ranges = _ranges;
+        empty = false;
+        foreach (i, r; ranges)
         {
-            ranges = _ranges;
-            empty = false;
-            foreach (i, r; ranges)
-            {
-                current[i] = r.save;
-                if (current[i].empty)
-                    empty = true;
-            }
-        }
-        @property auto front()
-        {
-            import std.algorithm.internal : algoFormat;
-            import std.range : iota;
-            return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
-                                    iota(0, current.length)));
-        }
-        void popFront() scope
-        {
-            foreach_reverse (i, ref r; current)
-            {
-                r.popFront();
-                if (!r.empty) break;
-
-                static if (i == 0)
-                    empty = true;
-                else
-                    r = ranges[i].save; // rollover
-            }
-        }
-        @property Result save() return scope
-        {
-            Result copy = this;
-            foreach (i, r; ranges)
-            {
-                copy.ranges[i] = ranges[i].save;
-                copy.current[i] = current[i].save;
-            }
-            return copy;
+            current[i] = r.save;
+            if (current[i].empty)
+                empty = true;
         }
     }
-    static assert(isForwardRange!Result, Result.stringof ~ " must be a forward"
-            ~ " range");
 
-    return Result(ranges);
+    @property auto front()
+    {
+        import std.algorithm.internal : algoFormat;
+        import std.range : iota;
+        return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
+                                iota(0, current.length)));
+    }
+
+    void popFront() scope
+    {
+        foreach_reverse (i, ref r; current)
+        {
+            r.popFront();
+            if (!r.empty) break;
+
+            static if (i == 0)
+                empty = true;
+            else
+                r = ranges[i].save; // rollover
+        }
+    }
+
+    @property Result save() return scope
+    {
+        Result copy = this;
+        foreach (i, r; ranges)
+        {
+            copy.ranges[i] = ranges[i].save;
+            copy.current[i] = current[i].save;
+        }
+        return copy;
+    }
+
+    static if (allSatisfy!(hasLength, RR))
+    {
+        @property size_t length() const
+        {
+            size_t result = 1;
+            foreach (r; ranges)
+            {
+                result *= r.length;
+            }
+            return result;
+        }
+    }
+}
+
+static assert(isForwardRange!Result,
+    Result.stringof ~ " must be a forward range");
+
+return Result(ranges);
 }
 
 // cartesian product of empty ranges should be empty
@@ -435,6 +454,13 @@ if (ranges.length >= 2 &&
     auto cprod2 = cartesianProduct(p,p,p,q,p);
     assert(cprod2.empty);
     foreach (_; cprod2) {} // should not crash
+}
+ @safe unittest
+{
+    import std.algorithm.setops;
+
+    assert(cartesianProduct([1,2], [3,4]).length == 4);
+    assert(cartesianProduct([1,2,3], [4,5]).length == 6);
 }
 
 @safe unittest
