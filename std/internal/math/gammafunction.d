@@ -1945,12 +1945,29 @@ do
 real gammaIncompleteComplInv(real a, real p)
 in
 {
-  assert(p >= 0 && p <= 1);
-  assert(a>0);
+    if (!any!isNaN(only(a, p)))
+    {
+        assert(signbit(a) == 0);
+        assert(p >= 0.0L && p <= 1.0L);
+    }
 }
 do
 {
-    if (p == 0) return real.infinity;
+    // pass p first, so that if p and a are NaNs with the same payload but with
+    // opposite signs, return p.
+    if (any!isNaN(only(a, p))) return largestNaNPayload(p, a);
+
+    // domain violations
+    if (signbit(a) == 1) return real.nan;
+    if (p < 0.0L || p > 1.0L) return real.nan;
+
+    // places where not invertible
+    if (a is +0.0L && p < 1.0L) return real.nan;
+    if (a is real.infinity && p > 0.0L) return real.nan;
+
+    // edge cases for p
+    if (p == 0.0L) return real.infinity;
+    if (p == 1.0L) return 0.0L;
 
     real y0 = p;
     const real MAXLOGL =  1.1356523406294143949492E4L;
@@ -2107,6 +2124,13 @@ static if (real.mant_dig >= 64) // incl. 80-bit reals
     assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109L) < 0.000000000005L);
 else
     assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109L) < 0.00000005L);
+
+assert(gammaIncompleteComplInv(NaN(0x5UL), -NaN(0x5UL)) is -NaN(0x5UL));
+assert(!isNaN(gammaIncompleteComplInv(+0.0L, 1.0L)));
+assert(isNaN(gammaIncompleteComplInv(+0.0L, nextDown(1.0L))));
+assert(!isNaN(gammaIncompleteComplInv(real.infinity, -0.0L)));
+assert(isNaN(gammaIncompleteComplInv(real.infinity, nextUp(+0.0L))));
+assert(gammaIncompleteComplInv(2.0L, 1.0L) == 0.0L);
 }
 
 
