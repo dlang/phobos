@@ -1612,6 +1612,7 @@ string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
     return code;
 }
 
+pragma(inline, true)
 bool isPow2OrZero(size_t sz) @safe pure nothrow @nogc
 {
     // See also: std.math.isPowerOf2()
@@ -9161,6 +9162,7 @@ public bool isWhite(dchar c)
 /++
     Return whether `c` is a Unicode lowercase $(CHARACTER).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isLower(dchar c)
 {
@@ -9194,6 +9196,7 @@ bool isLower(dchar c)
 /++
     Return whether `c` is a Unicode uppercase $(CHARACTER).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isUpper(dchar c)
 {
@@ -10433,6 +10436,7 @@ if (!isSomeString!S && (isRandomAccessRange!S && hasLength!S && hasSlicing!S && 
     Returns whether `c` is a Unicode alphabetic $(CHARACTER)
     (general Unicode category: Alphabetic).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isAlpha(dchar c)
 {
@@ -10478,6 +10482,7 @@ bool isMark(dchar c)
     Returns whether `c` is a Unicode numerical $(CHARACTER)
     (general Unicode category: Nd, Nl, No).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
@@ -10511,6 +10516,7 @@ bool isNumber(dchar c)
         `true` if the character is in the Alphabetic, Nd, Nl, or No Unicode
         categories
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isAlphaNum(dchar c)
 {
@@ -10548,6 +10554,7 @@ bool isAlphaNum(dchar c)
     Returns whether `c` is a Unicode punctuation $(CHARACTER)
     (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isPunctuation(dchar c)
 {
@@ -10695,6 +10702,7 @@ bool isFormat(dchar c)
     Returns whether `c` is a Unicode Private Use $(CODEPOINT)
     (general Unicode category: Co).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isPrivateUse(dchar c)
 {
@@ -10707,6 +10715,7 @@ bool isPrivateUse(dchar c)
     Returns whether `c` is a Unicode surrogate $(CODEPOINT)
     (general Unicode category: Cs).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isSurrogate(dchar c)
 {
@@ -10716,6 +10725,7 @@ bool isSurrogate(dchar c)
 /++
     Returns whether `c` is a Unicode high surrogate (lead surrogate).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isSurrogateHi(dchar c)
 {
@@ -10725,6 +10735,7 @@ bool isSurrogateHi(dchar c)
 /++
     Returns whether `c` is a Unicode low surrogate (trail surrogate).
 +/
+pragma(inline, true)
 @safe pure nothrow @nogc
 bool isSurrogateLo(dchar c)
 {
