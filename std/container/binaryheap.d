@@ -262,6 +262,27 @@ Clears the heap by detaching it from the underlying store.
     }
 
 /**
+Clears the inactive portion of the heap (from `length` to `capacity`)
+to break GC reachability. This is useful for heaps with large capacities
+where the unused portion might hold references to objects.
+     */
+    void removeTail()
+    {
+        if (!_payload.refCountedStore.isInitialized) return;
+        if (_length >= _store.length) return;
+        
+        alias T = typeof(_store[0]);
+        static if (hasIndirections!T)
+        {
+            // Clear the inactive portion of the store
+            foreach (i; _length .. _store.length)
+            {
+                _store[i] = T.init;
+            }
+        }
+    }
+
+/**
 Inserts `value` into the store. If the underlying store is a range
 and $(D length == capacity), throws an exception.
      */
@@ -326,8 +347,6 @@ and $(D length == capacity), throws an exception.
             _store[_length - 1] = move(t1);
         }
         --_length;
-        // Break GC reachability of the removed element
-        _store[length] = typeof(_store[_length]).init;
         percolate(_store[], 0, _length);
     }
 
@@ -345,6 +364,7 @@ that are expensive to copy.
         removeFront();
         return _store[_length];
     }
+    
 
 /**
 Replaces the largest element in the store with `value`.
@@ -638,4 +658,25 @@ original Dyamic Array, but point to a new Dynamic Array.
     // Making changes to the original Store will not affect the Heap anymore
     a[0] = 60;
     assert(h.front() == 40);
+}
+
+/// Test removeTail() clears inactive portion of heap with references
+@system unittest
+{
+    class Node { int value; this(int v) { value = v; } }
+    
+    Node[] a = new Node[10];
+    foreach (i; 0..5)
+        a[i] = new Node(i);
+    
+    auto h = heapify!"a.value > b.value"(a[0..5]);
+    
+    h.insert(new Node(6));
+    Node saved = a[5];
+    assert(a[6] is null);
+    
+    // After removeTail(), inactive slots should be cleared
+    h.removeTail();
+    assert(a[5] is saved); // Active element unchanged
+    assert(a[6] is null);  // Inactive slots cleared
 }
