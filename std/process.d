@@ -1795,6 +1795,40 @@ version (Posix) @system unittest
     testFDs();
 }
 
+// Test that spawning a process works when RLIMIT_NOFILE is very large.
+// Regression test: a cast(int) of rlim_cur caused overflow when the limit
+// was unlimited (RLIM_INFINITY), making the fd-closing code attempt a
+// massive malloc that would fail with "Cannot allocate memory".
+version (Posix) @system unittest
+{
+    import core.sys.posix.sys.resource : rlimit, getrlimit, setrlimit, RLIMIT_NOFILE;
+
+    // Save current limit
+    rlimit originalLimit;
+    if (getrlimit(RLIMIT_NOFILE, &originalLimit) != 0)
+        return; // Can't test if we can't get the limit
+
+    // Set RLIMIT_NOFILE to a value that overflows int (> int.max)
+    rlimit highLimit;
+    highLimit.rlim_cur = cast(ulong) int.max + 1;
+    highLimit.rlim_max = originalLimit.rlim_max;
+
+    // If we can't raise the limit (e.g. no permission), try with rlim_max
+    if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
+    {
+        highLimit.rlim_cur = originalLimit.rlim_max;
+        if (highLimit.rlim_cur <= int.max)
+            return; // Can't set a high enough limit to test the overflow
+        if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
+            return;
+    }
+    scope(exit) setrlimit(RLIMIT_NOFILE, &originalLimit);
+
+    // This should not throw "Failed to allocate memory"
+    TestScript prog = "exit 0";
+    assert(execute(prog.path).status == 0);
+}
+
 @system unittest // Environment variables in spawnProcess().
 {
     // We really should use set /a on Windows, but Wine doesn't support it.
