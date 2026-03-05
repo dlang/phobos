@@ -270,7 +270,6 @@ where the unused portion might hold references to objects.
     {
         if (!_payload.refCountedStore.isInitialized) return;
         if (_length >= _store.length) return;
-        
         alias T = typeof(_store[0]);
         static if (hasIndirections!T)
         {
@@ -364,7 +363,6 @@ that are expensive to copy.
         removeFront();
         return _store[_length];
     }
-    
 
 /**
 Replaces the largest element in the store with `value`.
@@ -664,17 +662,17 @@ original Dyamic Array, but point to a new Dynamic Array.
 @system unittest
 {
     class Node { int value; this(int v) { value = v; } }
-    
+
     Node[] a = new Node[10];
-    foreach (i; 0..5)
+    foreach (i; 0 .. 5)
         a[i] = new Node(i);
-    
-    auto h = heapify!"a.value > b.value"(a[0..5]);
-    
+
+    auto h = heapify!"a.value > b.value"(a[0 .. 5]);
+
     h.insert(new Node(6));
     Node saved = a[5];
     assert(a[6] is null);
-    
+
     // After removeTail(), inactive slots should be cleared
     h.removeTail();
     assert(a[5] is saved); // Active element unchanged
