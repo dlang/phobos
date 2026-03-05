@@ -28,6 +28,7 @@ jobs:
           # macOS
           - job_name: macOS x64
             os: macos-14
+            timeout-minutes: 60
           # Windows
           - job_name: Windows x64
             os: windows-2022
@@ -37,7 +38,7 @@ jobs:
     name: ${{ matrix.job_name }}
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container_image }}
-    timeout-minutes: 40
+    timeout-minutes: ${{ matrix.timeout-minutes || 40 }}
     env:
       # for ci/run.sh:
       OS_NAME: ${{ startsWith(matrix.os, 'ubuntu') && 'linux' || (startsWith(matrix.os, 'macos') && 'osx' || (startsWith(matrix.os, 'windows') && 'windows' || '')) }}
