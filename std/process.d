@@ -1046,7 +1046,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                         if (getrlimit(RLIMIT_NOFILE, &r) != 0)
                             abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
 
-                        immutable long maxDescriptors = r.rlim_cur;
+                        immutable maxDescriptors = r.rlim_cur;
 
                         // Missing druntime declaration
                         pragma(mangle, "dirfd")
@@ -1080,52 +1080,55 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                                 close(fd);
                             }
                         }
-                        else if (maxDescriptors > 0 && maxDescriptors <= 128*1024)
-                        {
-                            // This is going to allocate 8 bytes for each possible file descriptor from lowfd to rlim_cur.
-                            // NOTE: malloc() and getrlimit() are not on the POSIX async
-                            // signal safe functions list, but practically this should
-                            // not be a problem. Java VM and CPython also use malloc()
-                            // in its own implementation via opendir().
-                            import core.stdc.stdlib : malloc;
-                            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-
-                            immutable int maxToClose = cast(int)(maxDescriptors - lowfd);
-
-                            // Call poll() to see which ones are actually open:
-                            auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-                            if (pfds is null)
-                            {
-                                abortOnError(forkPipeOut, InternalError.malloc, .errno);
-                            }
-
-                            foreach (i; 0 .. maxToClose)
-                            {
-                                pfds[i].fd = i + lowfd;
-                                pfds[i].events = 0;
-                                pfds[i].revents = 0;
-                            }
-
-                            if (poll(pfds, maxToClose, 0) < 0)
-                                // couldn't use poll, use the slow path.
-                                goto LslowClose;
-
-                            foreach (i; 0 .. maxToClose)
-                            {
-                                // POLLNVAL will be set if the file descriptor is invalid.
-                                if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
-                            }
-                        }
                         else
                         {
-                        LslowClose:
-                            // Fall back to closing everything up to a sane limit.
-                            // When rlim_cur is huge (e.g. unlimited), cap to avoid
-                            // iterating over billions of file descriptors.
-                            immutable long closeMax = maxDescriptors > 1_048_576 ? 1_048_576 : maxDescriptors;
-                            foreach (i; lowfd .. cast(int) closeMax)
+                            if (maxDescriptors <= 128*1024)
                             {
-                                close(i);
+                                // This is going to allocate 8 bytes for each possible file descriptor from lowfd to rlim_cur.
+                                // NOTE: malloc() and getrlimit() are not on the POSIX async
+                                // signal safe functions list, but practically this should
+                                // not be a problem. Java VM and CPython also use malloc()
+                                // in its own implementation via opendir().
+                                import core.stdc.stdlib : malloc;
+                                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+
+                                immutable maxToClose = cast(int)(maxDescriptors - lowfd);
+
+                                // Call poll() to see which ones are actually open:
+                                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                                if (pfds is null)
+                                {
+                                    abortOnError(forkPipeOut, InternalError.malloc, .errno);
+                                }
+
+                                foreach (i; 0 .. maxToClose)
+                                {
+                                    pfds[i].fd = i + lowfd;
+                                    pfds[i].events = 0;
+                                    pfds[i].revents = 0;
+                                }
+
+                                if (poll(pfds, maxToClose, 0) < 0)
+                                    // couldn't use poll, use the slow path.
+                                    goto LslowClose;
+
+                                foreach (i; 0 .. maxToClose)
+                                {
+                                    // POLLNVAL will be set if the file descriptor is invalid.
+                                    if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                                }
+                            }
+                            else
+                            {
+                            LslowClose:
+                                // Fall back to closing everything up to a sane limit.
+                                // When rlim_cur is huge (e.g. unlimited), cap to avoid
+                                // iterating over billions of file descriptors.
+                                immutable closeMax = maxDescriptors > 1_048_576 ? 1_048_576 : maxDescriptors;
+                                foreach (i; lowfd .. cast(int) closeMax)
+                                {
+                                    close(i);
+                                }
                             }
                         }
                     }
@@ -1801,32 +1804,36 @@ version (Posix) @system unittest
 // massive malloc that would fail with "Cannot allocate memory".
 version (Posix) @system unittest
 {
-    import core.sys.posix.sys.resource : rlimit, getrlimit, setrlimit, RLIMIT_NOFILE;
+    import core.sys.posix.sys.resource : rlimit, rlim_t, getrlimit, setrlimit, RLIMIT_NOFILE;
 
-    // Save current limit
-    rlimit originalLimit;
-    if (getrlimit(RLIMIT_NOFILE, &originalLimit) != 0)
-        return; // Can't test if we can't get the limit
-
-    // Set RLIMIT_NOFILE to a value that overflows int (> int.max)
-    rlimit highLimit;
-    highLimit.rlim_cur = cast(ulong) int.max + 1;
-    highLimit.rlim_max = originalLimit.rlim_max;
-
-    // If we can't raise the limit (e.g. no permission), try with rlim_max
-    if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
+    // This test only applies on platforms where rlim_t can exceed int.max.
+    static if (rlim_t.sizeof > int.sizeof)
     {
-        highLimit.rlim_cur = originalLimit.rlim_max;
-        if (highLimit.rlim_cur <= int.max)
-            return; // Can't set a high enough limit to test the overflow
-        if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
-            return;
-    }
-    scope(exit) setrlimit(RLIMIT_NOFILE, &originalLimit);
+        // Save current limit
+        rlimit originalLimit;
+        if (getrlimit(RLIMIT_NOFILE, &originalLimit) != 0)
+            return; // Can't test if we can't get the limit
 
-    // This should not throw "Failed to allocate memory"
-    TestScript prog = "exit 0";
-    assert(execute(prog.path).status == 0);
+        // Set RLIMIT_NOFILE to a value that overflows int (> int.max)
+        rlimit highLimit;
+        highLimit.rlim_cur = cast(rlim_t) int.max + 1;
+        highLimit.rlim_max = originalLimit.rlim_max;
+
+        // If we can't raise the limit (e.g. no permission), try with rlim_max
+        if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
+        {
+            highLimit.rlim_cur = originalLimit.rlim_max;
+            if (highLimit.rlim_cur <= int.max)
+                return; // Can't set a high enough limit to test the overflow
+            if (setrlimit(RLIMIT_NOFILE, &highLimit) != 0)
+                return;
+        }
+        scope(exit) setrlimit(RLIMIT_NOFILE, &originalLimit);
+
+        // This should not throw "Failed to allocate memory"
+        TestScript prog = "exit 0";
+        assert(execute(prog.path).status == 0);
+    }
 }
 
 @system unittest // Environment variables in spawnProcess().
