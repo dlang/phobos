@@ -1124,7 +1124,8 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                                 // Fall back to closing everything up to a sane limit.
                                 // When rlim_cur is huge (e.g. unlimited), cap to avoid
                                 // iterating over billions of file descriptors.
-                                immutable closeMax = cast(int) (maxDescriptors > 1_048_576 ? 1_048_576 : maxDescriptors);
+                                immutable closeMax = cast(int)
+                                    (maxDescriptors > 1_048_576 ? 1_048_576 : maxDescriptors);
                                 foreach (i; lowfd .. closeMax)
                                 {
                                     close(i);
