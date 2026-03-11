@@ -180,7 +180,6 @@ public:
         assert(cast(long) b2 == -0x01_02_03_04_05_06L);
     }
 
-
     /// Construct a `BigInt` from a built-in integral type.
     this(T)(T x) pure nothrow @safe
     if (isIntegral!T)
