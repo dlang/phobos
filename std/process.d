@@ -1048,9 +1048,21 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
 
                         immutable maxDescriptors = cast(int) r.rlim_cur;
 
-                        // Missing druntime declaration
-                        pragma(mangle, "dirfd")
-                        extern(C) nothrow @nogc int dirfd(DIR* dir);
+                        // dirfd: On NetBSD, this is a macro in dirent.h, not a function,
+                        //        so provide a D implementation instead.
+                        version (NetBSD)
+                        {
+                            static int dirfd(DIR* dir) nothrow @nogc
+                            {
+                                return *(cast(int*) dir);
+                            }
+                        }
+                        else
+                        {
+                            // Missing druntime declaration
+                            pragma(mangle, "dirfd")
+                            extern(C) nothrow @nogc int dirfd(DIR* dir);
+                        }
 
                         DIR* dir = null;
 
