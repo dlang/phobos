@@ -29,6 +29,7 @@
  *      NAN = $(RED NAN)
  *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
  *      GAMMA = &#915;
+ *      LGAMMA =&#947;
  *      PSI = &Psi;
  *      THETA = &theta;
  *      INTEGRAL = &#8747;
@@ -47,9 +48,11 @@
  *      LT = &lt;
  *      LE = &le;
  *      GT = &gt;
+ *      GE = &ge;
  *      SQRT = &radic;
  *      HALF = &frac12;
  *      COMPLEX = &#8450;
+ *      NOBR = <nobr>$1</nobr>
  *
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
@@ -249,30 +252,123 @@ real logmdigammaInverse(real x)
     return std.internal.math.gammafunction.logmdigammaInverse(x);
 }
 
-/** Incomplete beta integral
+/** Regularized incomplete beta function $(SUB I, x)(a,b)
  *
- * Returns regularized incomplete beta integral of the arguments, evaluated
- * from zero to x. The regularized incomplete beta function is defined as
+ * Mathematically, if a and b are positive real numbers, and 0 $(LE) x $(LE) 1, then
+ * $(SUB I, x)(a,b) = $(INTEGRATE 0, x)$(POWER t, a-1)$(POWER (1-t), b-1)dt/B(a,b) where B is the
+ * beta function. It is also the cumulative distribution function of the beta distribution.
  *
- * betaIncomplete(a, b, x) = $(GAMMA)(a + b) / ( $(GAMMA)(a) $(GAMMA)(b) ) *
- * $(INTEGRATE 0, x) $(POWER t, a-1)$(POWER (1-t), b-1) dt
+ * `betaIncomplete(a, b, x)` evaluates $(SUB I, `x`)(`a`,`b`).
  *
- * and is the same as the cumulative distribution function of the Beta
- * distribution.
+ * Params:
+ *   a = the first argument of B, must be positive
+ *   b = the second argument of B, must be positive
+ *   x = the fraction of integration completion from below, 0 $(LE) x $(LE) 1
  *
- * The domain of definition is 0 <= x <= 1.  In this
- * implementation a and b are restricted to positive values.
- * The integral from x to 1 may be obtained by the symmetry
- * relation
+ * Returns:
+ *   It returns $(SUB I, x)(a,b), an element of [0,1].
  *
- *    betaIncompleteCompl(a, b, x )  =  betaIncomplete( b, a, 1-x )
+  * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH b)         $(TH x)        $(TH betaIncomplete(a, b, x)) )
+ *   $(TR $(TD negative)  $(TD b)         $(TD x)        $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD negative)  $(TD x)        $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(LT) 0)  $(TD $(NAN))                  )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(GT) 1)  $(TD $(NAN))                  )
+ *   $(TR $(TD +0)        $(TD +0)        $(TD (0,1))    $(TD $(NAN))                  )
+ *   $(TR $(TD $(INFIN))  $(TD $(INFIN))  $(TD (0,1))    $(TD $(NAN))                  )
+ * )
  *
- * The integral is evaluated by a continued fraction expansion
- * or, when b * x is small, by a power series.
+ * If one or more of the input parameters are $(NAN), the one with the largest payload is returned.
+ * For equal payloads but with possibly different signs, the order of preference is x, a, b.
+ *
+ * Note:
+ *   The integral is evaluated by a continued fraction expansion or, when `b * x` is small, by a
+ *   power series.
+ *
+ * See_Also: $(LREF beta) $(LREF betaIncompleteCompl)
  */
 real betaIncomplete(real a, real b, real x )
+in
+{
+    if (!isNaN(a) && !isNaN(b) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(signbit(b) == 0, "b must be positive");
+        assert(x >= 0 && x <= 1, "x must be in [0,1]");
+    }
+}
+out(i; isNaN(i) || (i >=0 && i <= 1))
+do
 {
     return std.internal.math.gammafunction.betaIncomplete(a, b, x);
+}
+
+///
+@safe unittest
+{
+    assert(betaIncomplete(1, 1, .5) == .5);
+    assert(betaIncomplete(+0., +0., 0) == 0);
+    assert(isNaN(betaIncomplete(+0., +0., .5)));
+    assert(isNaN(betaIncomplete(real.infinity, real.infinity, .5)));
+    assert(betaIncomplete(real.infinity, real.infinity, 1) == 1);
+    assert(betaIncomplete(NaN(0x1), 1, NaN(0x2)) is NaN(0x2));
+    assert(betaIncomplete(1, NaN(0x3), -NaN(0x3)) is -NaN(0x3));
+}
+
+/** Regularized incomplete beta function complement $(SUB I$(SUP C), x)(a,b)
+ *
+ * Mathematically, if a $(GT) 0, b $(GT) 0, and 0 $(LE) x $(LE) 1, then
+ * $(SUB I$(SUP C), x)(a,b) = $(INTEGRATE x, 1)$(POWER t, a-1)$(POWER (1-t), b-1)dt/B(a,b) where B
+ * is the beta function. It is also the complement of the cumulative distribution function of the
+ * beta distribution. It can be shown that $(SUB I$(SUP C), x)(a,b) = $(SUB I, 1-x)(b,a).
+ *
+ * `betaIncompleteCompl(a, b, x)` evaluates $(SUB I$(SUP C), `x`)(`a`,`b`).
+ *
+ * Params:
+ *   a = the first argument of B, must be positive
+ *   b = the second argument of B, must be positive
+ *   x = the fraction of integration completion from above, 0 $(LE) x $(LE) 1
+ *
+ * Returns:
+ *   It returns $(SUB I$(SUP C), x)(a,b), an element of [0,1].
+ *
+   * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH b)         $(TH x)        $(TH betaIncompleteCompl(a, b, x)) )
+ *   $(TR $(TD negative)  $(TD b)         $(TD x)        $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD negative)  $(TD x)        $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(LT) 0)  $(TD $(NAN))                       )
+ *   $(TR $(TD a)         $(TD b)         $(TD $(GT) 1)  $(TD $(NAN))                       )
+ *   $(TR $(TD +0)        $(TD +0)        $(TD (0,1))    $(TD $(NAN))                       )
+ *   $(TR $(TD $(INFIN))  $(TD $(INFIN))  $(TD (0,1))    $(TD $(NAN))                       )
+ * )
+ *
+ * If one or more of the input parameters are $(NAN), the one with the largest payload is returned.
+ * For equal payloads but with possibly different signs, the order of preference is x, a, b.
+ *
+ * See_Also: $(LREF beta) $(LREF betaIncomplete)
+ */
+real betaIncompleteCompl(real a, real b, real x)
+in
+{
+    // allow NaN input to pass through so that it can be addressed by the
+    // internal NaN payload propagation logic
+    if (!isNaN(a) && !isNaN(b) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(signbit(b) == 0, "b must be positive");
+        assert(x >= 0 && x <= 1, "x must be in [0, 1]");
+    }
+}
+out(i; isNaN(i) || (i >=0 && i <= 1))
+do
+{
+    return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);
+}
+
+///
+@safe unittest
+{
+    assert(betaIncompleteCompl(.1, .2, 0) == betaIncomplete(.2, .1, 1));
 }
 
 /** Inverse of incomplete beta integral
@@ -288,60 +384,165 @@ real betaIncompleteInverse(real a, real b, real y )
     return std.internal.math.gammafunction.betaIncompleteInv(a, b, y);
 }
 
-/** Incomplete gamma integral and its complement
+/** Regularized lower incomplete gamma function P(a,x)
  *
- * These functions are defined by
+ * Mathematically, P(a,x) = $(LGAMMA)(a,x)/$(GAMMA)(a), where $(LGAMMA)(a,x) is the lower incomplete
+ * gamma function, $(LGAMMA)(a,x) = $(INTEGRATE 0, x)$(POWER t, a-1)$(POWER e, -t)dt, a $(GT) 0, and
+ * x $(GE) 0.
  *
- *   gammaIncomplete = ( $(INTEGRATE 0, x) $(POWER e, -t) $(POWER t, a-1) dt )/ $(GAMMA)(a)
+ * Params:
+ *   a = the shape parameter, must be positive
+ *   x = the fraction of integration completion from below, must be non-negative
  *
- *  gammaIncompleteCompl(a,x)   =   1 - gammaIncomplete(a,x)
- * = ($(INTEGRATE x, $(INFIN)) $(POWER e, -t) $(POWER t, a-1) dt )/ $(GAMMA)(a)
+ * Returns:
+ *   It returns P(a,x), an element of [0,1].
  *
- * In this implementation both arguments must be positive.
- * The integral is evaluated by either a power series or
- * continued fraction expansion, depending on the relative
- * values of a and x.
+ * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH x)              $(TH gammaIncomplete(a, x)) )
+ *   $(TR $(TD negative)  $(TD)                $(TD $(NAN))                )
+ *   $(TR $(TD)           $(TD $(LT) 0)        $(TD $(NAN))                )
+ *   $(TR $(TD positive)  $(TD 0)              $(TD 0)                     )
+ *   $(TR $(TD positive)  $(TD $(INFIN))       $(TD 1)                     )
+ *   $(TR $(TD +0)        $(TD $(GT) 0)        $(TD 1)                     )
+ *   $(TR $(TD $(INFIN))  $(TD (0, $(INFIN)))  $(TD 0)                     )
+ * )
+ *
+ * See_Also: $(LREF gamma) and $(LREF gammaIncompleteCompl)
  */
 real gammaIncomplete(real a, real x )
 in
 {
-   assert(x >= 0);
-   assert(a > 0);
+    // allow NaN input to pass through so that it can be addressed by the
+    // internal NaN payload propagation logic
+    if (!isNaN(a) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(x >= 0, "x must be non-negative");
+    }
 }
+out(p; isNaN(p) || (p >= 0 && p <= 1))
 do
 {
     return std.internal.math.gammafunction.gammaIncomplete(a, x);
 }
 
-/** ditto */
-real gammaIncompleteCompl(real a, real x )
+///
+@safe unittest
+{
+    assert(gammaIncomplete(1, 1) == 1 - 1/E);
+    assert(gammaIncomplete(1, 0) == 0);
+    assert(gammaIncomplete(1, real.infinity) == 1);
+    assert(gammaIncomplete(+0., 1) == 1);
+    assert(gammaIncomplete(real.infinity, 1) == 0);
+}
+
+/** Regularized upper incomplete gamma function Q(a,x)
+ *
+ * Mathematically, Q(a,x) = $(GAMMA)(a,x)/$(GAMMA)(a), where $(GAMMA)(a,x) is the upper incomplete
+ * gamma function, $(GAMMA)(a,x) = $(INTEGRATE x, $(INFIN))$(POWER t, a-1)$(POWER e, -t)dt,
+ * $(NOBR a $(GT) 0), and x $(GE) 0. Note that P(a,x) + Q(a,x) = 1 or Q(a,x) = 1 - P(a,x), so Q is
+ * the complement of P.
+ *
+ * Params:
+ *   a = the shape parameter, must be positive
+ *   x = the fraction of integration completion from above, must be non-negative
+ *
+ * Returns:
+ *   It returns Q(a,x), an element of [0,1].
+ *
+ * $(TABLE_SV
+ *   $(TR $(TH a)         $(TH x)              $(TH gammaIncompleteCompl(a, x)) )
+ *   $(TR $(TD negative)  $(TD)                $(TD $(NAN))                     )
+ *   $(TR $(TD)           $(TD $(LT) 0)        $(TD $(NAN))                     )
+ *   $(TR $(TD positive)  $(TD 0)              $(TD 1)                          )
+ *   $(TR $(TD positive)  $(TD $(INFIN))       $(TD 0)                          )
+ *   $(TR $(TD +0)        $(TD $(GT) 0)        $(TD 0)                          )
+ *   $(TR $(TD $(INFIN))  $(TD (0, $(INFIN)))  $(TD 1)                          )
+ * )
+ *
+ * See_Also: $(LREF gamma) and $(LREF gammaIncomplete)
+ */
+ real gammaIncompleteCompl(real a, real x )
 in
 {
-   assert(x >= 0);
-   assert(a > 0);
+    // allow NaN input to pass through so that it can be addressed by the
+    // internal NaN payload propagation logic
+    if (!isNaN(a) && !isNaN(x))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(x >= 0, "x must be non-negative");
+    }
 }
+out(q; isNaN(q) || (q >= 0 && q <= 1))
 do
 {
     return std.internal.math.gammafunction.gammaIncompleteCompl(a, x);
 }
 
-/** Inverse of complemented incomplete gamma integral
+///
+@safe unittest
+{
+    assert(isClose(gammaIncompleteCompl(2, 1), 2/E));
+    assert(gammaIncompleteCompl(1, 0) == 1);
+    assert(gammaIncompleteCompl(1, real.infinity) == 0);
+    assert(gammaIncompleteCompl(+0., 1) == 0);
+    assert(gammaIncompleteCompl(real.infinity, 1) == 1);
+    assert(isClose(gammaIncompleteCompl(1, 2), 1-gammaIncomplete(1, 2)));
+}
+
+/** Inverse regularized upper incomplete gamma function Q$(SUP -1)(a,p) with respect to p
  *
- * Given a and p, the function finds x such that
+ * Given a and p, the function finds x such that p = Q(a,x).
  *
- *  gammaIncompleteCompl( a, x ) = p.
+ * Params:
+ *   a = the shape parameter, must be positive
+ *   p = Q(a,x), must be in the interval [0,1]
+ *
+ * Returns:
+ *   It returns x, a value $(GE) 0
+ *
+ * $(TABLE_SV
+ *   $(TR $(TH a)               $(TH p)        $(TH gammaIncompleteComplInverse(a, p)) )
+ *   $(TR $(TD negative)        $(TD)          $(TD $(NAN))                            )
+ *   $(TR $(TD)                 $(TD $(LT) 0)  $(TD $(NAN))                            )
+ *   $(TR $(TD)                 $(TD $(GT) 1)  $(TD $(NAN))                            )
+ *   $(TR $(TD +0)              $(TD $(LT) 1)  $(TD $(NAN))                            )
+ *   $(TR $(TD $(INFIN))        $(TD $(GT) 0)  $(TD $(NAN))                            )
+ *   $(TR $(TD $(GT) 0)         $(TD 0)        $(TD $(INFIN))                          )
+ *   $(TR $(TD $(LT) $(INFIN))  $(TD 1)        $(TD 0)                                 )
+ * )
+ *
+ * See_Also: $(LREF gammaIncompleteCompl)
  */
 real gammaIncompleteComplInverse(real a, real p)
 in
 {
-  assert(p >= 0 && p <= 1);
-  assert(a > 0);
+    // allow NaN input to pass through so that it can be addressed by the
+    // internal NaN payload propagation logic
+    if (!isNaN(a) && !isNaN(p))
+    {
+        assert(signbit(a) == 0, "a must be positive");
+        assert(p >= 0.0L && p <= 1.0L, "p must be in the interval [0,1]");
+    }
 }
+out(x; isNaN(x) || x >= 0.0L)
 do
 {
     return std.internal.math.gammafunction.gammaIncompleteComplInv(a, p);
 }
 
+///
+@safe unittest
+{
+    const a = 2, p = 0.5L;
+    assert(isClose(gammaIncompleteComplInverse(a, gammaIncompleteCompl(a, p)), p));
+
+    assert(gammaIncompleteComplInverse(1, 1/E) == 1);
+    assert(isNaN(gammaIncompleteComplInverse(+0.0L, 0.1)));
+    assert(isNaN(gammaIncompleteComplInverse(real.infinity, 0.2)));
+    assert(gammaIncompleteComplInverse(3, 0) is real.infinity);
+    assert(gammaIncompleteComplInverse(4, 1) == 0);
+}
 
 /* ***********************************************
  *     ERROR FUNCTIONS & NORMAL DISTRIBUTION     *
