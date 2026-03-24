@@ -309,7 +309,7 @@ else
 endif
 
 # build with shared library support (defaults to true on supported platforms)
-SHARED=$(if $(findstring $(OS),linux freebsd),1,)
+SHARED=$(if $(findstring $(OS),linux freebsd hurd),1,)
 
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor$(DOTEXE)
 PUBLICTESTS_DIR=$(ROOT)/publictests

@@ -1031,6 +1031,8 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                     import core.sys.freebsd.unistd : closefrom;
                 else version (OpenBSD)
                     import core.sys.openbsd.unistd : closefrom;
+                else version (Hurd)
+                    import core.sys.hurd.unistd : closefrom;
 
                 static if (!__traits(compiles, closefrom))
                 {
