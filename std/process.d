@@ -1036,7 +1036,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 {
                     void fallback (int lowfd)
                     {
-                        import core.sys.posix.dirent : dirent, opendir, readdir, closedir, DIR;
+                        import core.sys.posix.dirent : dirfd, dirent, opendir, readdir, closedir, DIR;
                         import core.sys.posix.unistd : close;
                         import core.sys.posix.stdlib : atoi, malloc, free;
                         import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
@@ -1047,10 +1047,6 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                             abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
 
                         immutable maxDescriptors = cast(int) r.rlim_cur;
-
-                        // Missing druntime declaration
-                        pragma(mangle, "dirfd")
-                        extern(C) nothrow @nogc int dirfd(DIR* dir);
 
                         DIR* dir = null;
 
