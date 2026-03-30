@@ -184,7 +184,13 @@ jobs:
               exit 1
             fi
 
-            git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
+            # Clone DMD: try requested branch, fall back to master if missing
+            if git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd 2>/dev/null; then
+              echo "Cloned dlang/dmd branch: $REPO_BRANCH"
+            else
+              echo "Branch '$REPO_BRANCH' not found; cloning master instead"
+              git clone --branch master --depth 1 https://github.com/dlang/dmd.git ../dmd
+            fi
             echo '::endgroup::'
 
             cd ../dmd
