@@ -62,7 +62,7 @@ jobs:
           fetch-depth: 50
       - name: Clone DMD
         run: |
-          set -uexo pipefail
+          set -uxo pipefail
 
           ref='${{ github.ref }}'
           if [[ "$ref" =~ ^refs/pull/ ]]; then
@@ -78,7 +78,13 @@ jobs:
             exit 1
           fi
 
-          git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
+          # Clone DMD: try the specific branch, fall back to master if it doesn't exist
+          if git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd 2>/dev/null; then
+            echo "Cloned dlang/dmd branch: $REPO_BRANCH"
+          else
+            echo "Branch '$REPO_BRANCH' not found; cloning master instead"
+            git clone --branch master --depth 1 https://github.com/dlang/dmd.git ../dmd
+          fi
 
       - name: Set environment variable N (parallelism)
         run: echo "N=$(${{ runner.os == 'macOS' && 'sysctl -n hw.logicalcpu' || 'nproc' }})" >> $GITHUB_ENV
