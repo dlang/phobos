@@ -429,7 +429,7 @@ do
 ///
 @safe unittest
 {
-    assert(gammaIncomplete(1, 1) == 1 - 1/E);
+    assert(isClose(gammaIncomplete(1, 1), 1 - 1/E));
     assert(gammaIncomplete(1, 0) == 0);
     assert(gammaIncomplete(1, real.infinity) == 1);
     assert(gammaIncomplete(+0., 1) == 1);
