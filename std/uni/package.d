@@ -9273,54 +9273,61 @@ if (isSomeString!S || (isRandomAccessRange!S && hasLength!S && hasSlicing!S && i
 {
     import std.array : appender, array;
     import std.ascii : isASCII;
-    import std.utf : byDchar, codeLength;
+    import std.utf : byDchar, codeLength, encode, decode;
+    import std.traits : Unqual;
 
     alias C = ElementEncodingType!S;
+    alias C2 = Unqual!C;
 
-    auto r = s.byDchar;
-    for (size_t i; !r.empty; i += r.front.codeLength!C , r.popFront())
-    {
-        auto cOuter = r.front;
-        ushort idx = indexFn(cOuter);
-        if (idx == ushort.max)
-            continue;
-        auto result = appender!(C[])();
-        result.reserve(s.length);
-        result.put(s[0 .. i]);
-        foreach (dchar c; s[i .. $].byDchar)
+    auto result = appender!(C[])();
+    result.reserve(s.length);
+
+    void put(dchar c) @trusted {
+        static if (is(C2 == dchar))
         {
-            if (c.isASCII)
+            result ~= c;
+        }
+        else
+        {
+            C2[4 / C.sizeof] buf;
+            const len = encode(buf, c);
+            result ~= cast(C[]) buf[0 .. len];
+        }
+    }
+
+    for (size_t i; i < s.length;)
+    {
+        if (s[i].isASCII)
+        {
+            result ~= cast(C) asciiConvert(s[i]);
+            i++;
+        }
+        else
+        {
+            dchar c = decode(s, i);
+            auto idx = indexFn(c);
+            if (idx == ushort.max)
+                put(c); // not present
+            else if (idx < maxIdx)
             {
-                result.put(asciiConvert(c));
+                c = tableFn(idx);
+                put(c);
             }
             else
             {
-                idx = indexFn(c);
-                if (idx == ushort.max)
-                    result.put(c);
-                else if (idx < maxIdx)
-                {
-                    c = tableFn(idx);
-                    result.put(c);
-                }
-                else
-                {
-                    auto val = tableFn(idx);
-                    // unpack length + codepoint
-                    immutable uint len = val >> 24;
-                    result.put(cast(dchar)(val & 0xFF_FFFF));
-                    foreach (j; idx+1 .. idx+len)
-                        result.put(tableFn(j));
-                }
+                auto val = tableFn(idx);
+                // unpack length + codepoint
+                immutable uint len = val >> 24;
+                put(cast(dchar) (val & 0xFF_FFFF));
+                foreach (j; idx+1 .. idx+len)
+                    put(tableFn(j));
             }
         }
-        return result.data;
     }
 
-    static if (isSomeString!S)
-        return s;
-    else
-        return s.array;
+    // Don't do anything clever if we might not convert.
+    // It is literally slower doing the lookup than duplicating memory.
+    return result.data;
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=12428
