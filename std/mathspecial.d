@@ -537,7 +537,7 @@ do
     const a = 2, p = 0.5L;
     assert(isClose(gammaIncompleteComplInverse(a, gammaIncompleteCompl(a, p)), p));
 
-    assert(gammaIncompleteComplInverse(1, 1/E) == 1);
+    assert(isClose(gammaIncompleteComplInverse(1, 1/E), 1));
     assert(isNaN(gammaIncompleteComplInverse(+0.0L, 0.1)));
     assert(isNaN(gammaIncompleteComplInverse(real.infinity, 0.2)));
     assert(gammaIncompleteComplInverse(3, 0) is real.infinity);
