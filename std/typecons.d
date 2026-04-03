@@ -3780,7 +3780,7 @@ struct Nullable(T)
             _isNull = false;
         }
 
-    static if (hasElaborateDestructor!T)
+    static if (__traits(needsDestruction, T))
     {
         ~this()
         {

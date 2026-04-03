@@ -634,13 +634,12 @@ if (isInputRange!Values && isInputRange!Keys)
             static if (is(typeof(() nothrow
             {
                 import std.range : ElementType;
-                import std.traits : hasElaborateDestructor;
                 alias KeyElement = ElementType!Keys;
-                static if (hasElaborateDestructor!KeyElement)
+                static if (__traits(needsDestruction, KeyElement))
                     KeyElement.init.__xdtor();
 
                 alias ValueElement = ElementType!Values;
-                static if (hasElaborateDestructor!ValueElement)
+                static if (__traits(needsDestruction, ValueElement))
                     ValueElement.init.__xdtor();
             })))
             {
@@ -672,13 +671,12 @@ if (isInputRange!Values && isInputRange!Keys)
             static if (is(typeof(() @safe
             {
                 import std.range : ElementType;
-                import std.traits : hasElaborateDestructor;
                 alias KeyElement = ElementType!Keys;
-                static if (hasElaborateDestructor!KeyElement)
+                static if (__traits(needsDestruction, KeyElement))
                     KeyElement.init.__xdtor();
 
                 alias ValueElement = ElementType!Values;
-                static if (hasElaborateDestructor!ValueElement)
+                static if (__traits(needsDestruction, ValueElement))
                     ValueElement.init.__xdtor();
 
                 aa[key] = values.front;
