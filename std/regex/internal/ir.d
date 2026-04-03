@@ -1002,7 +1002,7 @@ struct CharMatcher {
 // Internal non-resizeble array, switches between inline storage and CoW
 // POD-only
 struct SmallFixedArray(T, uint SMALL=3)
-if (!hasElaborateDestructor!T)
+if (!__traits(needsDestruction, T))
 {
     import std.internal.memory : enforceMalloc;
     import core.memory : pureFree;

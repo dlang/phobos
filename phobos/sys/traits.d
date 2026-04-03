@@ -5448,8 +5448,7 @@ template hasComplexCopying(T)
   +/
 template hasComplexDestruction(T)
 {
-    import core.internal.traits : hasElaborateDestructor;
-    alias hasComplexDestruction = hasElaborateDestructor!T;
+    alias hasComplexDestruction = __traits(needsDestruction, T);
 }
 
 ///

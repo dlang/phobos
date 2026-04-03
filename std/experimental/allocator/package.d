@@ -1668,7 +1668,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 private enum hasPurePostblit(T) = !hasElaborateCopyConstructor!T ||
     is(typeof(() pure { T.init.__xpostblit(); }));
 
-private enum hasPureDtor(T) = !hasElaborateDestructor!T ||
+private enum hasPureDtor(T) = !__traits(needsDestruction, T) ||
     is(typeof(() pure { T.init.__xdtor(); }));
 
 // `true` when postblit and destructor of T cannot escape references to itself
@@ -1693,7 +1693,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
         }
 
         size_t i = 0;
-        static if (hasElaborateDestructor!T)
+        static if (__traits(needsDestruction, T))
         {
             scope (failure)
             {
@@ -2411,7 +2411,7 @@ allocated with the same allocator.
 */
 void dispose(A, T)(auto ref A alloc, auto ref T* p)
 {
-    static if (hasElaborateDestructor!T)
+    static if (__traits(needsDestruction, T))
     {
         destroy(*p);
     }
@@ -2447,7 +2447,7 @@ if (is(T == class) || is(T == interface))
 /// Ditto
 void dispose(A, T)(auto ref A alloc, auto ref T[] array)
 {
-    static if (hasElaborateDestructor!(typeof(array[0])))
+    static if (__traits(needsDestruction, typeof(array[0])))
     {
         foreach (ref e; array)
         {

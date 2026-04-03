@@ -3159,7 +3159,7 @@ private template getRvalue(Flag!"try_" try_, T)
 
 private void destroyIfOwner(T)(ref T value)
 {
-    static if (hasElaborateDestructor!T)
+    static if (__traits(needsDestruction, T))
     {
         destroy(value);
     }

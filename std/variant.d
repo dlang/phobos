@@ -697,7 +697,7 @@ switchStmtTupAssign:
             }
 
         case OpID.destruct:
-            static if (hasElaborateDestructor!A)
+            static if (__traits(needsDestruction, A))
             {
                 zis.__xdtor();
             }
@@ -3133,10 +3133,10 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     static assert( hasElaborateCopyConstructor!(Algebraic!S));
     static assert( hasElaborateCopyConstructor!(Algebraic!(bool, S)));
 
-    static assert( hasElaborateDestructor!(Variant));
-    static assert(!hasElaborateDestructor!(Algebraic!bool));
-    static assert( hasElaborateDestructor!(Algebraic!S));
-    static assert( hasElaborateDestructor!(Algebraic!(bool, S)));
+    static assert( __traits(needsDestruction, Variant));
+    static assert(!__traits(needsDestruction, Algebraic!bool));
+    static assert( __traits(needsDestruction, Algebraic!S));
+    static assert( __traits(needsDestruction, Algebraic!(bool, S)));
 
     import std.array;
     alias Value = Algebraic!bool;

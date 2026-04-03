@@ -406,8 +406,8 @@ if (!is(immutable T == immutable bool))
         ~this()
         {
             // Warning: destroy would destroy also class instances.
-            // The hasElaborateDestructor protects us here.
-            static if (hasElaborateDestructor!T)
+            // The __traits(needsDestruction, T) protects us here.
+            static if (__traits(needsDestruction, T))
                 foreach (ref e; _payload)
                     .destroy(e);
 
@@ -431,7 +431,7 @@ if (!is(immutable T == immutable bool))
             if (length >= newLength)
             {
                 // shorten
-                static if (hasElaborateDestructor!T)
+                static if (__traits(needsDestruction, T))
                     foreach (ref e; _payload.ptr[newLength .. _payload.length])
                         .destroy(e);
 
@@ -996,7 +996,7 @@ if (!is(immutable T == immutable bool))
     void removeBack()
     {
         assert(!empty);
-        static if (hasElaborateDestructor!T)
+        static if (__traits(needsDestruction, T))
             .destroy(_data._payload[$ - 1]);
 
         _data._payload = _data._payload[0 .. $ - 1];
@@ -1021,7 +1021,7 @@ if (!is(immutable T == immutable bool))
     size_t removeBack(size_t howMany)
     {
         if (howMany > length) howMany = length;
-        static if (hasElaborateDestructor!T)
+        static if (__traits(needsDestruction, T))
             foreach (ref e; _data._payload[$ - howMany .. $])
                 .destroy(e);
 
