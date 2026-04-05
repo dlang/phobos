@@ -1135,15 +1135,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
               to the size parameter.
             +/
             enum isShared = is (E == shared);
-            version (D_ProfileGC)
-            {
-                // FIXME: file, line, function should be propagated from the
-                // caller, not here.
-                ret = _d_newarrayUTrace!E(size, isShared,
-                    __FILE__, __LINE__, __FUNCTION__);
-            }
-            else
-                ret = _d_newarrayU!E(size, isShared);
+            ret = _d_newarrayU!E(size, isShared);
             static if (minimallyInitialized && hasIndirections!E)
                 // _d_newarrayU would have asserted if the multiplication below
                 // had overflowed, so we don't have to check it again.
