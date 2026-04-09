@@ -2041,7 +2041,7 @@ public:
         enum defaultTZDatabaseDir = "";
     }
 
-    private static string getDefaultTZDatabaseDir()
+    private static string getDefaultTZDatabaseDir() @trusted
     {
         import core.stdc.stdlib : getenv;
         import std.string : fromStringz;
