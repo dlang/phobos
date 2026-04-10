@@ -4397,6 +4397,7 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
                 }
 
                 size_t wrAcc = 0;
+                assert(rr > 0);
                 while (wrAcc < rr)
                 {
                     auto wr = core.sys.posix.unistd.write(
