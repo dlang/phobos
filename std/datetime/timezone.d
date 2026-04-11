@@ -338,6 +338,7 @@ public:
             else version (linux)         enum utcZone = "UTC";
             else version (Darwin)        enum utcZone = "UTC";
             else version (Solaris)       enum utcZone = "UTC";
+            else version (Hurd)          enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
             auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
