@@ -10594,10 +10594,14 @@ if (Values.length > 1)
         void opIndexAssign(CommonType!Values value, size_t idx)
         {
             assert(idx < length, "Attempting to assign to an out of bounds index of an Only range");
+            sw:
             final switch (frontIndex + idx)
                 static foreach (i; 0 .. Values.length)
-                case i:
-                    values[i] = value;
+                {
+                    case i:
+                        values[i] = value;
+                        break sw;
+                }
         }
     }
 
@@ -11063,6 +11067,15 @@ auto only()()
     static assert(!__traits(compiles, r3.back = 789));
     // Workaround https://issues.dlang.org/show_bug.cgi?id=24383
     static assert(!__traits(compiles, () { r3[0] = 789; }));
+}
+
+// https://github.com/dlang/phobos/issues/10993
+@safe unittest
+{
+    auto x = only(3, 4);
+    x[0] = 2;
+    assert(x[0] == 2);
+    assert(x[1] == 4);
 }
 
 // https://github.com/dlang/phobos/issues/10561
