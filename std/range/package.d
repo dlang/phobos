@@ -10594,12 +10594,13 @@ if (Values.length > 1)
         void opIndexAssign(CommonType!Values value, size_t idx)
         {
             assert(idx < length, "Attempting to assign to an out of bounds index of an Only range");
+            sw:
             final switch (frontIndex + idx)
                 static foreach (i; 0 .. Values.length)
                 {
-                    // Looks awkward because "Error: must use labeled `break` within `static foreach`"
                     case i:
-                        return cast(void) (values[i] = value);
+                        values[i] = value;
+                        break sw;
                 }
         }
     }
