@@ -35,7 +35,7 @@ install_deps() {
         fi
     done
 
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash install.sh dmd-$HOST_DMD_VER --activate)"
+    source "$(CURL_USER_AGENT="$CURL_USER_AGENT" bash install.sh dmd-$HOST_DMD_VER --activate)"
     $DC --version
     env
 }
@@ -86,7 +86,7 @@ setup_repos()
     done
 
     # load environment for bootstrap compiler
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
+    source "$(CURL_USER_AGENT="$CURL_USER_AGENT" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
     pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD PIC="$PIC" all && popd
@@ -122,7 +122,7 @@ codecov()
 # extract publictests and run them independently
 publictests()
 {
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
+    source "$(CURL_USER_AGENT="$CURL_USER_AGENT" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     make -j"$N" publictests DUB="$DUB" BUILD=$BUILD
     make -j"$N" publictests DUB="$DUB" BUILD=$BUILD NO_BOUNDSCHECKS=1
