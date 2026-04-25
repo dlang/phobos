@@ -1744,7 +1744,7 @@ public:
     /***************************************
      * Supports comparison operators for `BitArray`.
      */
-    int opCmp(BitArray a2) const @nogc pure nothrow
+    int opCmp(const BitArray a2) const @nogc pure nothrow
     {
         const lesser = this.length < a2.length ? &this : &a2;
         immutable fullWords = lesser.fullWords;
@@ -1791,8 +1791,8 @@ public:
         bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
         bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        const a = BitArray(ba);
+        const b = BitArray(bb);
         auto c = BitArray(bc);
         auto d = BitArray(bd);
         auto e = BitArray(be);
