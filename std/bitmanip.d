@@ -1176,10 +1176,10 @@ public:
     }
 
     /**********************************************
-     * Sets the amount of bits in the `BitArray`.
+     * Sets the number of bits in the `BitArray`.
      * $(RED Warning: increasing length may overwrite bits in
      * the final word of the current underlying data regardless
-     * of whether it is shared between BitArray objects. i.e. D
+     * of whether it is shared between `BitArray` objects. i.e. D
      * dynamic array extension semantics are not followed.)
      */
     @property size_t length(size_t newlen) pure nothrow @system
@@ -2214,7 +2214,7 @@ public:
     /***************************************
      * ditto
      */
-    BitArray opOpAssign(string op)(BitArray b) pure nothrow return scope
+    BitArray opOpAssign(string op)(const BitArray b) pure nothrow return scope
     if (op == "~")
     {
         auto istart = _len;
@@ -2231,7 +2231,7 @@ public:
         bool[] bb = [0,1,0];
 
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        const b = BitArray(bb);
         BitArray c;
 
         c = (a ~= b);
@@ -2241,7 +2241,6 @@ public:
         assert(a[2] == 0);
         assert(a[3] == 1);
         assert(a[4] == 0);
-
         assert(c == a);
     }
 
@@ -2273,12 +2272,10 @@ public:
     }
 
     /** ditto */
-    BitArray opBinary(string op)(BitArray b) const pure nothrow
+    BitArray opBinary(string op)(const BitArray b) const pure nothrow
     if (op == "~")
     {
-        BitArray r;
-
-        r = this.dup;
+        BitArray r = this.dup;
         r ~= b;
         return r;
     }
@@ -2289,8 +2286,8 @@ public:
         bool[] ba = [1,0];
         bool[] bb = [0,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        const a = BitArray(ba);
+        const b = BitArray(bb);
         BitArray c;
 
         c = (a ~ b);
