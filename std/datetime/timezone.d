@@ -2449,16 +2449,17 @@ public:
         }
         else
         {
-            import std.path : baseName;
-            // dirEntries is @system because it uses a DirIterator with a
-            // RefCounted variable, but here, no references to the payload is
-            // escaped to the outside, so this should be @trusted
+            import std.path : baseName, relativePath;
+            // dirEntries might be @system because it uses a DirIterator with a
+            // SafeRefCounted variable that's only safe under DIP1000, but
+            // here no references to the payload are escaped to the outside,
+            // so this should be @trusted.
             () @trusted {
                 foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
                 {
                     if (de.isFile)
                     {
-                        auto tzName = de.name[tzDatabaseDir.length .. $];
+                        auto tzName = relativePath(de.name, tzDatabaseDir);
 
                         if (!tzName.extension().empty ||
                             !tzName.startsWith(subName) ||
