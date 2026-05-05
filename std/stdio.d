@@ -3103,6 +3103,19 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
         }
 
+        private void putcChecked(_iobuf* h, int c) @trusted
+        {
+            import std.exception : errnoEnforce;
+            if (trustedFPUTC(c, h) == EOF) errnoEnforce(0);
+        }
+
+        private void putwcChecked(_iobuf* h, wchar_t c) @trusted
+        {
+            import std.exception : errnoEnforce;
+            // fputwc returns WEOF (= -1) on error
+            if (trustedFPUTWC(c, h) == -1) errnoEnforce(0);
+        }
+
         /// Range primitive implementations.
         void put(A)(scope A writeme)
         if ((isSomeChar!(ElementType!A) ||
@@ -3142,8 +3155,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
             static if (c.sizeof == 1)
             {
                 highSurrogateShouldBeEmpty();
-                if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                else if (c <= 0x7F) trustedFPUTWC(c, handle_);
+                if (orientation_ <= 0) putcChecked(handle_, c);
+                else if (c <= 0x7F) putwcChecked(handle_, c);
                 else if (c >= 0b1100_0000) // start byte of multibyte sequence
                 {
                     rbuf8[0] = c;
@@ -3160,7 +3173,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         wchar_t[4 / wchar_t.sizeof] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTWC(wbuf[i], handle_);
+                            putwcChecked(handle_, wbuf[i]);
                         rbuf8Filled = 0;
                     }
                 }
@@ -3172,8 +3185,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 if (c <= 0x7F)
                 {
                     highSurrogateShouldBeEmpty();
-                    if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                    else trustedFPUTWC(c, handle_);
+                    if (orientation_ <= 0) putcChecked(handle_, c);
+                    else putwcChecked(handle_, c);
                 }
                 else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
                 {
@@ -3195,14 +3208,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTC(wbuf[i], handle_);
+                            putcChecked(handle_, wbuf[i]);
                     }
                     else
                     {
                         wchar_t[4 / wchar_t.sizeof] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTWC(wbuf[i], handle_);
+                            putwcChecked(handle_, wbuf[i]);
                     }
                     rbuf8Filled = 0;
                 }
@@ -3216,14 +3229,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle_);
+                        putcChecked(handle_, c);
                     }
                     else
                     {
                         char[4] buf = void;
                         immutable len = encode(buf, c);
                         foreach (i ; 0 .. len)
-                            trustedFPUTC(buf[i], handle_);
+                            putcChecked(handle_, buf[i]);
                     }
                 }
                 else
@@ -3235,21 +3248,20 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(cast(wchar_t) c, handle_);
+                            putwcChecked(handle_, cast(wchar_t) c);
                         }
                         else
                         {
-                            trustedFPUTWC(cast(wchar_t)
+                            putwcChecked(handle_, cast(wchar_t)
                                     ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), handle_);
-                            trustedFPUTWC(cast(wchar_t)
-                                    (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                    handle_);
+                                            + 0xD800));
+                            putwcChecked(handle_, cast(wchar_t)
+                                    (((c - 0x10000) & 0x3FF) + 0xDC00));
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(cast(wchar_t) c, handle_);
+                        putwcChecked(handle_, cast(wchar_t) c);
                     }
                     else
                     {
@@ -3829,6 +3841,21 @@ void main()
     import std.exception : collectException;
     auto e = collectException({ File f; f.writeln("Hello!"); }());
     assert(e && e.msg == "Attempting to write to closed File");
+}
+
+// https://github.com/dlang/phobos/issues/11005
+// LockingTextWriter's per-character path used to discard fputc's return value.
+version (linux)
+@system unittest
+{
+    import std.exception : assertThrown, ErrnoException;
+
+    // /dev/full always returns ENOSPC on write, making the error deterministic.
+    // _IONBF disables buffering so fputc hits the kernel on every call.
+    auto f = File("/dev/full", "w");
+    f.setvbuf(0, _IONBF);
+    auto w = f.lockingTextWriter();
+    assertThrown!ErrnoException(w.put('x'));
 }
 
 @safe unittest // https://issues.dlang.org/show_bug.cgi?id=21592
