@@ -1093,6 +1093,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
+        import std.internal.retry : retryShortIO;
 
         version (Windows)
         {
@@ -1117,10 +1118,13 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
             }
         }
 
-        auto result = trustedFwrite(_p.handle, buffer);
-        if (result == result.max) result = 0;
-        errnoEnforce(result == buffer.length,
-                text("Wrote ", result, " instead of ", buffer.length,
+        FILE* h = _p.handle;
+        immutable n = (() @trusted => retryShortIO(
+            (size_t off) => trustedFwrite(h, buffer[off .. $]),
+            buffer.length,
+            () { .clearerr(h); }))();
+        errnoEnforce(n == buffer.length,
+                text("Wrote ", n, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
                         _name, "'"));
     }
@@ -3106,14 +3110,18 @@ is empty, throws an `Exception`. In case of an I/O error throws
         private void putcChecked(_iobuf* h, int c) @trusted
         {
             import std.exception : errnoEnforce;
-            if (trustedFPUTC(c, h) == EOF) errnoEnforce(0);
+            import std.internal.retry : retryOnEINTR;
+            if (retryOnEINTR(() => trustedFPUTC(c, h), EOF) == EOF)
+                errnoEnforce(0);
         }
 
         private void putwcChecked(_iobuf* h, wchar_t c) @trusted
         {
             import std.exception : errnoEnforce;
+            import std.internal.retry : retryOnEINTR;
             // fputwc returns WEOF (= -1) on error
-            if (trustedFPUTWC(c, h) == -1) errnoEnforce(0);
+            if (retryOnEINTR(() => trustedFPUTWC(c, h)) == -1)
+                errnoEnforce(0);
         }
 
         /// Range primitive implementations.
@@ -3133,8 +3141,13 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto result = trustedFwrite(file_._p.handle, writeme);
-                    if (result != writeme.length) errnoEnforce(0);
+                    import std.internal.retry : retryShortIO;
+                    FILE* h = file_._p.handle;
+                    immutable n = (() @trusted => retryShortIO(
+                        (size_t off) => trustedFwrite(h, writeme[off .. $]),
+                        writeme.length,
+                        () { .clearerr(h); }))();
+                    if (n != writeme.length) errnoEnforce(0);
                     return;
                 }
             }
@@ -3354,11 +3367,15 @@ is empty, throws an `Exception`. In case of an I/O error throws
         {
             import std.conv : text;
             import std.exception : errnoEnforce;
+            import std.internal.retry : retryShortIO;
 
-            auto result = trustedFwrite(file_._p.handle, buffer);
-            if (result == result.max) result = 0;
-            errnoEnforce(result == buffer.length,
-                    text("Wrote ", result, " instead of ", buffer.length,
+            FILE* h = file_._p.handle;
+            immutable n = (() @trusted => retryShortIO(
+                (size_t off) => trustedFwrite(h, buffer[off .. $]),
+                buffer.length,
+                () { .clearerr(h); }))();
+            errnoEnforce(n == buffer.length,
+                    text("Wrote ", n, " instead of ", buffer.length,
                             " objects of type ", T.stringof, " to file `",
                             name, "'"));
         }
@@ -3856,6 +3873,59 @@ version (linux)
     f.setvbuf(0, _IONBF);
     auto w = f.lockingTextWriter();
     assertThrown!ErrnoException(w.put('x'));
+}
+
+// https://github.com/dlang/phobos/issues/11006
+// LockingTextWriter.put survives an EINTR from a signal without SA_RESTART.
+version (linux)
+@system unittest
+{
+    import core.atomic : atomicLoad, atomicStore;
+    import core.sys.posix.pthread : pthread_kill;
+    import core.sys.posix.signal : SA_RESTART, SIGUSR1, sigaction, sigaction_t,
+        sigemptyset;
+    import core.sys.posix.unistd : read;
+    import core.thread : Thread;
+    import core.time : msecs;
+    import std.process : pipe;
+
+    // Install a SIGUSR1 handler without SA_RESTART so that fwrite may return
+    // short with errno == EINTR when the signal arrives mid-write.
+    extern (C) static nothrow void noop(int) {}
+    sigaction_t sa;
+    sa.sa_handler = &noop;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // no SA_RESTART
+    sigaction(SIGUSR1, &sa, null);
+
+    auto p = pipe();
+    // Write 512 KiB — much larger than the default 64 KiB pipe buffer —
+    // so the writer thread reliably blocks inside write(2).
+    immutable msg = new ubyte[512 * 1024];
+
+    shared bool done = false;
+    shared bool threw = false;
+    auto t = new Thread(() {
+        try
+            p.writeEnd.lockingTextWriter.put(cast(const(ubyte)[]) msg);
+        catch (Exception)
+            atomicStore(threw, true);
+        atomicStore(done, true);
+    });
+    t.start();
+
+    // Give the writer time to block inside write(2) before signalling.
+    Thread.sleep(50.msecs);
+    pthread_kill(t.id, SIGUSR1);
+
+    // Drain the pipe so the blocked write can make progress and complete.
+    ubyte[4096] buf;
+    while (!atomicLoad(done))
+        read(p.readEnd.fileno, buf.ptr, buf.length);
+    t.join();
+
+    assert(!atomicLoad(threw),
+        "LockingTextWriter.put threw on EINTR — retryShortIO not working");
 }
 
 @safe unittest // https://issues.dlang.org/show_bug.cgi?id=21592
