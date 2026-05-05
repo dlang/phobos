@@ -906,7 +906,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             enum isCallbackWithLessThanTwoParameters =
                 (is(R == delegate) || is(Target == function)) &&
                 !is(typeof(receiver("", "")));
-            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental)
+            if (!isCallbackWithLessThanTwoParameters && val is null && !incremental)
             {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
@@ -1192,7 +1192,7 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
         if (!isLong && !cfg.bundling)
         {
             // argument looks like -ovalue and there's no bundling
-            value = arg[1 .. $];
+            value = arg.length > 1 ? arg[1 .. $] : null;
             arg = arg[0 .. 1];
         }
         else
@@ -2049,4 +2049,15 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     args = ["prog", "--foo", "1337"];
     getopt(args, "foo|f", &a);
     assert(a == 1337);
+}
+
+// https://github.com/dlang/phobos/issues/10791
+@safe unittest
+{
+    string arg1, arg2;
+
+    auto args = ["prog", "--arg1=", "--arg2=p2"];
+    getopt(args, "arg1", &arg1, "arg2", &arg2);
+    assert(arg1 == "", "arg1 should be empty string, got: " ~ arg1);
+    assert(arg2 == "p2");
 }
