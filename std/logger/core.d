@@ -2522,7 +2522,7 @@ version (StdUnittest) private void testFuncNames(Logger logger) @safe
                                             ~ format(" gllOff(%s) llOff(%s) " ~
                                                 "llVSgll(%s) tllVSll(%s) " ~
                                                 "tllOff(%s) condFalse(%s) "
-                                                ~ "shoudlLog(%s)",
+                                                ~ "shouldLog(%s)",
                                                 gll != LogLevel.off,
                                                 ll != LogLevel.off, llVSgll,
                                                 tllVSll, tllOff, condFalse,

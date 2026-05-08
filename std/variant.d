@@ -680,7 +680,7 @@ switchStmtTupAssign:
                         static if (is(A == U[n], U, size_t n))
                             auto p = cast(A*) (new U[n]).ptr;
                         else
-                            // object will be intialized later. Using malloc in case `this()` is disabled
+                            // object will be initialized later. Using malloc in case `this()` is disabled
                             A* p = cast(A*) GC.malloc(A.sizeof, 0, typeid(A));
                         // Emplace will run the postblit of `A` us, no need to do it manually, then
                         copyEmplace(*zis, *p);
@@ -790,7 +790,7 @@ public:
                 static if (is(T == U[n], U, size_t n))
                     T* p = cast(T*) (new U[n]).ptr;
                 else
-                    // object will be intialized later. Using malloc in case `this()` is disabled
+                    // object will be initialized later. Using malloc in case `this()` is disabled
                     T* p = cast(T*) GC.malloc(T.sizeof, 0, typeid(T));
                 copyEmplace(rhs, *p);
                 *(cast(T**) &store) = p;

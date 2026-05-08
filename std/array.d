@@ -2356,7 +2356,7 @@ if (isInputRange!RoR &&
                     emplaceRef(result[len++], e);
             }
             assert(len == result.length, format!
-                    "len %s must equal result.lenght %s"(len, result.length));
+                    "len %s must equal result.length %s"(len, result.length));
             return (() @trusted => cast(RetType) result)();
         }
     }
