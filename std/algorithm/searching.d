@@ -2163,7 +2163,7 @@ if (isForwardRange!R1 && isForwardRange!R2
             return haystack[haystack.length .. haystack.length];
         }
         // Optimization in case the ranges are both SortedRanges.
-        // Binary search can be used to find the first occurence
+        // Binary search can be used to find the first occurrence
         // of the first element of the needle in haystack.
         // When it is found O(walklength(needle)) steps are performed.
         // https://issues.dlang.org/show_bug.cgi?id=8829 enhancement

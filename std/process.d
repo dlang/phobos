@@ -469,7 +469,7 @@ private:
                 if (lenRead == 0)
                 {
                     immutable err = GetLastError();
-                    if (err == NO_ERROR) // sucessfully read a 0-length variable
+                    if (err == NO_ERROR) // successfully read a 0-length variable
                         return sink("");
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
                         return sink(null);

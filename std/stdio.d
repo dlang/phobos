@@ -4967,7 +4967,7 @@ struct lines
             }
         }
         // can only reach when _FGETC returned -1
-        if (!f.eof) throw new StdioException("Error in reading file"); // error occured
+        if (!f.eof) throw new StdioException("Error in reading file"); // error occurred
         return result;
     }
 }
@@ -5201,7 +5201,7 @@ private struct ChunksImpl
             assert(r <= size);
             if (r != size)
             {
-                // error occured
+                // error occurred
                 if (!f.eof) throw new StdioException(null);
                 buffer.length = r;
             }
