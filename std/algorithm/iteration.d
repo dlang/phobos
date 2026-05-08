@@ -4991,7 +4991,7 @@ private template ReduceSeedType(E)
 
         alias ReduceSeedType = Unqual!(typeof(fun(lvalueOf!E, lvalueOf!E)));
 
-        //Check the Seed type is usable.
+        //Check the Seed type is useable.
         ReduceSeedType s = ReduceSeedType.init;
         static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
             is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
