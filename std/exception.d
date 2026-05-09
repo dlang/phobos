@@ -1059,12 +1059,12 @@ false negatives:
 
 `doesPointTo` will return `true` if it is absolutely certain
 `source` points to `target`. It may produce false negatives, but never
-false positives. This function should be prefered when trying to validate
+false positives. This function should be preferred when trying to validate
 input data.
 
 `mayPointTo` will return `false` if it is absolutely certain
 `source` does not point to `target`. It may produce false positives, but never
-false negatives. This function should be prefered for defensively choosing a
+false negatives. This function should be preferred for defensively choosing a
 code path.
 
 Note: Evaluating $(D doesPointTo(x, x)) checks whether `x` has
