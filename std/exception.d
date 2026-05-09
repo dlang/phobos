@@ -1956,7 +1956,7 @@ Params:
     `Throwable` of type `E`. The handler must accept arguments of
     the form $(D E, ref IRange) and its return value is used as the primitive's
     return value whenever `E` is thrown. For `opIndex`, the handler can
-    optionally recieve a third argument; the index that caused the exception.
+    optionally receive a third argument; the index that caused the exception.
     input = The range to _handle.
 
 Returns: A wrapper `struct` that preserves the range interface of `input`.

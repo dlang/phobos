@@ -3464,7 +3464,7 @@ public:
      * a read status change means there is an incoming connection request and
      * it's able to accept.
      *
-     * `SocketSet`'s updated to include only those sockets which an event occured.
+     * `SocketSet`'s updated to include only those sockets which an event occurred.
      * For a `connect()`ing socket, writeability means connected.
      * For a `listen()`ing socket, readability means listening
      * `Winsock`; possibly internally limited to 64 sockets per set.
