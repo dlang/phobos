@@ -636,7 +636,7 @@ array of the occurrences and then selecting its top items, and also
 requires less memory (`largestPartialIntersection` builds its
 result directly in `tgt` and requires no extra memory).
 
-If at least one of the ranges is a multiset, then all occurences
+If at least one of the ranges is a multiset, then all occurrences
 of a duplicate element are taken into account. The result is
 equivalent to merging all ranges and picking the most frequent
 `tgt.length` elements.
@@ -714,7 +714,7 @@ import std.algorithm.sorting : SortOutput; // FIXME
 Similar to `largestPartialIntersection`, but associates a weight
 with each distinct element in the intersection.
 
-If at least one of the ranges is a multiset, then all occurences
+If at least one of the ranges is a multiset, then all occurrences
 of a duplicate element are taken into account. The result
 is equivalent to merging all input ranges and picking the highest
 `tgt.length`, weight-based ranking elements.
@@ -1063,7 +1063,7 @@ ranges must have a common type.
 
 
 In the case of multisets, considering that element `a` appears `x`
-times in `r1` and `y` times and `r2`, the number of occurences
+times in `r1` and `y` times and `r2`, the number of occurrences
 of `a` in the resulting range is going to be `x-y` if x > y or 0 otherwise.
 
 Params:
@@ -1188,8 +1188,8 @@ $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 types of the ranges must have a common type.
 
 In the case of multisets, the range with the minimum number of
-occurences of a given element, propagates the number of
-occurences of this element to the resulting range.
+occurrences of a given element, propagates the number of
+occurrences of this element to the resulting range.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -1359,9 +1359,9 @@ ranges must have a common type.
 
 If both ranges are sets (without duplicated elements), the resulting
 range is going to be a set. If at least one of the ranges is a multiset,
-the number of occurences of an element `x` in the resulting range is `abs(a-b)`
-where `a` is the number of occurences of `x` in `r1`, `b` is the number of
-occurences of `x` in `r2`, and `abs` is the absolute value.
+the number of occurrences of an element `x` in the resulting range is `abs(a-b)`
+where `a` is the number of occurrences of `x` in `r1`, `b` is the number of
+occurrences of `x` in `r2`, and `abs` is the absolute value.
 
 If both arguments are ranges of L-values of the same type then
 `SetSymmetricDifference` will also be a range of L-values of

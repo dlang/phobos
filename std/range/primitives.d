@@ -400,7 +400,7 @@ $(BOOKTABLE ,
 
 Tip: `put` should $(I not) be used "UFCS-style", e.g. `r.put(e)`.
 Doing this may call `R.put` directly, by-passing any transformation
-feature provided by `Range.put`. $(D put(r, e)) is prefered.
+feature provided by `Range.put`. $(D put(r, e)) is preferred.
  +/
 void put(R, E)(ref R r, E e)
 {

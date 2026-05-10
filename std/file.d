@@ -2973,7 +2973,7 @@ Params:
 
 Throws:
     $(LREF FileException) on POSIX or $(LREF WindowsException) on Windows
-    if an error occured.
+    if an error occurred.
  */
 void mkdir(R)(R pathname)
 if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
