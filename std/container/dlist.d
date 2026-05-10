@@ -661,7 +661,7 @@ Complexity: $(BIGOH 1)
     alias stableRemove = remove;
 
 /**
-Removes first element of `r`, wich must be a range obtained originally
+Removes first element of `r`, which must be a range obtained originally
 from this container, from both DList instance and range `r`.
 
 Compexity: $(BIGOH 1)
@@ -677,7 +677,7 @@ Compexity: $(BIGOH 1)
     }
 
 /**
-Removes last element of `r`, wich must be a range obtained originally
+Removes last element of `r`, which must be a range obtained originally
 from this container, from both DList instance and range `r`.
 
 Compexity: $(BIGOH 1)

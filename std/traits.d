@@ -5541,7 +5541,7 @@ if (is(F == function) && is(G == function) ||
          */
         template checkSTC()
         {
-            // Note the order of arguments.  The convertion order Lwr -> Upr is
+            // Note the order of arguments.  The conversion order Lwr -> Upr is
             // correct since Upr should be semantically 'narrower' than Lwr.
             enum ok = isStorageClassImplicitlyConvertible!(Lwr, Upr);
         }
@@ -5566,7 +5566,7 @@ if (is(F == function) && is(G == function) ||
                 (!!(uprAtts & safety    )  >= !!(lwrAtts & safety    )) ;
         }
         /*
-         * Check for return type: usual implicit convertion.
+         * Check for return type: usual implicit conversion.
          */
         template checkReturnType()
         {
@@ -7889,7 +7889,7 @@ else
     Removes `shared` qualifier, if any, from type `T`.
 
     Note that while `immutable` is implicitly `shared`, it is unaffected by
-    Unshared. Only explict `shared` is removed.
+    Unshared. Only explicit `shared` is removed.
   +/
 template Unshared(T)
 {
