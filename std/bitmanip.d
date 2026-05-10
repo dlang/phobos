@@ -1075,7 +1075,7 @@ public:
     This constructor is the inverse of $(LREF opCast).
 
     Params:
-        v = Source array. `v.length` must be a multple of `size_t.sizeof`.
+        v = Source array. `v.length` must be a multiple of `size_t.sizeof`.
         numbits = Number of bits to be mapped from the source array, i.e.
                   length of the created `BitArray`.
     */

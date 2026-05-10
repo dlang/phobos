@@ -1351,7 +1351,7 @@ static:
     and the destination type is `Dst`.
 
     Params:
-        src = Souce operand
+        src = Source operand
 
     Returns:
         Nominally the result is the desired value of the cast operation,

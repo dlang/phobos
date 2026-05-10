@@ -587,7 +587,7 @@ Returns:
     `lower` if `val` is less than `lower`, `upper` if `val` is greater than
     `upper`, and `val` in all other cases. Comparisons are made
     correctly (using $(REF lessThan, std,functional) and the return value
-    is converted to the return type using the standard integer coversion rules
+    is converted to the return type using the standard integer conversion rules
     $(REF greaterThan, std,functional)) even if the signedness of `T1`, `T2`,
     and `T3` are different.
 */
