@@ -109,7 +109,7 @@ struct ScopedAllocator(ParentAllocator)
         mixin(_processAndReturnAllocateResult);
     }
 
-    static if (hasMember!(Allocator, "allocateZeroed"))
+    static if (__traits(hasMember, Allocator, "allocateZeroed"))
     package(std) void[] allocateZeroed()(size_t n)
     {
         auto b = parent.allocateZeroed(n);
@@ -119,7 +119,7 @@ struct ScopedAllocator(ParentAllocator)
     /**
     Forwards to $(D parent.expand(b, delta)).
     */
-    static if (hasMember!(Allocator, "expand"))
+    static if (__traits(hasMember, Allocator, "expand"))
     bool expand(ref void[] b, size_t delta)
     {
         auto result = parent.expand(b, delta);
@@ -160,7 +160,7 @@ struct ScopedAllocator(ParentAllocator)
     /**
     Forwards to `parent.owns(b)`.
     */
-    static if (hasMember!(Allocator, "owns"))
+    static if (__traits(hasMember, Allocator, "owns"))
     Ternary owns(void[] b)
     {
         return parent.owns(b);
@@ -169,7 +169,7 @@ struct ScopedAllocator(ParentAllocator)
     /**
     Deallocates `b`.
     */
-    static if (hasMember!(Allocator, "deallocate"))
+    static if (__traits(hasMember, Allocator, "deallocate"))
     bool deallocate(void[] b)
     {
         // Remove from list

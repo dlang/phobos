@@ -303,7 +303,7 @@ public:
     Increments `numOwns` (per instance and and per call) and forwards to $(D
     parent.owns(b)).
     */
-    static if (hasMember!(Allocator, "owns"))
+    static if (__traits(hasMember, Allocator, "owns"))
     {
         static if ((perCallFlags & Options.numOwns) == 0)
         Ternary owns(void[] b)
@@ -360,7 +360,7 @@ public:
         return result;
     }
 
-    static if (hasMember!(Allocator, "allocateZeroed"))
+    static if (__traits(hasMember, Allocator, "allocateZeroed"))
     {
         static if (!(perCallFlags
             & (Options.numAllocate | Options.numAllocateOK
@@ -410,7 +410,7 @@ public:
     private void[] alignedAllocateImpl(string f = null, ulong n = 0)(size_t bytes, uint a)
     {
         up!"numAlignedAllocate";
-        static if (!hasMember!(Allocator, "alignedAllocate"))
+        static if (!__traits(hasMember, Allocator, "alignedAllocate"))
         {
             if (bytes == 0)
                 up!"numAlignedAllocateOk";
@@ -455,7 +455,7 @@ public:
     {
         up!"numExpand";
         Signed!size_t slack = 0;
-        static if (!hasMember!(Allocator, "expand"))
+        static if (!__traits(hasMember, Allocator, "expand"))
         {
             auto result = s == 0;
         }
@@ -580,13 +580,13 @@ public:
         add!"bytesUsed"(-Signed!size_t(b.length));
         add!"bytesSlack"(-(this.goodAllocSize(b.length) - b.length));
         addPerCall!(f, n, "numDeallocate", "bytesContracted")(1, b.length);
-        static if (hasMember!(Allocator, "deallocate"))
+        static if (__traits(hasMember, Allocator, "deallocate"))
             return parent.deallocate(b);
         else
             return false;
     }
 
-    static if (hasMember!(Allocator, "deallocateAll"))
+    static if (__traits(hasMember, Allocator, "deallocateAll"))
     {
         /**
         Defined only if `Allocator.deallocateAll` is defined. Affects

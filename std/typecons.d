@@ -2371,7 +2371,7 @@ if (is(T == class) || is(T == interface) || isAssociativeArray!T)
     void opAssign(return scope T another) pure nothrow @nogc
     {
         // If `T` defines `opCast` we must infer the safety
-        static if (hasMember!(T, "opCast"))
+        static if (__traits(hasMember, T, "opCast"))
         {
             // This will allow the compiler to infer the safety of `T.opCast!U`
             // without generating any runtime cost
@@ -3899,7 +3899,7 @@ struct Nullable(T)
         assert(e != 12);
     }
 
-    static if (!isAggregateType!T || hasMember!(T, "toHash"))
+    static if (!isAggregateType!T || __traits(hasMember, T, "toHash"))
     {
         size_t toHash() const @safe nothrow
         {

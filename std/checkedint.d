@@ -277,7 +277,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     alias Representation = T;
 
     // state {
-    static if (hasMember!(Hook, "defaultValue"))
+    static if (__traits(hasMember, Hook, "defaultValue"))
         private T payload = Hook.defaultValue!T;
     else
         private T payload;
@@ -310,7 +310,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     Defines the minimum and maximum. These values are hookable by defining
     `Hook.min` and/or `Hook.max`.
     */
-    static if (hasMember!(Hook, "min"))
+    static if (__traits(hasMember, Hook, "min"))
     {
         enum Checked!(T, Hook) min = Checked!(T, Hook)(Hook.min!T);
         ///
@@ -326,7 +326,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         /// ditto
         enum Checked!(T, Hook) min = Checked(T.min);
     }
-    static if (hasMember!(Hook, "max"))
+    static if (__traits(hasMember, Hook, "max"))
     {
         /// ditto
         enum Checked!(T, Hook) max = Checked(Hook.max!T);
@@ -455,7 +455,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     U opCast(U, this _)()
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
     {
-        static if (hasMember!(Hook, "hookOpCast"))
+        static if (__traits(hasMember, Hook, "hookOpCast"))
         {
             return hook.hookOpCast!U(payload);
         }
@@ -468,7 +468,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             return payload;
         }
         // may lose bits or precision
-        else static if (!hasMember!(Hook, "onBadCast"))
+        else static if (!__traits(hasMember, Hook, "onBadCast"))
         {
             return cast(U) payload;
         }
@@ -526,11 +526,11 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             {
                 return payload == rhs.payload;
             }
-            else static if (hasMember!(Hook, "hookOpEquals"))
+            else static if (__traits(hasMember, Hook, "hookOpEquals"))
             {
                 return hook.hookOpEquals(payload, rhs.payload);
             }
-            else static if (hasMember!(W, "hookOpEquals"))
+            else static if (__traits(hasMember, W, "hookOpEquals"))
             {
                 return rhs.hook.hookOpEquals(rhs.payload, payload);
             }
@@ -539,7 +539,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
                 return payload == rhs.payload;
             }
         }
-        else static if (hasMember!(Hook, "hookOpEquals"))
+        else static if (__traits(hasMember, Hook, "hookOpEquals"))
             return hook.hookOpEquals(payload, rhs);
         else static if (isIntegral!U || isFloatingPoint!U || is(U == bool))
             return payload == rhs;
@@ -599,13 +599,13 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     */
     size_t toHash() const nothrow @safe
     {
-        static if (hasMember!(Hook, "hookToHash"))
+        static if (__traits(hasMember, Hook, "hookToHash"))
         {
             return hook.hookToHash(payload);
         }
         else static if (stateSize!Hook > 0)
         {
-            static if (hasMember!(typeof(payload), "toHash"))
+            static if (__traits(hasMember, typeof(payload), "toHash"))
             {
                 return payload.toHash() ^ hashOf(hook);
             }
@@ -614,7 +614,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
                 return hashOf(payload) ^ hashOf(hook);
             }
         }
-        else static if (hasMember!(typeof(payload), "toHash"))
+        else static if (__traits(hasMember, typeof(payload), "toHash"))
         {
             return payload.toHash();
         }
@@ -638,13 +638,13 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             alias localPayload = this.payload;
         }
 
-        static if (hasMember!(Hook, "hookToHash"))
+        static if (__traits(hasMember, Hook, "hookToHash"))
         {
             return hook.hookToHash(localPayload);
         }
         else static if (stateSize!Hook > 0)
         {
-            static if (hasMember!(typeof(localPayload), "toHash"))
+            static if (__traits(hasMember, typeof(localPayload), "toHash"))
             {
                 return localPayload.toHash() ^ hashOf(hook);
             }
@@ -653,7 +653,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
                 return hashOf(localPayload) ^ hashOf(hook);
             }
         }
-        else static if (hasMember!(typeof(localPayload), "toHash"))
+        else static if (__traits(hasMember, typeof(localPayload), "toHash"))
         {
             return localPayload.toHash();
         }
@@ -722,7 +722,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     auto opCmp(U, this _)(const U rhs) //const pure @safe nothrow @nogc
     if (isIntegral!U || isFloatingPoint!U || is(U == bool))
     {
-        static if (hasMember!(Hook, "hookOpCmp"))
+        static if (__traits(hasMember, Hook, "hookOpCmp"))
         {
             return hook.hookOpCmp(payload, rhs);
         }
@@ -756,11 +756,11 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             // Use the lhs hook
             return this.opCmp(rhs.payload);
         }
-        else static if (hasMember!(Hook, "hookOpCmp"))
+        else static if (__traits(hasMember, Hook, "hookOpCmp"))
         {
             return hook.hookOpCmp(get, rhs.get);
         }
-        else static if (hasMember!(Hook1, "hookOpCmp"))
+        else static if (__traits(hasMember, Hook1, "hookOpCmp"))
         {
             return -rhs.hook.hookOpCmp(rhs.payload, get);
         }
@@ -852,13 +852,13 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         static if (op == "+")
             return Checked(this); // "+" is not hookable
-        else static if (hasMember!(Hook, "hookOpUnary"))
+        else static if (__traits(hasMember, Hook, "hookOpUnary"))
         {
             auto r = hook.hookOpUnary!op(payload);
             return Checked!(typeof(r), Hook)(r);
         }
         else static if (op == "-" && isIntegral!T && T.sizeof >= 4 &&
-                !isUnsigned!T && hasMember!(Hook, "onOverflow"))
+                !isUnsigned!T && __traits(hasMember, Hook, "onOverflow"))
         {
             static assert(is(typeof(-payload) == typeof(payload)));
             bool overflow;
@@ -875,9 +875,9 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     ref Checked opUnary(string op)() return
     if (op == "++" || op == "--")
     {
-        static if (hasMember!(Hook, "hookOpUnary"))
+        static if (__traits(hasMember, Hook, "hookOpUnary"))
             hook.hookOpUnary!op(payload);
-        else static if (hasMember!(Hook, "onOverflow"))
+        else static if (__traits(hasMember, Hook, "onOverflow"))
         {
             static if (op == "++")
             {
@@ -966,7 +966,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         static if (isIntegral!R) alias Result = Checked!(R, Hook);
         else alias Result = R;
 
-        static if (hasMember!(Hook, "hookOpBinary"))
+        static if (__traits(hasMember, Hook, "hookOpBinary"))
         {
             auto r = hook.hookOpBinary!op(payload, rhs);
             return Checked!(typeof(r), Hook)(r);
@@ -979,7 +979,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         {
             return mixin("payload" ~ op ~ "rhs");
         }
-        else static if (hasMember!(Hook, "onOverflow"))
+        else static if (__traits(hasMember, Hook, "onOverflow"))
         {
             bool overflow;
             auto r = opChecked!op(payload, rhs, overflow);
@@ -1015,23 +1015,23 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             // Delegate to lhs
             return mixin("this" ~ op ~ "rhs.payload");
         }
-        else static if (hasMember!(Hook, "hookOpBinary"))
+        else static if (__traits(hasMember, Hook, "hookOpBinary"))
         {
             return hook.hookOpBinary!op(payload, rhs);
         }
-        else static if (hasMember!(Hook1, "hookOpBinary"))
+        else static if (__traits(hasMember, Hook1, "hookOpBinary"))
         {
             // Delegate to rhs
             return mixin("this.payload" ~ op ~ "rhs");
         }
-        else static if (hasMember!(Hook, "onOverflow") &&
-            !hasMember!(Hook1, "onOverflow"))
+        else static if (__traits(hasMember, Hook, "onOverflow") &&
+            !__traits(hasMember, Hook1, "onOverflow"))
         {
             // Delegate to lhs
             return mixin("this" ~ op ~ "rhs.payload");
         }
-        else static if (hasMember!(Hook1, "onOverflow") &&
-            !hasMember!(Hook, "onOverflow"))
+        else static if (__traits(hasMember, Hook1, "onOverflow") &&
+            !__traits(hasMember, Hook, "onOverflow"))
         {
             // Delegate to rhs
             return mixin("this.payload" ~ op ~ "rhs");
@@ -1096,12 +1096,12 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     private auto opBinaryRightImpl(string op, Lhs, this _)(const Lhs lhs)
     {
-        static if (hasMember!(Hook, "hookOpBinaryRight"))
+        static if (__traits(hasMember, Hook, "hookOpBinaryRight"))
         {
             auto r = hook.hookOpBinaryRight!op(lhs, payload);
             return Checked!(typeof(r), Hook)(r);
         }
-        else static if (hasMember!(Hook, "hookOpBinary"))
+        else static if (__traits(hasMember, Hook, "hookOpBinary"))
         {
             auto r = hook.hookOpBinary!op(lhs, payload);
             return Checked!(typeof(r), Hook)(r);
@@ -1114,7 +1114,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         {
             return mixin("lhs" ~ op ~ "payload");
         }
-        else static if (hasMember!(Hook, "onOverflow"))
+        else static if (__traits(hasMember, Hook, "onOverflow"))
         {
             bool overflow;
             auto r = opChecked!op(lhs, T(payload), overflow);
@@ -1186,7 +1186,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     {
         static assert(is(typeof(mixin("payload" ~ op ~ "=rhs")) == T));
 
-        static if (hasMember!(Hook, "hookOpOpAssign"))
+        static if (__traits(hasMember, Hook, "hookOpOpAssign"))
         {
             hook.hookOpOpAssign!op(payload, rhs);
         }
@@ -1197,7 +1197,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             import std.conv : unsigned;
 
             static if (ProperCompare.hookOpCmp(R.min, min.get) < 0 &&
-                hasMember!(Hook, "onLowerBound"))
+                __traits(hasMember, Hook, "onLowerBound"))
             {
                 if (ProperCompare.hookOpCmp(r, min.get) < 0)
                 {
@@ -1207,7 +1207,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
                 }
             }
             static if (ProperCompare.hookOpCmp(max.get, R.max) < 0 &&
-                hasMember!(Hook, "onUpperBound"))
+                __traits(hasMember, Hook, "onUpperBound"))
             {
                 if (ProperCompare.hookOpCmp(r, max.get) > 0)
                 {

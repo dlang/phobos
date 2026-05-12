@@ -137,7 +137,7 @@ public:
 
     // Since all memory is drawn from ParentAllocator, we can
     // forward this to the parent
-    static if (hasMember!(ParentAllocator, "owns"))
+    static if (__traits(hasMember, ParentAllocator, "owns"))
     Ternary owns(void[] b)
     {
         return parent.owns(b);
@@ -171,7 +171,7 @@ public:
     }
 
     // Allocate works only if memory can be provided via `alignedAllocate` from the parent
-    static if (hasMember!(ParentAllocator, "alignedAllocate"))
+    static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
     void[] allocate(size_t n)
     {
         static if (isShared)
@@ -327,7 +327,7 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
         Returns:
             A chunk of memory of the required length or `null` on failure or
         */
-        static if (hasMember!(ParentAllocator, "alignedAllocate"))
+        static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
         void[] allocate(size_t n);
 
         /**
@@ -352,7 +352,7 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
         Returns:
             `Ternary.yes` if owned by this allocator and `Ternary.no` otherwise
         */
-        static if (hasMember!(ParentAllocator, "owns"))
+        static if (__traits(hasMember, ParentAllocator, "owns"))
         Ternary owns(void[] b);
     }
     else
@@ -487,7 +487,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
         Returns:
             A chunk of memory of the required length or `null` on failure or
         */
-        static if (hasMember!(ParentAllocator, "alignedAllocate"))
+        static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
         void[] allocate(size_t n);
 
         /**
@@ -512,7 +512,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
         Returns:
             `Ternary.yes` if owned by this allocator and `Ternary.no` otherwise
         */
-        static if (hasMember!(ParentAllocator, "owns"))
+        static if (__traits(hasMember, ParentAllocator, "owns"))
         Ternary owns(void[] b);
     }
     else

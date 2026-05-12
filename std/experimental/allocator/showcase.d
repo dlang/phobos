@@ -22,7 +22,7 @@ then falls back to `Allocator`. Defined as:
 alias StackFront(size_t stackSize, Allocator) =
     FallbackAllocator!(
         InSituRegion!(stackSize, Allocator.alignment,
-            hasMember!(Allocator, "deallocate")
+            __traits(hasMember, Allocator, "deallocate")
                 ? Yes.defineDeallocate
                 : No.defineDeallocate),
         Allocator);

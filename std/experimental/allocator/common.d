@@ -405,7 +405,7 @@ implementation of `reallocate`.
 bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
 {
     if (b.length == s) return true;
-    static if (hasMember!(Allocator, "expand"))
+    static if (__traits(hasMember, Allocator, "expand"))
     {
         if (b.length <= s && a.expand(b, s - b.length)) return true;
     }
@@ -413,7 +413,7 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
     if (newB.length != s) return false;
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
-    static if (hasMember!(Allocator, "deallocate"))
+    static if (__traits(hasMember, Allocator, "deallocate"))
         a.deallocate(b);
     b = newB;
     return true;
@@ -435,9 +435,9 @@ implementation of `reallocate`.
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,
         ref void[] b, size_t s, uint a)
-if (hasMember!(Allocator, "alignedAllocate"))
+if (__traits(hasMember, Allocator, "alignedAllocate"))
 {
-    static if (hasMember!(Allocator, "expand"))
+    static if (__traits(hasMember, Allocator, "expand"))
     {
         if (b.length <= s && b.ptr.alignedAt(a)
             && alloc.expand(b, s - b.length)) return true;
@@ -450,7 +450,7 @@ if (hasMember!(Allocator, "alignedAllocate"))
     if (newB.length != s) return false;
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
-    static if (hasMember!(Allocator, "deallocate"))
+    static if (__traits(hasMember, Allocator, "deallocate"))
         alloc.deallocate(b);
     b = newB;
     return true;
@@ -522,7 +522,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     foreach (fun; funs)
     {
         result ~= "
-    static if (hasMember!(typeof("~member~"), `"~fun~"`))
+    static if (__traits(hasMember, typeof("~member~"), `"~fun~"`))
     auto ref "~fun~"(Parameters!(typeof("~member~"."~fun~")) args)
     {
         return "~member~"."~fun~"(args);
@@ -564,7 +564,7 @@ version (StdUnittest)
         assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
 
         // Test allocateZeroed
-        static if (hasMember!(A, "allocateZeroed"))
+        static if (__traits(hasMember, A, "allocateZeroed"))
         {{
             auto b3 = a.allocateZeroed(8);
             if (b3 !is null)
@@ -576,26 +576,26 @@ version (StdUnittest)
         }}
 
         // Test alignedAllocate
-        static if (hasMember!(A, "alignedAllocate"))
+        static if (__traits(hasMember, A, "alignedAllocate"))
         {{
              auto b3 = a.alignedAllocate(1, 256);
              assert(b3.length <= 1);
              assert(b3.ptr.alignedAt(256));
              assert(a.alignedReallocate(b3, 2, 512));
              assert(b3.ptr.alignedAt(512));
-             static if (hasMember!(A, "alignedDeallocate"))
+             static if (__traits(hasMember, A, "alignedDeallocate"))
              {
                  a.alignedDeallocate(b3);
              }
          }}
         else
         {
-            static assert(!hasMember!(A, "alignedDeallocate"));
+            static assert(!__traits(hasMember, A, "alignedDeallocate"));
             // This seems to be a bug in the compiler:
-            //static assert(!hasMember!(A, "alignedReallocate"), A.stringof);
+            //static assert(!__traits(hasMember, A, "alignedReallocate"), A.stringof);
         }
 
-        static if (hasMember!(A, "allocateAll"))
+        static if (__traits(hasMember, A, "allocateAll"))
         {{
              auto aa = make();
              if (aa.allocateAll().ptr)
@@ -610,7 +610,7 @@ version (StdUnittest)
              assert(!ab.allocate(1).ptr);
          }}
 
-        static if (hasMember!(A, "expand"))
+        static if (__traits(hasMember, A, "expand"))
         {{
              assert(a.expand(b1, 0));
              auto len = b1.length;
@@ -635,7 +635,7 @@ version (StdUnittest)
         assert(b6.length == 2);
 
         // Test owns
-        static if (hasMember!(A, "owns"))
+        static if (__traits(hasMember, A, "owns"))
         {{
              assert(a.owns(null) == Ternary.no);
              assert(a.owns(b1) == Ternary.yes);
@@ -643,7 +643,7 @@ version (StdUnittest)
              assert(a.owns(b6) == Ternary.yes);
          }}
 
-        static if (hasMember!(A, "resolveInternalPointer"))
+        static if (__traits(hasMember, A, "resolveInternalPointer"))
         {{
              void[] p;
              assert(a.resolveInternalPointer(null, p) == Ternary.no);

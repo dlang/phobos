@@ -364,7 +364,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     /// Ditto
     static if (!is(ParentAllocator == NullAllocator)
-        && hasMember!(ParentAllocator, "deallocate"))
+        && __traits(hasMember, ParentAllocator, "deallocate"))
     ~this()
     {
         parent.deallocate(payload);
