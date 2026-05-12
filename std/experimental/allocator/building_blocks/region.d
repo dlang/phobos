@@ -113,7 +113,7 @@ struct Region(ParentAllocator,
     If `ParentAllocator` defines `deallocate`, the region defines a destructor
     that uses `ParentAllocator.deallocate` to free the memory chunk.
     */
-    static if (hasMember!(ParentAllocator, "deallocate"))
+    static if (__traits(hasMember, ParentAllocator, "deallocate"))
     ~this()
     {
         with (_impl) parent.deallocate(_begin[0 .. _end - _begin]);
@@ -802,7 +802,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     Expands an allocated block in place. Expansion will succeed only if the
     block is the last allocated.
     */
-    static if (hasMember!(typeof(_impl), "expand"))
+    static if (__traits(hasMember, typeof(_impl), "expand"))
     bool expand(ref void[] b, size_t delta)
     {
         if (!_impl._current) lazyInit;
@@ -1318,7 +1318,7 @@ shared struct SharedRegion(ParentAllocator,
     If `ParentAllocator` defines `deallocate`, the region defines a destructor
     that uses `ParentAllocator.deallocate` to free the memory chunk.
     */
-    static if (hasMember!(ParentAllocator, "deallocate"))
+    static if (__traits(hasMember, ParentAllocator, "deallocate"))
     ~this()
     {
         with (_impl) parent.deallocate(cast(void[]) _begin[0 .. _end - _begin]);

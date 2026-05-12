@@ -68,12 +68,12 @@ struct FallbackAllocator(Primary, Fallback)
         return result.length == s ? result : fallback.allocate(s);
     }
 
-    static if (hasMember!(Primary, "allocateZeroed")
-            || (hasMember!(Fallback, "allocateZeroed")))
+    static if (__traits(hasMember, Primary, "allocateZeroed")
+            || (__traits(hasMember, Fallback, "allocateZeroed")))
     package(std) void[] allocateZeroed()(size_t s)
     {
         // Try to allocate with primary.
-        static if (hasMember!(Primary, "allocateZeroed"))
+        static if (__traits(hasMember, Primary, "allocateZeroed"))
         {
             void[] result = primary.allocateZeroed(s);
             if (result.length == s) return result;
@@ -88,7 +88,7 @@ struct FallbackAllocator(Primary, Fallback)
             }
         }
         // Allocate with fallback.
-        static if (hasMember!(Fallback, "allocateZeroed"))
+        static if (__traits(hasMember, Fallback, "allocateZeroed"))
         {
             return fallback.allocateZeroed(s);
         }
@@ -104,16 +104,16 @@ struct FallbackAllocator(Primary, Fallback)
     `FallbackAllocator` offers `alignedAllocate` iff at least one of the
     allocators also offers it. It attempts to allocate using either or both.
     */
-    static if (hasMember!(Primary, "alignedAllocate")
-        || hasMember!(Fallback, "alignedAllocate"))
+    static if (__traits(hasMember, Primary, "alignedAllocate")
+        || __traits(hasMember, Fallback, "alignedAllocate"))
     void[] alignedAllocate(size_t s, uint a)
     {
-        static if (hasMember!(Primary, "alignedAllocate"))
+        static if (__traits(hasMember, Primary, "alignedAllocate"))
         {{
             auto result = primary.alignedAllocate(s, a);
             if (result.length == s) return result;
         }}
-        static if (hasMember!(Fallback, "alignedAllocate"))
+        static if (__traits(hasMember, Fallback, "alignedAllocate"))
         {{
             auto result = fallback.alignedAllocate(s, a);
             if (result.length == s) return result;
@@ -131,20 +131,20 @@ struct FallbackAllocator(Primary, Fallback)
     (returning `false`) otherwise.
 
     */
-    static if (hasMember!(Primary, "owns")
-        && (hasMember!(Primary, "expand") || hasMember!(Fallback, "expand")))
+    static if (__traits(hasMember, Primary, "owns")
+        && (__traits(hasMember, Primary, "expand") || __traits(hasMember, Fallback, "expand")))
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
         if (!b.ptr) return false;
         if (primary.owns(b) == Ternary.yes)
         {
-            static if (hasMember!(Primary, "expand"))
+            static if (__traits(hasMember, Primary, "expand"))
                 return primary.expand(b, delta);
             else
                 return false;
         }
-        static if (hasMember!(Fallback, "expand"))
+        static if (__traits(hasMember, Fallback, "expand"))
             return fallback.expand(b, delta);
         else
             return false;
@@ -161,7 +161,7 @@ struct FallbackAllocator(Primary, Fallback)
     allocation from `fallback` to `primary`.
 
     */
-    static if (hasMember!(Primary, "owns"))
+    static if (__traits(hasMember, Primary, "owns"))
     bool reallocate(ref void[] b, size_t newSize)
     {
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
@@ -170,7 +170,7 @@ struct FallbackAllocator(Primary, Fallback)
             if (b1.length != newSize) return false;
             if (b.length < newSize) b1[0 .. b.length] = b[];
             else b1[] = b[0 .. newSize];
-            static if (hasMember!(From, "deallocate"))
+            static if (__traits(hasMember, From, "deallocate"))
                 from.deallocate(b);
             b = b1;
             return true;
@@ -187,14 +187,14 @@ struct FallbackAllocator(Primary, Fallback)
             || crossAllocatorMove(fallback, primary);
     }
 
-    static if (hasMember!(Primary, "owns")
-        && (hasMember!(Primary, "alignedAllocate")
-            || hasMember!(Fallback, "alignedAllocate")))
+    static if (__traits(hasMember, Primary, "owns")
+        && (__traits(hasMember, Primary, "alignedAllocate")
+            || __traits(hasMember, Fallback, "alignedAllocate")))
     bool alignedReallocate(ref void[] b, size_t newSize, uint a)
     {
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
         {
-            static if (!hasMember!(To, "alignedAllocate"))
+            static if (!__traits(hasMember, To, "alignedAllocate"))
             {
                 return false;
             }
@@ -204,14 +204,14 @@ struct FallbackAllocator(Primary, Fallback)
                 if (b1.length != newSize) return false;
                 if (b.length < newSize) b1[0 .. b.length] = b[];
                 else b1[] = b[0 .. newSize];
-                static if (hasMember!(From, "deallocate"))
+                static if (__traits(hasMember, From, "deallocate"))
                     from.deallocate(b);
                 b = b1;
                 return true;
             }
         }
 
-        static if (hasMember!(Primary, "alignedAllocate"))
+        static if (__traits(hasMember, Primary, "alignedAllocate"))
         {
             if (b is null || primary.owns(b) == Ternary.yes)
             {
@@ -219,7 +219,7 @@ struct FallbackAllocator(Primary, Fallback)
                     || crossAllocatorMove(primary, fallback);
             }
         }
-        static if (hasMember!(Fallback, "alignedAllocate"))
+        static if (__traits(hasMember, Fallback, "alignedAllocate"))
         {
             return fallback.alignedReallocate(b, newSize, a)
                 || crossAllocatorMove(fallback, primary);
@@ -234,7 +234,7 @@ struct FallbackAllocator(Primary, Fallback)
     `owns` is defined if and only if both allocators define `owns`.
     Returns $(D primary.owns(b) | fallback.owns(b)).
     */
-    static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
+    static if (__traits(hasMember, Primary, "owns") && __traits(hasMember, Fallback, "owns"))
     Ternary owns(void[] b)
     {
         return primary.owns(b) | fallback.owns(b);
@@ -244,8 +244,8 @@ struct FallbackAllocator(Primary, Fallback)
     `resolveInternalPointer` is defined if and only if both allocators
     define it.
     */
-    static if (hasMember!(Primary, "resolveInternalPointer")
-        && hasMember!(Fallback, "resolveInternalPointer"))
+    static if (__traits(hasMember, Primary, "resolveInternalPointer")
+        && __traits(hasMember, Fallback, "resolveInternalPointer"))
     Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         Ternary r = primary.resolveInternalPointer(p, result);
@@ -260,21 +260,21 @@ struct FallbackAllocator(Primary, Fallback)
     request is forwarded to `fallback.deallocate` if it is defined, or is a
     no-op otherwise.
     */
-    static if (hasMember!(Primary, "owns") &&
-        (hasMember!(Primary, "deallocate")
-            || hasMember!(Fallback, "deallocate")))
+    static if (__traits(hasMember, Primary, "owns") &&
+        (__traits(hasMember, Primary, "deallocate")
+            || __traits(hasMember, Fallback, "deallocate")))
     bool deallocate(void[] b)
     {
         if (primary.owns(b) == Ternary.yes)
         {
-            static if (hasMember!(Primary, "deallocate"))
+            static if (__traits(hasMember, Primary, "deallocate"))
                 return primary.deallocate(b);
             else
                 return false;
         }
         else
         {
-            static if (hasMember!(Fallback, "deallocate"))
+            static if (__traits(hasMember, Fallback, "deallocate"))
                 return fallback.deallocate(b);
             else
                 return false;
@@ -286,8 +286,8 @@ struct FallbackAllocator(Primary, Fallback)
 
     Returns: $(D primary.empty & fallback.empty)
     */
-    static if (hasMember!(Primary, "empty")
-               && hasMember!(Fallback, "empty"))
+    static if (__traits(hasMember, Primary, "empty")
+               && __traits(hasMember, Fallback, "empty"))
     Ternary empty()
     {
         return primary.empty & fallback.empty;

@@ -172,7 +172,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             mixin(_processAndReturnAllocateResult);
         }
 
-        static if (hasMember!(Allocator, "allocateZeroed"))
+        static if (__traits(hasMember, Allocator, "allocateZeroed"))
         package(std) void[] allocateZeroed()(size_t bytes)
         {
             if (!bytes) return null;
@@ -180,7 +180,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             mixin(_processAndReturnAllocateResult);
         }
 
-        static if (hasMember!(Allocator, "allocateAll"))
+        static if (__traits(hasMember, Allocator, "allocateAll"))
         void[] allocateAll()
         {
             auto result = parent.allocateAll();
@@ -209,14 +209,14 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return result;
         }
 
-        static if (hasMember!(Allocator, "owns"))
+        static if (__traits(hasMember, Allocator, "owns"))
         Ternary owns(void[] b)
         {
             if (b is null) return Ternary.no;
             return parent.owns((() @trusted => actualAllocation(b))());
         }
 
-        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        static if (__traits(hasMember, Allocator, "resolveInternalPointer"))
         Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             void[] p1;
@@ -230,8 +230,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return Ternary.yes;
         }
 
-        static if (!stateSize!Suffix && hasMember!(Allocator, "expand")
-                    && hasMember!(Allocator, "owns"))
+        static if (!stateSize!Suffix && __traits(hasMember, Allocator, "expand")
+                    && __traits(hasMember, Allocator, "owns"))
         bool expand(ref void[] b, size_t delta)
         {
             if (!b || delta == 0) return delta == 0;
@@ -243,7 +243,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return true;
         }
 
-        static if (hasMember!(Allocator, "reallocate"))
+        static if (__traits(hasMember, Allocator, "reallocate"))
         bool reallocate(ref void[] b, size_t s)
         {
             if (b is null)
@@ -258,7 +258,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return true;
         }
 
-        static if (hasMember!(Allocator, "deallocate"))
+        static if (__traits(hasMember, Allocator, "deallocate"))
         bool deallocate(void[] b)
         {
             if (!b.ptr) return true;

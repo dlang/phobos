@@ -82,7 +82,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         return result.ptr ? result.ptr[0 .. n] : null;
     }
 
-    static if (hasMember!(ParentAllocator, "allocateZeroed"))
+    static if (__traits(hasMember, ParentAllocator, "allocateZeroed"))
     package(std) void[] allocateZeroed()(size_t n)
     {
         auto result = parent.allocateZeroed(goodAllocSize(n));
@@ -94,7 +94,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     `allocate` by forwarding to
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
-    static if (hasMember!(ParentAllocator, "alignedAllocate"))
+    static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
     void[] alignedAllocate(size_t n, uint a)
     {
         auto result = parent.alignedAllocate(goodAllocSize(n), a);
@@ -124,7 +124,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
             return true;
         }
         // Hail Mary
-        static if (hasMember!(ParentAllocator, "expand"))
+        static if (__traits(hasMember, ParentAllocator, "expand"))
         {
             // Expand to the appropriate quantum
             auto original = (() @trusted => b.ptr[0 .. allocated])();
@@ -176,7 +176,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     occurs in place under the conditions required by `expand`. Shrinking
     occurs in place if $(D goodAllocSize(b.length) == goodAllocSize(s)).
     */
-    static if (hasMember!(ParentAllocator, "alignedAllocate"))
+    static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
     bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
         if (!b.ptr)
@@ -206,7 +206,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     Defined if `ParentAllocator.deallocate` exists and forwards to
     $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
     */
-    static if (hasMember!(ParentAllocator, "deallocate"))
+    static if (__traits(hasMember, ParentAllocator, "deallocate"))
     bool deallocate(void[] b)
     {
         if (!b.ptr) return true;

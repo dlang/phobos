@@ -296,9 +296,9 @@ guarantees that no more than a single element will be placed.
 private void doPut(R, E)(ref R r, auto ref E e)
 {
     static if (is(PointerTarget!R == struct))
-        enum usingPut = hasMember!(PointerTarget!R, "put");
+        enum usingPut = __traits(hasMember, PointerTarget!R, "put");
     else
-        enum usingPut = hasMember!(R, "put");
+        enum usingPut = __traits(hasMember, R, "put");
 
     static if (usingPut)
     {
