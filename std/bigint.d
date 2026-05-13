@@ -2293,6 +2293,7 @@ unittest
  */
 void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, out BigInt remainder) pure nothrow @safe
 {
+    assert(!divisor.isZero(), "BigInt division by zero");
     BigUint q, r;
     BigUint.divMod(dividend.data, divisor.data, q, r);
     quotient.sign = dividend.sign != divisor.sign;
@@ -2350,6 +2351,26 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
     BigInt quotient, remainder;
     divMod(BigInt(-50), BigInt(1), quotient, remainder);
     assert(remainder == 0);
+}
+
+// https://github.com/dlang/phobos/issues/10784
+@system unittest
+{
+    import core.exception : AssertError;
+    BigInt quotient, remainder;
+    bool caught;
+    try
+        divMod(BigInt("1234"), BigInt(0), quotient, remainder);
+    catch (AssertError)
+        caught = true;
+    assert(caught, "divMod by zero should assert");
+}
+
+// https://github.com/dlang/phobos/issues/10784
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    assertThrown(BigInt(100) / BigInt(0));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19740
