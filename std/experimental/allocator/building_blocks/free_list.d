@@ -35,7 +35,6 @@ struct FreeList(ParentAllocator,
 {
     import std.conv : text;
     import std.exception : enforce;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
 
@@ -525,7 +524,6 @@ struct ContiguousFreeList(ParentAllocator,
         : NullAllocator;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     alias Impl = FreeList!(NullAllocator, minSize, maxSize);
@@ -863,7 +861,6 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.conv : text;
     import std.exception : enforce;
-    import std.traits : hasMember;
 
     static if (__traits(hasMember, ParentAllocator, "owns"))
     {

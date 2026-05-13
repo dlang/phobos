@@ -22,7 +22,6 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import common = std.experimental.allocator.common : roundUpToMultipleOf,
            alignedAt;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     static assert((max - (min - 1)) % step == 0,

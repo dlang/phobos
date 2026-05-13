@@ -518,7 +518,7 @@ Forwards each of the methods in `funs` (if defined) to `member`.
 */
 /*package*/ string forwardToMember(string member, string[] funs...)
 {
-    string result = "    import std.traits : hasMember, Parameters;\n";
+    string result = "    import std.traits : Parameters;\n";
     foreach (fun; funs)
     {
         result ~= "

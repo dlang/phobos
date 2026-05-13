@@ -18,7 +18,7 @@ shared) methods.
 struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 {
     import std.algorithm.comparison : min;
-    import std.traits : hasMember, ReturnType;
+    import std.traits : ReturnType;
     import std.typecons : Ternary;
 
     static if (stateSize!SmallAllocator) private SmallAllocator _small;

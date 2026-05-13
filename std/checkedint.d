@@ -269,7 +269,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
     import std.experimental.allocator.common : stateSize;
     import std.format.spec : FormatSpec;
     import std.range.primitives : isInputRange, ElementType;
-    import std.traits : hasMember, isSomeChar;
+    import std.traits : isSomeChar;
 
     /**
     The type of the integral subject to checking.

@@ -2698,7 +2698,6 @@ if (!isPointer!A)
     {
         auto state = a.allocate(stateSize!(CAllocatorImpl!A));
         import std.algorithm.mutation : move;
-        import std.traits : hasMember;
         static if (__traits(hasMember, A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
@@ -2715,7 +2714,6 @@ RCIAllocator allocatorObject(A)(A* pa)
     assert(pa);
     import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
-    import std.traits : hasMember;
     static if (__traits(hasMember, A, "deallocate"))
     {
         scope(failure) pa.deallocate(state);
@@ -2812,7 +2810,6 @@ if (!isPointer!A)
     {
         auto state = a.allocate(stateSize!(CSharedAllocatorImpl!A));
         import std.algorithm.mutation : move;
-        import std.traits : hasMember;
         static if (__traits(hasMember, A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
@@ -2833,7 +2830,6 @@ RCISharedAllocator sharedAllocatorObject(A)(A* pa)
     assert(pa);
     import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CSharedAllocatorImpl!(A, Yes.indirect)));
-    import std.traits : hasMember;
     static if (__traits(hasMember, A, "deallocate"))
     {
         scope(failure) pa.deallocate(state);
@@ -2853,8 +2849,6 @@ Usually `CAllocatorImpl` is used indirectly by calling $(LREF theAllocator).
 class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : IAllocator
 {
-    import std.traits : hasMember;
-
     static if (stateSize!Allocator) private size_t rc = 1;
 
     /**
@@ -3082,7 +3076,6 @@ $(LREF processAllocator).
 class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : ISharedAllocator
 {
-    import std.traits : hasMember;
     import core.atomic : atomicOp, atomicLoad;
 
     static if (stateSize!Allocator) shared size_t rc = 1;

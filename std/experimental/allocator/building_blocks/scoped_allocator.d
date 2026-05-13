@@ -32,7 +32,6 @@ struct ScopedAllocator(ParentAllocator)
 
     import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     private struct Node

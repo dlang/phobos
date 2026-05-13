@@ -172,7 +172,7 @@ struct StatsCollector(Allocator, ulong flags = Options.all,
     ulong perCallFlags = 0)
 {
 private:
-    import std.traits : hasMember, Signed;
+    import std.traits : Signed;
     import std.typecons : Ternary;
 
     static string define(string type, string[] names...)
