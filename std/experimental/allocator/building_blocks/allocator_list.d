@@ -76,7 +76,6 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     import core.lifetime : emplace;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     private enum ouroboros = is(BookkeepingAllocator == NullAllocator);
@@ -670,7 +669,6 @@ version (Posix) @system unittest
 shared struct SharedAllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
     import std.typecons : Ternary;
-    import std.traits : hasMember;
     import core.internal.spinlock : SpinLock;
 
 private:

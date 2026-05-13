@@ -57,7 +57,6 @@ struct FreeTree(ParentAllocator)
 
     import std.algorithm.comparison : min, max;
     import std.algorithm.mutation : swap;
-    import std.traits : hasMember;
 
     // State
     static if (stateSize!ParentAllocator) private ParentAllocator parent;

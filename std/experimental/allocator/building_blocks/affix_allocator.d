@@ -29,7 +29,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
         hasStaticallyKnownAlignment;
     import std.math.traits : isPowerOf2;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     static if (hasStaticallyKnownAlignment!Allocator)

@@ -13,7 +13,6 @@ import std.typecons : Flag, Yes, No;
 private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
 {
     import std.conv : text;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
     import std.typecons : tuple, Tuple;
 
@@ -1392,7 +1391,6 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 {
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
-    import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
     auto a = BitmappedBlock!(64, 64)(cast(ubyte[])(r.allocateAll()));
     static assert(__traits(hasMember, InSituRegion!(10_240, 64), "allocateAll"));
@@ -1728,7 +1726,6 @@ shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = plat
     // Test chooseAtRuntime
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
-    import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
     uint blockSize = 64;
     auto a = BitmappedBlock!(chooseAtRuntime, 64)(cast(ubyte[])(r.allocateAll()), blockSize);

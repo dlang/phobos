@@ -39,8 +39,6 @@ always return the same value for a given `n`.)
 */
 struct Quantizer(ParentAllocator, alias roundingFunction)
 {
-    import std.traits : hasMember;
-
     /**
     The parent allocator. Depending on whether `ParentAllocator` holds state
     or not, this is a member variable or an alias for

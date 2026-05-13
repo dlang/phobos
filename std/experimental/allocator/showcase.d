@@ -11,7 +11,6 @@ module std.experimental.allocator.showcase;
 import std.experimental.allocator.building_blocks.fallback_allocator,
     std.experimental.allocator.gc_allocator,
     std.experimental.allocator.building_blocks.region;
-import std.traits : hasMember;
 
 /**
 

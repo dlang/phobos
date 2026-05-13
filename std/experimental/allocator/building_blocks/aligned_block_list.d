@@ -13,7 +13,6 @@ import std.experimental.allocator.building_blocks.null_allocator;
 // Common function implementation for thread local and shared AlignedBlockList
 private mixin template AlignedBlockListImpl(bool isShared)
 {
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     static if (isShared)
@@ -313,8 +312,6 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
     version (StdDdoc)
     {
         import std.typecons : Ternary;
-        import std.traits : hasMember;
-
         /**
         Returns a chunk of memory of size `n`
         It finds the first node in the `AlignedBlockNode` list which has available memory,
@@ -473,7 +470,6 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
     version (StdDdoc)
     {
         import std.typecons : Ternary;
-        import std.traits : hasMember;
 
         /**
         Returns a chunk of memory of size `n`

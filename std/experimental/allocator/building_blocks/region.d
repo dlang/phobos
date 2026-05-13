@@ -44,7 +44,6 @@ struct Region(ParentAllocator,
     static assert(minAlign.isGoodStaticAlignment);
     static assert(ParentAllocator.alignment >= minAlign);
 
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     // state
@@ -693,7 +692,6 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 {
     import std.algorithm.comparison : max;
     import std.conv : to;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
     import core.thread.types : isStackGrowingDown;
 
@@ -1172,7 +1170,6 @@ shared struct SharedRegion(ParentAllocator,
     static assert(minAlign.isGoodStaticAlignment);
     static assert(ParentAllocator.alignment >= minAlign);
 
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     // state

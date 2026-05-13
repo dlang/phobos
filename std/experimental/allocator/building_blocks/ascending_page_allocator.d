@@ -749,8 +749,6 @@ version (StdUnittest)
 {
     static void testAlloc(Allocator)(ref Allocator a) @nogc nothrow
     {
-        import std.traits : hasMember;
-
         size_t numPages = 5;
         uint alignment = cast(uint) pageSize;
 

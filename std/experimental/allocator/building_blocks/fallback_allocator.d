@@ -24,7 +24,6 @@ up by the `GCAllocator`.
 struct FallbackAllocator(Primary, Fallback)
 {
     import std.algorithm.comparison : min;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     // Need both allocators to be stateless
