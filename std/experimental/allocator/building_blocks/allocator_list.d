@@ -1328,10 +1328,11 @@ template SharedAllocatorList(alias factoryFunction,
     assert(a.deallocateAll());
 }
 
-//BUG: this test freezes spuriously on FreeBSD, see also https://github.com/dlang/phobos/issues/10730.
+//BUG: this test freezes spuriously on FreeBSD, Alpine, macOS and probably more.
+// See also https://github.com/dlang/phobos/issues/10730.
 // The lock in a.allocate() below blocks in all remaining threads causing the join to never complete.
 // This might also hint at problems in the spinlock implementation.
-version (FreeBSD) {} else
+version (none)
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
