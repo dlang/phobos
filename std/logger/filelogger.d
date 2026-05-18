@@ -27,7 +27,7 @@ class FileLogger : Logger
 
     Params:
       fn = The filename of the output file of the `FileLogger`. If that
-      file can not be opened for writting an exception will be thrown.
+      file can not be opened for writing an exception will be thrown.
       lv = The `LogLevel` for the `FileLogger`. By default the
 
     Example:

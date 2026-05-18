@@ -590,13 +590,13 @@ private template optionValidator(A...)
                     }
                     else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
                     {
-                        msg = optionValidatorErrorFormat("a receiver can not be preceeded by a receiver", i);
+                        msg = optionValidatorErrorFormat("a receiver can not be preceded by a receiver", i);
                         goto end;
                     }
                     else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
                         && isSomeString!(A[i-2]))
                     {
-                        msg = optionValidatorErrorFormat("a string can not be preceeded by two strings", i);
+                        msg = optionValidatorErrorFormat("a string can not be preceded by two strings", i);
                         goto end;
                     }
                 }
@@ -2001,12 +2001,12 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     import std.conv : ConvException;
     import std.string : indexOf;
 
-    enum UniqueIdentifer {
+    enum UniqueIdentifier {
         a,
         b
     }
 
-    UniqueIdentifer a;
+    UniqueIdentifier a;
 
     auto args = ["prog", "--foo", "HELLO"];
     try
@@ -2019,7 +2019,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     {
         string str = () @trusted { return e.toString(); }();
         assert(str.indexOf("HELLO") != -1);
-        assert(str.indexOf("UniqueIdentifer") != -1);
+        assert(str.indexOf("UniqueIdentifier") != -1);
         assert(str.indexOf("foo") != -1);
     }
 }

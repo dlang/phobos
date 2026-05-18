@@ -144,7 +144,7 @@ pragma(inline, true) real sgnGamma(real x)
 /** Beta function, B(x,y)
  *
  * Mathematically, if x $(GT) 0 and y $(GT) 0 then
- * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (l-t), y-1)dt. Through analytic continuation, it
+ * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (1-t), y-1)dt. Through analytic continuation, it
  * is extended to $(COMPLEX)$(SUP 2) where it can be expressed in terms of $(GAMMA)(z).
  *
  * B(x,y) = $(GAMMA)(x)$(GAMMA)(y) / $(GAMMA)(x+y).

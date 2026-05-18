@@ -310,7 +310,7 @@ private:
             }
             else
                 assert((flags&Flags.storeNormalized) && exp == 0,
-                    "Underflow occured assigning to a " ~
+                    "Underflow occurred assigning to a " ~
                     typeof(this).stringof ~ " (no denormal support).");
         }
         else
@@ -357,11 +357,11 @@ private:
                 sig         = 0;
                 exp         = exponent_max;
                 static if (~flags&(Flags.infinity))
-                    assert(0, "Overflow occured assigning to a " ~
+                    assert(0, "Overflow occurred assigning to a " ~
                         typeof(this).stringof ~ " (no infinity support).");
             }
             else
-                assert(exp == exponent_max, "Overflow occured assigning to a "
+                assert(exp == exponent_max, "Overflow occurred assigning to a "
                     ~ typeof(this).stringof ~ " (no infinity support).");
         }
     }
