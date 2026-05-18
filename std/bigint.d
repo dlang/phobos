@@ -1469,7 +1469,7 @@ public:
      *     n = The nth number to retrieve. Must be less than $(LREF ulongLength) or
      *     $(LREF uintLength) with respect to `T`.
      * Returns:
-     *     The nth `ulong` in the representation of this `BigInt`.
+     *     The nth number of type `T` in the representation of this `BigInt`.
      */
     T getDigit(T = ulong)(size_t n) const
     if (is(T == ulong) || is(T == uint))
@@ -2380,9 +2380,9 @@ void divMod(const BigInt dividend, const BigInt divisor, out BigInt quotient, ou
 /**
 Fast power modulus calculation for $(LREF BigInt) operands.
 Params:
-     base = the $(LREF BigInt) is basic operands.
-     exponent = the $(LREF BigInt) is power exponent of base.
-     modulus = the $(LREF BigInt) is modules to be modular of base ^ exponent.
+     base = the base $(LREF BigInt) operand.
+     exponent = the exponent $(LREF BigInt) to raise `base` by.
+     modulus = the $(LREF BigInt) modulus to use for the modular exponentiation.
 Returns:
      The power modulus value of (base ^ exponent) % modulus.
 */

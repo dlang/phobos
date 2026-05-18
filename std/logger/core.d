@@ -44,7 +44,7 @@ bool isLoggingEnabled()(LogLevel ll, LogLevel loggerLL,
 /* This function formates a `SysTime` into an `OutputRange`.
 
 The `SysTime` is formatted similar to
-$(LREF std.datatime.DateTime.toISOExtString) except the fractional second part.
+$(LREF std.datetime.DateTime.toISOExtString) except the fractional second part.
 The fractional second part is in milliseconds and is always 3 digits.
 */
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
@@ -942,7 +942,7 @@ abstract class Logger
     of the Logger must be greater or equal to the global `LogLevel`.
 
     Params:
-      args = The data that should be logged.
+      ll = The $(LREF LogLevel) used for logging.
       condition = The condition must be `true` for the data to be logged.
       args = The data that is to be logged.
 

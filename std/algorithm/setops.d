@@ -1003,7 +1003,7 @@ less). Computation is done lazily, one union element at a time.
 
 Params:
     less = Predicate the given ranges are sorted by.
-    ror = A range of ranges sorted by `less` to compute the intersection for.
+    ror = A range of ranges sorted by `less` to compute the union for.
 
 Returns:
     A range of the union of the ranges in `ror`.

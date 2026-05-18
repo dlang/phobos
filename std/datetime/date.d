@@ -223,7 +223,7 @@ public:
 
 
     /++
-        Compares this $(LREF DateTime) with the given `DateTime.`.
+        Compares this $(LREF DateTime) with the given `DateTime`.
 
         Returns:
             $(BOOKTABLE,
@@ -1197,8 +1197,7 @@ public:
         affect larger units. For instance, rolling a $(LREF DateTime) one
         year's worth of days gets the exact same $(LREF DateTime).
 
-        Accepted units are `"days"`, `"minutes"`, `"hours"`,
-        `"minutes"`, and `"seconds"`.
+        Accepted units are `"days"`, `"hours"`, `"minutes"`, and `"seconds"`.
 
         Params:
             units = The units to add.

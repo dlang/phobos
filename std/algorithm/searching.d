@@ -1166,7 +1166,7 @@ with `withOneOfThese[0]`, 2 if it ends with `withOneOfThese[1]`, and so
 on.
 
 In the case when no needle parameters are given, return `true` iff back of
-`doesThisStart` fulfils predicate `pred`.
+`doesThisEnd` fulfils predicate `pred`.
 */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
