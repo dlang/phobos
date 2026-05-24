@@ -3234,7 +3234,7 @@ struct HTTP
     */
     @property void maxRedirects(uint maxRedirs)
     {
-        if (maxRedirs == uint.max)
+        if (maxRedirs == 0)
         {
             // Disable
             p.curl.set(CurlOption.followlocation, 0);
