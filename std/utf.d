@@ -42,6 +42,7 @@ $(TR $(TD Index) $(TD
 $(TR $(TD Validation) $(TD
     $(LREF isValidDchar)
     $(LREF isValidCodepoint)
+    $(LREF isValidUTF)
     $(LREF validate)
 ))
 $(TR $(TD Miscellaneous) $(TD
@@ -2926,10 +2927,168 @@ if (isSomeChar!C)
 /* =================== Validation ======================= */
 
 /++
+    Returns whether the given string is well-formed Unicode or not.
+
+    See_Also:
+        $(LREF validate)
+  +/
+bool isValidUTF(S)(S str) @safe pure nothrow @nogc
+if (isSomeString!S)
+{
+    static if (is(immutable ElementEncodingType!S == immutable dchar))
+    {
+        foreach (c; str)
+        {
+            if (!isValidDchar(c))
+                return false;
+        }
+
+        return true;
+    }
+    else
+    {
+        static if (is(immutable ElementEncodingType!S == immutable char))
+            enum replacementDcharString = "\uFFFD";
+        else static if (is(immutable ElementEncodingType!S == immutable wchar))
+            enum replacementDcharString = "\uFFFD"w;
+        else
+            static assert(false, "The template constraint or static if is wrong.");
+
+        size_t i = 0;
+        while (i < str.length)
+        {
+            // The extra work here is because while decode will replace invalid
+            // Unicode with the replacement character, the replacement character
+            // is valid Unicode. So, it's possible that the string already has
+            // the replacement character in it (presumably due to invalid
+            // Unicode having been replaced by some other code previously), and
+            // we don't want to flag that as being invalid Unicode.
+            immutable before = i;
+            if (str.decode!(UseReplacementDchar.yes)(i) == replacementDchar)
+            {
+                auto temp = str[before .. $];
+                if (temp.length >= replacementDcharString.length &&
+                    temp[0 .. replacementDcharString.length] == replacementDcharString)
+                {
+                    continue;
+                }
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+///
+@safe unittest
+{
+    char[] a = [167, 133, 175];
+    assert(!isValidUTF(a));
+
+    assert(isValidUTF("hello world"));
+    assert(isValidUTF("ドラング・ロックス"));
+}
+
+@safe unittest
+{
+    // UTF-8
+    assert("😁".isValidUTF());
+    assert("hello\u07FF\uD7FF\U00010000\U0010FFFF".isValidUTF());
+    assert("\U0010fff8 𐁊 foo 𐂓".isValidUTF());
+    assert("𐁄𐂌𐃯 hello ディラン".isValidUTF());
+    assert("noe\u0308l".isValidUTF());
+    assert("ドラング・ロックス".isValidUTF());
+
+    {
+        char[] str = [72, 101, 108, 108, 111, 32, 0, 185, 203, 219, 251, 255];
+        assert(!str.isValidUTF());
+    }
+    {
+        char[] str = [65, 29, 225, 18, 50, 62, 194, 29];
+        assert(!str.isValidUTF());
+    }
+
+    assert("\uFFFD".isValidUTF());
+    assert("\uFFFD\uFFFD".isValidUTF());
+    assert("\uFFFD\uFFFD\uFFFD".isValidUTF());
+    assert("\uFFFDa\uFFFDb\uFFFDc".isValidUTF());
+    assert("0\uFFFD0".isValidUTF());
+    assert("ドラング\uFFFD・\uFFFDロックス".isValidUTF());
+
+    assert(!("\uFFFD" ~ [char(226), char(203)]).isValidUTF());
+    assert(!([char(194)] ~ "\uFFFD").isValidUTF());
+
+    // UTF-16
+    assert("😁"w.isValidUTF());
+    assert("hello\u07FF\uD7FF\U00010000\U0010FFFF"w.isValidUTF());
+    assert("\U0010fff8 𐁊 foo 𐂓"w.isValidUTF());
+    assert("𐁄𐂌𐃯 hello ディラン"w.isValidUTF());
+    assert("noe\u0308l"w.isValidUTF());
+    assert("ドラング・ロックス"w.isValidUTF());
+
+    {
+        wchar[] str = [12390, 101, 108, 19, 111, 10929, 0, 185, 0xD800, 219, 251, 255];
+        assert(!str.isValidUTF());
+    }
+    {
+        wchar[] str = [65, 29, 225, 18, 0xD907, 62, 194, 29];
+        assert(!str.isValidUTF());
+    }
+
+    assert("\uFFFD"w.isValidUTF());
+    assert("\uFFFD\uFFFD"w.isValidUTF());
+    assert("\uFFFD\uFFFD\uFFFD"w.isValidUTF());
+    assert("\uFFFDa\uFFFDb\uFFFDc"w.isValidUTF());
+    assert("0\uFFFD0"w.isValidUTF());
+    assert("ドラング\uFFFD・\uFFFDロックス"w.isValidUTF());
+
+    assert(!("\uFFFD"w ~ [wchar(0xD999), wchar(27)]).isValidUTF());
+    assert(!([wchar(0xDABA)] ~ "\uFFFD"w).isValidUTF());
+
+    // UTF-32
+    assert("😁"d.isValidUTF());
+    assert("hello\u07FF\uD7FF\U00010000\U0010FFFF"d.isValidUTF());
+    assert("\U0010fff8 𐁊 foo 𐂓"d.isValidUTF());
+    assert("𐁄𐂌𐃯 hello ディラン"d.isValidUTF());
+    assert("noe\u0308l"d.isValidUTF());
+    assert("ドラング・ロックス"d.isValidUTF());
+
+    {
+        dchar[] str = [72, 101, 108, 108, 111, 32, 0, 185, 0xDDDD, 219, 251, 255];
+        assert(!str.isValidUTF());
+    }
+    {
+        dchar[] str = [65, 29, 225, 18, 50, 62, cast(dchar) 0x111111, 29];
+        assert(!str.isValidUTF());
+    }
+
+    assert("\uFFFD"d.isValidUTF());
+    assert("\uFFFD\uFFFD"d.isValidUTF());
+    assert("\uFFFD\uFFFD\uFFFD"d.isValidUTF());
+    assert("\uFFFDa\uFFFDb\uFFFDc"d.isValidUTF());
+    assert("0\uFFFD0"d.isValidUTF());
+    assert("ドラング\uFFFD・\uFFFDロックス"d.isValidUTF());
+
+    assert(!("\uFFFD"d ~ [cast(dchar) 0x222222, dchar(203)]).isValidUTF());
+    assert(!([dchar(0xDFDF)] ~ "\uFFFD"d).isValidUTF());
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=12923
+@safe unittest
+{
+    char[] a = [167, 133, 175];
+    assert(!isValidUTF(a));
+}
+
+/++
     Checks to see if `str` is well-formed unicode or not.
 
     Throws:
         `UTFException` if `str` is not well-formed.
+
+    See_Also:
+        $(LREF isValidUTF)
   +/
 void validate(S)(in S str) @safe pure
 if (isSomeString!S)
