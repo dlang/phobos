@@ -5448,7 +5448,7 @@ template hasComplexCopying(T)
   +/
 template hasComplexDestruction(T)
 {
-    alias hasComplexDestruction = __traits(needsDestruction, T);
+    enum hasComplexDestruction = __traits(needsDestruction, T);
 }
 
 ///
