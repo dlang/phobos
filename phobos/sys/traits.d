@@ -2725,7 +2725,7 @@ template isSameSymbol(alias lhs)
     static assert(!isSameSymbol!(double, const double));
     static assert(!isSameSymbol!(double, int));
     static assert( isSameSymbol!(Object, Object));
-    static assert( isSameSymbol!(Object, const Object));
+    static assert(!isSameSymbol!(Object, const Object));
 
     static assert(!isSameSymbol!(i, int));
     static assert( isSameSymbol!(typeof(i), int));
