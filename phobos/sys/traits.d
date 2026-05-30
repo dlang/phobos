@@ -5725,13 +5725,13 @@ else
     alias testWithQualifiers = assertWithQualifiers!hasIndirections;
 
     foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-                          float, double, real, char, wchar, dchar, int function(string), void))
+                          float, double, real, char, wchar, dchar, int function(string)))
     {
         mixin testWithQualifiers!(T, false);
         mixin testWithQualifiers!(T*, true);
         mixin testWithQualifiers!(T[], true);
 
-        mixin testWithQualifiers!(T[42], is(T == void));
+        mixin testWithQualifiers!(T[42], false);
         mixin testWithQualifiers!(T[0], false);
 
         mixin testWithQualifiers!(T*[42], true);
@@ -5741,7 +5741,7 @@ else
         mixin testWithQualifiers!(T[][0], false);
     }
 
-    foreach (T; AliasSeq!(int[int], int delegate(string)))
+    foreach (T; AliasSeq!(int[int], int delegate(string), void))
     {
         mixin testWithQualifiers!(T, true);
         mixin testWithQualifiers!(T*, true);
