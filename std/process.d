@@ -1117,9 +1117,19 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                             else
                             {
                             LslowClose:
-                                // Fall back to closing everything up to a sane limit.
-                                // When rlim_cur is huge (e.g. unlimited), cap to avoid
-                                // iterating over billions of file descriptors.
+                                // Last-resort fallback: close every descriptor from
+                                // lowfd up to a fixed cap. This path is only reached on
+                                // obscure systems lacking both /dev/fd and /proc/self/fd
+                                // *and* where poll() failed, so it is essentially never
+                                // taken in practice.
+                                //
+                                // The cap of 1_048_576 (2^20) is deliberately arbitrary:
+                                // rlim_cur may be huge or RLIM_INFINITY, and blindly
+                                // iterating to it could mean closing billions of mostly
+                                // non-existent descriptors. No realistic process has
+                                // anywhere near 1M descriptors actually open, so capping
+                                // here is effectively "close everything" while keeping the
+                                // worst case bounded. Any similarly large value would do.
                                 immutable closeMax = cast(int)
                                     (maxDescriptors > 1_048_576 ? 1_048_576 : maxDescriptors);
                                 foreach (i; lowfd .. closeMax)
