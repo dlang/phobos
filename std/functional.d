@@ -1324,7 +1324,7 @@ unittest
 ----
 
 Params:
-    fun = the call-able to memozie
+    fun = the call-able to memoize
     maxSize = The maximum size of the GC buffer to hold the return values
 Returns:
     A new function which calls `fun` and caches its return values.

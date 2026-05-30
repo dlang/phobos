@@ -145,7 +145,7 @@ enum IR:uint {
     GroupEnd           = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
     Option             = 0b1_01110_00, //start of an option within an alternation x | y (length)
     GotoEndOr          = 0b1_01111_00, //end of an option (length of the rest)
-    Bof                = 0b1_10000_00, //begining of "file" (string) ^
+    Bof                = 0b1_10000_00, //beginning of "file" (string) ^
     Eof                = 0b1_10001_00, //end of "file" (string) $
     //... any additional atoms here
 
@@ -1002,7 +1002,7 @@ struct CharMatcher {
 // Internal non-resizeble array, switches between inline storage and CoW
 // POD-only
 struct SmallFixedArray(T, uint SMALL=3)
-if (!hasElaborateDestructor!T)
+if (!__traits(needsDestruction, T))
 {
     import std.internal.memory : enforceMalloc;
     import core.memory : pureFree;

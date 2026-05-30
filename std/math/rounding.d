@@ -959,7 +959,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
 
             if ((y.vi & fraction_mask) != 0)
             {
-                // If 'x' is negative, then first substract (1.0 - T.epsilon) from the value.
+                // If 'x' is negative, then first subtract (1.0 - T.epsilon) from the value.
                 if (y.vi >> sign_shift)
                     y.vi += fraction_mask;
                 y.vi &= ~fraction_mask;

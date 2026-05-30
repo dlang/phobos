@@ -590,13 +590,13 @@ private template optionValidator(A...)
                     }
                     else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
                     {
-                        msg = optionValidatorErrorFormat("a receiver can not be preceeded by a receiver", i);
+                        msg = optionValidatorErrorFormat("a receiver can not be preceded by a receiver", i);
                         goto end;
                     }
                     else static if (i > 1 && isOptionStr!(A[i]) && isOptionStr!(A[i-1])
                         && isSomeString!(A[i-2]))
                     {
-                        msg = optionValidatorErrorFormat("a string can not be preceeded by two strings", i);
+                        msg = optionValidatorErrorFormat("a string can not be preceded by two strings", i);
                         goto end;
                     }
                 }
@@ -906,7 +906,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
             enum isCallbackWithLessThanTwoParameters =
                 (is(R == delegate) || is(Target == function)) &&
                 !is(typeof(receiver("", "")));
-            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental)
+            if (!isCallbackWithLessThanTwoParameters && val is null && !incremental)
             {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
@@ -1192,7 +1192,7 @@ private bool optMatch(string arg, scope string optPattern, ref string value,
         if (!isLong && !cfg.bundling)
         {
             // argument looks like -ovalue and there's no bundling
-            value = arg[1 .. $];
+            value = arg.length > 1 ? arg[1 .. $] : null;
             arg = arg[0 .. 1];
         }
         else
@@ -2001,12 +2001,12 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     import std.conv : ConvException;
     import std.string : indexOf;
 
-    enum UniqueIdentifer {
+    enum UniqueIdentifier {
         a,
         b
     }
 
-    UniqueIdentifer a;
+    UniqueIdentifier a;
 
     auto args = ["prog", "--foo", "HELLO"];
     try
@@ -2019,7 +2019,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     {
         string str = () @trusted { return e.toString(); }();
         assert(str.indexOf("HELLO") != -1);
-        assert(str.indexOf("UniqueIdentifer") != -1);
+        assert(str.indexOf("UniqueIdentifier") != -1);
         assert(str.indexOf("foo") != -1);
     }
 }
@@ -2049,4 +2049,15 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt, st
     args = ["prog", "--foo", "1337"];
     getopt(args, "foo|f", &a);
     assert(a == 1337);
+}
+
+// https://github.com/dlang/phobos/issues/10791
+@safe unittest
+{
+    string arg1, arg2;
+
+    auto args = ["prog", "--arg1=", "--arg2=p2"];
+    getopt(args, "arg1", &arg1, "arg2", &arg2);
+    assert(arg1 == "", "arg1 should be empty string, got: " ~ arg1);
+    assert(arg2 == "p2");
 }

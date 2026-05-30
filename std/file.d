@@ -842,14 +842,25 @@ version (Posix) private void writeImpl(scope const(char)[] name, scope const(FSC
         scope(failure) core.sys.posix.unistd.close(fd);
 
         immutable size = buffer.length;
-        size_t sum, cnt = void;
+        size_t sum;
         while (sum != size)
         {
-            cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
+            size_t cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
             const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
-            if (numwritten != cnt)
-                break;
-            sum += numwritten;
+            if (numwritten > 0)
+            {
+                sum += numwritten;
+                continue;
+            }
+            if (numwritten == -1)
+            {
+                if (errno == EINTR)
+                {
+                    continue;
+                }
+                break;  // error
+            }
+            break;
         }
         cenforce(sum == size, name, namez);
     }
@@ -969,6 +980,19 @@ if (isConvertibleToString!RF || isConvertibleToString!RT)
     assert(t2.readText == "2");
 }
 
+
+@safe unittest
+{
+    import std.file;
+    import std.exception : assertThrown;
+
+    string f = null;
+
+    // Check if FileException is thrown for invalid rename
+    assertThrown!FileException(rename("", f));
+    assertThrown!FileException(rename(f, ""));
+}
+
 private void renameImpl(scope const(char)[] f, scope const(char)[] t,
                         scope const(FSChar)* fromz, scope const(FSChar)* toz) @trusted
 {
@@ -983,10 +1007,10 @@ private void renameImpl(scope const(char)[] f, scope const(char)[] t,
             import std.conv : to, text;
 
             if (!f)
-                f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
+                f = fromz ? to!(typeof(f))(fromz[0 .. wcslen(fromz)]) : "(null)";
 
             if (!t)
-                t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
+                t = toz ? to!(typeof(t))(toz[0 .. wcslen(toz)]) : "(null)";
 
             enforce(false,
                 new FileException(
@@ -2949,7 +2973,7 @@ Params:
 
 Throws:
     $(LREF FileException) on POSIX or $(LREF WindowsException) on Windows
-    if an error occured.
+    if an error occurred.
  */
 void mkdir(R)(R pathname)
 if (isSomeFiniteCharInputRange!R && !isConvertibleToString!R)
@@ -4356,16 +4380,41 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
             }
             scope(exit) core.stdc.stdlib.free(buf);
 
-            for (auto size = statbufr.st_size; size; )
+            while (true)
             {
-                immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
-                cenforce(
-                    core.sys.posix.unistd.read(fdr, buf, toxfer) == toxfer
-                    && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
-                    f, fromz);
-                assert(size >= toxfer);
-                size -= toxfer;
+                auto rr = core.sys.posix.unistd.read(fdr, buf, BUFSIZ);
+                if (rr == 0)
+                {
+                    break;
+                }
+                if (rr == -1)
+                {
+                    if (errno == EINTR)
+                    {
+                        continue;
+                    }
+                    cenforce(false, f, fromz);
+                }
+
+                size_t wrAcc = 0;
+                assert(rr > 0);
+                while (wrAcc < rr)
+                {
+                    auto wr = core.sys.posix.unistd.write(
+                        fdw, buf + wrAcc, rr - wrAcc);
+                    if (wr == -1)
+                    {
+                        if (errno == EINTR)
+                        {
+                            continue;
+                        }
+                        cenforce(false, t, toz);
+                    }
+                    cenforce(wr > 0, t, toz);
+                    wrAcc += wr;
+                }
             }
+
             if (preserve)
                 cenforce(fchmod(fdw, to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }

@@ -1055,7 +1055,7 @@ final:
     }
 
     /+
-        handle succesful threads
+        handle successful threads
     +/
     void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches, int code)
     {

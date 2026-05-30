@@ -173,6 +173,10 @@ ifdef NO_AUTODECODE
 override DFLAGS += -version=NoAutodecodeStrings
 endif
 
+ifdef LINUX_LEGACY_EMULATE_GETRANDOM
+override DFLAGS += -version=linux_legacy_emulate_getrandom
+endif
+
 UDFLAGS=-unittest -version=StdUnittest
 
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
@@ -270,13 +274,13 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal \
 	$(addprefix internal/, \
 		cstring memory digest/sha_SSSE3 \
-		entropy \
+		entropy retry \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		scopebuffer test/dummyrange test/range \
 		test/sumtype_example_overloads \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
-		windows/advapi32 \
+		windows/advapi32 windows/bcrypt \
 	) \
 	typetuple \
 )

@@ -2797,7 +2797,7 @@ string absolutePath(return scope const string path, lazy string base = getcwd())
     assertThrown(absolutePath("bar", "foo"));
 }
 
-// Ensure that we can call absolute path with scope paramaters
+// Ensure that we can call absolute path with scope parameters
 @safe unittest
 {
     string testAbsPath(scope const string path, scope const string base) {

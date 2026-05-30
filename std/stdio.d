@@ -1093,6 +1093,7 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
+        import std.internal.retry : retryShortIO;
 
         version (Windows)
         {
@@ -1117,10 +1118,13 @@ Throws: `ErrnoException` if the file is not opened or if the call to `fwrite` fa
             }
         }
 
-        auto result = trustedFwrite(_p.handle, buffer);
-        if (result == result.max) result = 0;
-        errnoEnforce(result == buffer.length,
-                text("Wrote ", result, " instead of ", buffer.length,
+        FILE* h = _p.handle;
+        immutable n = (() @trusted => retryShortIO(
+            (size_t off) => trustedFwrite(h, buffer[off .. $]),
+            buffer.length,
+            () { .clearerr(h); }))();
+        errnoEnforce(n == buffer.length,
+                text("Wrote ", n, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
                         _name, "'"));
     }
@@ -3103,6 +3107,23 @@ is empty, throws an `Exception`. In case of an I/O error throws
             }
         }
 
+        private void putcChecked(_iobuf* h, int c) @trusted
+        {
+            import std.exception : errnoEnforce;
+            import std.internal.retry : retryOnEINTR;
+            if (retryOnEINTR(() => trustedFPUTC(c, h), EOF) == EOF)
+                errnoEnforce(0);
+        }
+
+        private void putwcChecked(_iobuf* h, wchar_t c) @trusted
+        {
+            import std.exception : errnoEnforce;
+            import std.internal.retry : retryOnEINTR;
+            // fputwc returns WEOF (= -1) on error
+            if (retryOnEINTR(() => trustedFPUTWC(c, h)) == -1)
+                errnoEnforce(0);
+        }
+
         /// Range primitive implementations.
         void put(A)(scope A writeme)
         if ((isSomeChar!(ElementType!A) ||
@@ -3120,8 +3141,13 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto result = trustedFwrite(file_._p.handle, writeme);
-                    if (result != writeme.length) errnoEnforce(0);
+                    import std.internal.retry : retryShortIO;
+                    FILE* h = file_._p.handle;
+                    immutable n = (() @trusted => retryShortIO(
+                        (size_t off) => trustedFwrite(h, writeme[off .. $]),
+                        writeme.length,
+                        () { .clearerr(h); }))();
+                    if (n != writeme.length) errnoEnforce(0);
                     return;
                 }
             }
@@ -3142,8 +3168,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
             static if (c.sizeof == 1)
             {
                 highSurrogateShouldBeEmpty();
-                if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                else if (c <= 0x7F) trustedFPUTWC(c, handle_);
+                if (orientation_ <= 0) putcChecked(handle_, c);
+                else if (c <= 0x7F) putwcChecked(handle_, c);
                 else if (c >= 0b1100_0000) // start byte of multibyte sequence
                 {
                     rbuf8[0] = c;
@@ -3160,7 +3186,7 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         wchar_t[4 / wchar_t.sizeof] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTWC(wbuf[i], handle_);
+                            putwcChecked(handle_, wbuf[i]);
                         rbuf8Filled = 0;
                     }
                 }
@@ -3172,8 +3198,8 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 if (c <= 0x7F)
                 {
                     highSurrogateShouldBeEmpty();
-                    if (orientation_ <= 0) trustedFPUTC(c, handle_);
-                    else trustedFPUTWC(c, handle_);
+                    if (orientation_ <= 0) putcChecked(handle_, c);
+                    else putwcChecked(handle_, c);
                 }
                 else if (0xD800 <= c && c <= 0xDBFF) // high surrogate
                 {
@@ -3195,14 +3221,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         char[4] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTC(wbuf[i], handle_);
+                            putcChecked(handle_, wbuf[i]);
                     }
                     else
                     {
                         wchar_t[4 / wchar_t.sizeof] wbuf;
                         immutable size = encode(wbuf, d);
                         foreach (i; 0 .. size)
-                            trustedFPUTWC(wbuf[i], handle_);
+                            putwcChecked(handle_, wbuf[i]);
                     }
                     rbuf8Filled = 0;
                 }
@@ -3216,14 +3242,14 @@ is empty, throws an `Exception`. In case of an I/O error throws
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle_);
+                        putcChecked(handle_, c);
                     }
                     else
                     {
                         char[4] buf = void;
                         immutable len = encode(buf, c);
                         foreach (i ; 0 .. len)
-                            trustedFPUTC(buf[i], handle_);
+                            putcChecked(handle_, buf[i]);
                     }
                 }
                 else
@@ -3235,21 +3261,20 @@ is empty, throws an `Exception`. In case of an I/O error throws
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(cast(wchar_t) c, handle_);
+                            putwcChecked(handle_, cast(wchar_t) c);
                         }
                         else
                         {
-                            trustedFPUTWC(cast(wchar_t)
+                            putwcChecked(handle_, cast(wchar_t)
                                     ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), handle_);
-                            trustedFPUTWC(cast(wchar_t)
-                                    (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                    handle_);
+                                            + 0xD800));
+                            putwcChecked(handle_, cast(wchar_t)
+                                    (((c - 0x10000) & 0x3FF) + 0xDC00));
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(cast(wchar_t) c, handle_);
+                        putwcChecked(handle_, cast(wchar_t) c);
                     }
                     else
                     {
@@ -3342,11 +3367,15 @@ is empty, throws an `Exception`. In case of an I/O error throws
         {
             import std.conv : text;
             import std.exception : errnoEnforce;
+            import std.internal.retry : retryShortIO;
 
-            auto result = trustedFwrite(file_._p.handle, buffer);
-            if (result == result.max) result = 0;
-            errnoEnforce(result == buffer.length,
-                    text("Wrote ", result, " instead of ", buffer.length,
+            FILE* h = file_._p.handle;
+            immutable n = (() @trusted => retryShortIO(
+                (size_t off) => trustedFwrite(h, buffer[off .. $]),
+                buffer.length,
+                () { .clearerr(h); }))();
+            errnoEnforce(n == buffer.length,
+                    text("Wrote ", n, " instead of ", buffer.length,
                             " objects of type ", T.stringof, " to file `",
                             name, "'"));
         }
@@ -3829,6 +3858,74 @@ void main()
     import std.exception : collectException;
     auto e = collectException({ File f; f.writeln("Hello!"); }());
     assert(e && e.msg == "Attempting to write to closed File");
+}
+
+// https://github.com/dlang/phobos/issues/11005
+// LockingTextWriter's per-character path used to discard fputc's return value.
+version (linux)
+@system unittest
+{
+    import std.exception : assertThrown, ErrnoException;
+
+    // /dev/full always returns ENOSPC on write, making the error deterministic.
+    // _IONBF disables buffering so fputc hits the kernel on every call.
+    auto f = File("/dev/full", "w");
+    f.setvbuf(0, _IONBF);
+    auto w = f.lockingTextWriter();
+    assertThrown!ErrnoException(w.put('x'));
+}
+
+// https://github.com/dlang/phobos/issues/11006
+// LockingTextWriter.put survives an EINTR from a signal without SA_RESTART.
+version (linux)
+@system unittest
+{
+    import core.atomic : atomicLoad, atomicStore;
+    import core.sys.posix.pthread : pthread_kill;
+    import core.sys.posix.signal : SA_RESTART, SIGUSR1, sigaction, sigaction_t,
+        sigemptyset;
+    import core.sys.posix.unistd : read;
+    import core.thread : Thread;
+    import core.time : msecs;
+    import std.process : pipe;
+
+    // Install a SIGUSR1 handler without SA_RESTART so that fwrite may return
+    // short with errno == EINTR when the signal arrives mid-write.
+    extern (C) static nothrow void noop(int) {}
+    sigaction_t sa;
+    sa.sa_handler = &noop;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // no SA_RESTART
+    sigaction(SIGUSR1, &sa, null);
+
+    auto p = pipe();
+    // Write 512 KiB — much larger than the default 64 KiB pipe buffer —
+    // so the writer thread reliably blocks inside write(2).
+    immutable msg = new ubyte[512 * 1024];
+
+    shared bool done = false;
+    shared bool threw = false;
+    auto t = new Thread(() {
+        try
+            p.writeEnd.lockingTextWriter.put(cast(const(ubyte)[]) msg);
+        catch (Exception)
+            atomicStore(threw, true);
+        atomicStore(done, true);
+    });
+    t.start();
+
+    // Give the writer time to block inside write(2) before signalling.
+    Thread.sleep(50.msecs);
+    pthread_kill(t.id, SIGUSR1);
+
+    // Drain the pipe so the blocked write can make progress and complete.
+    ubyte[4096] buf;
+    while (!atomicLoad(done))
+        read(p.readEnd.fileno, buf.ptr, buf.length);
+    t.join();
+
+    assert(!atomicLoad(threw),
+        "LockingTextWriter.put threw on EINTR — retryShortIO not working");
 }
 
 @safe unittest // https://issues.dlang.org/show_bug.cgi?id=21592
@@ -4870,7 +4967,7 @@ struct lines
             }
         }
         // can only reach when _FGETC returned -1
-        if (!f.eof) throw new StdioException("Error in reading file"); // error occured
+        if (!f.eof) throw new StdioException("Error in reading file"); // error occurred
         return result;
     }
 }
@@ -5104,7 +5201,7 @@ private struct ChunksImpl
             assert(r <= size);
             if (r != size)
             {
-                // error occured
+                // error occurred
                 if (!f.eof) throw new StdioException(null);
                 buffer.length = r;
             }

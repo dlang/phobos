@@ -2012,7 +2012,7 @@ public class UUIDParsingException : Exception
         this.input = input;
         this.position = pos;
         this.reason = why;
-        string message = format("An error occured in the UUID parser: %s\n" ~
+        string message = format("An error occurred in the UUID parser: %s\n" ~
           " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
           "\r", "\\r"), "\n", "\\n"), pos);
         super(message, file, line, next);

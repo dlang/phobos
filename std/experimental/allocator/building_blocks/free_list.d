@@ -35,7 +35,6 @@ struct FreeList(ParentAllocator,
 {
     import std.conv : text;
     import std.exception : enforce;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
 
@@ -333,7 +332,7 @@ struct FreeList(ParentAllocator,
         return parent.allocate(n);
     }
 
-    static if (hasMember!(ParentAllocator, "allocateZeroed"))
+    static if (__traits(hasMember, ParentAllocator, "allocateZeroed"))
     package(std) void[] allocateZeroed()(size_t n)
     {
         static if (adaptive == Yes.adaptive) ++accumSamples;
@@ -384,7 +383,7 @@ struct FreeList(ParentAllocator,
             root.next = t;
             return true;
         }
-        static if (hasMember!(ParentAllocator, "deallocate"))
+        static if (__traits(hasMember, ParentAllocator, "deallocate"))
             return parent.deallocate(block);
         else
             return false;
@@ -394,7 +393,7 @@ struct FreeList(ParentAllocator,
     Defined only if `ParentAllocator` defines `deallocateAll`. If so,
     forwards to it and resets the freelist.
     */
-    static if (hasMember!(ParentAllocator, "deallocateAll"))
+    static if (__traits(hasMember, ParentAllocator, "deallocateAll"))
     bool deallocateAll()
     {
         root = null;
@@ -406,7 +405,7 @@ struct FreeList(ParentAllocator,
     freeing each element in turn. Defined only if `ParentAllocator` defines
     `deallocate`. $(D FreeList!(0, unbounded)) does not have this function.
     */
-    static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    static if (__traits(hasMember, ParentAllocator, "deallocate") && !unchecked)
     void minimize()
     {
         while (root)
@@ -423,7 +422,7 @@ struct FreeList(ParentAllocator,
     on destruction.
     */
     static if (!is(ParentAllocator == NullAllocator) &&
-        hasMember!(ParentAllocator, "deallocate") && !unchecked)
+        __traits(hasMember, ParentAllocator, "deallocate") && !unchecked)
     ~this()
     {
         minimize();
@@ -525,7 +524,6 @@ struct ContiguousFreeList(ParentAllocator,
         : NullAllocator;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     alias Impl = FreeList!(NullAllocator, minSize, maxSize);
@@ -706,7 +704,7 @@ struct ContiguousFreeList(ParentAllocator,
     Defined if `ParentAllocator` defines it. Checks whether the block
     belongs to this allocator.
     */
-    static if (hasMember!(SParent, "owns") || unchecked)
+    static if (__traits(hasMember, SParent, "owns") || unchecked)
     // Ternary owns(const void[] b) const ?
     Ternary owns(void[] b)
     {
@@ -748,7 +746,7 @@ struct ContiguousFreeList(ParentAllocator,
     /**
     Deallocates everything from the parent.
     */
-    static if (hasMember!(ParentAllocator, "deallocateAll")
+    static if (__traits(hasMember, ParentAllocator, "deallocateAll")
         && stateSize!ParentAllocator)
     bool deallocateAll()
     {
@@ -863,9 +861,8 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.conv : text;
     import std.exception : enforce;
-    import std.traits : hasMember;
 
-    static if (hasMember!(ParentAllocator, "owns"))
+    static if (__traits(hasMember, ParentAllocator, "owns"))
     {
         import std.typecons : Ternary;
     }
@@ -1042,14 +1039,14 @@ struct SharedFreeList(ParentAllocator,
     }
 
     /// Ditto
-    static if (hasMember!(ParentAllocator, "owns"))
+    static if (__traits(hasMember, ParentAllocator, "owns"))
     Ternary owns(const void[] b) shared const
     {
         return parent.owns(b);
     }
 
     /// Ditto
-    static if (hasMember!(ParentAllocator, "reallocate"))
+    static if (__traits(hasMember, ParentAllocator, "reallocate"))
     bool reallocate(ref void[] b, size_t s) shared
     {
         return parent.reallocate(b, s);
@@ -1098,7 +1095,7 @@ struct SharedFreeList(ParentAllocator,
             lock.unlock();
             return true;
         }
-        static if (hasMember!(ParentAllocator, "deallocate"))
+        static if (__traits(hasMember, ParentAllocator, "deallocate"))
             return parent.deallocate(b);
         else
             return false;
@@ -1110,11 +1107,11 @@ struct SharedFreeList(ParentAllocator,
         bool result = false;
         lock.lock();
         scope(exit) lock.unlock();
-        static if (hasMember!(ParentAllocator, "deallocateAll"))
+        static if (__traits(hasMember, ParentAllocator, "deallocateAll"))
         {
             result = parent.deallocateAll();
         }
-        else static if (hasMember!(ParentAllocator, "deallocate"))
+        else static if (__traits(hasMember, ParentAllocator, "deallocate"))
         {
             result = true;
             for (auto n = _root; n;)
@@ -1135,7 +1132,7 @@ struct SharedFreeList(ParentAllocator,
     freeing each element in turn. Defined only if `ParentAllocator` defines
     `deallocate`.
     */
-    static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    static if (__traits(hasMember, ParentAllocator, "deallocate") && !unchecked)
     void minimize() shared
     {
         lock.lock();

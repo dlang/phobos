@@ -2652,7 +2652,7 @@ template isEqual(alias lhs)
     static assert(!__traits(compiles, __traits(identifier, arr[0])));
 
     // Similarly, once an enum member from the AliasSeq is assigned to a
-    // variable, __traits(identifer, ...) operates on the variable, not the
+    // variable, __traits(identifier, ...) operates on the variable, not the
     // symbol from the AliasSeq or the value of the variable.
     auto var = uniqueMembers[0];
     static assert(__traits(identifier, var) == "var");
@@ -5448,8 +5448,7 @@ template hasComplexCopying(T)
   +/
 template hasComplexDestruction(T)
 {
-    import core.internal.traits : hasElaborateDestructor;
-    alias hasComplexDestruction = hasElaborateDestructor!T;
+    alias hasComplexDestruction = __traits(needsDestruction, T);
 }
 
 ///

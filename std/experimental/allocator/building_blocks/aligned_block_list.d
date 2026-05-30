@@ -13,7 +13,6 @@ import std.experimental.allocator.building_blocks.null_allocator;
 // Common function implementation for thread local and shared AlignedBlockList
 private mixin template AlignedBlockListImpl(bool isShared)
 {
-    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     static if (isShared)
@@ -137,7 +136,7 @@ public:
 
     // Since all memory is drawn from ParentAllocator, we can
     // forward this to the parent
-    static if (hasMember!(ParentAllocator, "owns"))
+    static if (__traits(hasMember, ParentAllocator, "owns"))
     Ternary owns(void[] b)
     {
         return parent.owns(b);
@@ -171,7 +170,7 @@ public:
     }
 
     // Allocate works only if memory can be provided via `alignedAllocate` from the parent
-    static if (hasMember!(ParentAllocator, "alignedAllocate"))
+    static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
     void[] allocate(size_t n)
     {
         static if (isShared)
@@ -313,8 +312,6 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
     version (StdDdoc)
     {
         import std.typecons : Ternary;
-        import std.traits : hasMember;
-
         /**
         Returns a chunk of memory of size `n`
         It finds the first node in the `AlignedBlockNode` list which has available memory,
@@ -327,7 +324,7 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
         Returns:
             A chunk of memory of the required length or `null` on failure or
         */
-        static if (hasMember!(ParentAllocator, "alignedAllocate"))
+        static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
         void[] allocate(size_t n);
 
         /**
@@ -352,7 +349,7 @@ struct AlignedBlockList(Allocator, ParentAllocator, ulong theAlignment = (1 << 2
         Returns:
             `Ternary.yes` if owned by this allocator and `Ternary.no` otherwise
         */
-        static if (hasMember!(ParentAllocator, "owns"))
+        static if (__traits(hasMember, ParentAllocator, "owns"))
         Ternary owns(void[] b);
     }
     else
@@ -473,7 +470,6 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
     version (StdDdoc)
     {
         import std.typecons : Ternary;
-        import std.traits : hasMember;
 
         /**
         Returns a chunk of memory of size `n`
@@ -487,7 +483,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
         Returns:
             A chunk of memory of the required length or `null` on failure or
         */
-        static if (hasMember!(ParentAllocator, "alignedAllocate"))
+        static if (__traits(hasMember, ParentAllocator, "alignedAllocate"))
         void[] allocate(size_t n);
 
         /**
@@ -512,7 +508,7 @@ shared struct SharedAlignedBlockList(Allocator, ParentAllocator, ulong theAlignm
         Returns:
             `Ternary.yes` if owned by this allocator and `Ternary.no` otherwise
         */
-        static if (hasMember!(ParentAllocator, "owns"))
+        static if (__traits(hasMember, ParentAllocator, "owns"))
         Ternary owns(void[] b);
     }
     else

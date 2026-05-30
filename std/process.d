@@ -469,7 +469,7 @@ private:
                 if (lenRead == 0)
                 {
                     immutable err = GetLastError();
-                    if (err == NO_ERROR) // sucessfully read a 0-length variable
+                    if (err == NO_ERROR) // successfully read a 0-length variable
                         return sink("");
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
                         return sink(null);
@@ -1036,7 +1036,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                 {
                     void fallback (int lowfd)
                     {
-                        import core.sys.posix.dirent : dirent, opendir, readdir, closedir, DIR;
+                        import core.sys.posix.dirent : dirfd, dirent, opendir, readdir, closedir, DIR;
                         import core.sys.posix.unistd : close;
                         import core.sys.posix.stdlib : atoi, malloc, free;
                         import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
@@ -1047,10 +1047,6 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
                             abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
 
                         immutable maxDescriptors = r.rlim_cur;
-
-                        // Missing druntime declaration
-                        pragma(mangle, "dirfd")
-                        extern(C) nothrow @nogc int dirfd(DIR* dir);
 
                         // Always try /dev/fd enumeration first — it's the most
                         // efficient approach and handles unlimited RLIMIT_NOFILE.
@@ -1247,18 +1243,11 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
     {
         closePipeWriteEnds();
 
-        T retryInterrupted(T)(scope T delegate() syscall)
-        {
-            import core.stdc.errno : errno, EINTR;
-            T result;
-            do
-                result = syscall();
-            while (result == -1 && .errno == EINTR);
-            return result;
-        }
+        import std.internal.retry : retryOnEINTR;
 
         auto status = InternalError.noerror;
-        auto readExecResult = retryInterrupted(() => core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof));
+        auto readExecResult = retryOnEINTR(
+            () => core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof));
         // Save error number just in case if subsequent "waitpid" fails and overrides errno
         immutable lastError = .errno;
 
@@ -1267,7 +1256,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             // Forked child exits right after creating second fork. So it should be safe to wait here.
             import core.sys.posix.sys.wait : waitpid;
             int waitResult;
-            retryInterrupted(() => waitpid(id, &waitResult, 0));
+            retryOnEINTR(() => waitpid(id, &waitResult, 0));
         }
 
         if (readExecResult == -1)
@@ -1277,7 +1266,7 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
         if (status != InternalError.noerror)
         {
             int error;
-            readExecResult = retryInterrupted(() => read(forkPipe[0], &error, error.sizeof));
+            readExecResult = retryOnEINTR(() => read(forkPipe[0], &error, error.sizeof));
             string errorMsg;
             final switch (status)
             {

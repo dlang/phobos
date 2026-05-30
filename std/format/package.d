@@ -473,7 +473,7 @@ $(BOOKTABLE ,
    $(TR $(MULTIROW_CELL 2, $(I Enum))
         $(TD $(B 's'))
             $(TD The name of the value. If the name is not available, the base value
-                 is used, preceeded by a cast.)
+                 is used, preceded by a cast.)
    )
    $(TR $(TD All, but $(B 's'))
             $(TD Enums can be formatted with all format characters that can be used

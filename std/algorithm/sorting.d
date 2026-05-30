@@ -3267,7 +3267,7 @@ if (isRandomAccessRange!R && hasLength!R && hasSwappableElements!R &&
     size_t length;
     scope(exit)
     {
-        static if (hasElaborateDestructor!T)
+        static if (__traits(needsDestruction, T))
         {
             foreach (i; 0 .. length) collectException(destroy(xform1[i]));
         }

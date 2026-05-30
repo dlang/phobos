@@ -1051,7 +1051,7 @@ if (!(is(S : T) &&
     {
         import std.array : appender;
         // other string-to-string
-        //Use Appender directly instead of toStr, which also uses a formatedWrite
+        // Use Appender directly instead of toStr, which also uses a formattedWrite
         auto w = appender!T();
         w.put(value);
         return w.data;

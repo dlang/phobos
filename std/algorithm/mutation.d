@@ -1164,7 +1164,7 @@ pure nothrow @safe @nogc unittest
         static struct X { int n = 0; ~this(){n = 0;} }
         X x;
     }
-    static assert(hasElaborateDestructor!S3);
+    static assert(__traits(needsDestruction, S3));
     S3 s31, s32;
     s31.x.n = 1;
     move(s31, s32);
@@ -1267,15 +1267,13 @@ pure nothrow @safe @nogc unittest
 
 private void moveImpl(T)(ref scope T target, ref return scope T source)
 {
-    import std.traits : hasElaborateDestructor;
-
     static if (is(T == struct))
     {
         //  Unsafe when compiling without -dip1000
         if ((() @trusted => &source == &target)()) return;
 
         // Destroy target before overwriting it
-        static if (hasElaborateDestructor!T) target.__xdtor();
+        static if (__traits(needsDestruction, T)) target.__xdtor();
     }
     // move and emplace source into target
     moveEmplaceImpl(target, source);
@@ -1326,7 +1324,7 @@ private T trustedMoveImpl(T)(ref return scope T source) @trusted
         static struct X { int n = 0; ~this(){n = 0;} }
         X x;
     }
-    static assert(hasElaborateDestructor!S3);
+    static assert(__traits(needsDestruction, S3));
     S3 s31;
     s31.x.n = 1;
     S3 s32 = move(s31);
@@ -1440,7 +1438,7 @@ private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
 {
     import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
-                        hasElaborateCopyConstructor, hasElaborateDestructor,
+                        hasElaborateCopyConstructor,
                         hasElaborateMove,
                         isAssignable, isStaticArray;
 
@@ -1466,7 +1464,7 @@ private void moveEmplaceImpl(T)(ref scope T target, ref return scope T source)
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
-        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        static if (__traits(needsDestruction, T) || hasElaborateCopyConstructor!T)
         {
             // If T is nested struct, keep original context pointer
             static if (__traits(isNested, T))

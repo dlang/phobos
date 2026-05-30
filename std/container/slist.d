@@ -628,7 +628,7 @@ Complexity: $(BIGOH n)
     alias stableLinearRemove = linearRemove;
 
 /**
-Removes the first occurence of an element from the list in linear time.
+Removes the first occurrence of an element from the list in linear time.
 
 Returns: True if the element existed and was successfully removed, false otherwise.
 

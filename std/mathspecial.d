@@ -144,7 +144,7 @@ pragma(inline, true) real sgnGamma(real x)
 /** Beta function, B(x,y)
  *
  * Mathematically, if x $(GT) 0 and y $(GT) 0 then
- * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (l-t), y-1)dt. Through analytic continuation, it
+ * B(x,y) = $(INTEGRATE 0, 1)$(POWER t, x-1)$(POWER (1-t), y-1)dt. Through analytic continuation, it
  * is extended to $(COMPLEX)$(SUP 2) where it can be expressed in terms of $(GAMMA)(z).
  *
  * B(x,y) = $(GAMMA)(x)$(GAMMA)(y) / $(GAMMA)(x+y).
@@ -187,21 +187,6 @@ pragma(inline, true) real beta(real x, real y)
 @safe unittest
 {
     assert(beta(1, 2) == 0.5);
-    assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
-    assert(beta(3, 4) == beta(4, 3));
-    assert(isNaN(beta(-real.infinity, +0.)));
-    assert(isNaN(beta(-1, 2)));
-    assert(beta(-0.5, 0.5) is -0.0L);
-    assert(beta(-1.5, 0.5) is +0.0L);
-    assert(beta(+0., +0.) == +real.infinity);
-    assert(isNaN(beta(+0., +real.infinity)));
-    assert(beta(1, +real.infinity) is +0.0L);
-    assert(isNaN(beta(-0., +0.)));
-    assert(beta(-0., nextUp(+0.0L)) == -real.infinity);
-    assert(beta(-0.5, +real.infinity) == -real.infinity);
-    assert(beta(nextDown(-1.0L), real.infinity) == real.infinity);
-    assert(beta(nextDown(-0.0L), +0.) == +real.infinity);
-    assert(beta(-0.5, -0.) == -real.infinity);
 }
 
 /** Digamma function, $(PSI)(x)

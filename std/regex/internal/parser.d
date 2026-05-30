@@ -179,7 +179,7 @@ struct CodeGen
     uint counterDepth = 0;         // current depth of nested counted repetitions
     CodepointSet[] charsets;       // sets for char classes
     const(CharMatcher)[] matchers; // matchers for char classes
-    uint[] backrefed;              // bitarray for groups refered by backref
+    uint[] backrefed;              // bitarray for groups referred by backref
     uint ngroup;                   // final number of groups (of all patterns)
 
     void start(uint length)

@@ -1593,7 +1593,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
         if (overflow) return null;
     }
 
-    static if (__traits(isZeroInit, T) && hasMember!(Allocator, "allocateZeroed"))
+    static if (__traits(isZeroInit, T) && __traits(hasMember, Allocator, "allocateZeroed"))
     {
         auto m = alloc.allocateZeroed(nAlloc);
         return (() @trusted => cast(T[]) m)();
@@ -1668,7 +1668,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 private enum hasPurePostblit(T) = !hasElaborateCopyConstructor!T ||
     is(typeof(() pure { T.init.__xpostblit(); }));
 
-private enum hasPureDtor(T) = !hasElaborateDestructor!T ||
+private enum hasPureDtor(T) = !__traits(needsDestruction, T) ||
     is(typeof(() pure { T.init.__xdtor(); }));
 
 // `true` when postblit and destructor of T cannot escape references to itself
@@ -1693,7 +1693,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
         }
 
         size_t i = 0;
-        static if (hasElaborateDestructor!T)
+        static if (__traits(needsDestruction, T))
         {
             scope (failure)
             {
@@ -2411,7 +2411,7 @@ allocated with the same allocator.
 */
 void dispose(A, T)(auto ref A alloc, auto ref T* p)
 {
-    static if (hasElaborateDestructor!T)
+    static if (__traits(needsDestruction, T))
     {
         destroy(*p);
     }
@@ -2447,7 +2447,7 @@ if (is(T == class) || is(T == interface))
 /// Ditto
 void dispose(A, T)(auto ref A alloc, auto ref T[] array)
 {
-    static if (hasElaborateDestructor!(typeof(array[0])))
+    static if (__traits(needsDestruction, typeof(array[0])))
     {
         foreach (ref e; array)
         {
@@ -2698,8 +2698,7 @@ if (!isPointer!A)
     {
         auto state = a.allocate(stateSize!(CAllocatorImpl!A));
         import std.algorithm.mutation : move;
-        import std.traits : hasMember;
-        static if (hasMember!(A, "deallocate"))
+        static if (__traits(hasMember, A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
         }
@@ -2715,8 +2714,7 @@ RCIAllocator allocatorObject(A)(A* pa)
     assert(pa);
     import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
-    import std.traits : hasMember;
-    static if (hasMember!(A, "deallocate"))
+    static if (__traits(hasMember, A, "deallocate"))
     {
         scope(failure) pa.deallocate(state);
     }
@@ -2812,8 +2810,7 @@ if (!isPointer!A)
     {
         auto state = a.allocate(stateSize!(CSharedAllocatorImpl!A));
         import std.algorithm.mutation : move;
-        import std.traits : hasMember;
-        static if (hasMember!(A, "deallocate"))
+        static if (__traits(hasMember, A, "deallocate"))
         {
             scope(failure) a.deallocate(state);
         }
@@ -2833,8 +2830,7 @@ RCISharedAllocator sharedAllocatorObject(A)(A* pa)
     assert(pa);
     import core.lifetime : emplace;
     auto state = pa.allocate(stateSize!(CSharedAllocatorImpl!(A, Yes.indirect)));
-    import std.traits : hasMember;
-    static if (hasMember!(A, "deallocate"))
+    static if (__traits(hasMember, A, "deallocate"))
     {
         scope(failure) pa.deallocate(state);
     }
@@ -2853,8 +2849,6 @@ Usually `CAllocatorImpl` is used indirectly by calling $(LREF theAllocator).
 class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : IAllocator
 {
-    import std.traits : hasMember;
-
     static if (stateSize!Allocator) private size_t rc = 1;
 
     /**
@@ -2912,7 +2906,7 @@ nothrow:
     */
     override void[] alignedAllocate(size_t s, uint a)
     {
-        static if (hasMember!(Allocator, "alignedAllocate"))
+        static if (__traits(hasMember, Allocator, "alignedAllocate"))
             return impl.alignedAllocate(s, a);
         else
             return null;
@@ -2924,14 +2918,14 @@ nothrow:
     */
     override Ternary owns(void[] b)
     {
-        static if (hasMember!(Allocator, "owns")) return impl.owns(b);
+        static if (__traits(hasMember, Allocator, "owns")) return impl.owns(b);
         else return Ternary.unknown;
     }
 
     /// Returns $(D impl.expand(b, s)) if defined, `false` otherwise.
     override bool expand(ref void[] b, size_t s)
     {
-        static if (hasMember!(Allocator, "expand"))
+        static if (__traits(hasMember, Allocator, "expand"))
             return impl.expand(b, s);
         else
             return s == 0;
@@ -2946,7 +2940,7 @@ nothrow:
     /// Forwards to `impl.alignedReallocate` if defined, `false` otherwise.
     bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
-        static if (!hasMember!(Allocator, "alignedAllocate"))
+        static if (!__traits(hasMember, Allocator, "alignedAllocate"))
         {
             return false;
         }
@@ -2959,7 +2953,7 @@ nothrow:
     // Undocumented for now
     Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
-        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        static if (__traits(hasMember, Allocator, "resolveInternalPointer"))
         {
             return impl.resolveInternalPointer(p, result);
         }
@@ -2975,7 +2969,7 @@ nothrow:
     */
     override bool deallocate(void[] b)
     {
-        static if (hasMember!(Allocator, "deallocate"))
+        static if (__traits(hasMember, Allocator, "deallocate"))
         {
             return impl.deallocate(b);
         }
@@ -2991,7 +2985,7 @@ nothrow:
     */
     override bool deallocateAll()
     {
-        static if (hasMember!(Allocator, "deallocateAll"))
+        static if (__traits(hasMember, Allocator, "deallocateAll"))
         {
             return impl.deallocateAll();
         }
@@ -3006,7 +3000,7 @@ nothrow:
     */
     override Ternary empty()
     {
-        static if (hasMember!(Allocator, "empty"))
+        static if (__traits(hasMember, Allocator, "empty"))
         {
             return Ternary(impl.empty);
         }
@@ -3021,7 +3015,7 @@ nothrow:
     */
     override void[] allocateAll()
     {
-        static if (hasMember!(Allocator, "allocateAll"))
+        static if (__traits(hasMember, Allocator, "allocateAll"))
         {
             return impl.allocateAll();
         }
@@ -3082,7 +3076,6 @@ $(LREF processAllocator).
 class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : ISharedAllocator
 {
-    import std.traits : hasMember;
     import core.atomic : atomicOp, atomicLoad;
 
     static if (stateSize!Allocator) shared size_t rc = 1;
@@ -3142,7 +3135,7 @@ nothrow:
     */
     override void[] alignedAllocate(size_t s, uint a) shared
     {
-        static if (hasMember!(Allocator, "alignedAllocate"))
+        static if (__traits(hasMember, Allocator, "alignedAllocate"))
             return impl.alignedAllocate(s, a);
         else
             return null;
@@ -3154,14 +3147,14 @@ nothrow:
     */
     override Ternary owns(void[] b) shared
     {
-        static if (hasMember!(Allocator, "owns")) return impl.owns(b);
+        static if (__traits(hasMember, Allocator, "owns")) return impl.owns(b);
         else return Ternary.unknown;
     }
 
     /// Returns $(D impl.expand(b, s)) if defined, `false` otherwise.
     override bool expand(ref void[] b, size_t s) shared
     {
-        static if (hasMember!(Allocator, "expand"))
+        static if (__traits(hasMember, Allocator, "expand"))
             return impl.expand(b, s);
         else
             return s == 0;
@@ -3176,7 +3169,7 @@ nothrow:
     /// Forwards to `impl.alignedReallocate` if defined, `false` otherwise.
     bool alignedReallocate(ref void[] b, size_t s, uint a) shared
     {
-        static if (!hasMember!(Allocator, "alignedAllocate"))
+        static if (!__traits(hasMember, Allocator, "alignedAllocate"))
         {
             return false;
         }
@@ -3189,7 +3182,7 @@ nothrow:
     // Undocumented for now
     Ternary resolveInternalPointer(const void* p, ref void[] result) shared
     {
-        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        static if (__traits(hasMember, Allocator, "resolveInternalPointer"))
         {
             return impl.resolveInternalPointer(p, result);
         }
@@ -3205,7 +3198,7 @@ nothrow:
     */
     override bool deallocate(void[] b) shared
     {
-        static if (hasMember!(Allocator, "deallocate"))
+        static if (__traits(hasMember, Allocator, "deallocate"))
         {
             return impl.deallocate(b);
         }
@@ -3221,7 +3214,7 @@ nothrow:
     */
     override bool deallocateAll() shared
     {
-        static if (hasMember!(Allocator, "deallocateAll"))
+        static if (__traits(hasMember, Allocator, "deallocateAll"))
         {
             return impl.deallocateAll();
         }
@@ -3236,7 +3229,7 @@ nothrow:
     */
     override Ternary empty() shared
     {
-        static if (hasMember!(Allocator, "empty"))
+        static if (__traits(hasMember, Allocator, "empty"))
         {
             return Ternary(impl.empty);
         }
@@ -3251,7 +3244,7 @@ nothrow:
     */
     override void[] allocateAll() shared
     {
-        static if (hasMember!(Allocator, "allocateAll"))
+        static if (__traits(hasMember, Allocator, "allocateAll"))
         {
             return impl.allocateAll();
         }
@@ -3659,7 +3652,7 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    static if (hasMember!(Allocator, "reallocate"))
+    static if (__traits(hasMember, Allocator, "reallocate"))
     bool reallocate(ref void[] b, size_t s)
     {
         auto n = &parent.prefix(b);

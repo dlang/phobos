@@ -6349,7 +6349,7 @@ Params:
         deciding where to split the range.
 
 Returns:
-    A forward range of slices of the original range split by whitespace.
+    A forward range of slices of the original range split by `isTerminator`.
  +/
 auto splitter(alias isTerminator, Range)(Range r)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(r.front))))

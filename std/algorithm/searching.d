@@ -1166,7 +1166,7 @@ with `withOneOfThese[0]`, 2 if it ends with `withOneOfThese[1]`, and so
 on.
 
 In the case when no needle parameters are given, return `true` iff back of
-`doesThisStart` fulfils predicate `pred`.
+`doesThisEnd` fulfils predicate `pred`.
 */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
@@ -2163,7 +2163,7 @@ if (isForwardRange!R1 && isForwardRange!R2
             return haystack[haystack.length .. haystack.length];
         }
         // Optimization in case the ranges are both SortedRanges.
-        // Binary search can be used to find the first occurence
+        // Binary search can be used to find the first occurrence
         // of the first element of the needle in haystack.
         // When it is found O(walklength(needle)) steps are performed.
         // https://issues.dlang.org/show_bug.cgi?id=8829 enhancement

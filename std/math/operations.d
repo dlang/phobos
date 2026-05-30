@@ -1023,7 +1023,7 @@ if (isFloatingPoint!(X))
         reference = Reference value.
         maxRelDiff = Maximum allowable difference relative to `reference`.
         Setting to 0.0 disables this check. Defaults to `1e-2`.
-        maxAbsDiff = Maximum absolute difference. This is mainly usefull
+        maxAbsDiff = Maximum absolute difference. This is mainly useful
         for comparing values to zero. Setting to 0.0 disables this check.
         Defaults to `1e-5`.
 
@@ -1210,7 +1210,7 @@ deprecated @safe pure nothrow unittest
         Setting to 0.0 disables this check. Default depends on the type of
         `lhs` and `rhs`: It is approximately half the number of decimal digits of
         precision of the smaller type.
-        maxAbsDiff = Maximum absolute difference. This is mainly usefull
+        maxAbsDiff = Maximum absolute difference. This is mainly useful
         for comparing values to zero. Setting to 0.0 disables this check.
         Defaults to `0.0`.
 

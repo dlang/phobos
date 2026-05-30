@@ -74,7 +74,7 @@ rbTree.insert(5); // null pointer dereference
 ---
 
 Using an uninitialized struct-based container will work, because the struct
-intializes itself upon use; however, up to this point the container will not
+initializes itself upon use; however, up to this point the container will not
 have an identity and assignment does not create two references to the same
 data.
 
