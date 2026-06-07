@@ -528,6 +528,13 @@ template ctRegexImpl(alias pattern, string flags="")
     Compile regular expression using CTFE
     and generate optimized native machine code for matching it.
 
+    Note: Unlike $(LREF regex), `ctRegex` always uses a
+    $(LINK2 https://en.wikipedia.org/wiki/Backtracking, backtracking)
+    engine, even for patterns without backreferences. This means
+    matching is not guaranteed to run in linear time. For patterns
+    applied to untrusted input, consider the runtime $(LREF regex),
+    which selects a linear-time engine when possible.
+
     Returns: StaticRegex object for faster matching.
 
     Params:
