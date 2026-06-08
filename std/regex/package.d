@@ -234,6 +234,15 @@ They met on 24/01/1970.
      )
   )
 
+  $(P $(B Note on performance:) each time a lookahead or lookbehind
+  assertion is reached, its subexpression is matched from scratch by a
+  separate matcher, with no result reused between evaluations. As a result,
+  an assertion whose subexpression contains an unbounded repetition
+  (*, +, {n,}) can make matching take time polynomial in the length of the
+  input, which is most likely to matter for long or untrusted input. Where
+  the pattern allows, avoid repetitions inside lookaround, otherwise
+  consider bounding the input length.)
+
   $(REG_START Character classes )
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
