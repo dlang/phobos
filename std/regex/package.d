@@ -475,6 +475,17 @@ if (isSomeString!(S))
     assert(indexOf(regexString, 'U') >= 0, "String representation should include flags.");
 }
 
+@system unittest
+{
+    // A loop followed by a small char-alternation (an OrChar, e.g. produced by
+    // case-insensitive matching) should get the same InfiniteBloom prefilter
+    // that a loop followed by a single character does.
+    assert(regex("a*b").filters.length > 0,
+        "loop followed by a single char should build a bloom prefilter");
+    assert(regex("(?i)a*b").filters.length > 0,
+        "loop followed by an OrChar should build a bloom prefilter too");
+}
+
 public auto regexImpl(S)(const S pattern, const(char)[] flags="")
 if (isSomeString!(typeof(pattern)))
 {

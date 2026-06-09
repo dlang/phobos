@@ -1158,7 +1158,10 @@ void optimize(Char)(ref Regex!Char zis)
                 case Char:
                     set.add(ir[i].data, ir[i].data+1);
                     goto default;
-                //TODO: OrChar
+                case OrChar://assumes IRL!(OrChar) == 1
+                    foreach (k; 0 .. ir[i].sequence)
+                        set.add(ir[i+k].data, ir[i+k].data+1);
+                    goto default;
                 case Trie, CodepointSet:
                     set = zis.charsets[ir[i].data];
                     goto default;
