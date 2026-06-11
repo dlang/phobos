@@ -1019,8 +1019,12 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 
 
 /++
-    Start matching `input` to regex pattern `re`,
-    using Thompson NFA matching scheme.
+    Start matching `input` to regex pattern `re`.
+
+    The exact matching scheme (Thompson NFA or backtracking) is chosen
+    automatically based on the pattern; this function does not force a
+    particular engine. It is kept for backwards compatibility and is
+    equivalent to $(LREF bmatch).
 
     The use of this function is $(RED discouraged) - use either of
     $(LREF matchAll) or $(LREF matchFirst).
@@ -1169,9 +1173,12 @@ if (isSomeString!R && isSomeString!String)
 }
 
 /++
-    Start matching of `input` to regex pattern `re`,
-    using traditional $(LINK2 https://en.wikipedia.org/wiki/Backtracking,
-    backtracking) matching scheme.
+    Start matching of `input` to regex pattern `re`.
+
+    The exact matching scheme (Thompson NFA or backtracking) is chosen
+    automatically based on the pattern; this function does not force a
+    particular engine. It is kept for backwards compatibility and is
+    equivalent to $(LREF match).
 
     The use of this function is $(RED discouraged) - use either of
     $(LREF matchAll) or $(LREF matchFirst).
