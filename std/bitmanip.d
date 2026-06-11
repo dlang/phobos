@@ -4045,8 +4045,9 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, const T value, size_t index)
 if (canSwapEndianness!T &&
-    isForwardRange!R &&
+    isRandomAccessRange!R &&
     hasSlicing!R &&
+    hasAssignableElements!R &&
     is(ElementType!R : ubyte))
 {
     write!(T, endianness)(range, value, &index);
@@ -4055,8 +4056,9 @@ if (canSwapEndianness!T &&
 /++ Ditto +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, const T value, size_t* index)
 if (canSwapEndianness!T &&
-    isForwardRange!R &&
+    isRandomAccessRange!R &&
     hasSlicing!R &&
+    hasAssignableElements!R &&
     is(ElementType!R : ubyte))
 {
     assert(index, "index must not point to null");
@@ -4069,7 +4071,14 @@ if (canSwapEndianness!T &&
     immutable begin = *index;
     immutable end = begin + T.sizeof;
     *index = end;
-    range[begin .. end] = bytes[0 .. T.sizeof];
+
+    static if (is(T == U[], U))
+        range[begin .. end] = bytes[0 .. T.sizeof];
+    else
+    {
+        foreach (i; 0 .. T.sizeof)
+            range[begin + i] = bytes[i];
+    }
 }
 
 ///
@@ -4381,6 +4390,63 @@ if (canSwapEndianness!T &&
     }
 
     static assert(!__traits(compiles, buffer.write!Real(Real.one)));
+}
+
+// https://github.com/dlang/phobos/issues/11028
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.meta : AliasSeq;
+
+    // A class is used just to make sure that any uses of save are done
+    // correctly and that implicit saves are not accidentally relied upon.
+    static class RARange
+    {
+        @property bool empty() @safe const { return _arr.empty; }
+        @property ubyte front() @safe const { return _arr[0]; }
+        @property void front(ubyte value) @safe { _arr[0] = value; }
+        void popFront() @safe { _arr = _arr[1 .. $]; }
+        auto save() @safe { return new typeof(this)(_arr); }
+        @property ubyte back() @safe const { return _arr[$ - 1]; }
+        @property void back(ubyte value) @safe { _arr[$ - 1] = value; }
+        void popBack() @safe { _arr = _arr[0 .. $ - 1]; }
+        @property size_t length() @safe const { return _arr.length; }
+        ubyte opIndex(size_t i) @safe const { return _arr[i]; }
+        void opIndexAssign(ubyte value, size_t i) @safe { _arr[i] = value; }
+        auto opSlice(size_t i, size_t j) @safe { return new RARange(_arr[i .. j]); }
+        this(ubyte[] arr) @safe { _arr = arr; }
+        ubyte[] _arr;
+    }
+    static assert(isRandomAccessRange!RARange);
+    static assert(hasSlicing!RARange);
+    static assert(hasAssignableElements!RARange);
+
+    {
+        auto range = new RARange([0, 0, 0, 0, 0, 0, 0, 0]);
+        range.write!uint(29110231u, 0);
+        assert(equal(range.save, [1, 188, 47, 215, 0, 0, 0, 0]));
+
+        range.write!ushort(927, 0);
+        assert(equal(range.save, [3, 159, 47, 215, 0, 0, 0, 0]));
+
+        range.write!ubyte(42, 0);
+        assert(equal(range.save, [42, 159, 47, 215, 0, 0, 0, 0]));
+    }
+    {
+        auto range = new RARange([0, 0, 0, 0, 0, 0, 0, 0]);
+        size_t index = 0;
+        range.write!ushort(261, &index);
+        assert(equal(range.save, [1, 5, 0, 0, 0, 0, 0, 0]));
+        assert(index == 2);
+
+        range.write!uint(369700095u, &index);
+        assert(equal(range.save, [1, 5, 22, 9, 44, 255, 0, 0]));
+        assert(index == 6);
+
+        range.write!ubyte(8, &index);
+        assert(equal(range.save, [1, 5, 22, 9, 44, 255, 8, 0]));
+        assert(index == 7);
+    }
 }
 
 
