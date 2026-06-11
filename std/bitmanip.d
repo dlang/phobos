@@ -3374,7 +3374,7 @@ if (canSwapEndianness!T &&
     isForwardRange!R &&
     is(ElementType!R : const ubyte))
 {
-    static if (hasSlicing!R)
+    static if (hasSlicing!R && is(typeof(R.init[0 .. 0]) : const(ubyte)[]))
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
     else
     {
@@ -3398,7 +3398,7 @@ if (canSwapEndianness!T &&
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
 if (canSwapEndianness!T &&
-    isForwardRange!R &&
+    isRandomAccessRange!R &&
     hasSlicing!R &&
     is(ElementType!R : const ubyte))
 {
@@ -3408,7 +3408,7 @@ if (canSwapEndianness!T &&
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
 if (canSwapEndianness!T &&
-    isForwardRange!R &&
+    isRandomAccessRange!R &&
     hasSlicing!R &&
     is(ElementType!R : const ubyte))
 {
@@ -3416,7 +3416,14 @@ if (canSwapEndianness!T &&
 
     immutable begin = *index;
     immutable end = begin + T.sizeof;
-    const ubyte[T.sizeof] bytes = range[begin .. end];
+    static if (hasSlicing!R && is(typeof(R.init[0 .. 0]) : const(ubyte)[]))
+        const ubyte[T.sizeof] bytes = range[begin .. end];
+    else
+    {
+        ubyte[T.sizeof] bytes = void;
+        foreach (i; 0 .. T.sizeof)
+            bytes[i] = range[begin + i];
+    }
     *index = end;
 
     static if (endianness == Endian.bigEndian)
@@ -3657,6 +3664,116 @@ if (canSwapEndianness!T &&
         }
 
         static assert(!__traits(compiles, buffer.peek!Real()));
+    }
+}
+
+// https://github.com/dlang/phobos/issues/11027
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    // Classes are used just to make sure that any uses of save are done
+    // correctly and that implicit saves are not accidentally relied upon.
+    static class IRange
+    {
+        @property bool empty() @safe const { return _arr.empty; }
+        @property ubyte front() @safe const { return _arr[0]; }
+        void popFront() @safe { _arr = _arr[1 .. $]; }
+        this(ubyte[] arr) @safe { _arr = arr; }
+        ubyte[] _arr;
+    }
+    static assert(isInputRange!IRange);
+    static assert(!isForwardRange!IRange);
+    static assert(!hasSlicing!IRange);
+
+    static class FRange
+    {
+        @property bool empty() @safe const { return _arr.empty; }
+        @property ubyte front() @safe const { return _arr[0]; }
+        void popFront() @safe { _arr = _arr[1 .. $]; }
+        auto save() @safe { return new typeof(this)(_arr); }
+        this(ubyte[] arr) @safe { _arr = arr; }
+        ubyte[] _arr;
+    }
+    static assert(isForwardRange!FRange);
+    static assert(!isRandomAccessRange!FRange);
+    static assert(!hasSlicing!FRange);
+
+    static class FSRange
+    {
+        @property bool empty() @safe const { return _arr.empty; }
+        @property ubyte front() @safe const { return _arr[0]; }
+        void popFront() @safe { _arr = _arr[1 .. $]; }
+        auto save() @safe { return new typeof(this)(_arr); }
+        @property size_t length() @safe const { return _arr.length; }
+        auto opSlice(size_t i, size_t j) @safe { return new FSRange(_arr[i .. j]); }
+        this(ubyte[] arr) @safe { _arr = arr; }
+        ubyte[] _arr;
+    }
+    static assert(isForwardRange!FSRange);
+    static assert(!isRandomAccessRange!FSRange);
+    static assert(hasSlicing!FSRange);
+
+    static class RARange
+    {
+        @property bool empty() @safe const { return _arr.empty; }
+        @property ubyte front() @safe const { return _arr[0]; }
+        void popFront() @safe { _arr = _arr[1 .. $]; }
+        auto save() @safe { return new typeof(this)(_arr); }
+        @property ubyte back() @safe const { return _arr[$ - 1]; }
+        void popBack() @safe { _arr = _arr[0 .. $ - 1]; }
+        @property size_t length() @safe const { return _arr.length; }
+        ubyte opIndex(size_t i) @safe const { return _arr[i]; }
+        auto opSlice(size_t i, size_t j) @safe { return new RARange(_arr[i .. j]); }
+        this(ubyte[] arr) @safe { _arr = arr; }
+        ubyte[] _arr;
+    }
+    static assert(isRandomAccessRange!RARange);
+    static assert(hasSlicing!RARange);
+
+    foreach (R; AliasSeq!(FRange, FSRange, RARange))
+    {
+        auto range = new RARange([1, 5, 22, 9, 44, 255, 8]);
+        assert(range.peek!uint() == 17110537);
+        assert(range.peek!ushort() == 261);
+        assert(range.peek!ubyte() == 1);
+
+        assert(range.peek!uint(2) == 369700095);
+        assert(range.peek!ushort(2) == 5641);
+        assert(range.peek!ubyte(2) == 22);
+
+        size_t index = 0;
+        assert(range.peek!ushort(&index) == 261);
+        assert(index == 2);
+
+        assert(range.peek!uint(&index) == 369700095);
+        assert(index == 6);
+
+        assert(range.peek!ubyte(&index) == 8);
+        assert(index == 7);
+    }
+
+    // Not for the listed bug, but we might as well use the same test ranges
+    // to verify that read works correctly under the same circumstances.
+    foreach (R; AliasSeq!(IRange, FRange, FSRange, RARange))
+    {
+        auto range = new R([1, 5, 22, 9, 44, 255, 8]);
+        static if (hasLength!R)
+            assert(range.length == 7);
+        assert(!range.empty);
+
+        assert(range.read!ushort() == 261);
+        static if (hasLength!R)
+            assert(range.length == 5);
+        assert(!range.empty);
+
+        assert(range.read!uint() == 369700095);
+        static if (hasLength!R)
+            assert(range.length == 1);
+        assert(!range.empty);
+
+        assert(range.read!ubyte() == 8);
+        assert(range.empty);
     }
 }
 
