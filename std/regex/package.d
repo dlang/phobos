@@ -211,6 +211,11 @@ They met on 24/01/1970.
         When referring to a matched portion of text,
         names work like aliases in addition to direct numbers.
      )
+    $(REG_ROW \1$(COMMA) \2 ..., Backreference: matches the same text most
+        recently captured by the capturing group with that number. Groups are
+        numbered from 1 by the position of their opening parenthesis. A
+        multi-digit reference such as \12 denotes group 12 when at least that
+        many capturing groups precede it. )
     $(REG_TITLE Assertions, Match position rather than character )
     $(REG_ROW ^, Matches at the beginning of input or line (in multiline mode).)
     $(REG_ROW $, Matches at the end of input or line (in multiline mode). )
