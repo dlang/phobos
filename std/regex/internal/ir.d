@@ -392,7 +392,7 @@ struct Group(DataIndex)
 
     @trusted string toString()() const
     {
-        if (begin < end)
+        if (begin > end)
             return "(unmatched)";
         import std.array : appender;
         import std.format.write : formattedWrite;
@@ -400,6 +400,21 @@ struct Group(DataIndex)
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
     }
+}
+
+@safe unittest
+{
+    Group!size_t matched = { begin: 2, end: 5 };
+    assert(cast(bool) matched);
+    assert(matched.toString == "2..5");
+
+    Group!size_t empty = { begin: 3, end: 3 };
+    assert(cast(bool) empty);
+    assert(empty.toString == "3..3");
+
+    Group!size_t unmatched;
+    assert(!cast(bool) unmatched);
+    assert(unmatched.toString == "(unmatched)");
 }
 
 //debugging tool, prints out instruction along with opcodes
