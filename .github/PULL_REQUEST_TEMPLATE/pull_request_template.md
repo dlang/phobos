@@ -9,7 +9,7 @@
 ### Feature request or issue tracking
 
 <!-- Please update the issue number (e.g. `#10974`) below, if applicable.
-     Otherwise feel free to remove this section. -->
+     Otherwise, feel free to remove this section. -->
 
 Closes #10974.
 
@@ -21,7 +21,7 @@ Closes #10974.
 - [ ] If my changes are non-trivial and do not concern a reported issue, I have added a changelog entry.
 
 
-### LLM/AI disclosue
+### LLM/AI disclosure
 
 <!-- If applicable, please keep the corresponding option only.
      (This section can be removed for hand-written code.) -->
