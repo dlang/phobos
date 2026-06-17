@@ -2659,6 +2659,9 @@ enum SocketOption: int
 version (StdDdoc)
 class Socket
 {
+    protected socket_t sock;
+    protected AddressFamily _family;
+
 public:
 
     /**
@@ -2987,11 +2990,71 @@ public:
 }
 
 version (StdDdoc) {} else
-class Socket
+class Socket : SocketNotBorrowed
 {
+    this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted
+    {
+        _family = af;
+        auto handle = cast(socket_t) socket(af, type, protocol);
+        if (handle == socket_t.init)
+            throw new SocketOSException("Unable to create socket");
+        setSock(handle);
+    }
+
+    this(AddressFamily af, SocketType type)
+    {
+        /* A single protocol exists to support this socket type within the
+         * protocol family, so the ProtocolType is assumed.
+         */
+        this(af, type, cast(ProtocolType) 0);         // Pseudo protocol number.
+    }
+
+    this(AddressFamily af, SocketType type, scope const(char)[] protocolName) @trusted
+    {
+        protoent* proto;
+        proto = getprotobyname(protocolName.tempCString());
+        if (!proto)
+            throw new SocketOSException("Unable to find the protocol");
+        this(af, type, cast(ProtocolType) proto.p_proto);
+    }
+
+    this(const scope AddressInfo info)
+    {
+        this(info.family, info.type, info.protocol);
+    }
+
+    this(socket_t sock, AddressFamily af) pure nothrow @nogc
+    {
+        super(sock, af);
+    }
+
+    // For use with accepting().
+    package this() pure nothrow @nogc
+    {
+        super();
+    }
+
+    ~this() nothrow @nogc
+    {
+        close();
+    }
+}
+
+/**
+ * Class that represents a network communication endpoint using
+ * the Berkeley sockets interface.
+ *
+ * Same as Socket, but acquires a socket from outside and doesn't
+ * closes it in the destructor. This allows to use a socket borrowed
+ * from somewhere and simply leave, so that others can continue
+ * working with it.
+ */
+class SocketNotBorrowed
+{
+    protected socket_t sock;
+    protected AddressFamily _family;
+
 private:
-    socket_t sock;
-    AddressFamily _family;
 
     version (Windows)
         bool _blocking = true;         /// Property to get or set whether the socket is blocking or nonblocking.
@@ -3051,50 +3114,12 @@ private:
 
 public:
 
-    this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted
-    {
-        _family = af;
-        auto handle = cast(socket_t) socket(af, type, protocol);
-        if (handle == socket_t.init)
-            throw new SocketOSException("Unable to create socket");
-        setSock(handle);
-    }
-
-    this(AddressFamily af, SocketType type)
-    {
-        /* A single protocol exists to support this socket type within the
-         * protocol family, so the ProtocolType is assumed.
-         */
-        this(af, type, cast(ProtocolType) 0);         // Pseudo protocol number.
-    }
-
-
-    this(AddressFamily af, SocketType type, scope const(char)[] protocolName) @trusted
-    {
-        protoent* proto;
-        proto = getprotobyname(protocolName.tempCString());
-        if (!proto)
-            throw new SocketOSException("Unable to find the protocol");
-        this(af, type, cast(ProtocolType) proto.p_proto);
-    }
-
-
-    this(const scope AddressInfo info)
-    {
-        this(info.family, info.type, info.protocol);
-    }
-
+    /// Use an existing socket handle.
     this(socket_t sock, AddressFamily af) pure nothrow @nogc
     {
         assert(sock != socket_t.init);
         this.sock = sock;
         this._family = af;
-    }
-
-
-    ~this() nothrow @nogc
-    {
-        close();
     }
 
 
