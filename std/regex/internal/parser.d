@@ -968,17 +968,13 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         case '1': .. case '9':
             uint nref = cast(uint) front - '0';
             immutable maxBackref = sum(g.groupStack.data);
-            enforce(nref < maxBackref, "Backref to unseen group");
-            //perl's disambiguation rule i.e.
-            //get next digit only if there is such group number
             popFront();
-            while (nref < maxBackref && !empty && std.ascii.isDigit(front))
+            while (!empty && std.ascii.isDigit(front))
             {
                 nref = nref * 10 + front - '0';
                 popFront();
             }
-            if (nref >= maxBackref)
-                nref /= 10;
+            enforce(nref < maxBackref, "Backref to unseen group");
             enforce(!g.isOpenGroup(nref), "Backref to open group");
             uint localLimit = maxBackref - g.groupStack.top;
             if (nref >= localLimit)

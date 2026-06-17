@@ -711,3 +711,12 @@ version (none) // TODO: revist once we have proper benchmark framework
     ma = ma2;
     assert(ma[1] == "");
 }
+
+// https://github.com/dlang/phobos/issues/11035
+@safe unittest
+{
+    assertThrown(regex(`(a)\12`));
+    assertThrown(regex(`(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)\123`));
+    // a valid multi-digit backref still works
+    assertNotThrown(regex(`(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)\12`));
+}
