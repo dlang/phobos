@@ -2656,6 +2656,337 @@ enum SocketOption: int
  * Class that creates a network communication endpoint using
  * the Berkeley sockets interface.
  */
+version (StdDdoc)
+class Socket
+{
+public:
+
+    /**
+     * Create a blocking socket. If a single protocol type exists to support
+     * this socket type within the address family, the `ProtocolType` may be
+     * omitted.
+     */
+    this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted {}
+
+    /// ditto
+    this(AddressFamily af, SocketType type) {}
+
+    /// ditto
+    this(AddressFamily af, SocketType type, scope const(char)[] protocolName) @trusted {}
+
+    /**
+     * Create a blocking socket using the parameters from the specified
+     * `AddressInfo` structure.
+     */
+    this(const scope AddressInfo info) {}
+
+    /// Use an existing socket handle.
+    this(socket_t sock, AddressFamily af) pure nothrow @nogc {}
+
+    /// Get underlying socket handle.
+    @property socket_t handle() const pure nothrow @nogc
+    {
+        return cast(socket_t) null;
+    }
+
+    /**
+     * Releases the underlying socket handle from the Socket object. Once it
+     * is released, you cannot use the Socket object's methods anymore. This
+     * also means the Socket destructor will no longer close the socket - it
+     * becomes your responsibility.
+     *
+     * To get the handle without releasing it, use the `handle` property.
+     */
+    @property socket_t release() pure nothrow @nogc => cast(socket_t) null;
+
+    /**
+     * Get/set socket's blocking flag.
+     *
+     * When a socket is blocking, calls to receive(), accept(), and send()
+     * will block and wait for data/action.
+     * A non-blocking socket will immediately return instead of blocking.
+     */
+    @property bool blocking() @trusted const nothrow @nogc => false;
+
+    /// ditto
+    @property void blocking(bool byes) @trusted {}
+
+    /// Get the socket's address family.
+    @property AddressFamily addressFamily() => cast(AddressFamily) 0;
+
+    /// Property that indicates if this is a valid, alive socket.
+    @property bool isAlive() @trusted const => false;
+
+    /**
+     * Associate a local address with this socket.
+     *
+     * Params:
+     *     addr = The $(LREF Address) to associate this socket with.
+     *
+     * Throws: $(LREF SocketOSException) when unable to bind the socket.
+     */
+    void bind(Address addr) @trusted {}
+
+    /**
+     * Establish a connection. If the socket is blocking, connect waits for
+     * the connection to be made. If the socket is nonblocking, connect
+     * returns immediately and the connection attempt is still in progress.
+     */
+    void connect(Address to) @trusted {}
+
+    /**
+     * Listen for an incoming connection. `bind` must be called before you
+     * can `listen`. The `backlog` is a request of how many pending
+     * incoming connections are queued until `accept`ed.
+     */
+    void listen(int backlog) @trusted {}
+
+    /**
+     * Called by `accept` when a new `Socket` must be created for a new
+     * connection. To use a derived class, override this method and return an
+     * instance of your class. The returned `Socket`'s handle must not be
+     * set; `Socket` has a protected constructor `this()` to use in this
+     * situation.
+     *
+     * Override to use a derived class.
+     * The returned socket's handle must not be set.
+     */
+    protected Socket accepting() pure nothrow => null;
+
+    /**
+     * Accept an incoming connection. If the socket is blocking, `accept`
+     * waits for a connection request. Throws `SocketAcceptException` if
+     * unable to _accept. See `accepting` for use with derived classes.
+     */
+    Socket accept() @trusted => null;
+
+    /**
+     * Accept an incoming connection and retrieve the peer `Address`. If the
+     * socket is blocking, `accept` waits for a connection request. Throws
+     * `SocketAcceptException` if unable to _accept. See `accepting` for use
+     * with derived classes.
+     */
+    Socket accept(out Address peerAddress) @trusted => null;
+
+    /// Disables sends and/or receives.
+    void shutdown(SocketShutdown how) @trusted nothrow @nogc {}
+
+    /**
+     * Immediately drop any connections and release socket resources.
+     * The `Socket` object is no longer usable after `close`.
+     * Calling `shutdown` before `close` is recommended
+     * for connection-oriented sockets.
+     */
+    void close() scope @trusted nothrow @nogc {}
+
+    /**
+     * Returns: The local machine's host name
+     */
+    static @property string hostName() @trusted => null;
+
+    /// Remote endpoint `Address`.
+    @property Address remoteAddress() @trusted => null;
+
+    /// Local endpoint `Address`.
+    @property Address localAddress() @trusted => null;
+
+    /**
+     * Send or receive error code. See `wouldHaveBlocked`,
+     * `lastSocketError` and `Socket.getErrorText` for obtaining more
+     * information about the error.
+     */
+    enum int ERROR = _SOCKET_ERROR;
+
+    /**
+     * Send data on the connection. If the socket is blocking and there is no
+     * buffer space left, `send` waits.
+     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
+     * failure.
+     */
+    ptrdiff_t send(scope const(void)[] buf, SocketFlags flags) @trusted => 0;
+
+    /// ditto
+    ptrdiff_t send(scope const(void)[] buf) => 0;
+
+    /**
+     * Send data to a specific destination Address. If the destination address is
+     * not specified, a connection must have been made and that address is used.
+     * If the socket is blocking and there is no buffer space left, `sendTo` waits.
+     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
+     * failure.
+     */
+    ptrdiff_t sendTo(scope const(void)[] buf, SocketFlags flags, Address to) @trusted => 0;
+
+    /// ditto
+    ptrdiff_t sendTo(scope const(void)[] buf, Address to) => 0;
+
+    //assumes you connect()ed
+    /// ditto
+    ptrdiff_t sendTo(scope const(void)[] buf, SocketFlags flags) @trusted => 0;
+
+    //assumes you connect()ed
+    /// ditto
+    ptrdiff_t sendTo(scope const(void)[] buf) => 0;
+
+    /**
+     * Receive data on the connection. If the socket is blocking, `receive`
+     * waits until there is data to be received.
+     * Returns: The number of bytes actually received, `0` if the remote side
+     * has closed the connection, or `Socket.ERROR` on failure.
+     */
+    ptrdiff_t receive(scope void[] buf, SocketFlags flags) @trusted => 0;
+
+    /// ditto
+    ptrdiff_t receive(scope void[] buf) => 0;
+
+    /**
+     * Receive data and get the remote endpoint `Address`.
+     * If the socket is blocking, `receiveFrom` waits until there is data to
+     * be received.
+     * Returns: The number of bytes actually received, `0` if the remote side
+     * has closed the connection, or `Socket.ERROR` on failure.
+     */
+    ptrdiff_t receiveFrom(scope void[] buf, SocketFlags flags, ref Address from) @trusted => 0;
+
+    /// ditto
+    ptrdiff_t receiveFrom(scope void[] buf, ref Address from) => 0;
+
+    //assumes you connect()ed
+    /// ditto
+    ptrdiff_t receiveFrom(scope void[] buf, SocketFlags flags) @trusted => 0;
+
+    //assumes you connect()ed
+    /// ditto
+    ptrdiff_t receiveFrom(scope void[] buf) => 0;
+
+    /**
+     * Get a socket option.
+     * Returns: The number of bytes written to `result`.
+     * The length, in bytes, of the actual result - very different from getsockopt()
+     */
+    int getOption(SocketOptionLevel level, SocketOption option, scope void[] result) @trusted => 0;
+
+    /// Common case of getting integer and boolean options.
+    int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) @trusted => 0;
+
+    /// Get the linger option.
+    int getOption(SocketOptionLevel level, SocketOption option, out Linger result) @trusted => 0;
+
+    /// Get a timeout (duration) option.
+    void getOption(SocketOptionLevel level, SocketOption option, out Duration result) @trusted {}
+
+    /// Set a socket option.
+    void setOption(SocketOptionLevel level, SocketOption option, scope void[] value) @trusted {}
+
+    /// Common case for setting integer and boolean options.
+    void setOption(SocketOptionLevel level, SocketOption option, int32_t value) @trusted {}
+
+    /// Set the linger option.
+    void setOption(SocketOptionLevel level, SocketOption option, Linger value) @trusted {}
+
+    /**
+     * Sets a timeout (duration) option, i.e. `SocketOption.SNDTIMEO` or
+     * `RCVTIMEO`. Zero indicates no timeout.
+     *
+     * In a typical application, you might also want to consider using
+     * a non-blocking socket instead of setting a timeout on a blocking one.
+     *
+     * Note: While the receive timeout setting is generally quite accurate
+     * on *nix systems even for smaller durations, there are two issues to
+     * be aware of on Windows: First, although undocumented, the effective
+     * timeout duration seems to be the one set on the socket plus half
+     * a second. `setOption()` tries to compensate for that, but still,
+     * timeouts under 500ms are not possible on Windows. Second, be aware
+     * that the actual amount of time spent until a blocking call returns
+     * randomly varies on the order of 10ms.
+     *
+     * Params:
+     *   level  = The level at which a socket option is defined.
+     *   option = Either `SocketOption.SNDTIMEO` or `SocketOption.RCVTIMEO`.
+     *   value  = The timeout duration to set. Must not be negative.
+     *
+     * Throws: `SocketException` if setting the options fails.
+     *
+     * Example:
+     * ---
+     * import std.datetime;
+     * import std.typecons;
+     * auto pair = socketPair();
+     * scope(exit) foreach (s; pair) s.close();
+     *
+     * // Set a receive timeout, and then wait at one end of
+     * // the socket pair, knowing that no data will arrive.
+     * pair[0].setOption(SocketOptionLevel.SOCKET,
+     *     SocketOption.RCVTIMEO, dur!"seconds"(1));
+     *
+     * auto sw = StopWatch(Yes.autoStart);
+     * ubyte[1] buffer;
+     * pair[0].receive(buffer);
+     * writefln("Waited %s ms until the socket timed out.",
+     *     sw.peek.msecs);
+     * ---
+     */
+    void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted {}
+
+    /**
+     * Get a text description of this socket's error status, and clear the
+     * socket's error status.
+     */
+    string getErrorText() => null;
+
+    /**
+     * Enables TCP keep-alive with the specified parameters.
+     *
+     * Params:
+     *   time     = Number of seconds with no activity until the first
+     *              keep-alive packet is sent.
+     *   interval = Number of seconds between when successive keep-alive
+     *              packets are sent if no acknowledgement is received.
+     *
+     * Throws: `SocketOSException` if setting the options fails, or
+     * `SocketFeatureException` if setting keep-alive parameters is
+     * unsupported on the current platform.
+     */
+    void setKeepAlive(int time, int interval) @trusted {}
+
+    /**
+     * Wait for a socket to change status. A wait timeout of $(REF Duration, core, time) or
+     * `TimeVal`, may be specified; if a timeout is not specified or the
+     * `TimeVal` is `null`, the maximum timeout is used. The `TimeVal`
+     * timeout has an unspecified value when `select` returns.
+     * Returns: The number of sockets with status changes, `0` on timeout,
+     * or `-1` on interruption. If the return value is greater than `0`,
+     * the `SocketSets` are updated to only contain the sockets having status
+     * changes. For a connecting socket, a write status change means the
+     * connection is established and it's able to send. For a listening socket,
+     * a read status change means there is an incoming connection request and
+     * it's able to accept.
+     *
+     * `SocketSet`'s updated to include only those sockets which an event occurred.
+     * For a `connect()`ing socket, writeability means connected.
+     * For a `listen()`ing socket, readability means listening
+     * `Winsock`; possibly internally limited to 64 sockets per set.
+     *
+     * Returns:
+     * the number of events, 0 on timeout, or -1 on interruption
+     */
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout) @trusted => 0;
+
+    /// ditto
+    //maximum timeout
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError) => 0;
+
+    /// Ditto
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* timeout) @trusted => 0;
+
+    /**
+     * Can be overridden to support other addresses.
+     * Returns: A new `Address` object for the current address family.
+     */
+    protected Address createAddress() pure nothrow => cast(Address) null;
+}
+
+version (StdDdoc) {} else
 class Socket
 {
 private:
@@ -2720,11 +3051,6 @@ private:
 
 public:
 
-    /**
-     * Create a blocking socket. If a single protocol type exists to support
-     * this socket type within the address family, the `ProtocolType` may be
-     * omitted.
-     */
     this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted
     {
         _family = af;
@@ -2734,7 +3060,6 @@ public:
         setSock(handle);
     }
 
-    /// ditto
     this(AddressFamily af, SocketType type)
     {
         /* A single protocol exists to support this socket type within the
@@ -2744,7 +3069,6 @@ public:
     }
 
 
-    /// ditto
     this(AddressFamily af, SocketType type, scope const(char)[] protocolName) @trusted
     {
         protoent* proto;
@@ -2755,16 +3079,11 @@ public:
     }
 
 
-    /**
-     * Create a blocking socket using the parameters from the specified
-     * `AddressInfo` structure.
-     */
     this(const scope AddressInfo info)
     {
         this(info.family, info.type, info.protocol);
     }
 
-    /// Use an existing socket handle.
     this(socket_t sock, AddressFamily af) pure nothrow @nogc
     {
         assert(sock != socket_t.init);
@@ -2779,20 +3098,11 @@ public:
     }
 
 
-    /// Get underlying socket handle.
     @property socket_t handle() const pure nothrow @nogc
     {
         return sock;
     }
 
-    /**
-     * Releases the underlying socket handle from the Socket object. Once it
-     * is released, you cannot use the Socket object's methods anymore. This
-     * also means the Socket destructor will no longer close the socket - it
-     * becomes your responsibility.
-     *
-     * To get the handle without releasing it, use the `handle` property.
-     */
     @property socket_t release() pure nothrow @nogc
     {
         auto h = sock;
@@ -2800,13 +3110,6 @@ public:
         return h;
     }
 
-    /**
-     * Get/set socket's blocking flag.
-     *
-     * When a socket is blocking, calls to receive(), accept(), and send()
-     * will block and wait for data/action.
-     * A non-blocking socket will immediately return instead of blocking.
-     */
     @property bool blocking() @trusted const nothrow @nogc
     {
         version (Windows)
@@ -2819,7 +3122,6 @@ public:
         }
     }
 
-    /// ditto
     @property void blocking(bool byes) @trusted
     {
         version (Windows)
@@ -2848,13 +3150,11 @@ public:
     }
 
 
-    /// Get the socket's address family.
     @property AddressFamily addressFamily()
     {
         return _family;
     }
 
-    /// Property that indicates if this is a valid, alive socket.
     @property bool isAlive() @trusted const
     {
         int type;
@@ -2862,25 +3162,12 @@ public:
         return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
     }
 
-    /**
-     * Associate a local address with this socket.
-     *
-     * Params:
-     *     addr = The $(LREF Address) to associate this socket with.
-     *
-     * Throws: $(LREF SocketOSException) when unable to bind the socket.
-     */
     void bind(Address addr) @trusted
     {
         if (_SOCKET_ERROR == .bind(sock, addr.name, addr.nameLen))
             throw new SocketOSException("Unable to bind socket");
     }
 
-    /**
-     * Establish a connection. If the socket is blocking, connect waits for
-     * the connection to be made. If the socket is nonblocking, connect
-     * returns immediately and the connection attempt is still in progress.
-     */
     void connect(Address to) @trusted
     {
         if (_SOCKET_ERROR == .connect(sock, to.name, to.nameLen))
@@ -2909,37 +3196,17 @@ public:
         }
     }
 
-    /**
-     * Listen for an incoming connection. `bind` must be called before you
-     * can `listen`. The `backlog` is a request of how many pending
-     * incoming connections are queued until `accept`ed.
-     */
     void listen(int backlog) @trusted
     {
         if (_SOCKET_ERROR == .listen(sock, backlog))
             throw new SocketOSException("Unable to listen on socket");
     }
 
-    /**
-     * Called by `accept` when a new `Socket` must be created for a new
-     * connection. To use a derived class, override this method and return an
-     * instance of your class. The returned `Socket`'s handle must not be
-     * set; `Socket` has a protected constructor `this()` to use in this
-     * situation.
-     *
-     * Override to use a derived class.
-     * The returned socket's handle must not be set.
-     */
     protected Socket accepting() pure nothrow
     {
         return new Socket;
     }
 
-    /**
-     * Accept an incoming connection. If the socket is blocking, `accept`
-     * waits for a connection request. Throws `SocketAcceptException` if
-     * unable to _accept. See `accepting` for use with derived classes.
-     */
     Socket accept() @trusted
     {
         auto newsock = cast(socket_t).accept(sock, null, null);
@@ -2966,12 +3233,6 @@ public:
         return newSocket;
     }
 
-    /**
-     * Accept an incoming connection and retrieve the peer `Address`. If the
-     * socket is blocking, `accept` waits for a connection request. Throws
-     * `SocketAcceptException` if unable to _accept. See `accepting` for use
-     * with derived classes.
-     */
     Socket accept(out Address peerAddress) @trusted
     {
         Address addr = createAddress();
@@ -3003,7 +3264,6 @@ public:
         return newSocket;
     }
 
-    /// Disables sends and/or receives.
     void shutdown(SocketShutdown how) @trusted nothrow @nogc
     {
         .shutdown(sock, cast(int) how);
@@ -3023,12 +3283,6 @@ public:
     }
 
 
-    /**
-     * Immediately drop any connections and release socket resources.
-     * The `Socket` object is no longer usable after `close`.
-     * Calling `shutdown` before `close` is recommended
-     * for connection-oriented sockets.
-     */
     void close() scope @trusted nothrow @nogc
     {
         _close(sock);
@@ -3036,9 +3290,6 @@ public:
     }
 
 
-    /**
-     * Returns: The local machine's host name
-     */
     static @property string hostName() @trusted     // getter
     {
         char[256] result;         // Host names are limited to 255 chars.
@@ -3047,7 +3298,6 @@ public:
         return to!string(result.ptr);
     }
 
-    /// Remote endpoint `Address`.
     @property Address remoteAddress() @trusted
     {
         Address addr = createAddress();
@@ -3059,7 +3309,6 @@ public:
         return addr;
     }
 
-    /// Local endpoint `Address`.
     @property Address localAddress() @trusted
     {
         Address addr = createAddress();
@@ -3071,11 +3320,6 @@ public:
         return addr;
     }
 
-    /**
-     * Send or receive error code. See `wouldHaveBlocked`,
-     * `lastSocketError` and `Socket.getErrorText` for obtaining more
-     * information about the error.
-     */
     enum int ERROR = _SOCKET_ERROR;
 
     private static int capToInt(size_t size) nothrow @nogc
@@ -3087,12 +3331,6 @@ public:
         return size > size_t(int.max) ? int.max : cast(int) size;
     }
 
-    /**
-     * Send data on the connection. If the socket is blocking and there is no
-     * buffer space left, `send` waits.
-     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
-     * failure.
-     */
     ptrdiff_t send(scope const(void)[] buf, SocketFlags flags) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
@@ -3106,19 +3344,11 @@ public:
         return sent;
     }
 
-    /// ditto
     ptrdiff_t send(scope const(void)[] buf)
     {
         return send(buf, SocketFlags.NONE);
     }
 
-    /**
-     * Send data to a specific destination Address. If the destination address is
-     * not specified, a connection must have been made and that address is used.
-     * If the socket is blocking and there is no buffer space left, `sendTo` waits.
-     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
-     * failure.
-     */
     ptrdiff_t sendTo(scope const(void)[] buf, SocketFlags flags, Address to) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
@@ -3134,15 +3364,12 @@ public:
             return .sendto(sock, buf.ptr, buf.length, cast(int) flags, to.name, to.nameLen);
     }
 
-    /// ditto
     ptrdiff_t sendTo(scope const(void)[] buf, Address to)
     {
         return sendTo(buf, SocketFlags.NONE, to);
     }
 
 
-    //assumes you connect()ed
-    /// ditto
     ptrdiff_t sendTo(scope const(void)[] buf, SocketFlags flags) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
@@ -3156,20 +3383,12 @@ public:
     }
 
 
-    //assumes you connect()ed
-    /// ditto
     ptrdiff_t sendTo(scope const(void)[] buf)
     {
         return sendTo(buf, SocketFlags.NONE);
     }
 
 
-    /**
-     * Receive data on the connection. If the socket is blocking, `receive`
-     * waits until there is data to be received.
-     * Returns: The number of bytes actually received, `0` if the remote side
-     * has closed the connection, or `Socket.ERROR` on failure.
-     */
     ptrdiff_t receive(scope void[] buf, SocketFlags flags) @trusted
     {
         version (Windows)         // Does not use size_t
@@ -3186,19 +3405,11 @@ public:
         }
     }
 
-    /// ditto
     ptrdiff_t receive(scope void[] buf)
     {
         return receive(buf, SocketFlags.NONE);
     }
 
-    /**
-     * Receive data and get the remote endpoint `Address`.
-     * If the socket is blocking, `receiveFrom` waits until there is data to
-     * be received.
-     * Returns: The number of bytes actually received, `0` if the remote side
-     * has closed the connection, or `Socket.ERROR` on failure.
-     */
     ptrdiff_t receiveFrom(scope void[] buf, SocketFlags flags, ref Address from) @trusted
     {
         if (!buf.length)         //return 0 and don't think the connection closed
@@ -3221,15 +3432,12 @@ public:
     }
 
 
-    /// ditto
     ptrdiff_t receiveFrom(scope void[] buf, ref Address from)
     {
         return receiveFrom(buf, SocketFlags.NONE, from);
     }
 
 
-    //assumes you connect()ed
-    /// ditto
     ptrdiff_t receiveFrom(scope void[] buf, SocketFlags flags) @trusted
     {
         if (!buf.length)         //return 0 and don't think the connection closed
@@ -3249,19 +3457,12 @@ public:
     }
 
 
-    //assumes you connect()ed
-    /// ditto
     ptrdiff_t receiveFrom(scope void[] buf)
     {
         return receiveFrom(buf, SocketFlags.NONE);
     }
 
 
-    /**
-     * Get a socket option.
-     * Returns: The number of bytes written to `result`.
-     * The length, in bytes, of the actual result - very different from getsockopt()
-     */
     int getOption(SocketOptionLevel level, SocketOption option, scope void[] result) @trusted
     {
         socklen_t len = cast(socklen_t) result.length;
@@ -3271,21 +3472,18 @@ public:
     }
 
 
-    /// Common case of getting integer and boolean options.
     int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) @trusted
     {
         return getOption(level, option, (&result)[0 .. 1]);
     }
 
 
-    /// Get the linger option.
     int getOption(SocketOptionLevel level, SocketOption option, out Linger result) @trusted
     {
         //return getOption(cast(SocketOptionLevel) SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
         return getOption(level, option, (&result.clinger)[0 .. 1]);
     }
 
-    /// Get a timeout (duration) option.
     void getOption(SocketOptionLevel level, SocketOption option, out Duration result) @trusted
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
@@ -3309,7 +3507,6 @@ public:
         else static assert(false);
     }
 
-    /// Set a socket option.
     void setOption(SocketOptionLevel level, SocketOption option, scope void[] value) @trusted
     {
         if (_SOCKET_ERROR == .setsockopt(sock, cast(int) level,
@@ -3318,62 +3515,18 @@ public:
     }
 
 
-    /// Common case for setting integer and boolean options.
     void setOption(SocketOptionLevel level, SocketOption option, int32_t value) @trusted
     {
         setOption(level, option, (&value)[0 .. 1]);
     }
 
 
-    /// Set the linger option.
     void setOption(SocketOptionLevel level, SocketOption option, Linger value) @trusted
     {
         //setOption(cast(SocketOptionLevel) SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
         setOption(level, option, (&value.clinger)[0 .. 1]);
     }
 
-    /**
-     * Sets a timeout (duration) option, i.e. `SocketOption.SNDTIMEO` or
-     * `RCVTIMEO`. Zero indicates no timeout.
-     *
-     * In a typical application, you might also want to consider using
-     * a non-blocking socket instead of setting a timeout on a blocking one.
-     *
-     * Note: While the receive timeout setting is generally quite accurate
-     * on *nix systems even for smaller durations, there are two issues to
-     * be aware of on Windows: First, although undocumented, the effective
-     * timeout duration seems to be the one set on the socket plus half
-     * a second. `setOption()` tries to compensate for that, but still,
-     * timeouts under 500ms are not possible on Windows. Second, be aware
-     * that the actual amount of time spent until a blocking call returns
-     * randomly varies on the order of 10ms.
-     *
-     * Params:
-     *   level  = The level at which a socket option is defined.
-     *   option = Either `SocketOption.SNDTIMEO` or `SocketOption.RCVTIMEO`.
-     *   value  = The timeout duration to set. Must not be negative.
-     *
-     * Throws: `SocketException` if setting the options fails.
-     *
-     * Example:
-     * ---
-     * import std.datetime;
-     * import std.typecons;
-     * auto pair = socketPair();
-     * scope(exit) foreach (s; pair) s.close();
-     *
-     * // Set a receive timeout, and then wait at one end of
-     * // the socket pair, knowing that no data will arrive.
-     * pair[0].setOption(SocketOptionLevel.SOCKET,
-     *     SocketOption.RCVTIMEO, dur!"seconds"(1));
-     *
-     * auto sw = StopWatch(Yes.autoStart);
-     * ubyte[1] buffer;
-     * pair[0].receive(buffer);
-     * writefln("Waited %s ms until the socket timed out.",
-     *     sw.peek.msecs);
-     * ---
-     */
     void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
@@ -3400,10 +3553,6 @@ public:
         else static assert(false);
     }
 
-    /**
-     * Get a text description of this socket's error status, and clear the
-     * socket's error status.
-     */
     string getErrorText()
     {
         int32_t error;
@@ -3411,19 +3560,6 @@ public:
         return formatSocketError(error);
     }
 
-    /**
-     * Enables TCP keep-alive with the specified parameters.
-     *
-     * Params:
-     *   time     = Number of seconds with no activity until the first
-     *              keep-alive packet is sent.
-     *   interval = Number of seconds between when successive keep-alive
-     *              packets are sent if no acknowledgement is received.
-     *
-     * Throws: `SocketOSException` if setting the options fails, or
-     * `SocketFeatureException` if setting keep-alive parameters is
-     * unsupported on the current platform.
-     */
     void setKeepAlive(int time, int interval) @trusted
     {
         version (Windows)
@@ -3451,27 +3587,6 @@ public:
                 "is not supported on this platform");
     }
 
-    /**
-     * Wait for a socket to change status. A wait timeout of $(REF Duration, core, time) or
-     * `TimeVal`, may be specified; if a timeout is not specified or the
-     * `TimeVal` is `null`, the maximum timeout is used. The `TimeVal`
-     * timeout has an unspecified value when `select` returns.
-     * Returns: The number of sockets with status changes, `0` on timeout,
-     * or `-1` on interruption. If the return value is greater than `0`,
-     * the `SocketSets` are updated to only contain the sockets having status
-     * changes. For a connecting socket, a write status change means the
-     * connection is established and it's able to send. For a listening socket,
-     * a read status change means there is an incoming connection request and
-     * it's able to accept.
-     *
-     * `SocketSet`'s updated to include only those sockets which an event occurred.
-     * For a `connect()`ing socket, writeability means connected.
-     * For a `listen()`ing socket, readability means listening
-     * `Winsock`; possibly internally limited to 64 sockets per set.
-     *
-     * Returns:
-     * the number of events, 0 on timeout, or -1 on interruption
-     */
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout) @trusted
     {
         auto vals = timeout.split!("seconds", "usecs")();
@@ -3481,14 +3596,12 @@ public:
         return select(checkRead, checkWrite, checkError, &tv);
     }
 
-    /// ditto
     //maximum timeout
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError)
     {
         return select(checkRead, checkWrite, checkError, null);
     }
 
-    /// Ditto
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* timeout) @trusted
     in
     {
@@ -3584,10 +3697,6 @@ public:
     }
 
 
-    /**
-     * Can be overridden to support other addresses.
-     * Returns: A new `Address` object for the current address family.
-     */
     protected Address createAddress() pure nothrow
     {
         Address result;
@@ -3615,7 +3724,6 @@ public:
     }
 
 }
-
 
 /// Shortcut class for a TCP Socket.
 class TcpSocket: Socket
