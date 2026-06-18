@@ -29,6 +29,7 @@ import core.stdc.stdint, core.stdc.stdlib, core.stdc.string, std.conv, std.strin
 import core.stdc.config;
 import core.time : dur, Duration;
 import std.exception;
+import std.typecons: Flag;
 
 import std.internal.cstring;
 
@@ -2661,6 +2662,7 @@ class Socket
 private:
     socket_t sock;
     AddressFamily _family;
+    const bool closeOnDestruction = true;
 
     version (Windows)
         bool _blocking = true;         /// Property to get or set whether the socket is blocking or nonblocking.
@@ -2772,10 +2774,20 @@ public:
         this._family = af;
     }
 
+    /// Use an existing socket handle.
+    ///
+    ///Params:
+    ///    closeOnDestruction = If No doesn't close underlying system socket in the destructor.
+    this(socket_t sock, AddressFamily af, Flag!"closeOnDestruction" closeOnDestruction) pure nothrow @nogc
+    {
+        this.closeOnDestruction = closeOnDestruction;
+        this(sock, af);
+    }
 
     ~this() nothrow @nogc
     {
-        close();
+        if (closeOnDestruction)
+            close();
     }
 
 
