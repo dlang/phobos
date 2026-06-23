@@ -205,6 +205,11 @@ They met on 24/01/1970.
     $(REG_ROW (?#comment), An inline comment that is ignored while matching.)
     $(REG_ROW (?:regex), Matches subexpression regex,
       $(U not) saving matched portion of text. Useful to speed up matching. )
+    $(REG_ROW (?flags), Inline flags: enables one or more of the matching flags
+        $(S_LINK RegexFlags, i, m, s and x) for the remainder of the pattern. A
+        leading -, as in (?-i), disables the flags that follow instead, so flags
+        can be turned on and off partway through a pattern. The g flag cannot be
+        set inline. )
     $(REG_ROW A|B, Matches subexpression A, or failing that, matches B. )
     $(REG_ROW (?P$(LT)name$(GT)regex), Matches named subexpression
         regex labeling it with name 'name'.
@@ -260,7 +265,7 @@ They met on 24/01/1970.
      $(I Any sequence of character class elements implicitly forms a union.) )
   )
 
-  $(REG_START Regex flags )
+  $(DDOC_ANCHOR RegexFlags)$(REG_START Regex flags )
   $(REG_TABLE
     $(REG_TITLE Flag, Semantics )
     $(REG_ROW g, Global regex, repeat over the whole input. )
