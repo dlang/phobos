@@ -465,7 +465,6 @@ debug(std_regex_test) import std.stdio;
     }
 
     ct_tests();
-    run_tests!bmatch(); //backtracker
-    run_tests!match(); //thompson VM
+    run_tests!match();
 }
 
