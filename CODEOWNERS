@@ -10,52 +10,52 @@
 # when someone opens a pull request that modifies code that they own.
 # Later matches take precedence.
 
-.dscanner.ini
+# .dscanner.ini
 circleci.sh @CyberShadow @MartinNowak
-etc/c/* @CyberShadow
+etc/c/ @CyberShadow
 posix.mak @CyberShadow @MartinNowak
 # tools/unicode_table_generator.d
-std/*
-std/algorithm/* @PetarKirov
+# std/
+std/algorithm/ @PetarKirov
 std/array.d @PetarKirov
-std/ascii.d
+# std/ascii.d
 # std/base64.d
-std/bigint.d
+# std/bigint.d
 # std/bitmanip.d
 std/c/windows/* @CyberShadow
 # std/compiler.d
-std/complex.d
+# std/complex.d
 std/concurrency.d @MartinNowak
 std/container/ @PetarKirov
-std/conv.d
+# std/conv.d
 # std/csv.d
-std/datetime/* @jmdavis
+std/datetime/ @jmdavis
 std/demangle.d @MartinNowak @rainers
-std/digest/*
+# std/digest/
 # std/encoding.d
 # std/exception.d
-std/experimental/allocator/* @PetarKirov
-std/experimental/checkedint/*
+std/experimental/allocator/ @PetarKirov
+# std/experimental/checkedint/
 std/file.d @CyberShadow
 # std/format.d
 # std/functional.d
 # std/getopt.d
 # std/internal/
 std/json.d @CyberShadow
-std/logger/* @burner
-std/math* @ibuclaw
+std/logger/ @burner
+std/math/ @ibuclaw
 std/meta.d @PetarKirov
 # std/mmfile.d
 std/net/curl.d @CyberShadow
-std/net/isemail.d
+# std/net/isemail.d
 # std/numeric.d
 # std/outbuffer.d
 # std/parallelism.d
 std/path.d @CyberShadow
 std/process.d @CyberShadow @schveiguy
-std/random.d
-std/range/* @PetarKirov
-std/regex/* @DmitryOlshansky
+# std/random.d
+std/range/ @PetarKirov
+std/regex/ @DmitryOlshansky
 # std/signals.d
 std/socket.d @CyberShadow
 # std/stdint.d
@@ -69,8 +69,8 @@ std/typecons.d @PetarKirov
 std/uni.d @DmitryOlshansky
 # std/uri.d
 std/utf.d @jmdavis
-std/uuid.d
+# std/uuid.d
 # std/variant.d
-std/windows/* @CyberShadow
+std/windows/ @CyberShadow
 std/zip.d @CyberShadow
 std/zlib.d @CyberShadow
