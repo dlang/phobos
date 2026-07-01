@@ -280,6 +280,7 @@ if (is(Unqual!Char == Char))
     private void fillUp() scope
     {
         import std.format : enforceFmt, FormatException;
+        bool canBePosition = true;
 
         // Reset content
         if (__ctfe)
@@ -368,19 +369,20 @@ if (is(Unqual!Char == Char))
                 // We practically found the format specifier
                 trailing = trailing[j + 1 .. $];
                 return;
-            case '-': flDash = true; ++i; break;
-            case '+': flPlus = true; ++i; break;
-            case '=': flEqual = true; ++i; break;
-            case '#': flHash = true; ++i; break;
-            case '0': flZero = true; ++i; break;
-            case ' ': flSpace = true; ++i; break;
+            case '-': flDash = true; canBePosition = false; ++i; break;
+            case '+': flPlus = true; canBePosition = false; ++i; break;
+            case '=': flEqual = true; canBePosition = false; ++i; break;
+            case '#': flHash = true; canBePosition = false; ++i; break;
+            case '0': flZero = true; canBePosition = false; ++i; break;
+            case ' ': flSpace = true; canBePosition = false; ++i; break;
             case '*':
+                canBePosition = false;
                 ++i;
                 if (i < trailing.length && isDigit(trailing[i]))
                 {
                     // a '*' followed by digits and '$' is a
                     // positional format
-                    trailing = trailing[1 .. $];
+                    trailing = trailing[i .. $];
                     width = -parse!(typeof(width))(trailing);
                     i = 0;
                     enforceFmt(trailing[i++] == '$',
@@ -400,12 +402,16 @@ if (is(Unqual!Char == Char))
                 i = trailing.length - tmp.length;
                 if (tmp.startsWith('$'))
                 {
+                    enforceFmt(canBePosition,
+                        text("Incorrect format specifier %", trailing[i .. $]));
                     // index of the form %n$
                     indexEnd = indexStart = to!ubyte(widthOrArgIndex);
                     ++i;
                 }
                 else if (tmp.startsWith(':'))
                 {
+                    enforceFmt(canBePosition,
+                        text("Incorrect format specifier %", trailing[i .. $]));
                     // two indexes of the form %m:n$, or one index of the form %m:$
                     indexStart = to!ubyte(widthOrArgIndex);
                     tmp = tmp[1 .. $];
@@ -424,11 +430,13 @@ if (is(Unqual!Char == Char))
                 else
                 {
                     // width
+                    canBePosition = false;
                     width = to!int(widthOrArgIndex);
                 }
                 break;
             case ',':
                 // Separator (default 3 digits)
+                canBePosition = false;
                 ++i;
                 flSeparator = true;
 
@@ -459,6 +467,7 @@ if (is(Unqual!Char == Char))
                 break;
             case '.':
                 // Precision
+                canBePosition = false;
                 ++i;
                 if (i < trailing.length && trailing[i] == '*')
                 {
@@ -985,4 +994,3 @@ void enforceValidFormatSpec(T, Char)(scope const ref FormatSpec!Char f)
     assert(collectExceptionMsg!FormatException(format("%.*,*?d", 5))
         == "Missing separator digit width argument");
 }
-

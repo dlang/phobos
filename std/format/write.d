@@ -771,6 +771,12 @@ if (isSomeString!(typeof(fmt)))
     w.clear();
     formattedWrite(w, "%s%s", 23, 45);
     assert(w.data == "2345", w.data);
+
+    w.clear();
+    formattedWrite(w, "%2$*1$d %3$s", 7, 23, "abc");
+    assert(w.data == "     23 abc", w.data);
+    assert(collectExceptionMsg!FormatException(formattedWrite(w, "%*1$2$d %3$s", 7, 23, "abc"))
+        == "Incorrect format specifier %$d %3$s");
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=3479
