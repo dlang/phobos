@@ -25,6 +25,7 @@ jobs:
             os: ubuntu-latest
             container_image: alpine:3.21
             host_dmd: ldmd2
+            timeout-minutes: 60  # Alpine/musl pushes test_phobos beyond the 40 min default
           # macOS
           - job_name: macOS x64
             os: macos-14
