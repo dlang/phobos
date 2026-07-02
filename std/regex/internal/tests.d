@@ -464,8 +464,17 @@ debug(std_regex_test) import std.stdio;
         debug(std_regex_test) writeln("!!! FReD C-T test done !!!");
     }
 
+    // Force the backtracking engine to exercise it on every pattern.
+    auto bmatchForced(R, RegEx)(R input, RegEx re)
+    {
+        import std.regex.internal.ir : RuntimeFactory, BasicElementOf;
+        import std.regex.internal.backtracking : BacktrackingMatcher;
+        alias Char = BasicElementOf!R;
+        return match(input, re.withFactory(new RuntimeFactory!(BacktrackingMatcher, Char)));
+    }
+
     ct_tests();
-    run_tests!bmatch(); //backtracker
-    run_tests!match(); //thompson VM
+    run_tests!match(); // engine auto-selected per pattern
+    run_tests!bmatchForced(); // force the backtracking engine on every pattern
 }
 
