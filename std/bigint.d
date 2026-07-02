@@ -1328,11 +1328,11 @@ public:
         char[] buff;
         if (spec == 'X')
         {
-            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper);
+            buff = data.toHexString(0, 0, 0, f.flZero ? '0' : ' ', LetterCase.upper);
         }
         else if (spec == 'x')
         {
-            buff = data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower);
+            buff = data.toHexString(0, 0, 0, f.flZero ? '0' : ' ', LetterCase.lower);
         }
         else if (spec == 'o')
         {
@@ -1346,6 +1346,8 @@ public:
 
         char signChar = isNegative ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
+        immutable useGrouping = hex && f.flSeparator && f.separators > 0 && f.separators != f.UNSPECIFIED;
+        immutable zeroPad = useGrouping && !f.flDash && f.flZero && f.width > minw ? f.width - minw : 0;
 
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
         {
@@ -1361,6 +1363,12 @@ public:
             }
         }
 
+        if (useGrouping)
+        {
+            auto totalDigits = buff.length + zeroPad;
+            minw = totalDigits + (totalDigits - 1) / f.separators + (signChar ? 1 : 0);
+        }
+
         immutable maxw = minw < f.width ? f.width : minw;
         immutable difw = maxw - minw;
 
@@ -1374,11 +1382,32 @@ public:
             put(sink, buf[]);
         }
 
-        if (!f.flDash && f.flZero)
-            foreach (i; 0 .. difw)
-                put(sink, "0");
+        if (useGrouping)
+        {
+            auto totalDigits = buff.length + zeroPad;
+            auto front = cast(int) (totalDigits % f.separators);
+            if (front == 0)
+                front = f.separators;
 
-        put(sink, buff);
+            foreach (i; 0 .. totalDigits)
+            {
+                if (i < zeroPad)
+                    put(sink, '0');
+                else
+                    put(sink, buff[i - zeroPad]);
+
+                if (i + 1 < totalDigits && (i + 1 - front) % f.separators == 0)
+                    put(sink, cast(char) f.separatorChar);
+            }
+        }
+        else
+        {
+            if (!f.flDash && f.flZero)
+                foreach (i; 0 .. difw)
+                    put(sink, '0');
+
+            put(sink, buff);
+        }
 
         if (f.flDash)
             foreach (i; 0 .. difw)
@@ -1397,9 +1426,15 @@ public:
         x *= 12345;
 
         assert(format("%d", x) == "12345000000");
-        assert(format("%x", x) == "2_dfd1c040");
-        assert(format("%X", x) == "2_DFD1C040");
+        assert(format("%x", x) == "2dfd1c040");
+        assert(format("%X", x) == "2DFD1C040");
         assert(format("%o", x) == "133764340100");
+
+        auto y = (BigInt(1L) << 65) + 5;
+        assert(format("%x", y) == "20000000000000005");
+        assert(format("%X", y) == "20000000000000005");
+        assert(format("%,4?x", '_', y) == "2_0000_0000_0000_0005");
+        assert(format("%,4?X", '_', y) == "2_0000_0000_0000_0005");
     }
 
     // for backwards compatibility, see unittest below
