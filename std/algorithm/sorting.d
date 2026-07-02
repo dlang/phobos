@@ -77,7 +77,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.sorting;
 
-import std.algorithm.mutation : SwapStrategy;
+import std.algorithm.mutation : SwapStrategy, reverse;
 import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.typecons : Flag, No, Yes;
@@ -5025,6 +5025,7 @@ bool nthPermutationImpl(Range)
                        (auto ref Range range, ulong perm)
 if (isRandomAccessRange!Range && hasLength!Range)
 {
+
     import std.range.primitives : ElementType;
     import std.numeric : decimalToFactorial;
 
@@ -5037,10 +5038,20 @@ if (isRandomAccessRange!Range && hasLength!Range)
         return false;
     }
 
+    if (idx < range.length)
+    {
+        reverse(fac[0 .. idx]);
+        // Preserve leading zero digits in the Lehmer code to ensure lexicographic order
+
+        reverse(fac[0 .. range.length]);
+    }
+
+    size_t len = range.length;
+
     ElementType!Range tmp;
     size_t i = 0;
 
-    for (; i < idx; ++i)
+    for (; i < len; ++i)
     {
         size_t re = fac[i];
         tmp = range[re + i];
@@ -5055,6 +5066,41 @@ if (isRandomAccessRange!Range && hasLength!Range)
 }
 
 ///
+pure @safe unittest
+{
+    auto src = [0, 1, 2];
+    auto rslt = [0, 2, 1];
+
+    src = nthPermutation(src, 1);
+    assert(src == rslt);
+}
+pure @safe unittest
+{
+    auto src = [0, 1, 2, 3];
+    auto rslt = [0, 3, 1, 2];
+
+    src = nthPermutation(src, 4);
+    assert(src == rslt);
+}
+pure @safe unittest
+{
+    auto src = [0, 1, 2];
+    auto rslt = [0, 2, 1];
+
+    bool worked = nthPermutationImpl(src, 1);
+    assert(worked);
+    assert(src == rslt);
+}
+pure @safe unittest
+{
+    auto src = [0, 1, 2, 3];
+    auto rslt = [0, 3, 1, 2];
+
+    bool worked = nthPermutationImpl(src, 4);
+    assert(worked);
+    assert(src == rslt);
+}
+
 pure @safe unittest
 {
     auto src = [0, 1, 2, 3, 4, 5, 6];
@@ -5076,7 +5122,7 @@ pure @safe unittest
 pure @safe unittest
 {
     auto src = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    auto rslt = [4, 0, 6, 2, 1, 3, 5, 7, 8, 9, 10];
+    auto rslt = [0, 1, 2, 3, 8, 4, 10, 6, 5, 7, 9];
 
     src = nthPermutation(src, 2982);
     assert(src == rslt);
@@ -5097,7 +5143,7 @@ pure @safe unittest
     import std.meta : AliasSeq;
 
     auto src = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    auto rsl = [4, 0, 6, 2, 1, 3, 5, 7, 8, 9, 10];
+    auto rsl = [0, 1, 2, 3, 8, 4, 10, 6, 5, 7, 9];
 
     foreach (T; AliasSeq!(
             DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random, int[]),
