@@ -1,0 +1,45 @@
+Add `FFT` that doesn’t use GC.
+
+`FFT` is an FFT solver compatible with `@nogc`, `nothrow`, `@safe`, and `pure`.
+```D
+@nogc nothrow pure @safe void fun()
+{
+    import std.complex;
+
+    enum size = 8;
+    float[size] arr = [1,2,3,4,5,6,7,8];
+    Complex!float[size] fft;
+
+    immutable fftSolver = FFT(size);
+
+    fftSolver.compute(arr[], fft[]);
+}
+```
+
+Convenience functions now use `FFT`. In effect, `fft(R, Ret)` and
+`inverseFft(R, Ret)` also can be used in `@nogc`, `nothrow`, `pure`,
+and `@safe` code.
+
+`FFT` can also avoid dynamic memory allocation by using a preallocated buffer.
+However, this is not `@safe`. The buffer must not be modified or freed within
+the lifetime of the `FFT` instance.
+
+```D
+@nogc nothrow pure @system void unsafeFun()
+{
+    import std.complex;
+
+    enum size = 8;
+    float[size] arr = [1,2,3,4,5,6,7,8];
+    Complex!float[size] fft;
+
+    enum bufferSize = FFT.requiredBufferSize(size);
+    ubyte[bufferSize] buff;
+    immutable fftSolver = FFT(size, buff);
+
+    fftSolver.compute(arr[], fft[]);
+}
+```
+
+`Fft` class is still available for backwards compatibility. It is not recommended
+for new code.
