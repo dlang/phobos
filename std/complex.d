@@ -43,8 +43,7 @@ import std.traits;
         be `Complex!double`.  Otherwise, the return type is
         deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(R)(const R re)  @safe pure nothrow @nogc
-if (is(R : double))
+auto complex(R : double)(const R re)  @safe pure nothrow @nogc
 {
     static if (isFloatingPoint!R)
         return Complex!R(re, 0);
@@ -53,8 +52,7 @@ if (is(R : double))
 }
 
 /// ditto
-auto complex(R, I)(const R re, const I im)  @safe pure nothrow @nogc
-if (is(R : double) && is(I : double))
+auto complex(R : double, I : double)(const R re, const I im)  @safe pure nothrow @nogc
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
         return Complex!(CommonType!(R, I))(re, im);
@@ -182,10 +180,10 @@ if (isFloatingPoint!T)
     }
 
     /// ditto
-    this(Rx : T, Ry : T)(const Rx x, const Ry y)
+    this(R : T, I : T)(const R re, const I im)
     {
-        re = x;
-        im = y;
+        this.re = re;
+        this.im = im;
     }
 
     /// ditto
