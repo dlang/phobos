@@ -3732,28 +3732,19 @@ template hasElaborateAssign(S)
     static assert( hasElaborateAssign!SS9);
 }
 
-version (StdDdoc)
-{
-    /**
-       True if `S` or any type directly embedded in the representation
-       of `S` defines an elaborate destructor. Elaborate destructors
-       are introduced by defining `~this()` for a $(D
-       struct).
+/**
+   True if `S` or any type directly embedded in the representation
+   of `S` defines an elaborate destructor. Elaborate destructors
+   are introduced by defining `~this()` for a $(D
+   struct).
 
-       Classes and unions never have elaborate destructors, even
-       though classes may define `~this()`.
-    */
-    template hasElaborateDestructor(S)
-    {
-        import core.internal.traits : hasElabDest = hasElaborateDestructor;
-        alias hasElaborateDestructor = hasElabDest!(S);
-    }
-}
-else
-{
-    import core.internal.traits : hasElabDest = hasElaborateDestructor;
-    alias hasElaborateDestructor = hasElabDest;
-}
+   Classes and unions never have elaborate destructors, even
+   though classes may define `~this()`.
+
+   Note: This just wraps $(LINK2 $(ROOT_DIR)spec/traits.html#needsDestruction,
+   `__traits(needsDestruction, S)`).
+*/
+enum hasElaborateDestructor(S) = __traits(needsDestruction, S);
 
 ///
 @safe unittest
