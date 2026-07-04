@@ -1258,7 +1258,7 @@ private template isSwitchable(E)
 //Static representation of the index I of the enum S,
 //In representation T.
 //T must be an immutable string (avoids un-necessary initializations).
-private template enumRep(T, S, S value)
+private template enumRep(T, S, immutable S value)
 if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     static T enumRep = toStr!T(value);
@@ -1403,6 +1403,20 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     S s; s.c = new C();
     assert(to!string(s) == "C");
 }
+
+// https://github.com/dlang/phobos/issues/10568
+@safe unittest
+{
+    enum E { One }
+
+    inout(E) fun(inout(E) e)
+    {
+        import std.conv;
+        auto s = e.to!string;
+        return e;
+    }
+}
+
 
 @safe unittest
 {
