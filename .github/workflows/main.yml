@@ -140,6 +140,7 @@ jobs:
           cpu_count: 4
           sync_files: runner-to-vm
           version: ${{ matrix.freebsd_version }}
+          shell: bash
       - name: Run in VM
         timeout-minutes: 19
         shell: cpa.sh {0}
@@ -147,7 +148,7 @@ jobs:
           set -uexo pipefail
 
           freebsd_version='${{ matrix.freebsd_version }}'
-          freebsd_major="${freebsd_version%%.*}"
+          freebsd_major="${freebsd_version:0:2}"
 
           export OS_NAME=freebsd
           export MODEL=64
@@ -168,21 +169,14 @@ jobs:
 
           echo '::group::Clone DMD'
           ref='${{ github.ref }}'
-          case "$ref" in
-            refs/pull/*)
-              REPO_BRANCH="$GITHUB_BASE_REF"
-              ;;
-            refs/heads/*)
-              REPO_BRANCH="${ref#refs/heads/}"
-              ;;
-            refs/tags/*)
-              REPO_BRANCH="${ref#refs/tags/}"
-              ;;
-            *)
-              echo "Error: unexpected GitHub ref '$ref'" >&2
-              exit 1
-              ;;
-          esac
+          if [[ "$ref" =~ ^refs/pull/ ]]; then
+            REPO_BRANCH="$GITHUB_BASE_REF"
+          elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
+            REPO_BRANCH="${BASH_REMATCH[2]}"
+          else
+            echo "Error: unexpected GitHub ref '$ref'" >&2
+            exit 1
+          fi
 
           git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
           echo '::endgroup::'
