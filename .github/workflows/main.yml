@@ -168,14 +168,21 @@ jobs:
 
           echo '::group::Clone DMD'
           ref='${{ github.ref }}'
-          if [[ "$ref" =~ ^refs/pull/ ]]; then
-            REPO_BRANCH="$GITHUB_BASE_REF"
-          elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
-            REPO_BRANCH="${BASH_REMATCH[2]}"
-          else
-            echo "Error: unexpected GitHub ref '$ref'" >&2
-            exit 1
-          fi
+          case "$ref" in
+            refs/pull/*)
+              REPO_BRANCH="$GITHUB_BASE_REF"
+              ;;
+            refs/heads/*)
+              REPO_BRANCH="${ref#refs/heads/}"
+              ;;
+            refs/tags/*)
+              REPO_BRANCH="${ref#refs/tags/}"
+              ;;
+            *)
+              echo "Error: unexpected GitHub ref '$ref'" >&2
+              exit 1
+              ;;
+          esac
 
           git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
           echo '::endgroup::'
