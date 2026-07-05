@@ -163,6 +163,11 @@ jobs:
 
           bash --version
 
+          # compiler/test/dshell/dwarf.d needs objdump from binutils.
+          # It will also optionally use llvm-dwarfdump from llvm.
+          # So, this installs both.
+          sudo pkg install -y binutils llvm
+
           echo '::group::Install git'
           sudo pkg install -y git
           echo '::endgroup::'
