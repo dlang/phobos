@@ -147,61 +147,61 @@ jobs:
           set -uexo pipefail
 
           freebsd_version='${{ matrix.freebsd_version }}'
-            freebsd_major="${freebsd_version:0:2}"
+          freebsd_major="${freebsd_version%%.*}"
 
-            export OS_NAME=freebsd
-            export MODEL=64
-            export HOST_DMD=dmd
-            export N="$(nproc)"
-            export FULL_BUILD=false
-            export CI_DFLAGS="-version=TARGET_FREEBSD${freebsd_major}"
+          export OS_NAME=freebsd
+          export MODEL=64
+          export HOST_DMD=dmd
+          export N="$(nproc)"
+          export FULL_BUILD=false
+          export CI_DFLAGS="-version=TARGET_FREEBSD${freebsd_major}"
 
-            #if [[ "$freebsd_major" == 12 ]]; then
-            #  sudo sed -i '' -e 's|pkg.FreeBSD.org|mirrors.xtom.com/freebsd-pkg|' /etc/pkg/FreeBSD.conf
-            #fi
+          #if [[ "$freebsd_major" == 12 ]]; then
+          #  sudo sed -i '' -e 's|pkg.FreeBSD.org|mirrors.xtom.com/freebsd-pkg|' /etc/pkg/FreeBSD.conf
+          #fi
 
-            bash --version
+          bash --version
 
-            echo '::group::Install git'
-            sudo pkg install -y git
-            echo '::endgroup::'
+          echo '::group::Install git'
+          sudo pkg install -y git
+          echo '::endgroup::'
 
-            echo '::group::Clone DMD'
-            ref='${{ github.ref }}'
-            if [[ "$ref" =~ ^refs/pull/ ]]; then
-              REPO_BRANCH="$GITHUB_BASE_REF"
-            elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
-              REPO_BRANCH="${BASH_REMATCH[2]}"
-            else
-              echo "Error: unexpected GitHub ref '$ref'" >&2
-              exit 1
-            fi
+          echo '::group::Clone DMD'
+          ref='${{ github.ref }}'
+          if [[ "$ref" =~ ^refs/pull/ ]]; then
+            REPO_BRANCH="$GITHUB_BASE_REF"
+          elif [[ "$ref" =~ ^refs/(heads|tags)/(.*)$ ]]; then
+            REPO_BRANCH="${BASH_REMATCH[2]}"
+          else
+            echo "Error: unexpected GitHub ref '$ref'" >&2
+            exit 1
+          fi
 
-            git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
-            echo '::endgroup::'
+          git clone --branch "$REPO_BRANCH" --depth 1 https://github.com/dlang/dmd.git ../dmd
+          echo '::endgroup::'
 
-            cd ../dmd
+          cd ../dmd
 
-            echo '::group::Install prerequisites'
-            sudo -E ci/cirrusci.sh
-            echo '::endgroup::'
+          echo '::group::Install prerequisites'
+          sudo -E ci/cirrusci.sh
+          echo '::endgroup::'
 
-            echo '::group::Install host compiler'
-            ci/run.sh install_host_compiler
-            echo '::endgroup::'
+          echo '::group::Install host compiler'
+          ci/run.sh install_host_compiler
+          echo '::endgroup::'
 
-            echo '::group::Build'
-            ci/run.sh build
-            echo '::endgroup::'
+          echo '::group::Build'
+          ci/run.sh build
+          echo '::endgroup::'
 
-            echo '::group::Test dmd'
-            ci/run.sh test_dmd
-            echo '::endgroup::'
+          echo '::group::Test dmd'
+          ci/run.sh test_dmd
+          echo '::endgroup::'
 
-            echo '::group::Test druntime'
-            ci/run.sh test_druntime
-            echo '::endgroup::'
+          echo '::group::Test druntime'
+          ci/run.sh test_druntime
+          echo '::endgroup::'
 
-            echo '::group::Test phobos'
-            ci/run.sh test_phobos
-            echo '::endgroup::'
+          echo '::group::Test phobos'
+          ci/run.sh test_phobos
+          echo '::endgroup::'
