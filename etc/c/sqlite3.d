@@ -3160,7 +3160,8 @@ struct Fts5ExtensionApi
 
 /// Ditto
 struct Fts5Tokenizer;
-struct fts5_tokenizer_v2 {
+struct fts5_tokenizer_v2
+{
   int iVersion;             /* Currently always 2 */
 
   int function (void*, const(char) **azArg, int nArg, Fts5Tokenizer **ppOut) xCreate;
@@ -3179,7 +3180,7 @@ struct fts5_tokenizer_v2 {
         int iEnd            /* Byte offset of end of token within input text */
       ) xToken
   ) xTokenize;
-};
+}
 
 /// Ditto
 struct fts5_tokenizer
