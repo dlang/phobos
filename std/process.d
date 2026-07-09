@@ -1029,6 +1029,8 @@ private Pid spawnProcessPosix(scope const(char[])[] args,
             {
                 version (FreeBSD)
                     import core.sys.freebsd.unistd : closefrom;
+                version (NetBSD)
+                    import core.sys.netbsd.unistd : closefrom;
                 else version (OpenBSD)
                     import core.sys.openbsd.unistd : closefrom;
                 else version (Hurd)
