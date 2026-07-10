@@ -2175,7 +2175,7 @@ private mixin template Protocol()
       * auto client = HTTP("dlang.org");
       * client.onReceive = (ubyte[] data)
       * {
-      *     writeln("Got data", to!(const(char)[])(data));
+      *     writeln("Got data", bitCast!(const(char)[])(data));
       *     return data.length;
       * };
       * client.perform();
@@ -2834,7 +2834,7 @@ struct HTTP
          * auto client = HTTP("dlang.org");
          * client.onReceive = (ubyte[] data)
          * {
-         *     writeln("Got data", to!(const(char)[])(data));
+         *     writeln("Got data", bitCast!(const(char)[])(data));
          *     return data.length;
          * };
          * client.perform();
@@ -2991,7 +2991,11 @@ struct HTTP
         return p.headersIn;
     }
 
-    /// HTTP method used.
+    /**
+     * HTTP method used.
+     *
+     * See_Also: $(LREF Method)
+     */
     @property void method(Method m)
     {
         p.method = m;
@@ -3069,7 +3073,7 @@ struct HTTP
       * ----
       * import std.net.curl, std.stdio, std.conv;
       * auto http = HTTP("http://www.mydomain.com");
-      * http.onReceive = (ubyte[] data) { writeln(to!(const(char)[])(data)); return data.length; };
+      * http.onReceive = (ubyte[] data) { writeln(bitCast!(const(char)[])(data)); return data.length; };
       * http.postData = [1,2,3,4,5];
       * http.perform();
       * ----
@@ -3088,7 +3092,7 @@ struct HTTP
       * ----
       * import std.net.curl, std.stdio, std.conv;
       * auto http = HTTP("http://www.mydomain.com");
-      * http.onReceive = (ubyte[] data) { writeln(to!(const(char)[])(data)); return data.length; };
+      * http.onReceive = (ubyte[] data) { writeln(bitCast!(const(char)[])(data)); return data.length; };
       * http.postData = "The quick....";
       * http.perform();
       * ----
@@ -3107,6 +3111,8 @@ struct HTTP
      *      "application/octet-stream". See also:
      *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
      *      Internet media type) on Wikipedia.
+     *
+     * Example:
      * -----
      * import std.net.curl;
      * auto http = HTTP("http://onlineform.example.com");
@@ -3160,7 +3166,7 @@ struct HTTP
       * ----
       * import std.net.curl, std.stdio, std.conv;
       * auto http = HTTP("dlang.org");
-      * http.onReceive = (ubyte[] data) { writeln(to!(const(char)[])(data)); return data.length; };
+      * http.onReceive = (ubyte[] data) { writeln(bitCast!(const(char)[])(data)); return data.length; };
       * http.onReceiveHeader = (in char[] key, in char[] value) { writeln(key, " = ", value); };
       * http.perform();
       * ----
@@ -4568,7 +4574,7 @@ struct Curl
       * Curl curl;
       * curl.initialize();
       * curl.set(CurlOption.url, "http://dlang.org");
-      * curl.onReceive = (ubyte[] data) { writeln("Got data", to!(const(char)[])(data)); return data.length;};
+      * curl.onReceive = (ubyte[] data) { writeln("Got data", bitCast!(const(char)[])(data)); return data.length;};
       * curl.perform();
       * ----
       */
