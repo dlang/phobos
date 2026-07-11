@@ -470,7 +470,10 @@ version (FloatingPointControlSupport)
   by zero), $(I overflow), and $(I invalid operation) exceptions are enabled.
   These three are combined into a $(I severeExceptions) value for convenience.
   Note in particular that if $(I invalidException) is enabled, a hardware trap
-  will be generated whenever an uninitialized floating-point variable is used.
+  will be generated for invalid floating-point operations (for example,
+  `0.0/0.0` or the square root of a negative number). Default-initialized
+  floating-point values are quiet NaNs and do not by themselves trigger this
+  exception.
 
   All changes are temporary. The previous state is restored at the
   end of the scope.
@@ -482,17 +485,16 @@ Example:
     FloatingPointControl fpctrl;
 
     // Enable hardware exceptions for division by zero, overflow to infinity,
-    // invalid operations, and uninitialized floating-point variables.
+    // and invalid operations.
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
-    // This will generate a hardware exception, if x is a
-    // default-initialized floating point variable:
-    real x; // Add `= 0` or even `= real.nan` to not throw the exception.
-    real y = x * 3.0;
+    // Division by zero generates a hardware exception when enabled:
+    // real y = 1.0 / 0.0;
 
-    // The exception is only thrown for default-uninitialized NaN-s.
-    // NaN-s with other payload are valid:
-    real z = y * real.nan; // ok
+    // Default-initialized floating-point values are quiet NaNs and do not
+    // by themselves trigger the invalid-operation exception:
+    real x;
+    real z = x * 3.0; // produces NaN without trapping
 
     // The set hardware exceptions and rounding modes will be disabled when
     // leaving this scope.
