@@ -3881,6 +3881,7 @@ version (linux)
 @system unittest
 {
     import core.atomic : atomicLoad, atomicStore;
+    import core.sys.posix.poll : poll, pollfd, POLLIN;
     import core.sys.posix.pthread : pthread_kill;
     import core.sys.posix.signal : SA_RESTART, SIGUSR1, sigaction, sigaction_t,
         sigemptyset;
@@ -3921,7 +3922,17 @@ version (linux)
     // Drain the pipe so the blocked write can make progress and complete.
     ubyte[4096] buf;
     while (!atomicLoad(done))
-        read(p.readEnd.fileno, buf.ptr, buf.length);
+    {
+        pollfd pfd =
+        {
+            fd : p.readEnd.fileno,
+            events : POLLIN,
+            revents : 0
+        };
+        int ret = poll(&pfd, 1, 100); // 100ms timeout
+        if (ret > 0 && (pfd.revents & POLLIN))
+            read(p.readEnd.fileno, buf.ptr, buf.length);
+    }
     t.join();
 
     assert(!atomicLoad(threw),
