@@ -2520,8 +2520,6 @@ static:
     Implements saturation for operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `<<=`, `>>=`,
     and `>>>=`. This hook is called if the result of the binary operation does
     not fit in `Lhs` without loss of information or a change in sign.
-    Bitwise operators (`&`, `|`, `^`, and the corresponding op-assign forms) are
-    not supported.
 
     Params:
     Rhs = The right-hand side type in the assignment, after the operation has
@@ -2553,8 +2551,7 @@ static:
     /**
 
     Implements saturation for operators `+`, `-` (unary and binary), `*`, `/`,
-    `%`, `^^`, `<<`, `>>`, and `>>>`. Bitwise operators (`&`, `|`, and `^`) are
-    not supported.
+    `%`, `^^`, `<<`, `>>`, and `>>>`.
 
     For unary `-`, `onOverflow` is called if $(D lhs == Lhs.min) and `Lhs` is a
     signed type. The function returns `Lhs.max`.
@@ -2611,7 +2608,7 @@ static:
         assert(checked!Saturate(100) >> -1 == int.max);
         assert(checked!Saturate(100) >> 33 == 0);
     }
-    /// Bitwise operators are not supported with `Saturate`.
+    // https://github.com/dlang/phobos/issues/11017
     @safe unittest
     {
         auto x = checked!Saturate(10);
