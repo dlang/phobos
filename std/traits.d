@@ -2504,9 +2504,9 @@ private:
     static assert(variadicFunctionStyle!DVarOnly2 == Variadic.d);
     static assert(variadicFunctionStyle!TypeSafe2 == Variadic.typesafe);
 
-    // Must not collapse into a typesafe variadic (`void function(int...)`).
-    static assert(!is(DVar2 == typeof(typesafeVariadic)));
-    static assert(!is(DVar2 == typeof(*void function(int...))));
+    // Must not collapse into a typesafe variadic.
+    static assert(variadicFunctionStyle!DVar2 != Variadic.typesafe);
+    static assert(!is(DVar2 == TypeSafe));
 }
 
 
