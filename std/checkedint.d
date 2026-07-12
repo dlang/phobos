@@ -2517,7 +2517,7 @@ struct Saturate
 static:
     /**
 
-    Implements saturation for operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `<<=`, `>>=`,
+    Implements saturation for operators `+=`, `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
     and `>>>=`. This hook is called if the result of the binary operation does
     not fit in `Lhs` without loss of information or a change in sign.
 
@@ -2551,7 +2551,7 @@ static:
     /**
 
     Implements saturation for operators `+`, `-` (unary and binary), `*`, `/`,
-    `%`, `^^`, `<<`, `>>`, and `>>>`.
+    `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.
 
     For unary `-`, `onOverflow` is called if $(D lhs == Lhs.min) and `Lhs` is a
     signed type. The function returns `Lhs.max`.
@@ -2593,6 +2593,8 @@ static:
             return rhs >= 0 ? Lhs.max : 0;
         else static if (x == ">>" || x == ">>>")
             return rhs >= 0 ? 0 : Lhs.max;
+        else static if (x == "&" || x == "|" || x == "^")
+            return mixin("lhs" ~ x ~ "rhs");
         else
             static assert(false);
     }
@@ -2608,16 +2610,20 @@ static:
         assert(checked!Saturate(100) >> -1 == int.max);
         assert(checked!Saturate(100) >> 33 == 0);
     }
-    // https://github.com/dlang/phobos/issues/11017
+    ///
     @safe unittest
     {
-        auto x = checked!Saturate(10);
-        static assert(!__traits(compiles, x & 10));
-        static assert(!__traits(compiles, x | 10));
-        static assert(!__traits(compiles, x ^ 10));
-        static assert(!__traits(compiles, x &= 10));
-        static assert(!__traits(compiles, x |= 10));
-        static assert(!__traits(compiles, x ^= 10));
+        assert((checked!Saturate(0b1100) & 0b1010) == 0b1000);
+        assert((checked!Saturate(0b1100) | 0b1010) == 0b1110);
+        assert((checked!Saturate(0b1100) ^ 0b1010) == 0b0110);
+
+        auto x = checked!Saturate(0b1100);
+        x &= 0b1010;
+        assert(x == 0b1000);
+        x |= 0b0011;
+        assert(x == 0b1011);
+        x ^= 0b1111;
+        assert(x == 0b0100);
     }
 }
 
