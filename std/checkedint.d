@@ -2594,7 +2594,7 @@ static:
         else static if (x == ">>" || x == ">>>")
             return rhs >= 0 ? 0 : Lhs.max;
         else static if (x == "&" || x == "|" || x == "^")
-            return mixin("lhs" ~ x ~ "rhs");
+            assert(false);
         else
             static assert(false);
     }
