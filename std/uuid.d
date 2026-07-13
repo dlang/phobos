@@ -597,8 +597,11 @@ public struct UUID
                 data[7]
             ];
 
-            const float hnsecs = rand_a.bigEndianToNative!ushort / MonotonicUUIDsFactory.subMsecsPart;
-            ret += dur!"hnsecs"(cast(ulong) hnsecs);
+            const ra = rand_a.bigEndianToNative!ushort;
+            const submsec = MonotonicUUIDsFactory.subMsecEpsilon * ra;
+            assert(submsec >= 0 && submsec < 1);
+
+            ret += dur!"hnsecs"(cast(ulong)(submsec * 10_000));
 
             return ret;
         }
@@ -1408,14 +1411,25 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 }
 
 ///
-class MonotonicUUIDsFactory
-{
-    import core.sync.mutex : Mutex;
-    import core.time : Duration;
-    import std.datetime.stopwatch : StopWatch;
+alias MonotonicUUIDsFactory = MonotonicUUIDsFactoryImpl!false;
 
-    private shared Mutex mtx;
-    private StopWatch startTimePoint;
+///
+class MonotonicUUIDsFactoryImpl(bool autostartDisabledForTesting)
+{
+    import core.time : Duration, MonoTime;
+
+    private static immutable ulong ticksPerMsec;
+    private const long initialTicks;
+
+    /// submsec value distributed over 12 bits (4096 values)
+    private enum short rangeOfSubMsec = 4096;
+    /// epsilon of submsec value
+    private enum float subMsecEpsilon = 1.0f / rangeOfSubMsec;
+
+    shared static this()
+    {
+        ticksPerMsec = MonoTime.ticksPerSecond / 1000;
+    }
 
     ///
     this(in SysTime startTime = SysTime.fromUnixTime(0)) shared
@@ -1424,27 +1438,31 @@ class MonotonicUUIDsFactory
     }
 
     ///
-    this(in Duration timeElapsed, bool autostartDisabledForTesting = false) shared
+    this(in Duration startTimeOffset) shared
     {
-        mtx = new shared Mutex();
+        const ticksPerHnsec = float(ticksPerMsec) / 10_000;
+        const offset = startTimeOffset.split!("msecs", "hnsecs");
 
-        (cast() startTimePoint).setTimeElapsed = timeElapsed;
+        auto offsetTicks = ticksPerMsec * offset.msecs;
+        offsetTicks += cast(ulong)(ticksPerHnsec * offset.hnsecs);
+        assert(offsetTicks > 0);
 
-        if (!autostartDisabledForTesting)
-            (cast() startTimePoint).start();
+        if (startTimeOffset.isNegative)
+            offsetTicks = -offsetTicks;
+
+        static if (!autostartDisabledForTesting)
+            offsetTicks -= MonoTime.currTime.ticks;
+
+        initialTicks = offsetTicks;
     }
 
-    private auto peek() shared
+    private long peekMono() shared
     {
-        mtx.lock();
-        scope(exit) mtx.unlock();
-
-        return (cast() startTimePoint).peek;
+        static if (autostartDisabledForTesting)
+            return initialTicks;
+        else
+            return initialTicks + MonoTime.currTime.ticks;
     }
-
-    // hnsecs is 1/10_000 of millisecond
-    // rand_a size is 12 bits (4096 values)
-    private enum float subMsecsPart = 1.0f / 10_000 * 4096;
 
     /**
      * Returns a monotonic timestamp + random based UUIDv7
@@ -1452,18 +1470,21 @@ class MonotonicUUIDsFactory
      */
     UUID createUUIDv7_method3(ubyte[8] externalRandom = generateRandomData!8) shared
     {
-        const curr = peek.split!("msecs", "hnsecs");
-        const qhnsecs = cast(ushort) (curr.hnsecs * subMsecsPart);
+        const curr = peekMono();
+        const msecs = curr / ticksPerMsec;
+        const submsec_ticks = curr % ticksPerMsec;
+
+        const ushort submsec_part = cast(ushort)(float(submsec_ticks) / ticksPerMsec * rangeOfSubMsec);
 
         ubyte[10] rand;
 
         // Whole rand_a is 16 bit, but usable only 12 MSB.
         // additional 4 less significant bits consumed
         // by a version value
-        rand[0 .. 2] = qhnsecs.nativeToBigEndian;
+        rand[0 .. 2] = submsec_part.nativeToBigEndian;
         rand[2 .. $] = externalRandom;
 
-        return UUID(curr.msecs, rand);
+        return UUID(msecs, rand);
     }
 }
 
@@ -1507,7 +1528,7 @@ class MonotonicUUIDsFactory
     const currTime = SysTime(DateTime(2025, 9, 12, 21, 38, 45), UTC());
     Duration d = currTime - SysTime.fromUnixTime(0) + dur!"msecs"(123);
 
-    auto f = new shared MonotonicUUIDsFactory(d, true);
+    auto f = new shared MonotonicUUIDsFactoryImpl!true(d);
 
     const u1 = f.createUUIDv7_method3();
     assert(u1.uuidVersion == UUID.Version.timestampRandom);
@@ -1530,7 +1551,7 @@ class MonotonicUUIDsFactory
     // 0.3 usecs, but Method 3 precision is only 0.25 of usec,
     // thus, expected value is 2
     d += dur!"hnsecs"(3);
-    f = new shared MonotonicUUIDsFactory(d, true);
+    f = new shared MonotonicUUIDsFactoryImpl!true(d);
 
     const u2 = f.createUUIDv7_method3();
     const uuidv7_milli_2 = u2.v7Timestamp;
