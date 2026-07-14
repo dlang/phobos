@@ -1445,7 +1445,6 @@ class MonotonicUUIDsFactoryImpl(bool autostartDisabledForTesting)
 
         auto offsetTicks = ticksPerMsec * offset.msecs;
         offsetTicks += cast(ulong)(ticksPerHnsec * offset.hnsecs);
-        assert(offsetTicks > 0);
 
         if (startTimeOffset.isNegative)
             offsetTicks = -offsetTicks;
