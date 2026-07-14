@@ -1505,7 +1505,7 @@ class MonotonicUUIDsFactoryImpl(bool autostartDisabledForTesting)
 @system unittest
 {
     import std.datetime.systime : Clock;
-    import core.time : seconds;
+    import core.time : Duration, seconds;
 
     auto f = new shared MonotonicUUIDsFactory;
 
@@ -1515,7 +1515,7 @@ class MonotonicUUIDsFactoryImpl(bool autostartDisabledForTesting)
     {
         u = f.createUUIDv7_method3;
 
-        const d = Clock.currTime - u.v7Timestamp_method3;
+        const Duration d = Clock.currTime - u.v7Timestamp_method3;
         assert(d < 1.seconds);
     }
 }
