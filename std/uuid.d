@@ -1483,12 +1483,20 @@ class MonotonicUUIDsFactory
 /// Generate monotone UUIDs
 @system unittest
 {
+    import std.datetime.systime : Clock;
+    import core.time : seconds;
+
     auto f = new shared MonotonicUUIDsFactory;
 
     UUID[10] monotonic;
 
     foreach (ref u; monotonic)
+    {
         u = f.createUUIDv7_method3;
+
+        const d = Clock.currTime - u.v7Timestamp_method3;
+        assert(d < 1.seconds);
+    }
 }
 
 @system unittest
