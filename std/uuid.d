@@ -1493,6 +1493,24 @@ class MonotonicUUIDsFactory
 
 @system unittest
 {
+    import std.datetime.systime : Clock;
+    import core.time : abs, Duration, seconds;
+
+    auto f = new shared MonotonicUUIDsFactory;
+
+    UUID[10] monotonic;
+
+    foreach (ref u; monotonic)
+    {
+        u = f.createUUIDv7_method3;
+
+        const Duration d = Clock.currTime - u.v7Timestamp_method3;
+        assert(d.abs < 1.seconds);
+    }
+}
+
+@system unittest
+{
     import std.conv : to;
     import std.datetime;
 
