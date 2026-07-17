@@ -4923,13 +4923,45 @@ struct _DirIterator(bool useDIP1000)
         "Please don't override useDIP1000 to disagree with compiler switch.");
 
 private:
-    SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    /+
+        @@BUG@@: <https://github.com/dlang/phobos/issues/11068>
+
+        While this `SafeRefCounted` variable is well encapsulated inside this struct,
+        the unsafeness of its destructor in non-DIP1000 builds still bleeds through.
+        By masking its type (achieved by storing it in a static void array)
+        and taking care of destruction and postblitting ourselves,
+        we can expose a `@safe` interface.
+
+        Is it beautiful? No.
+        Is it clean? No.
+        But, yes, it gets the job done. And the code is well enough unittested.
+    +/
+    alias Impl = SafeRefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no);
+    void[Impl.sizeof] _impl;
+
+    // Retain previous API.
+    ref Impl impl() inout @property
+    {
+        return *cast(Impl*)(&_impl);
+    }
 
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
+
 public:
+    this(this) @trusted
+    {
+        impl.__postblit();
+    }
+
+    ~this() @trusted
+    {
+        impl.__dtor();
+        impl = Impl.init;
+    }
+
     @property bool empty() @trusted { return impl.empty; }
     @property DirEntry front() @trusted { return impl.front; }
     void popFront() @trusted { impl.popFront(); }
