@@ -603,6 +603,19 @@ public struct UUID
             return ret;
         }
 
+        /// Read UUID v7 Method 3 timestamp
+        @system unittest
+        {
+            import core.time;
+            import std.datetime;
+
+            const u = UUID("019913ce-f124-7835-96c7-a2df691caa98");
+            const ts = u.v7Timestamp_method3;
+            const toCmp = SysTime(DateTime(2025, 9, 4, 8, 19, 13), dur!"hnsecs"(3165129), UTC());
+
+            assert(ts == toCmp, ts.toString~" != "~toCmp.toString);
+        }
+
         /**
          * RFC 4122 defines different internal data layouts for UUIDs.
          * Returns the format used by this UUID.
@@ -1465,19 +1478,6 @@ class MonotonicUUIDsFactory
 
         return UUID(curr.msecs, rand);
     }
-}
-
-/// Read UUID v7 Method 3 timestamp
-@system unittest
-{
-    import core.time;
-    import std.datetime;
-
-    const u = UUID("019913ce-f124-7835-96c7-a2df691caa98");
-    const ts = u.v7Timestamp_method3;
-    const toCmp = SysTime(DateTime(2025, 9, 4, 8, 19, 13), dur!"hnsecs"(3165129), UTC());
-
-    assert(ts == toCmp, ts.toString~" != "~toCmp.toString);
 }
 
 /// Generate monotone UUIDs
