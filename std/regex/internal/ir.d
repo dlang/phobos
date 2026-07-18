@@ -107,6 +107,17 @@ package(std) string regexOptionsToString()(uint flags) nothrow pure @safe
     return buffer[0 .. pos].idup;
 }
 
+/// True if `a` and `b` match under simple Unicode case folding (for `/i` backrefs).
+bool equalCasefold(dchar a, dchar b) @safe pure nothrow
+{
+    if (a == b)
+        return true;
+    foreach (c; simpleCaseFoldings(a))
+        if (c == b)
+            return true;
+    return false;
+}
+
 // flags that allow guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }
 

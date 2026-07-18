@@ -491,7 +491,11 @@ template ThompsonOps(E, S, bool withInput:true)
             {
                 size_t idx = source[n].begin + t.uopCounter;
                 size_t end = source[n].end;
-                if (s[idx .. end].front == front)
+                immutable fold = (re.flags & RegexOption.casefold) != 0;
+                immutable same = fold
+                    ? equalCasefold(s[idx .. end].front, front)
+                    : s[idx .. end].front == front;
+                if (same)
                 {
                     import std.utf : stride;
 
