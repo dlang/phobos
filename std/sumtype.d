@@ -2061,7 +2061,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             {
                 static foreach (hid, handler; handlers)
                 {
-                    static if (canMatch!(handlerAlias!(handler, valueTypes!caseId.length),
+                    static if (canMatch!(handlerAlias!(handler, SumTypes.length),
                             valueTypes!caseId))
                     {
                         if (result[caseId] == noMatch)
