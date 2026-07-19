@@ -1698,8 +1698,7 @@ enum bool isSumType(T) = is(T : SumType!Args, Args...);
  * overloads are considered as potential matches.
  *
  * String handlers such as `"a.member"` are accepted via
- * $(REF unaryFun, std,functional) (and $(REF binaryFun, std,functional) for
- * multiple dispatch), consistent with the rest of Phobos.
+ * $(REF unaryFun, std,functional), consistent with the rest of Phobos.
  *
  * Templated handlers are also accepted, and will match any type for which they
  * can be [implicitly instantiated](https://dlang.org/glossary.html#ifti).
@@ -1972,23 +1971,13 @@ private template Iota(size_t n)
     assert(Iota!3 == AliasSeq!(0, 1, 2));
 }
 
-private template handlerAlias(alias handler, size_t nArgs)
-{
-    import std.functional : binaryFun, unaryFun;
-
-    static if (nArgs == 1)
-        alias handlerAlias = unaryFun!handler;
-    else static if (nArgs == 2)
-        alias handlerAlias = binaryFun!handler;
-    else
-        alias handlerAlias = handler;
-}
-
 private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 {
     auto ref matchImpl(SumTypes...)(auto ref SumTypes args)
     if (allSatisfy!(isSumType, SumTypes) && args.length > 0)
     {
+        import std.functional : unaryFun;
+
         // Single dispatch (fast path)
         static if (args.length == 1)
         {
@@ -2061,8 +2050,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             {
                 static foreach (hid, handler; handlers)
                 {
-                    static if (canMatch!(handlerAlias!(handler, SumTypes.length),
-                            valueTypes!caseId))
+                    static if (canMatch!(unaryFun!handler, valueTypes!caseId))
                     {
                         if (result[caseId] == noMatch)
                         {
@@ -2095,8 +2083,7 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 
         static foreach (size_t hid, handler; handlers)
         {
-            mixin("alias ", handlerName!hid, " = handlerAlias!(handler, ",
-                toCtString!(SumTypes.length), ");");
+            mixin("alias ", handlerName!hid, " = unaryFun!handler;");
         }
 
         // Single dispatch (fast path)
