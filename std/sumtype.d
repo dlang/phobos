@@ -1697,6 +1697,10 @@ enum bool isSumType(T) = is(T : SumType!Args, Args...);
  * a function with more than one overload is given as a handler, all of the
  * overloads are considered as potential matches.
  *
+ * String handlers such as `"a.member"` are accepted via
+ * $(REF unaryFun, std,functional) (and $(REF binaryFun, std,functional) for
+ * multiple dispatch), consistent with the rest of Phobos.
+ *
  * Templated handlers are also accepted, and will match any type for which they
  * can be [implicitly instantiated](https://dlang.org/glossary.html#ifti).
  * (Remember that a $(DDSUBLINK spec/expression,function_literals, function literal)
@@ -1727,6 +1731,18 @@ template match(handlers...)
     {
         return matchImpl!(Yes.exhaustive, handlers)(args);
     }
+}
+
+// https://github.com/dlang/phobos/issues/11067
+version (D_BetterC) {} else
+@safe unittest
+{
+    struct Foo { int value; }
+    struct Bar { int value; }
+
+    alias Sum = SumType!(Foo, Bar);
+
+    assert(Sum(Bar(3)).match!"a.value" == 3);
 }
 
 /** $(DIVID avoiding-unintentional-matches, $(H3 Avoiding unintentional matches))
@@ -1956,6 +1972,18 @@ private template Iota(size_t n)
     assert(Iota!3 == AliasSeq!(0, 1, 2));
 }
 
+private template handlerAlias(alias handler, size_t nArgs)
+{
+    import std.functional : binaryFun, unaryFun;
+
+    static if (nArgs == 1)
+        alias handlerAlias = unaryFun!handler;
+    else static if (nArgs == 2)
+        alias handlerAlias = binaryFun!handler;
+    else
+        alias handlerAlias = handler;
+}
+
 private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 {
     auto ref matchImpl(SumTypes...)(auto ref SumTypes args)
@@ -2033,7 +2061,8 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
             {
                 static foreach (hid, handler; handlers)
                 {
-                    static if (canMatch!(handler, valueTypes!caseId))
+                    static if (canMatch!(handlerAlias!(handler, valueTypes!caseId.length),
+                            valueTypes!caseId))
                     {
                         if (result[caseId] == noMatch)
                         {
@@ -2066,7 +2095,8 @@ private template matchImpl(Flag!"exhaustive" exhaustive, handlers...)
 
         static foreach (size_t hid, handler; handlers)
         {
-            mixin("alias ", handlerName!hid, " = handler;");
+            mixin("alias ", handlerName!hid, " = handlerAlias!(handler, ",
+                toCtString!(SumTypes.length), ");");
         }
 
         // Single dispatch (fast path)
