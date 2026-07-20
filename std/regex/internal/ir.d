@@ -108,14 +108,11 @@ package(std) string regexOptionsToString()(uint flags) nothrow pure @safe
 }
 
 /// True if `a` and `b` match under simple Unicode case folding (for `/i` backrefs).
-bool equalCasefold(dchar a, dchar b) @safe pure nothrow
+bool equalCasefold(dchar lhs, dchar rhs) @safe pure nothrow @nogc
 {
-    if (a == b)
-        return true;
-    foreach (c; simpleCaseFoldings(a))
-        if (c == b)
-            return true;
-    return false;
+    dchar[1] a = lhs;
+    dchar[1] b = rhs;
+    return sicmp(a[], b[]) == 0;
 }
 
 // flags that allow guide execution of engine
