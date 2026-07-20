@@ -8020,13 +8020,13 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 package(std) int simpleCaseCmp(dchar lhs, dchar rhs) @safe @nogc pure nothrow
 {
     import std.internal.unicode_tables : sTable = simpleCaseTable;
-    static import std.ascii;
+    import std.ascii : toLower;
 
     int diff = lhs - rhs;
     if (!diff)
         return 0;
     if ((lhs | rhs) < 0x80)
-        return ascii.toLower(lhs) - ascii.toLower(rhs);
+        return toLower(lhs) - toLower(rhs);
     size_t idx = simpleCaseTrie[lhs];
     size_t idx2 = simpleCaseTrie[rhs];
     if (idx != EMPTY_CASE_TRIE)
