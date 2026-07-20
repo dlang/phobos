@@ -8016,6 +8016,36 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     int[Grapheme] aa;
 }
 
+// Per-codepoint simple case compare (trie tables); used by $(LREF sicmp).
+package(std) int simpleCaseCmp(dchar lhs, dchar rhs) @safe @nogc pure nothrow
+{
+    import std.internal.unicode_tables : sTable = simpleCaseTable;
+    static import std.ascii;
+
+    int diff = lhs - rhs;
+    if (!diff)
+        return 0;
+    if ((lhs | rhs) < 0x80)
+        return ascii.toLower(lhs) - ascii.toLower(rhs);
+    size_t idx = simpleCaseTrie[lhs];
+    size_t idx2 = simpleCaseTrie[rhs];
+    if (idx != EMPTY_CASE_TRIE)
+    {
+        if (idx2 != EMPTY_CASE_TRIE)
+        {
+            idx = idx - sTable(idx).n;
+            idx2 = idx2 - sTable(idx2).n;
+            if (idx == idx2)
+                return 0;
+            return sTable(idx).ch - sTable(idx2).ch;
+        }
+        return sTable(idx - sTable(idx).n).ch - rhs;
+    }
+    if (idx2 != EMPTY_CASE_TRIE)
+        return lhs - sTable(idx2 - sTable(idx2).n).ch;
+    return diff;
+}
+
 /++
     $(P Does basic case-insensitive comparison of `r1` and `r2`.
     This function uses simpler comparison rule thus achieving better performance
@@ -8043,12 +8073,10 @@ int sicmp(S1, S2)(scope S1 r1, scope S2 r2)
 if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
-    import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
     import std.range.primitives : isInfinite;
     import std.utf : decodeFront;
     import std.traits : isDynamicArray;
     import std.typecons : Yes;
-    static import std.ascii;
 
     static if ((isDynamicArray!S1 || isRandomAccessRange!S1)
         && (isDynamicArray!S2 || isRandomAccessRange!S2)
@@ -8074,7 +8102,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
             auto rhs = r2[i];
             if ((lhs | rhs) >= 0x80) goto NonAsciiPath;
             if (lhs == rhs) continue;
-            auto lowDiff = std.ascii.toLower(lhs) - std.ascii.toLower(rhs);
+            immutable lowDiff = simpleCaseCmp(lhs, rhs);
             if (lowDiff) return lowDiff;
         }
         static if (isInfinite!S1)
@@ -8096,38 +8124,9 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
         if (r2.empty)
             return 1;
         immutable rhs = decodeFront!(Yes.useReplacementDchar)(r2);
-        int diff = lhs - rhs;
+        immutable diff = simpleCaseCmp(lhs, rhs);
         if (!diff)
             continue;
-        if ((lhs | rhs) < 0x80)
-        {
-            immutable d = std.ascii.toLower(lhs) - std.ascii.toLower(rhs);
-            if (!d) continue;
-            return d;
-        }
-        size_t idx = simpleCaseTrie[lhs];
-        size_t idx2 = simpleCaseTrie[rhs];
-        // simpleCaseTrie is packed index table
-        if (idx != EMPTY_CASE_TRIE)
-        {
-            if (idx2 != EMPTY_CASE_TRIE)
-            {// both cased chars
-                // adjust idx --> start of bucket
-                idx = idx - sTable(idx).n;
-                idx2 = idx2 - sTable(idx2).n;
-                if (idx == idx2)// one bucket, equivalent chars
-                    continue;
-                else//  not the same bucket
-                    diff = sTable(idx).ch - sTable(idx2).ch;
-            }
-            else
-                diff = sTable(idx - sTable(idx).n).ch - rhs;
-        }
-        else if (idx2 != EMPTY_CASE_TRIE)
-        {
-            diff = lhs - sTable(idx2 - sTable(idx2).n).ch;
-        }
-        // one of chars is not cased at all
         return diff;
     }
     return int(r2.empty) - 1;
