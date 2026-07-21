@@ -491,11 +491,7 @@ template ThompsonOps(E, S, bool withInput:true)
             {
                 size_t idx = source[n].begin + t.uopCounter;
                 size_t end = source[n].end;
-                immutable fold = (re.flags & RegexOption.casefold) != 0;
-                immutable same = fold
-                    ? equalCasefold(s[idx .. end].front, front)
-                    : s[idx .. end].front == front;
-                if (same)
+                if (s[idx .. end].front == front)
                 {
                     import std.utf : stride;
 
@@ -503,6 +499,48 @@ template ThompsonOps(E, S, bool withInput:true)
                     if (t.uopCounter + source[n].begin == source[n].end)
                     {//last codepoint
                         t.pc += IRL!(IR.Backref);
+                        t.uopCounter = 0;
+                    }
+                    nlist.insertBack(t);
+                }
+                else
+                    recycle(t);
+                t = worklist.fetch();
+                return t != null;
+            }
+        }
+    }
+
+    static bool op(IR code:IR.BackrefI)(E e, S* state)
+    {
+        with(e) with(state)
+        {
+            uint n = re.ir[t.pc].data;
+            Group!DataIndex* source = re.ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
+            assert(source);
+            if (!source[n])  // unmatched group
+            {
+                recycle(t);
+                t = worklist.fetch();
+                return t != null;
+            }
+            if (source[n].begin == source[n].end)  // zero-width match
+            {
+                t.pc += IRL!(IR.BackrefI);
+                return true;
+            }
+            else
+            {
+                size_t idx = source[n].begin + t.uopCounter;
+                size_t end = source[n].end;
+                if (equalCasefold(s[idx .. end].front, front))
+                {
+                    import std.utf : stride;
+
+                    t.uopCounter += stride(s[idx .. end], 0);
+                    if (t.uopCounter + source[n].begin == source[n].end)
+                    {//last codepoint
+                        t.pc += IRL!(IR.BackrefI);
                         t.uopCounter = 0;
                     }
                     nlist.insertBack(t);
@@ -711,10 +749,30 @@ template ThompsonOps(E,S, bool withInput:false)
         }
     }
 
+    static bool op(IR code:IR.BackrefI)(E e, S* state)
+    {
+        with(e) with(state)
+        {
+            uint n = re.ir[t.pc].data;
+            Group!DataIndex* source = re.ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
+            assert(source);
+            if (!source[n])  // unmatched group
+                return popState(e);
+            if (source[n].begin == source[n].end)  // zero-width match
+            {
+                t.pc += IRL!(IR.BackrefI);
+                return true;
+            }
+            else
+                return popState(e);
+        }
+    }
+
     // forward all control flow to normal versions
     static bool op(IR code)(E e, S* state)
     if (code != IR.Char && code != IR.OrChar && code != IR.CodepointSet
-        && code != IR.Trie && code != IR.Char && code != IR.Any && code != IR.Backref)
+        && code != IR.Trie && code != IR.Char && code != IR.Any
+        && code != IR.Backref && code != IR.BackrefI)
     {
         return ThompsonOps!(E,S,true).op!code(e,state);
     }

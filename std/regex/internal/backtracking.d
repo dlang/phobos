@@ -656,12 +656,13 @@ final:
                     }
                     break;
                 case IR.Backref:
+                case IR.BackrefI:
                     immutable n = re.ir[pc].data;
                     auto g = re.ir[pc].localRef ? matches[n] : backrefed[n];
                     if (!g)
                         goto L_backtrack;
                     auto referenced = s[g.begin .. g.end];
-                    immutable fold = (re.flags & RegexOption.casefold) != 0;
+                    immutable fold = re.ir[pc].code == IR.BackrefI;
                     while (!atEnd && !referenced.empty
                         && (fold ? equalCasefold(front, referenced.front)
                                  : front == referenced.front))
@@ -822,7 +823,6 @@ struct CtContext
     import std.conv : to, text;
     //dirty flags
     bool counter;
-    bool casefold;
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
@@ -841,7 +841,6 @@ struct CtContext
         match = 1;
         reserved = 1; //first match is skipped
         total_matches = re.ngroup;
-        casefold = (re.flags & RegexOption.casefold) != 0;
         foreach (ref set; re.charsets)
         {
             charsets ~= set.intervals;
@@ -853,7 +852,6 @@ struct CtContext
         CtContext ct;
         ct.total_matches = e - s;
         ct.match = 1;
-        ct.casefold = casefold;
         return ct;
     }
 
@@ -1225,7 +1223,7 @@ struct CtContext
             {
                 pc++;
             }
-            else if (ir[pc].code == IR.Backref)
+            else if (ir[pc].code == IR.Backref || ir[pc].code == IR.BackrefI)
                 break;
             else
             {
@@ -1440,14 +1438,11 @@ struct CtContext
             string gStr = ir[0].localRef
                 ? ctSub("matches[$$]", ir[0].data)
                 : ctSub("backrefed[$$]", ir[0].data);
-            immutable cmp = casefold
-                ? "equalCasefold(front, referenced.front)"
-                : "front == referenced.front";
             code ~= ctSub( `
                     if (!$$)
                         $$
                     auto referenced = s[$$.begin .. $$.end];
-                    while (!atEnd && !referenced.empty && $$)
+                    while (!atEnd && !referenced.empty && front == referenced.front)
                     {
                         next();
                         referenced.popFront();
@@ -1455,7 +1450,26 @@ struct CtContext
                     if (referenced.empty)
                         $$
                     else
-                        $$`, gStr, bailOut, gStr, gStr, cmp, nextInstr, bailOut);
+                        $$`, gStr, bailOut, gStr, gStr, nextInstr, bailOut);
+            break;
+        case IR.BackrefI:
+            string gStr = ir[0].localRef
+                ? ctSub("matches[$$]", ir[0].data)
+                : ctSub("backrefed[$$]", ir[0].data);
+            code ~= ctSub( `
+                    if (!$$)
+                        $$
+                    auto referenced = s[$$.begin .. $$.end];
+                    while (!atEnd && !referenced.empty
+                        && equalCasefold(front, referenced.front))
+                    {
+                        next();
+                        referenced.popFront();
+                    }
+                    if (referenced.empty)
+                        $$
+                    else
+                        $$`, gStr, bailOut, gStr, gStr, nextInstr, bailOut);
             break;
         case IR.Nop:
         case IR.End:

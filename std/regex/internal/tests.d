@@ -283,6 +283,8 @@ debug(std_regex_test) import std.stdio;
         TestVectors(   `(.)\1`,              "xy",                  "n",   "-",  "-",           "i"),
         TestVectors(   `(ab)\1`,             "AbAb",                "y",   "$&", "AbAb",        "i"),
         TestVectors(   `(?i)(.)\1`,          "Aa BB",               "y",   "$&", "Aa"),
+        TestVectors(   `(.)\1(?i)X`,         "Aax",                 "n",   "-",  "-"),
+        TestVectors(   `(?i)(.)\1(?-i)X`,    "AaX",                 "y",   "$&", "AaX"),
 //escapes:
         TestVectors(    `\u0041\u005a\U00000065\u0001`,         "AZe\u0001",       "y",   "$&", "AZe\u0001"),
         TestVectors(    `\u`,               "",   "c",   "-",  "-"),
