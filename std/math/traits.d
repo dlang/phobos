@@ -988,6 +988,8 @@ template floatTraits(T)
                 version (X86_64)
                     static assert(false,"No traits support for " ~ T.stringof ~
                                   ". If you are on ARM, DMD is trying to target X86_64.");
+                else
+                    static assert(false, "No traits support for " ~ T.stringof);
             }
             else
                 static assert(false, "No traits support for " ~ T.stringof);
