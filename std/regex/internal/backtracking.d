@@ -656,12 +656,16 @@ final:
                     }
                     break;
                 case IR.Backref:
+                case IR.BackrefI:
                     immutable n = re.ir[pc].data;
                     auto g = re.ir[pc].localRef ? matches[n] : backrefed[n];
                     if (!g)
                         goto L_backtrack;
                     auto referenced = s[g.begin .. g.end];
-                    while (!atEnd && !referenced.empty && front == referenced.front)
+                    immutable fold = re.ir[pc].code == IR.BackrefI;
+                    while (!atEnd && !referenced.empty
+                        && (fold ? equalCasefold(front, referenced.front)
+                                 : front == referenced.front))
                     {
                         next();
                         referenced.popFront();
@@ -1219,7 +1223,7 @@ struct CtContext
             {
                 pc++;
             }
-            else if (ir[pc].code == IR.Backref)
+            else if (ir[pc].code == IR.Backref || ir[pc].code == IR.BackrefI)
                 break;
             else
             {
@@ -1439,6 +1443,25 @@ struct CtContext
                         $$
                     auto referenced = s[$$.begin .. $$.end];
                     while (!atEnd && !referenced.empty && front == referenced.front)
+                    {
+                        next();
+                        referenced.popFront();
+                    }
+                    if (referenced.empty)
+                        $$
+                    else
+                        $$`, gStr, bailOut, gStr, gStr, nextInstr, bailOut);
+            break;
+        case IR.BackrefI:
+            string gStr = ir[0].localRef
+                ? ctSub("matches[$$]", ir[0].data)
+                : ctSub("backrefed[$$]", ir[0].data);
+            code ~= ctSub( `
+                    if (!$$)
+                        $$
+                    auto referenced = s[$$.begin .. $$.end];
+                    while (!atEnd && !referenced.empty
+                        && equalCasefold(front, referenced.front))
                     {
                         next();
                         referenced.popFront();

@@ -276,6 +276,15 @@ debug(std_regex_test) import std.stdio;
         TestVectors(   `[adzУ-Я]{4}`,    "DzюЯ",                   "y",   "$&", "DzюЯ", "i"),
         TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ", "y",   "$&", "абвгдеЖЗИКЛ", "i"),
         TestVectors(   `(?:Dåb){3}`,  "DåbDÅBdÅb",                  "y",   "$&", "DåbDÅBdÅb", "i"),
+// <https://github.com/dlang/phobos/issues/11025> backrefs must casefold under `/i`:
+        TestVectors(   `(.)\1`,              "Aa",                  "y",   "$&", "Aa",          "i"),
+        TestVectors(   `(.)\1`,              "aA",                  "y",   "$&", "aA",          "i"),
+        TestVectors(   `(.)\1`,              "BB",                  "y",   "$&", "BB",          "i"),
+        TestVectors(   `(.)\1`,              "xy",                  "n",   "-",  "-",           "i"),
+        TestVectors(   `(ab)\1`,             "AbAb",                "y",   "$&", "AbAb",        "i"),
+        TestVectors(   `(?i)(.)\1`,          "Aa BB",               "y",   "$&", "Aa"),
+        TestVectors(   `(.)\1(?i)X`,         "Aax",                 "n",   "-",  "-"),
+        TestVectors(   `(?i)(.)\1(?-i)X`,    "AaX",                 "y",   "$&", "AaX"),
 //escapes:
         TestVectors(    `\u0041\u005a\U00000065\u0001`,         "AZe\u0001",       "y",   "$&", "AZe\u0001"),
         TestVectors(    `\u`,               "",   "c",   "-",  "-"),

@@ -981,13 +981,15 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 nref /= 10;
             enforce(!g.isOpenGroup(nref), "Backref to open group");
             uint localLimit = maxBackref - g.groupStack.top;
+            immutable IR backrefOp = (re_flags & RegexOption.casefold)
+                ? IR.BackrefI : IR.Backref;
             if (nref >= localLimit)
             {
-                g.put(Bytecode(IR.Backref, nref-localLimit));
+                g.put(Bytecode(backrefOp, nref-localLimit));
                 g.ir[$-1].setLocalRef();
             }
             else
-                g.put(Bytecode(IR.Backref, nref));
+                g.put(Bytecode(backrefOp, nref));
             g.markBackref(nref);
             break;
         default:
