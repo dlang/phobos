@@ -496,8 +496,8 @@ template ThompsonOps(E, S, bool withInput:true)
                     import std.utf : stride;
 
                     t.uopCounter += stride(s[idx .. end], 0);
-                    if (t.uopCounter + source[n].begin == source[n].end)
-                    {//last codepoint
+                    if (t.uopCounter + source[n].begin == source[n].end) // last codepoint
+                    {
                         t.pc += IRL!(IR.Backref);
                         t.uopCounter = 0;
                     }
