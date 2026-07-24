@@ -11536,9 +11536,9 @@ enum SearchPolicy
     linear,
 
     /**
-       Searches with a step that is grows linearly (1, 2, 3,...)
+       Searches with a step that grows linearly (1, 2, 3, ...),
        leading to a quadratic search schedule (indexes tried are 0, 1,
-       3, 6, 10, 15, 21, 28,...) Once the search overshoots its target,
+       3, 6, 10, 15, 21, 28,...). Once the search overshoots its target,
        the remaining interval is searched using binary search. The
        search is completed in $(BIGOH sqrt(n)) time. Use it when you
        are reasonably confident that the value is around the beginning
@@ -11549,9 +11549,9 @@ enum SearchPolicy
     /**
        Performs a $(LINK2 https://en.wikipedia.org/wiki/Exponential_search,
        galloping search algorithm), i.e. searches
-       with a step that doubles every time, (1, 2, 4, 8, ...)  leading
+       with a step that doubles every time (1, 2, 4, 8, ...), leading
        to an exponential search schedule (indexes tried are 0, 1, 3,
-       7, 15, 31, 63,...) Once the search overshoots its target, the
+       7, 15, 31, 63,...). Once the search overshoots its target, the
        remaining interval is searched using binary search. A value is
        found in $(BIGOH log(n)) time.
     */
