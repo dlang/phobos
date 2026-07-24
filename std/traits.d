@@ -2344,7 +2344,12 @@ if (isFunctionPointer!T || isDelegate!T)
         static if (varStyle == Variadic.c)
             result ~= ", ...";
         else static if (varStyle == Variadic.d)
-            result ~= "...";
+        {
+            // D-style variadics with fixed parameters need a comma, otherwise
+            // `Parameters!T...` is parsed as a typesafe variadic.
+            // e.g. `void function(int, ...)` vs `void function(int...)`
+            result ~= Parameters!T.length ? ", ..." : "...";
+        }
         else static if (varStyle == Variadic.typesafe)
             result ~= "...";
 
@@ -2426,6 +2431,7 @@ private:
     extern(System) int novar();
     extern(C) int cstyle(int, ...);
     extern(D) int dstyle(...);
+    extern(D) int dstyleWithArgs(int, ...);
     extern(D) int typesafe(int[]...);
 }
 @safe unittest
@@ -2434,7 +2440,7 @@ private:
 
     alias FA = FunctionAttribute;
     static foreach (BaseT; AliasSeq!(typeof(&sc), typeof(&novar), typeof(&cstyle),
-        typeof(&dstyle), typeof(&typesafe)))
+        typeof(&dstyle), typeof(&dstyleWithArgs), typeof(&typesafe)))
     {
         static foreach (T; AliasSeq!(BaseT, FunctionTypeOf!BaseT))
         {{
@@ -2473,6 +2479,34 @@ private:
             static assert(is(T3 == T));
         }}
     }
+}
+
+// https://github.com/dlang/phobos/issues/11004
+@safe unittest
+{
+    extern(D) void dVariadic(int a, ...) {}
+    extern(D) void dVariadicOnly(...) {}
+    extern(D) void typesafeVariadic(int[] a...) {}
+
+    alias DVar = typeof(dVariadic);
+    alias DVarOnly = typeof(dVariadicOnly);
+    alias TypeSafe = typeof(typesafeVariadic);
+
+    alias DVar2 = SetFunctionAttributes!(DVar, "D", functionAttributes!DVar);
+    alias DVarOnly2 = SetFunctionAttributes!(DVarOnly, "D", functionAttributes!DVarOnly);
+    alias TypeSafe2 = SetFunctionAttributes!(TypeSafe, "D", functionAttributes!TypeSafe);
+
+    static assert(is(DVar2 == DVar));
+    static assert(is(DVarOnly2 == DVarOnly));
+    static assert(is(TypeSafe2 == TypeSafe));
+
+    static assert(variadicFunctionStyle!DVar2 == Variadic.d);
+    static assert(variadicFunctionStyle!DVarOnly2 == Variadic.d);
+    static assert(variadicFunctionStyle!TypeSafe2 == Variadic.typesafe);
+
+    // Must not collapse into a typesafe variadic.
+    static assert(variadicFunctionStyle!DVar2 != Variadic.typesafe);
+    static assert(!is(DVar2 == TypeSafe));
 }
 
 
