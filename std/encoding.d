@@ -1666,6 +1666,7 @@ Returns true if c is a valid code point
  Params:
     c = the code point to be tested
  */
+pragma(inline, true)
 bool isValidCodePoint(dchar c) @safe pure nothrow @nogc
 {
     return c < 0xD800 || (c >= 0xE000 && c < 0x110000);

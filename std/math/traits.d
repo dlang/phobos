@@ -34,6 +34,7 @@ if (isFloatingPoint!(X))
 {
     version (all)
     {
+        pragma(inline, true);
         return x != x;
     }
     else
