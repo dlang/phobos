@@ -2593,6 +2593,8 @@ static:
             return rhs >= 0 ? Lhs.max : 0;
         else static if (x == ">>" || x == ">>>")
             return rhs >= 0 ? 0 : Lhs.max;
+        else static if (x == "&" || x == "|" || x == "^")
+            assert(false);
         else
             static assert(false);
     }
@@ -2607,6 +2609,21 @@ static:
         assert(checked!Saturate(100) << 33 == int.max);
         assert(checked!Saturate(100) >> -1 == int.max);
         assert(checked!Saturate(100) >> 33 == 0);
+    }
+    ///
+    @safe unittest
+    {
+        assert((checked!Saturate(0b1100) & 0b1010) == 0b1000);
+        assert((checked!Saturate(0b1100) | 0b1010) == 0b1110);
+        assert((checked!Saturate(0b1100) ^ 0b1010) == 0b0110);
+
+        auto x = checked!Saturate(0b1100);
+        x &= 0b1010;
+        assert(x == 0b1000);
+        x |= 0b0011;
+        assert(x == 0b1011);
+        x ^= 0b1111;
+        assert(x == 0b0100);
     }
 }
 
