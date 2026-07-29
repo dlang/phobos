@@ -576,6 +576,14 @@ auto castSwitch(choices...)(Object switchObject)
     }
 }
 
+// True if bound type `B` may be used with clamp value type `V`.
+// Besides the usual `is(B : V)`, allow `int` bounds when `V` is a smaller
+// integral so that calls like `clamp(ubyte(4), 1, 5)` work (integer literals
+// are typed as `int`). Larger bound types (e.g. `long` with `int`) stay rejected.
+private enum bool isClampBound(B, V) =
+    is(B : V) ||
+    (isIntegral!V && is(Unqual!B == int) && V.sizeof < int.sizeof);
+
 /** Clamps `val` into the given bounds. Result has the same type as `val`.
 
 Params:
@@ -586,17 +594,17 @@ Params:
 Returns:
     `lower` if `val` is less than `lower`, `upper` if `val` is greater than
     `upper`, and `val` in all other cases. Comparisons are made
-    correctly (using $(REF lessThan, std,functional) and the return value
-    is converted to the return type using the standard integer coversion rules
+    correctly (using $(REF lessThan, std,functional) and
     $(REF greaterThan, std,functional)) even if the signedness of `T1`, `T2`,
-    and `T3` are different.
+    and `T3` are different. Bounds are converted to the return type using the
+    standard integer conversion rules.
 */
 T1 clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 {
-    static assert(is(T2 : T1), "T2 of type '", T2.stringof
+    static assert(isClampBound!(T2, T1), "T2 of type '", T2.stringof
             , "' must be implicitly convertible to type of T1 '"
             , T1.stringof, "'");
-    static assert(is(T3 : T1), "T3 of type '", T3.stringof
+    static assert(isClampBound!(T3, T1), "T3 of type '", T3.stringof
             , "' must be implicitly convertible to type of T1 '"
             , T1.stringof, "'");
 
@@ -607,9 +615,21 @@ T1 clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
     // Once that is fixed, we can simply use the ternary in both the template constraint
     // and the template body
     if (val.lessThan(lower))
-        return lower;
+    {
+        // Narrowing from int literals to a smaller integral needs an explicit
+        // cast; reject values that are not representable as T1.
+        static if (!is(T2 : T1))
+            assert(cast(T2) cast(T1) lower == lower,
+                "lower is not representable as " ~ T1.stringof);
+        return cast(T1) lower;
+    }
     else if (val.greaterThan(upper))
-        return upper;
+    {
+        static if (!is(T3 : T1))
+            assert(cast(T3) cast(T1) upper == upper,
+                "upper is not representable as " ~ T1.stringof);
+        return cast(T1) upper;
+    }
     return val;
 }
 
@@ -667,6 +687,21 @@ T1 clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 @safe pure nothrow @nogc unittest
 {
     static assert(__traits(compiles, clamp(short.init, short.init, cast(const) short.init)));
+}
+
+// https://github.com/dlang/phobos/issues/10549
+@safe pure nothrow @nogc unittest
+{
+    assert(clamp(ubyte(4), 1, 5) == 4);
+    assert(clamp(ubyte(0), 1, 5) == 1);
+    assert(clamp(ubyte(9), 1, 5) == 5);
+    assert(clamp(byte(4), 1, 3) == 3);
+    assert(clamp(short(4), 1, 5) == 4);
+    assert(clamp(ushort(4), 1, 5) == 4);
+    static assert(is(typeof(clamp(ubyte(4), 1, 5)) == ubyte));
+    static assert(is(typeof(clamp(short(4), 1, 5)) == short));
+    // Larger bound types remain rejected (same policy as before).
+    static assert(!__traits(compiles, clamp(0, long.max, long.max)));
 }
 
 // cmp
