@@ -1,0 +1,6 @@
+Language dependent casing rules are now implemented in std.uni
+
+The functions ``toLowerSpecial`` and ``toUpperSpecial`` provide case conversion when a language Lithuanian, Turkish or Azeri is provided to it that follows that languages rules.
+
+This solves the problem of trying to make the letter ``i`` upper case into the Turkish ``İ``.
+
