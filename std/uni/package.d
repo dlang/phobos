@@ -10774,7 +10774,271 @@ bool isNonCharacter(dchar c)
         assert(isNonCharacter(ch));
 }
 
+/++
+    Converts `s` to lowercase using locale-aware special casing rules
+    from Unicode 3.13 Section 3.13. Unlike $(LREF toLower), this function
+    handles conditional casing rules that depend on surrounding context
+    and language, such as:
+
+    $(UL
+        $(LI Final_Sigma: Greek capital sigma (U+03A3) lowercases to final
+             sigma (U+03C2) only when it appears at the end of a word.)
+        $(LI Turkish/Azeri: The dotted I (U+0130) lowercases to plain i,
+             and plain I lowercases to dotless i (U+0131).)
+        $(LI Lithuanian: Capital I and J retain an explicit dot above when
+             lowercased and followed by combining accents.)
+    )
+
+    The existing $(LREF toLower) handles only the unconditional mappings.
+    This function adds the conditional rules that require
+    knowledge of the locality, the preceding, and following characters.
+
+    Params:
+        s = the string to convert
+        lang = the language context to use for language-sensitive rules
+
+    Returns:
+        A newly allocated string with the locale-aware lowercase mapping applied.
++/
+string toLowerSpecial(string s, CasingLanguage lang) @trusted
+{
+    import std.array : appender;
+    import std.utf : decode;
+    import std.exception : assumeUnique;
+
+    auto result = appender!(char[]);
+    result.reserve(s.length);
+
+    size_t k = 0;
+    while (k < s.length)
+    {
+        size_t charStart = k;
+        dchar c = decode(s, k);
+
+        // Look up special casing for this character and language
+        auto sc = getSpecialCasing(c, lang);
+        if (sc.lower.length > 0 && (sc.lower.length != 1 || sc.lower[0] != c))
+        {
+            if (sc.condition == SpecialCasingCondition.None ||
+                evalCondition(sc.condition, s, charStart))
+            {
+                foreach (dchar mc; sc.lower)
+                    result.put(mc);
+                continue;
+            }
+        }
+
+        // Fall back to existing unconditional casing
+        auto idx = toLowerIndex(c);
+        if (idx != ushort.max && idx >= MAX_SIMPLE_LOWER)
+        {
+            auto val = toLowerTable[idx];
+            immutable uint len = val >> 24;
+            result.put(cast(dchar)(val & 0xFF_FFFF));
+            foreach (j; idx + 1 .. idx + len)
+                result.put(cast(dchar)(toLowerTable[j] & 0xFF_FFFF));
+        }
+        else if (idx != ushort.max && idx < MAX_SIMPLE_LOWER)
+            result.put(cast(dchar) toLowerTable[idx]);
+        else
+            result.put(c);
+    }
+
+    return result.data.assumeUnique;
+}
+
+/++
+    Converts `s` to uppercase using locale-aware special casing rules
+    from Unicode 3.13 Section 3.13. Unlike $(LREF toUpper), this function
+    handles conditional casing rules that depend on surrounding context
+    and language, such as:
+
+    $(UL
+        $(LI Turkish/Azeri: lowercase i (U+0069) uppercases to dotted
+             capital I (U+0130), and dotless i (U+0131) uppercases to
+             plain I (U+0049).)
+    )
+
+    The existing $(LREF toUpper) handles only the unconditional mappings from
+    SpecialCasing.txt. This function adds the conditional rules that require
+    knowledge of the preceding and following characters.
+
+    Params:
+        s = the string to convert
+        lang = the language context to use for language-sensitive rules
+
+    Returns:
+        A newly allocated string with the locale-aware uppercase mapping applied.
++/
+string toUpperSpecial(string s, CasingLanguage lang) @trusted
+{
+    import std.array : appender;
+    import std.utf : decode;
+    import std.exception : assumeUnique;
+
+    auto result = appender!(char[]);
+    result.reserve(s.length);
+
+    size_t k = 0;
+    while (k < s.length)
+    {
+        size_t charStart = k;
+        dchar c = decode(s, k);
+
+        auto sc = getSpecialCasing(c, lang);
+        if (sc.upper.length > 0 && (sc.upper.length != 1 || sc.upper[0] != c))
+        {
+            if (sc.condition == SpecialCasingCondition.None ||
+                evalCondition(sc.condition, s, charStart))
+            {
+                foreach (dchar mc; sc.upper)
+                    result.put(mc);
+                continue;
+            }
+        }
+
+        auto idx = toUpperIndex(c);
+        if (idx != ushort.max && idx >= MAX_SIMPLE_UPPER)
+        {
+            auto val = toUpperTable[idx];
+            immutable uint len = val >> 24;
+            result.put(cast(dchar)(val & 0xFF_FFFF));
+            foreach (j; idx + 1 .. idx + len)
+                result.put(cast(dchar)(toUpperTable[j] & 0xFF_FFFF));
+        }
+        else if (idx != ushort.max && idx < MAX_SIMPLE_UPPER)
+            result.put(cast(dchar) toUpperTable[idx]);
+        else
+            result.put(c);
+    }
+
+    return result.data.assumeUnique;
+}
+
+/++
+    Converts `s` to titlecase using locale-aware special casing rules
+    from Unicode 3.13 Section 3.13. Unlike the existing titlecase conversion,
+    this function handles conditional casing rules that depend on surrounding
+    context and language.
+
+    Params:
+        s = the string to convert
+        lang = the language context to use for language-sensitive rules
+
+    Returns:
+        A newly allocated string with the locale-aware titlecase mapping applied.
++/
+string toTitleSpecial(string s, CasingLanguage lang) @trusted
+{
+    import std.array : appender;
+    import std.utf : decode;
+    import std.exception : assumeUnique;
+
+    auto result = appender!(char[]);
+    result.reserve(s.length);
+
+    size_t k = 0;
+    while (k < s.length)
+    {
+        size_t charStart = k;
+        dchar c = decode(s, k);
+
+        auto sc = getSpecialCasing(c, lang);
+        if (sc.title.length > 0 && (sc.title.length != 1 || sc.title[0] != c))
+        {
+            if (sc.condition == SpecialCasingCondition.None ||
+                evalCondition(sc.condition, s, charStart))
+            {
+                foreach (dchar mc; sc.title)
+                    result.put(mc);
+                continue;
+            }
+        }
+
+        auto idx = toTitleIndex(c);
+        if (idx != ushort.max && idx >= MAX_SIMPLE_TITLE)
+        {
+            auto val = toTitleTable[idx];
+            immutable uint len = val >> 24;
+            result.put(cast(dchar)(val & 0xFF_FFFF));
+            foreach (j; idx + 1 .. idx + len)
+                result.put(cast(dchar)(toTitleTable[j] & 0xFF_FFFF));
+        }
+        else if (idx != ushort.max && idx < MAX_SIMPLE_TITLE)
+            result.put(cast(dchar) toTitleTable[idx]);
+        else
+            result.put(c);
+    }
+
+    return result.data.assumeUnique;
+}
+
+///
+@safe unittest
+{
+    // Unconditional special casing still works via existing toLower
+    assert(toLower("\u0130") == "i\u0307");
+
+    // Turkish
+    assert(toLowerSpecial("\u0130", CasingLanguage.Turkish) == "i");
+    assert(toUpperSpecial("i", CasingLanguage.Turkish) == "\u0130");
+    assert(toLowerSpecial("I", CasingLanguage.Turkish) == "\u0131");
+    assert(toUpperSpecial("\u0131", CasingLanguage.Turkish) == "I");
+    assert(toTitleSpecial("\u0069", CasingLanguage.Turkish) == "\u0130");
+
+    // Azeri (same as Turkish for these rules)
+    assert(toLowerSpecial("I", CasingLanguage.Azeri) == "\u0131");
+
+    // Lithuanian: I + grave -> i + dot above + grave
+    assert(toLowerSpecial("I\u0300", CasingLanguage.Lithuanian) == "i\u0307\u0300");
+    assert(toLowerSpecial("J\u0300", CasingLanguage.Lithuanian) == "j\u0307\u0300");
+
+    // Existing functions untouched
+    assert(toLower("hello") == "hello");
+    assert(toUpper("hello") == "HELLO");
+}
+
+/++
+    Language identifier for locale-sensitive casing operations.
+    Used to select the correct special casing rules from Unicode 3.13.
++/
+enum CasingLanguage : ubyte
+{
+    /++ Language-insensitive context rules only (e.g. Final_Sigma). +/
+    Unknown,
+    /++ Lithuanian casing rules: retains the dot above I/J when followed by accents. +/
+    Lithuanian,
+    /++ Turkish casing rules: dotted/dotless I distinction (I ↔ ı, İ ↔ i). +/
+    Turkish,
+    /++ Azeri casing rules: same I distinction as Turkish. +/
+    Azeri,
+}
+
 private:
+
+/++
+    Condition tags for special casing rules per Unicode 3.13.
++/
+enum SpecialCasingCondition : ubyte
+{
+    None,
+    Final_Sigma,
+    Not_Final_Sigma,
+    After_Soft_Dotted,
+    More_Above,
+    After_I,
+    Not_Before_Dot,
+}
+
+/++
+    Result of a special casing lookup for a single codepoint.
++/
+struct SpecialCasing
+{
+    dstring lower, title, upper;
+    SpecialCasingCondition condition;
+}
+
 // load static data from pre-generated tables into usable datastructures
 
 
@@ -10923,6 +11187,296 @@ private:
     auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
     auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
 
+    //property tries for special casing context evaluation
+    auto isCaseIgnorableTrie() { static immutable res = asTrie(isCaseIgnorableTrieEntries); return res; }
+    auto isCasedTrie() { static immutable res = asTrie(isCasedTrieEntries); return res; }
+    auto isSoftDottedTrie() { static immutable res = asTrie(isSoftDottedTrieEntries); return res; }
+
+    //special casing tries - per language per direction
+    auto specialLowerIndex_UnknownTrie()
+        { static immutable res = asTrie(specialLowerIndex_UnknownTrieEntries); return res; }
+    auto specialUpperIndex_UnknownTrie()
+        { static immutable res = asTrie(specialUpperIndex_UnknownTrieEntries); return res; }
+    auto specialTitleIndex_UnknownTrie()
+        { static immutable res = asTrie(specialTitleIndex_UnknownTrieEntries); return res; }
+    auto specialLowerIndex_LithuanianTrie()
+        { static immutable res = asTrie(specialLowerIndex_LithuanianTrieEntries); return res; }
+    auto specialUpperIndex_LithuanianTrie()
+        { static immutable res = asTrie(specialUpperIndex_LithuanianTrieEntries); return res; }
+    auto specialTitleIndex_LithuanianTrie()
+        { static immutable res = asTrie(specialTitleIndex_LithuanianTrieEntries); return res; }
+    auto specialLowerIndex_TurkishTrie()
+        { static immutable res = asTrie(specialLowerIndex_TurkishTrieEntries); return res; }
+    auto specialUpperIndex_TurkishTrie()
+        { static immutable res = asTrie(specialUpperIndex_TurkishTrieEntries); return res; }
+    auto specialTitleIndex_TurkishTrie()
+        { static immutable res = asTrie(specialTitleIndex_TurkishTrieEntries); return res; }
+    auto specialLowerIndex_AzeriTrie()
+        { static immutable res = asTrie(specialLowerIndex_AzeriTrieEntries); return res; }
+    auto specialUpperIndex_AzeriTrie()
+        { static immutable res = asTrie(specialUpperIndex_AzeriTrieEntries); return res; }
+    auto specialTitleIndex_AzeriTrie()
+        { static immutable res = asTrie(specialTitleIndex_AzeriTrieEntries); return res; }
+
+    //context evaluation helpers for special casing conditions
+    bool specialIsCaseIgnorable(dchar c)
+    {
+        return isCaseIgnorableTrie[c];
+    }
+
+    bool specialIsCased(dchar c)
+    {
+        return isCasedTrie[c];
+    }
+
+    bool specialIsSoftDotted(dchar c)
+    {
+        return isSoftDottedTrie[c];
+    }
+
+    ubyte specialGetCCC(dchar c)
+    {
+        return combiningClassTrie[c];
+    }
+}
+
+/++
+    Look up special casing for a codepoint in a given language context.
+    Returns SpecialCasing with empty dstrings if no mapping exists.
++/
+SpecialCasing getSpecialCasing(dchar c, CasingLanguage lang) @trusted
+{
+    SpecialCasing result;
+    result.condition = SpecialCasingCondition.None;
+
+    dchar[] mappingFromTable(ushort idx, immutable(uint)[] table)
+    {
+        if (idx == ushort.max)
+            return null;
+        auto val = table[idx];
+        immutable uint len = val >> 24;
+        if (len == 0)
+            return null;
+        auto mapping = new dchar[len];
+        mapping[0] = cast(dchar)(val & 0xFF_FFFF);
+        foreach (j; 1 .. len)
+            mapping[j] = cast(dchar)(table[idx + j] & 0xFF_FFFF);
+        return mapping;
+    }
+
+    void tryAllDirs(TR)(auto ref TR lowerIdxTrie, immutable(uint)[] lowerTable,
+                         auto ref TR upperIdxTrie, immutable(uint)[] upperTable,
+                         auto ref TR titleIdxTrie, immutable(uint)[] titleTable,
+                         immutable(ubyte)[] condTable)
+    {
+        auto lIdx = lowerIdxTrie[c];
+        auto uIdx = upperIdxTrie[c];
+        auto tIdx = titleIdxTrie[c];
+
+        auto lMap = mappingFromTable(lIdx, lowerTable);
+        auto uMap = mappingFromTable(uIdx, upperTable);
+        auto tMap = mappingFromTable(tIdx, titleTable);
+
+        if (lMap !is null)
+            result.lower = cast(dstring) lMap;
+        if (uMap !is null)
+            result.upper = cast(dstring) uMap;
+        if (tMap !is null)
+            result.title = cast(dstring) tMap;
+
+        // Use the first available index for the condition
+        if (lIdx != ushort.max)
+            result.condition = cast(SpecialCasingCondition) condTable[lIdx];
+        else if (uIdx != ushort.max)
+            result.condition = cast(SpecialCasingCondition) condTable[uIdx];
+        else if (tIdx != ushort.max)
+            result.condition = cast(SpecialCasingCondition) condTable[tIdx];
+    }
+
+    final switch (lang)
+    {
+        case CasingLanguage.Unknown:
+            break;
+        case CasingLanguage.Lithuanian:
+            tryAllDirs(specialLowerIndex_LithuanianTrie(), specialLowerTable_Lithuanian(),
+                       specialUpperIndex_LithuanianTrie(), specialUpperTable_Lithuanian(),
+                       specialTitleIndex_LithuanianTrie(), specialTitleTable_Lithuanian(),
+                       specialLowerCond_Lithuanian());
+            return result;
+        case CasingLanguage.Turkish:
+            tryAllDirs(specialLowerIndex_TurkishTrie(), specialLowerTable_Turkish(),
+                       specialUpperIndex_TurkishTrie(), specialUpperTable_Turkish(),
+                       specialTitleIndex_TurkishTrie(), specialTitleTable_Turkish(),
+                       specialLowerCond_Turkish());
+            return result;
+        case CasingLanguage.Azeri:
+            tryAllDirs(specialLowerIndex_AzeriTrie(), specialLowerTable_Azeri(),
+                       specialUpperIndex_AzeriTrie(), specialUpperTable_Azeri(),
+                       specialTitleIndex_AzeriTrie(), specialTitleTable_Azeri(),
+                       specialLowerCond_Azeri());
+            return result;
+    }
+
+    tryAllDirs(specialLowerIndex_UnknownTrie(), specialLowerTable_Unknown(),
+               specialUpperIndex_UnknownTrie(), specialUpperTable_Unknown(),
+               specialTitleIndex_UnknownTrie(), specialTitleTable_Unknown(),
+               specialLowerCond_Unknown());
+    return result;
+}
+
+/++
+    Evaluate a SpecialCasingCondition given the current position in a UTF-8 string.
+    Works directly on raw bytes with on-the-fly decoding, avoiding any allocation.
+    Returns true if the condition is satisfied.
++/
+bool evalCondition(SpecialCasingCondition cond, scope const(char)[] s, size_t bytePos) @trusted pure
+{
+    import std.utf : stride, strideBack, decode;
+
+    if (cond == SpecialCasingCondition.None)
+        return true;
+
+    final switch (cond)
+    {
+        case SpecialCasingCondition.None:
+            return true;
+
+        case SpecialCasingCondition.Final_Sigma:
+            bool preceded = false;
+            {
+                size_t bp = bytePos;
+                while (bp > 0)
+                {
+                    bp -= strideBack(s, bp);
+                    auto ch = decode(s, bp);
+                    if (specialIsCaseIgnorable(ch))
+                        continue;
+                    else if (specialIsCased(ch))
+                    {
+                        preceded = true;
+                        break;
+                    }
+                    else
+                        break;
+                }
+            }
+            if (!preceded)
+                return false;
+            {
+                size_t bp = bytePos + stride(s, bytePos);
+                while (bp < s.length)
+                {
+                    auto ch = decode(s, bp);
+                    if (specialIsCaseIgnorable(ch))
+                        continue;
+                    else if (specialIsCased(ch))
+                        return false;
+                    else
+                        break;
+                }
+            }
+            return true;
+
+        case SpecialCasingCondition.Not_Final_Sigma:
+            bool preceded = false;
+            {
+                size_t bp = bytePos;
+                while (bp > 0)
+                {
+                    bp -= strideBack(s, bp);
+                    auto ch = decode(s, bp);
+                    if (specialIsCaseIgnorable(ch))
+                        continue;
+                    else if (specialIsCased(ch))
+                    {
+                        preceded = true;
+                        break;
+                    }
+                    else
+                        break;
+                }
+            }
+            if (!preceded)
+                return false;
+            {
+                size_t bp = bytePos + stride(s, bytePos);
+                while (bp < s.length)
+                {
+                    auto ch = decode(s, bp);
+                    if (specialIsCaseIgnorable(ch))
+                        continue;
+                    else if (specialIsCased(ch))
+                        return true;
+                    else
+                        break;
+                }
+            }
+            return false;
+
+        case SpecialCasingCondition.After_Soft_Dotted:
+            {
+                size_t bp = bytePos;
+                while (bp > 0)
+                {
+                    bp -= strideBack(s, bp);
+                    auto ch = decode(s, bp);
+                    if (specialIsSoftDotted(ch))
+                        return true;
+                    auto ccc = specialGetCCC(ch);
+                    if (ccc == 230 || ccc == 0)
+                        return false;
+                }
+            }
+            return false;
+
+        case SpecialCasingCondition.More_Above:
+            {
+                size_t bp = bytePos + stride(s, bytePos);
+                while (bp < s.length)
+                {
+                    auto ch = decode(s, bp);
+                    auto ccc = specialGetCCC(ch);
+                    if (ccc == 0)
+                        return false;
+                    else if (ccc == 230)
+                        return true;
+                }
+            }
+            return false;
+
+        case SpecialCasingCondition.After_I:
+            {
+                size_t bp = bytePos;
+                while (bp > 0)
+                {
+                    bp -= strideBack(s, bp);
+                    auto ch = decode(s, bp);
+                    if (ch == 'I')
+                        return true;
+                    auto ccc = specialGetCCC(ch);
+                    if (ccc >= 230 || ccc == 0)
+                        return false;
+                }
+            }
+            return false;
+
+        case SpecialCasingCondition.Not_Before_Dot:
+            {
+                size_t bp = bytePos + stride(s, bytePos);
+                while (bp < s.length)
+                {
+                    auto ch = decode(s, bp);
+                    auto ccc = specialGetCCC(ch);
+                    if (ccc == 0 || ccc == 230)
+                    {
+                        if (ch == '\u0307')
+                            return false;
+                        return true;
+                    }
+                }
+            }
+            return true;
+    }
 }
 
 }// version (!std_uni_bootstrap)

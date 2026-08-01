@@ -21,8 +21,6 @@ rdmd -m32 -Llibphobos2.a -defaultlib= unicode_table_generator.d
 
 Pull Requests to untangle this complex bootstrap process are welcome! :)
 
-TODO: Support emitting of Turkic casefolding mappings
-
 Authors: Dmitry Olshansky
 
 License: Boost
@@ -83,6 +81,32 @@ mixin(mixedCCEntry);
 //case folding mapping
 SimpleCaseEntry[] simpleTable;
 FullCaseEntry[] fullTable;
+
+enum SpecialCasingCondition : ubyte {
+    None,
+    Final_Sigma,
+    Not_Final_Sigma,
+    After_Soft_Dotted,
+    More_Above,
+    After_I,
+    Not_Before_Dot,
+}
+
+enum CasingLanguage : ubyte {
+    Unknown,
+    Lithuanian,
+    Turkish,
+    Azeri,
+}
+
+struct SpecialCasingEntry {
+    dchar codepoint;
+    uint[] lower, title, upper;
+    SpecialCasingCondition condition;
+    CasingLanguage language;
+}
+
+SpecialCasingEntry[] specialCasingEntries;
 
 ///canonical combining class
 CodepointSet[256] combiningClass;
@@ -360,6 +384,8 @@ void main(string[] argv)
     writeNormalizationTries(normSink);
     writeGraphemeTries(graphSink);
     writeCaseCoversion(baseSink);
+    writeSpecialCasingConversion(baseSink);
+    writePropertyTries(baseSink);
     writeCombining(compSink);
     writeDecomposition(decompSink);
     writeCompositionTable(compSink);
@@ -714,7 +740,7 @@ void loadSpecialCasing(string f)
         toUpperTabSimpleLen = cast(ushort) toUpperTab.length;
         toTitleTabSimpleLen = cast(ushort) toTitleTab.length;
 
-        // duplicate the simple indexes prior to adding our uncondtional rules also
+        // duplicate the simple indexes prior to adding our unconditional rules also
         toLowerIndex = toLowerSimpleIndex.dup;
         toTitleIndex = toTitleSimpleIndex.dup;
         toUpperIndex = toUpperSimpleIndex.dup;
@@ -725,43 +751,106 @@ void loadSpecialCasing(string f)
     foreach (line; file.byLine)
     {
         if (!line.empty && line[0] == '#')
-        {
-            if (line.canFind("Conditional Mappings"))
-            {
-                // TODO: we kinda need the conditional mappings for languages like Turkish
-                break;
-            }
-            else
-                continue;
-        }
-
-        auto entries = line.match(r);
-        if (entries.empty)
             continue;
-        auto pieces = array(entries.map!"a[1]");
-        dchar ch = parse!uint(pieces[0], 16);
-        void processPiece(ref ushort[dchar] index, ref uint[] table, char[] piece)
+
+        // Strip comments
+        auto commentIdx = line.countUntil('#');
+        auto lineStr = (commentIdx >= 0) ? line[0 .. commentIdx].idup : line.idup;
+        lineStr = std.string.strip(lineStr);
+        if (lineStr.length < 5)
+            continue;
+
+        // Split by semicolons to get: codepoint; lowercase; titlecase; uppercase; conditions
+        auto pieces_parts = lineStr.split(';');
+        if (pieces_parts.length < 4)
+            continue;
+
+        dchar ch = parse!uint(pieces_parts[0], 16);
+        string lowerStr = std.string.strip(pieces_parts[1]);
+        string titleStr = std.string.strip(pieces_parts[2]);
+        string upperStr = std.string.strip(pieces_parts[3]);
+        string conditionStr = pieces_parts.length > 4 ? std.string.strip(pieces_parts[4]) : "";
+
+        // Parse the condition string: may have language prefix + condition name
+        CasingLanguage language = CasingLanguage.Unknown;
+        SpecialCasingCondition condition = SpecialCasingCondition.None;
+
+        if (conditionStr.length > 0)
         {
-            uint[] mapped = piece.split
-                .map!(x=>parse!uint(x, 16)).array;
-            if (mapped.length == 1)
+            if (conditionStr.startsWith("lt"))
             {
-                table ~= mapped[0];
-                index[ch] = cast(ushort)(table.length - 1);
+                language = CasingLanguage.Lithuanian;
+                conditionStr = std.string.strip(conditionStr[2 .. $]);
             }
-            else
+            else if (conditionStr.startsWith("tr"))
             {
-                ushort idx = cast(ushort) table.length;
-                table ~= mapped;
-                table[idx] |= (mapped.length << 24); //upper 8bits - length of sequence
-                index[ch] = idx;
+                language = CasingLanguage.Turkish;
+                conditionStr = std.string.strip(conditionStr[2 .. $]);
+            }
+            else if (conditionStr.startsWith("az"))
+            {
+                language = CasingLanguage.Azeri;
+                conditionStr = std.string.strip(conditionStr[2 .. $]);
+            }
+
+            switch (conditionStr)
+            {
+                case "Final_Sigma": condition = SpecialCasingCondition.Final_Sigma; break;
+                case "Not_Final_Sigma": condition = SpecialCasingCondition.Not_Final_Sigma; break;
+                case "After_Soft_Dotted": condition = SpecialCasingCondition.After_Soft_Dotted; break;
+                case "More_Above": condition = SpecialCasingCondition.More_Above; break;
+                case "After_I": condition = SpecialCasingCondition.After_I; break;
+                case "Not_Before_Dot": condition = SpecialCasingCondition.Not_Before_Dot; break;
+                case "": condition = SpecialCasingCondition.None; break;
+                default: assert(0, "Unknown condition: " ~ conditionStr);
             }
         }
 
-        // lower, title, upper
-        processPiece(toLowerIndex, toLowerTab, pieces[1]);
-        processPiece(toTitleIndex, toTitleTab, pieces[2]);
-        processPiece(toUpperIndex, toUpperTab, pieces[3]);
+        // Parse mapping strings into uint arrays
+        uint[] parseMapping(string s)
+        {
+            uint[] result;
+            foreach (part; s.split(' '))
+            {
+                auto stripped = std.string.strip(part);
+                if (stripped.length == 0) continue;
+                result ~= parse!uint(stripped, 16);
+            }
+            return result;
+        }
+
+        uint[] lowerMap = parseMapping(lowerStr);
+        uint[] titleMap = parseMapping(titleStr);
+        uint[] upperMap = parseMapping(upperStr);
+
+        // Store as special casing entry
+        specialCasingEntries ~= SpecialCasingEntry(ch, lowerMap, titleMap, upperMap, condition, language);
+
+        // Also handle unconditional entries the old way for backward compat
+        if (language == CasingLanguage.Unknown && condition == SpecialCasingCondition.None)
+        {
+            void processPiece(ref ushort[dchar] index, ref uint[] table, uint[] mapped)
+            {
+                if (mapped.length == 0)
+                    return;
+                if (mapped.length == 1)
+                {
+                    table ~= mapped[0];
+                    index[ch] = cast(ushort)(table.length - 1);
+                }
+                else
+                {
+                    ushort idx = cast(ushort) table.length;
+                    table ~= mapped;
+                    table[idx] |= (mapped.length << 24);
+                    index[ch] = idx;
+                }
+            }
+
+            processPiece(toLowerIndex, toLowerTab, lowerMap);
+            processPiece(toTitleIndex, toTitleTab, titleMap);
+            processPiece(toUpperIndex, toUpperTab, upperMap);
+        }
     }
 }
 
@@ -1074,6 +1163,85 @@ void writeCaseCoversion(File sink)
     writeUintTable(sink, "toUpperTable", toUpperTab);
     writeUintTable(sink, "toLowerTable", toLowerTab);
     writeUintTable(sink, "toTitleTable", toTitleTab);
+}
+
+void writeSpecialCasingConversion(File sink)
+{
+    // For each language, build per-direction index+table pairs
+    static immutable string[4] languageNames = ["Unknown", "Lithuanian", "Turkish", "Azeri"];
+
+    // Build a ubyte[dchar] condition map per (direction, language)
+    ubyte[dchar][4][3] condMaps; // condMaps[dir][lang][ch] = condition
+    ushort[dchar][4][3] indexMaps;
+    uint[][4][3] tableArrays;
+
+    foreach (entry; specialCasingEntries)
+    {
+        auto lang = entry.language;
+
+        // Process lower, title, upper
+        foreach (dir; 0 .. 3)
+        {
+            uint[] mapped;
+            if (dir == 0) mapped = entry.lower;
+            else if (dir == 1) mapped = entry.title;
+            else mapped = entry.upper;
+
+            if (mapped.length == 0)
+                continue;
+
+            ushort i = cast(ushort) tableArrays[dir][lang].length;
+            tableArrays[dir][lang] ~= mapped;
+            tableArrays[dir][lang][i] |= (mapped.length << 24);
+            indexMaps[dir][lang][entry.codepoint] = i;
+            condMaps[dir][lang][entry.codepoint] = entry.condition;
+        }
+    }
+
+    // Generate trie + table for each language and direction
+    static immutable string[3] dirNames = ["Lower", "Upper", "Title"];
+
+    foreach (lang; 0 .. 4)
+    {
+        foreach (dir; 0 .. 3)
+        {
+            if (indexMaps[dir][lang].length == 0)
+                continue;
+
+            string name = "special" ~ dirNames[dir] ~ "Index_" ~ languageNames[lang];
+            writeBest3Level(sink, name, indexMaps[dir][lang], ushort.max);
+            writeUintTable(sink, "special" ~ dirNames[dir] ~ "Table_" ~ languageNames[lang], tableArrays[dir][lang]);
+
+            ubyte[] condTab = new ubyte[tableArrays[dir][lang].length];
+            foreach (ch, cond; condMaps[dir][lang])
+            {
+                auto idx = indexMaps[dir][lang][ch];
+                if (idx != ushort.max)
+                    condTab[idx] = cast(ubyte) cond;
+            }
+            writeUbyteTable(sink, "special" ~ dirNames[dir] ~ "Cond_" ~ languageNames[lang], condTab);
+        }
+    }
+}
+
+void writeUbyteTable(File sink, string name, const ubyte[] table)
+{
+    sink.writefln("immutable(ubyte)[] %s() nothrow @nogc pure @safe {\nstatic immutable ubyte[] t =", name);
+    sink.write("x\"");
+    foreach (i, elem; table)
+    {
+        if ((i % 24) == 0)
+            sink.write("\n");
+        sink.writef!"%02X"(elem);
+    }
+    sink.writeln("\";\nreturn t;\n}");
+}
+
+void writePropertyTries(File sink)
+{
+    writeBest3Level(sink, "isCaseIgnorable", general.table["Case_Ignorable"]);
+    writeBest3Level(sink, "isCased", general.table["Cased"]);
+    writeBest3Level(sink, "isSoftDotted", general.table["Soft_Dotted"]);
 }
 
 void writeDecomposition(File sink)
