@@ -1,0 +1,7 @@
+getopt: add callback handler with element index
+
+This adds a new callback handler variant to getopt.
+The handler is of the form $(D (string option, string value, size_t index)).
+The $(D index) is the position of the currently processed option
+in the argument array passed to getopt.
+This enables getopt to handle positional arguments.
