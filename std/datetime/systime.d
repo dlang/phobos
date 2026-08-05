@@ -2703,7 +2703,8 @@ public:
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
 
             version (CRuntime_WASI) {} // no tzname on WASI
-            else {
+            else
+            {
                 auto zone = timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName;
                 timeInfo.tm_zone = zone.toUTFz!(char*)();
             }

@@ -4433,7 +4433,8 @@ version (StdUnittest)
     assert(parallelSum == 499500);
     assert(wlRange[0 .. 1][0] == wlRange[0]);
 
-    version (WASI) {
+    version (WASI)
+    {
         // WASI is single-threaded
         // TaskPool has only main thread; thus only one slot.
     }

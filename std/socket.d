@@ -1150,7 +1150,8 @@ Address[] getAddress(scope const(char)[] hostname, ushort port)
         Address[] addresses;
 
         version (CRuntime_WASI) {} // no DNS resolution in wasi-libc yet
-        else {
+        else
+        {
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
         }
@@ -1730,7 +1731,8 @@ public:
     });
 
     version (CRuntime_WASI) {} // No DNS resolution in wasi-libc yet
-    else {
+    else
+    {
         softUnittest({
             // test reverse lookup
             auto ih = new InternetHost;
@@ -2609,7 +2611,8 @@ public:
     }
 }
 
-version (CRuntime_WASI) {
+version (CRuntime_WASI)
+{
     // Some strange bug(?) where `select` read availability becomes sticky
     // after the first send, after even `recv`ing the data.
     //
