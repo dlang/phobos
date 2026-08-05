@@ -96,7 +96,7 @@ version (Windows)
 }
 else version (Posix)
 {
-    import core.sys.posix.signal : timespec;
+    import core.sys.posix.time : timespec;
     import core.sys.posix.sys.types : time_t;
 }
 
@@ -398,6 +398,32 @@ public:
                     import core.sys.hurd.time : CLOCK_REALTIME_COARSE;
                     import core.sys.posix.time : clock_gettime, CLOCK_REALTIME;
                     static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_COARSE;
+                    else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
+                    else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
+                    else static assert(0, "Previous static if is wrong.");
+                    timespec ts = void;
+                    immutable error = clock_gettime(clockArg, &ts);
+                    // Posix clock_gettime called with a valid address and valid clock_id is only
+                    // permitted to fail if the number of seconds does not fit in time_t. If tv_sec
+                    // is long or larger overflow won't happen before 292 billion years A.D.
+                    static if (ts.tv_sec.max < long.max)
+                    {
+                        if (error)
+                            throw new TimeException("Call to clock_gettime() failed");
+                    }
+                    return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                           ts.tv_nsec / 100 +
+                           hnsecsToUnixEpoch;
+                }
+            }
+            else version (CRuntime_WASI)
+            {
+                static if (clockType == ClockType.second)
+                    return unixTimeToStdTime(core.stdc.time.time(null));
+                else
+                {
+                    import core.sys.posix.time : clock_gettime, CLOCK_REALTIME;
+                    static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
                     else static assert(0, "Previous static if is wrong.");
@@ -2675,8 +2701,12 @@ public:
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName;
-            timeInfo.tm_zone = zone.toUTFz!(char*)();
+
+            version (CRuntime_WASI) {} // no tzname on WASI
+            else {
+                auto zone = timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName;
+                timeInfo.tm_zone = zone.toUTFz!(char*)();
+            }
         }
 
         return timeInfo;
@@ -2687,7 +2717,8 @@ public:
         import std.conv : to;
         import core.time;
 
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         {
             import std.datetime.timezone : clearTZEnvVar, setTZEnvVar;
             setTZEnvVar("America/Los_Angeles");
@@ -2711,7 +2742,8 @@ public:
             else version (Windows)
                 assert(timeInfo.tm_isdst == 0 || timeInfo.tm_isdst == 1);
 
-            version (Posix)
+            version (CRuntime_WASI) {}
+            else version (Posix)
             {
                 assert(timeInfo.tm_gmtoff == -8 * 60 * 60);
                 assert(to!string(timeInfo.tm_zone) == "PST");
@@ -2730,12 +2762,15 @@ public:
             assert(timeInfo.tm_wday == 0);
             assert(timeInfo.tm_yday == 184);
 
-            version (Posix)
+            version (CRuntime_WASI)
+                assert(timeInfo.tm_isdst == 0 || timeInfo.tm_isdst == 1);
+            else version (Posix)
                 assert(timeInfo.tm_isdst == 1);
             else version (Windows)
                 assert(timeInfo.tm_isdst == 0 || timeInfo.tm_isdst == 1);
 
-            version (Posix)
+            version (CRuntime_WASI) {}
+            else version (Posix)
             {
                 assert(timeInfo.tm_gmtoff == -7 * 60 * 60);
                 assert(to!string(timeInfo.tm_zone) == "PDT");
@@ -2758,7 +2793,8 @@ public:
             assert(timeInfo.tm_yday == 0);
             assert(timeInfo.tm_isdst == 0);
 
-            version (Posix)
+            version (CRuntime_WASI) {}
+            else version (Posix)
             {
                 assert(timeInfo.tm_gmtoff == 0);
                 assert(to!string(timeInfo.tm_zone) == "SysTime.init's timezone");

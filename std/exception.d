@@ -631,7 +631,8 @@ private noreturn bailOut(E : Throwable = Exception)(string file, size_t line, sc
 alias errnoEnforce = enforce!ErrnoException;
 
 ///
-@system unittest
+version (WASI) {} // thisExePath is not available on WASI
+else @system unittest
 {
     import core.stdc.stdio : fclose, fgets, fopen;
     import std.file : thisExePath;

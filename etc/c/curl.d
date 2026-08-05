@@ -35,6 +35,10 @@
 
 module etc.c.curl;
 
+// WASIp1's networking is extremely limited
+version (WASIp1) {}
+else:
+
 import core.stdc.config;
 import core.stdc.time;
 import std.socket;

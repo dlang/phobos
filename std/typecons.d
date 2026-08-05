@@ -3550,7 +3550,8 @@ if (is(T == class) || is(T == interface))
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     class Data {}
 

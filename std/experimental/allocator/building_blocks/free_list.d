@@ -1178,7 +1178,8 @@ struct SharedFreeList(ParentAllocator,
     assert(a.approxMaxLength  == 1);
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import core.thread : ThreadGroup;
     import std.algorithm.comparison : equal;

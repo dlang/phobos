@@ -1661,7 +1661,8 @@ shared struct SharedBitmappedBlock(size_t theBlockSize, uint theAlignment = plat
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.common : platformAlignment;

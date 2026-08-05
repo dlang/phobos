@@ -29,6 +29,9 @@
  */
 module std.mmfile;
 
+version (WebAssembly) {} // WebAssembly does not have memory mapping
+else:
+
 import core.stdc.errno;
 import core.stdc.stdio;
 import core.stdc.stdlib;

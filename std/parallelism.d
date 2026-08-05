@@ -1059,6 +1059,13 @@ uint totalCPUsImpl() @nogc nothrow @trusted
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
+    else version (WASI)
+    {
+        // WASI is currently single-threaded, and has no way to discover
+        // how many processors the host has.
+
+        return 1;
+    }
     else
     {
         static assert(0, "Don't know how to get N CPUs on this OS.");
@@ -4236,7 +4243,11 @@ version (StdUnittest)
     import std.typecons : Tuple, tuple;
     import std.stdio;
 
-    poolInstance = new TaskPool(2);
+    version (WASI) // WASI is single-threaded
+        poolInstance = new TaskPool(0);
+    else
+        poolInstance = new TaskPool(2);
+
     scope(exit) poolInstance.stop();
 
     // The only way this can be verified is manually.
@@ -4282,10 +4293,14 @@ version (StdUnittest)
     assert(st2.args[0] == 1);
 
     // Test executeInNewThread().
-    auto ct = scopedTask!refFun(x);
-    ct.executeInNewThread(Thread.PRIORITY_MAX);
-    ct.yieldForce;
-    assert(ct.args[0] == 1);
+    version (WASI) {} // WASI is single-threaded
+    else
+    {
+        auto ct = scopedTask!refFun(x);
+        ct.executeInNewThread(Thread.PRIORITY_MAX);
+        ct.yieldForce;
+        assert(ct.args[0] == 1);
+    }
 
     // Test ref return.
     uint toInc = 0;
@@ -4417,7 +4432,13 @@ version (StdUnittest)
     auto parallelSum = poolInstance.reduce!"a + b"(wlRange);
     assert(parallelSum == 499500);
     assert(wlRange[0 .. 1][0] == wlRange[0]);
-    assert(wlRange[1 .. 2][0] == wlRange[1]);
+
+    version (WASI) {
+        // WASI is single-threaded
+        // TaskPool has only main thread; thus only one slot.
+    }
+    else
+        assert(wlRange[1 .. 2][0] == wlRange[1]);
 
     // Test finish()
     {
