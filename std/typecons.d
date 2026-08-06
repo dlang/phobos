@@ -3550,26 +3550,30 @@ if (is(T == class) || is(T == interface))
 }
 
 ///
-version (WASI) {} // WASI is single-threaded
-else @system unittest
+@system unittest
 {
     class Data {}
 
     static shared(Data) a;
     static UnqualRef!(shared Data) b;
 
-    import core.thread;
 
-    auto thread = new core.thread.Thread({
-        a = new shared Data();
-        b = new shared Data();
-    });
+    version (WASI) {} // WASI is single-threaded
+    else
+    {
+        import core.thread;
 
-    thread.start();
-    thread.join();
+        auto thread = new core.thread.Thread({
+            a = new shared Data();
+            b = new shared Data();
+        });
 
-    assert(a !is null);
-    assert(b is null);
+        thread.start();
+        thread.join();
+
+        assert(a !is null);
+        assert(b is null);
+    }
 }
 
 @safe unittest

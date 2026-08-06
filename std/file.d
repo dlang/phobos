@@ -2326,14 +2326,14 @@ if (isConvertibleToString!R)
 }
 
 /// setAttributes with a file
-version (CRuntime_WASI) {} // wasi-libc does not support chmod
-else @safe unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     import std.conv : octal;
 
     auto f = deleteme ~ "file";
-    version (Posix)
+    version (CRuntime_WASI) {} // wasi-libc does not support chmod
+    else version (Posix)
     {
         scope(exit) f.remove;
 
@@ -2353,14 +2353,14 @@ else @safe unittest
 }
 
 /// setAttributes with a directory
-version (CRuntime_WASI) {} // wasi-libc does not support chmod
-else @safe unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     import std.conv : octal;
 
     auto dir = deleteme ~ "dir";
-    version (Posix)
+    version (CRuntime_WASI) {} // wasi-libc does not support chmod
+    else version (Posix)
     {
         scope(exit) dir.rmdir;
 
@@ -3680,7 +3680,7 @@ else version (Posix) string getcwd() @trusted
     }
     else version (WASI)
     {
-        import std.exception;
+        import std.exception : enforce;
         enforce(0, "thisExePath is not available on WASI");
         return "";
     }
@@ -3689,15 +3689,18 @@ else version (Posix) string getcwd() @trusted
 }
 
 ///
-version (WASI) {}
-else @safe unittest
+@safe unittest
 {
-    import std.path : isAbsolute;
-    auto path = thisExePath();
+    version (WASI) {}
+    else
+    {
+        import std.path : isAbsolute;
+        auto path = thisExePath();
 
-    assert(path.exists);
-    assert(path.isAbsolute);
-    assert(path.isFile);
+        assert(path.exists);
+        assert(path.isAbsolute);
+        assert(path.isFile);
+    }
 }
 
 version (StdDdoc)
@@ -5660,13 +5663,16 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 }
 
 ///
-version (CRuntime_WASI) {}
-else @safe unittest
+@safe unittest
 {
-    import std.exception : assertThrown;
+    version (CRuntime_WASI) {}
+    else
+    {
+        import std.exception : assertThrown;
 
-    auto space = getAvailableDiskSpace(".");
-    assert(space > 0);
+        auto space = getAvailableDiskSpace(".");
+        assert(space > 0);
 
-    assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
+        assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
+    }
 }
