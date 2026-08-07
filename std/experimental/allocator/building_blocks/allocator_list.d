@@ -622,7 +622,8 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version (Posix) @system unittest
+version (WebAssembly) {}
+else version (Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;
@@ -1072,7 +1073,8 @@ template SharedAllocatorList(alias factoryFunction,
     testAlloc(a2);
 }
 
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -1130,7 +1132,8 @@ template SharedAllocatorList(alias factoryFunction,
     assert(a.deallocateAll());
 }
 
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator :
         AscendingPageAllocator, SharedAscendingPageAllocator;
@@ -1202,7 +1205,8 @@ template SharedAllocatorList(alias factoryFunction,
     SharedAllocatorList!((n) => SharedAscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a2;
 }
 
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -1238,7 +1242,8 @@ template SharedAllocatorList(alias factoryFunction,
     assert(a.deallocateAll());
 }
 
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.algorithm.comparison : max;
@@ -1259,7 +1264,8 @@ template SharedAllocatorList(alias factoryFunction,
     assert(a.deallocateAll());
 }
 
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -1294,7 +1300,8 @@ template SharedAllocatorList(alias factoryFunction,
     assert(a.deallocateAll());
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.experimental.allocator.building_blocks.region : SharedRegion;
     import core.thread : ThreadGroup;

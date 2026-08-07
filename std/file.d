@@ -1834,6 +1834,14 @@ if (isSomeFiniteCharInputRange!R)
 
     source.write(".");
     assert(target.timeLastModified(SysTime.min) < source.timeLastModified);
+    version (CRuntime_WASI)
+    {
+        // WASI works at nanosecond precision, so make sure there's at least
+        // some nsec between our changes so there's a measurable difference.
+        import core.thread : Thread;
+        import core.time : dur;
+        Thread.sleep(5.dur!"nsecs");
+    }
     target.write(".");
     assert(target.timeLastModified(SysTime.min) >= source.timeLastModified);
 }
@@ -2204,7 +2212,16 @@ if (isConvertibleToString!R)
         scope(exit) source.remove, target.remove;
 
         target.write("target");
-        target.symlink(source);
+
+        // Wasmtime does not permit absolute symlinks; Use relative instead
+        version (CRuntime_WASI)
+        {
+            import std.path : baseName;
+            target.baseName.symlink(source);
+        }
+        else
+            target.symlink(source);
+
         assert(source.readText == "target");
         assert(source.isSymlink);
         assert(source.getLinkAttributes.attrIsSymlink);
@@ -2315,7 +2332,8 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto f = deleteme ~ "file";
-    version (Posix)
+    version (CRuntime_WASI) {} // wasi-libc does not support chmod
+    else version (Posix)
     {
         scope(exit) f.remove;
 
@@ -2341,7 +2359,8 @@ if (isConvertibleToString!R)
     import std.conv : octal;
 
     auto dir = deleteme ~ "dir";
-    version (Posix)
+    version (CRuntime_WASI) {} // wasi-libc does not support chmod
+    else version (Posix)
     {
         scope(exit) dir.rmdir;
 
@@ -2763,7 +2782,16 @@ if (isConvertibleToString!R)
         scope(exit) source.remove, target.remove;
 
         target.write("target");
-        target.symlink(source);
+
+        // Wasmtime does not permit absolute symlinks; Use relative instead
+        version (CRuntime_WASI)
+        {
+            import std.path : baseName;
+            target.baseName.symlink(source);
+        }
+        else
+            target.symlink(source);
+
         assert(source.readText == "target");
         assert(source.isSymlink);
         assert(source.getLinkAttributes.attrIsSymlink);
@@ -2889,7 +2917,16 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
         scope(exit) source.remove, target.remove;
 
         target.write("target");
-        target.symlink(source);
+
+        // Wasmtime does not permit absolute symlinks; Use relative instead
+        version (CRuntime_WASI)
+        {
+            import std.path : baseName;
+            target.baseName.symlink(source);
+        }
+        else
+            target.symlink(source);
+
         assert(source.readText == "target");
         assert(source.isSymlink);
         assert(source.getLinkAttributes.attrIsSymlink);
@@ -3641,6 +3678,12 @@ else version (Posix) string getcwd() @trusted
     {
         return readLink("/proc/self/exe");
     }
+    else version (WASI)
+    {
+        import std.exception : enforce;
+        enforce(0, "thisExePath is not available on WASI");
+        return "";
+    }
     else
         static assert(0, "thisExePath is not supported on this platform");
 }
@@ -3648,12 +3691,16 @@ else version (Posix) string getcwd() @trusted
 ///
 @safe unittest
 {
-    import std.path : isAbsolute;
-    auto path = thisExePath();
+    version (WASI) {}
+    else
+    {
+        import std.path : isAbsolute;
+        auto path = thisExePath();
 
-    assert(path.exists);
-    assert(path.isAbsolute);
-    assert(path.isFile);
+        assert(path.exists);
+        assert(path.isAbsolute);
+        assert(path.isFile);
+    }
 }
 
 version (StdDdoc)
@@ -4452,7 +4499,8 @@ private void copyImpl(scope const(char)[] f, scope const(char)[] t,
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=11434
-@safe version (Posix) @safe unittest
+version (CRuntime_WASI) {} // wasi-libc has no chmod
+else version (Posix) @safe unittest
 {
     import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -4581,8 +4629,17 @@ version (Posix) @system unittest
     auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
     mkdirRecurse(d);
-    core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
-            (deleteme~"/link\0").ptr);
+
+    // Wasmtime does not permit absolute symlinks; Use relative instead
+    version (CRuntime_WASI)
+    {
+        core.sys.posix.unistd.symlink(("a/b/c\0").ptr,
+                (deleteme~"/link\0").ptr);
+    }
+    else
+        core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
+                (deleteme~"/link\0").ptr);
+
     rmdirRecurse(deleteme~"/link");
     enforce(exists(d));
     rmdirRecurse(deleteme);
@@ -4591,7 +4648,13 @@ version (Posix) @system unittest
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
     const linkTarget = deleteme ~ "/link";
-    symlink(deleteme ~ "/a/b/c", linkTarget);
+
+    // Wasmtime does not permit absolute symlinks; Use relative instead
+    version (CRuntime_WASI)
+        symlink("a/b/c", linkTarget);
+    else
+        symlink(deleteme ~ "a/b/c", linkTarget);
+
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
@@ -4811,8 +4874,17 @@ private struct DirIteratorImpl
             for (dirent* fdata; (fdata = readdir(_stack[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
-                    core.stdc.string.strcmp(&fdata.d_name[0], ".."))
+                version (CRuntime_WASI)
+                {
+                    bool cond = core.stdc.string.strcmp(cast(char*)&fdata.d_name, ".") &&
+                        core.stdc.string.strcmp(cast(char*)&fdata.d_name, "..");
+                }
+                else
+                {
+                    bool cond = core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
+                        core.stdc.string.strcmp(&fdata.d_name[0], "..");
+                }
+                if (cond)
                 {
                     _cur = DirEntry(_stack[$-1].dirpath, fdata);
                     return true;
@@ -5220,8 +5292,18 @@ auto dirEntries(bool useDIP1000 = dip1000Enabled)
     write(fpath, "hello world");
     version (Posix) () @trusted
     {
-        core.sys.posix.unistd.symlink((dpath ~ '\0').ptr, (sdpath ~ '\0').ptr);
-        core.sys.posix.unistd.symlink((fpath ~ '\0').ptr, (sfpath ~ '\0').ptr);
+        // Wasmtime does not permit absolute symlinks; Use relative instead
+        version (CRuntime_WASI)
+        {
+            import std.path : baseName;
+            core.sys.posix.unistd.symlink((dpath.baseName ~ '\0').ptr, (sdpath ~ '\0').ptr);
+            core.sys.posix.unistd.symlink((fpath.baseName ~ '\0').ptr, (sfpath ~ '\0').ptr);
+        }
+        else
+        {
+            core.sys.posix.unistd.symlink((dpath ~ '\0').ptr, (sdpath ~ '\0').ptr);
+            core.sys.posix.unistd.symlink((fpath ~ '\0').ptr, (sfpath ~ '\0').ptr);
+        }
     } ();
 
     static struct Flags { bool dir, file, link; }
@@ -5583,10 +5665,14 @@ ulong getAvailableDiskSpace(scope const(char)[] path) @safe
 ///
 @safe unittest
 {
-    import std.exception : assertThrown;
+    version (CRuntime_WASI) {}
+    else
+    {
+        import std.exception : assertThrown;
 
-    auto space = getAvailableDiskSpace(".");
-    assert(space > 0);
+        auto space = getAvailableDiskSpace(".");
+        assert(space > 0);
 
-    assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
+        assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
+    }
 }

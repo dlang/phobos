@@ -57,7 +57,7 @@ version (Windows)
 }
 else version (Posix)
 {
-    import core.sys.posix.signal : timespec;
+    import core.sys.posix.time : timespec;
     import core.sys.posix.sys.types : time_t;
 }
 
@@ -196,7 +196,8 @@ public:
     // Since reading in the time zone files could be expensive, most unit tests
     // are consolidated into this one unittest block which minimizes how often
     // it reads a time zone file.
-    @system unittest
+    version (WASI) {}
+    else @system unittest
     {
         import core.exception : AssertError;
         import std.conv : to;
@@ -254,7 +255,8 @@ public:
             assert(cast(DateTime) dst == dstDate);
             assert(std == stdUTC);
 
-            version (Posix)
+            version (CRuntime_WASI) {}
+            else version (Posix)
             {
                 setTZEnvVar(tzName);
 
@@ -583,7 +585,11 @@ public:
       +/
     @property override string stdName() @trusted const scope nothrow
     {
-        version (Posix)
+        version (CRuntime_WASI)
+        {
+            assert(0, "No tzname on WASI");
+        }
+        else version (Posix)
         {
             import core.stdc.time : tzname;
             import std.conv : to;
@@ -636,6 +642,10 @@ public:
         {
             // The same bug on NetBSD 7+
         }
+        else version (CRuntime_WASI)
+        {
+            // WASI has no tzname and no ability to configure the timezone.
+        }
         else
         {
             assert(LocalTime().stdName !is null);
@@ -668,7 +678,11 @@ public:
       +/
     @property override string dstName() @trusted const scope nothrow
     {
-        version (Posix)
+        version (CRuntime_WASI)
+        {
+            assert(0, "No tzname on WASI");
+        }
+        else version (Posix)
         {
             import core.stdc.time : tzname;
             import std.conv : to;
@@ -710,7 +724,8 @@ public:
         }
     }
 
-    @safe unittest
+    version (CRuntime_WASI) {}
+    else @safe unittest
     {
         // tzname, called from dstName, isn't set by default for Musl.
         version (CRuntime_Musl)
@@ -785,7 +800,8 @@ public:
     {
         LocalTime().hasDST;
 
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -954,7 +970,8 @@ public:
         assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
         assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
 
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -1101,11 +1118,17 @@ private:
     // operation the first time that LocalTime() is called.
     static immutable(LocalTime) singleton() @trusted
     {
-        import core.stdc.time : tzset;
         import std.concurrency : initOnce;
         static instance = new immutable(LocalTime)();
         static shared bool guard;
-        initOnce!guard({tzset(); return true;}());
+
+        version (CRuntime_WASI) {}
+        else
+        {
+            import core.stdc.time : tzset;
+            initOnce!guard({tzset(); return true;}());
+        }
+
         return instance;
     }
 
@@ -1185,7 +1208,8 @@ public:
     {
         assert(UTC().utcToTZ(0) == 0);
 
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -1218,7 +1242,8 @@ public:
     {
         assert(UTC().tzToUTC(0) == 0);
 
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         {
             scope(exit) clearTZEnvVar();
 
@@ -2032,6 +2057,10 @@ public:
     else version (Solaris)
     {
         enum defaultTZDatabaseDir = "/usr/share/lib/zoneinfo/";
+    }
+    else version (WASI)
+    {
+        enum defaultTZDatabaseDir = "";
     }
     else version (Posix)
     {
@@ -3435,6 +3464,7 @@ version (StdDdoc)
       +/
     void clearTZEnvVar() @safe nothrow;
 }
+else version (CRuntime_WASI) {}
 else version (Posix)
 {
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow

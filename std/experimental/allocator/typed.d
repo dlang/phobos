@@ -394,7 +394,8 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
 }
 
 ///
-@system unittest
+version (WebAssembly) {}
+else @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;

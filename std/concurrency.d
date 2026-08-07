@@ -88,7 +88,8 @@ import std.range.interfaces : InputRange;
 import std.traits;
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     __gshared string received;
     static void spawnedFunc(Tid ownerTid)
@@ -413,7 +414,8 @@ public:
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=21512
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.format : format;
 
@@ -452,7 +454,8 @@ public:
     return thisInfo.owner;
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.exception : assertThrown;
 
@@ -526,6 +529,8 @@ if (isSpawnable!(F, T))
 }
 
 ///
+version (WASI) {} // WASI is single-threaded
+else
 @system unittest
 {
     static void f(string msg)
@@ -537,7 +542,8 @@ if (isSpawnable!(F, T))
 }
 
 /// Fails: char[] has mutable aliasing.
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     string msg = "Hello, World!";
 
@@ -551,7 +557,8 @@ if (isSpawnable!(F, T))
 }
 
 /// New thread with anonymous function
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     spawn({
         ownerTid.send("This is so great!");
@@ -559,7 +566,8 @@ if (isSpawnable!(F, T))
     assert(receiveOnly!string == "This is so great!");
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import core.thread : thread_joinAll;
 
@@ -630,7 +638,8 @@ if (isSpawnable!(F, T))
     return spawnTid;
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     void function() fn1;
     void function(int) fn2;
@@ -757,7 +766,8 @@ do
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.variant : Variant;
 
@@ -895,7 +905,8 @@ do
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     auto tid = spawn(
     {
@@ -905,7 +916,8 @@ do
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     auto tid = spawn(
     {
@@ -915,7 +927,8 @@ do
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     struct Record { string name; int age; }
 
@@ -930,7 +943,8 @@ do
     send(tid, 0.5, Record("Alice", 31));
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     static void t1(Tid mainTid)
     {
@@ -1244,7 +1258,8 @@ void join(Tid tid)
 }
 
 ///
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import core.time : msecs;
     import core.thread : Thread;
@@ -1478,7 +1493,8 @@ class ThreadScheduler : Scheduler
  * This is an example scheduler that creates a new `Fiber` per call to spawn
  * and multiplexes the execution of all fibers within the main thread.
  */
-class FiberScheduler : Scheduler
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else class FiberScheduler : Scheduler
 {
     /**
      * This creates a new `Fiber` for the supplied op and then starts the
@@ -1669,7 +1685,8 @@ private:
     size_t m_pos;
 }
 
-@system unittest
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else @system unittest
 {
     static void receive(Condition cond, ref size_t received)
     {
@@ -1729,16 +1746,23 @@ __gshared Scheduler scheduler;
  */
 void yield() nothrow
 {
-    auto fiber = Fiber.getThis();
-    if (!(cast(IsGenerator) fiber))
+    version (WebAssembly) // No Fiber support on Wasm yet
     {
-        if (scheduler is null)
+        scheduler.yield();
+    }
+    else
+    {
+        auto fiber = Fiber.getThis();
+        if (!(cast(IsGenerator) fiber))
         {
-            if (fiber)
-                return Fiber.yield();
+            if (scheduler is null)
+            {
+                if (fiber)
+                    return Fiber.yield();
+            }
+            else
+                scheduler.yield();
         }
-        else
-            scheduler.yield();
     }
 }
 
@@ -1751,7 +1775,8 @@ private interface IsGenerator {}
  * that periodically returns values of type `T` to the
  * caller via `yield`.  This is represented as an InputRange.
  */
-class Generator(T) :
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else class Generator(T) :
     Fiber, IsGenerator, InputRange!T
 {
     /**
@@ -1934,7 +1959,8 @@ private:
 }
 
 ///
-@system unittest
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else @system unittest
 {
     auto tid = spawn({
         int i;
@@ -1962,7 +1988,8 @@ private:
  * Params:
  *  value = The value to yield.
  */
-void yield(T)(ref T value)
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else void yield(T)(ref T value)
 {
     Generator!T cur = cast(Generator!T) Fiber.getThis();
     if (cur !is null && cur.state == Fiber.State.EXEC)
@@ -1974,12 +2001,14 @@ void yield(T)(ref T value)
 }
 
 /// ditto
-void yield(T)(T value)
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else void yield(T)(T value)
 {
     yield(value);
 }
 
-@system unittest
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else @system unittest
 {
     import core.exception;
     import std.exception;
@@ -2033,7 +2062,8 @@ void yield(T)(T value)
     scheduler = null;
 }
 ///
-@system unittest
+version (WebAssembly) {} // No Fiber support on Wasm yet
+else @system unittest
 {
     import std.range;
 
@@ -2670,7 +2700,8 @@ private
     }
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -2763,7 +2794,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
     assert(MySingleton.instance !is null);
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     static class MySingleton
     {
@@ -2832,7 +2864,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import core.sync.mutex : Mutex;
 
@@ -2864,7 +2897,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 // test ability to send shared arrays
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     static shared int[] x = new shared(int)[1];
     auto tid = spawn({
@@ -2878,7 +2912,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=13930
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     immutable aa = ["0":0];
     thisTid.send(aa);
@@ -2886,7 +2921,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=19345
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     static struct Aggregate { const int a; const int[5] b; }
     static void t1(Tid mainTid)
@@ -2916,7 +2952,10 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     static assert(__traits(compiles, receiveOnly!noreturn()                 ));
     static assert(__traits(compiles, send(Tid.init, noreturn.init)          ));
     static assert(__traits(compiles, prioritySend(Tid.init, noreturn.init)  ));
-    static assert(__traits(compiles, yield(noreturn.init)                   ));
+
+    version (WebAssembly) {}
+    else
+        static assert(__traits(compiles, yield(noreturn.init)                   ));
 
     static assert(__traits(compiles, {
         __gshared noreturn n;

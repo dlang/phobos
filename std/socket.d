@@ -39,6 +39,10 @@ else version (TVOS)
 else version (WatchOS)
     version = iOSDerived;
 
+// WASIp1's networking is extremely limited
+version (WASIp1) {}
+else:
+
 @safe:
 
 version (Windows)
@@ -314,6 +318,7 @@ shared static this() @system
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
     }
+    else version (CRuntime_WASI) {} // getaddrinfo support is rather incomplete
     else version (Posix)
     {
         getnameinfoPointer = &getnameinfo;
@@ -334,46 +339,72 @@ shared static ~this() @system nothrow @nogc
 /**
  * The communication domain used to resolve an address.
  */
-enum AddressFamily: ushort
-{
-    UNSPEC =     AF_UNSPEC,     /// Unspecified address family
-    UNIX =       AF_UNIX,       /// Local communication (Unix socket)
-    INET =       AF_INET,       /// Internet Protocol version 4
-    IPX =        AF_IPX,        /// Novell IPX
-    APPLETALK =  AF_APPLETALK,  /// AppleTalk
-    INET6 =      AF_INET6,      /// Internet Protocol version 6
-}
+version (CRuntime_WASI)
+    enum AddressFamily: ushort
+    {
+        UNSPEC =     AF_UNSPEC,     /// Unspecified address family
+        UNIX =       AF_UNIX,       /// Local communication (Unix socket)
+        INET =       AF_INET,       /// Internet Protocol version 4
+        INET6 =      AF_INET6,      /// Internet Protocol version 6
+    }
+else
+    enum AddressFamily: ushort
+    {
+        UNSPEC =     AF_UNSPEC,     /// Unspecified address family
+        UNIX =       AF_UNIX,       /// Local communication (Unix socket)
+        INET =       AF_INET,       /// Internet Protocol version 4
+        IPX =        AF_IPX,        /// Novell IPX
+        APPLETALK =  AF_APPLETALK,  /// AppleTalk
+        INET6 =      AF_INET6,      /// Internet Protocol version 6
+    }
 
 
 /**
  * Communication semantics
  */
-enum SocketType: int
-{
-    STREAM =     SOCK_STREAM,           /// Sequenced, reliable, two-way communication-based byte streams
-    DGRAM =      SOCK_DGRAM,            /// Connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
-    RAW =        SOCK_RAW,              /// Raw protocol access
-    RDM =        SOCK_RDM,              /// Reliably-delivered message datagrams
-    SEQPACKET =  SOCK_SEQPACKET,        /// Sequenced, reliable, two-way connection-based datagrams with a fixed maximum length
-}
+version (CRuntime_WASI)
+    enum SocketType: int
+    {
+        STREAM =     SOCK_STREAM,           /// Sequenced, reliable, two-way communication-based byte streams
+        DGRAM =      SOCK_DGRAM,            /// Connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
+    }
+else
+    enum SocketType: int
+    {
+        STREAM =     SOCK_STREAM,           /// Sequenced, reliable, two-way communication-based byte streams
+        DGRAM =      SOCK_DGRAM,            /// Connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
+        RAW =        SOCK_RAW,              /// Raw protocol access
+        RDM =        SOCK_RDM,              /// Reliably-delivered message datagrams
+        SEQPACKET =  SOCK_SEQPACKET,        /// Sequenced, reliable, two-way connection-based datagrams with a fixed maximum length
+    }
 
 
 /**
  * Protocol
  */
-enum ProtocolType: int
-{
-    IP =    IPPROTO_IP,         /// Internet Protocol version 4
-    ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-    IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-    GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
-    TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-    PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-    UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-    IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-    RAW =   IPPROTO_RAW,        /// Raw IP packets
-    IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
-}
+version (CRuntime_WASI)
+    enum ProtocolType: int
+    {
+        IP =    IPPROTO_IP,         /// Internet Protocol version 4
+        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+        RAW =   IPPROTO_RAW,        /// Raw IP packets
+        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
+    }
+else
+    enum ProtocolType: int
+    {
+        IP =    IPPROTO_IP,         /// Internet Protocol version 4
+        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+        GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
+        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
+        RAW =   IPPROTO_RAW,        /// Raw IP packets
+        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
+    }
 
 
 /**
@@ -454,9 +485,10 @@ class Protocol
 }
 
 
-// Skip this test on Android because getprotobyname/number are
-// unimplemented in bionic.
+// Skip this test on Android and WASI because getprotobyname/number are
+// unimplemented in bionic and wasi-libc
 version (CRuntime_Bionic) {} else
+version (CRuntime_WASI) {} else
 @safe unittest
 {
     // import std.stdio : writefln;
@@ -779,7 +811,8 @@ class InternetHost
 }
 
 ///
-@safe unittest
+version (CRuntime_WASI) {} // gethostby* isn't implemented on WASI
+else @safe unittest
 {
     InternetHost ih = new InternetHost;
 
@@ -1114,8 +1147,14 @@ Address[] getAddress(scope const(char)[] hostname, ushort port)
 @safe unittest
 {
     softUnittest({
-        auto addresses = getAddress("63.105.9.61");
-        assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
+        Address[] addresses;
+
+        version (CRuntime_WASI) {} // no DNS resolution in wasi-libc yet
+        else
+        {
+            addresses = getAddress("63.105.9.61");
+            assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
+        }
 
         if (getaddrinfoPointer)
         {
@@ -1691,42 +1730,46 @@ public:
         assert(ia.toString() == "127.0.0.1:80");
     });
 
-    softUnittest({
-        // test reverse lookup
-        auto ih = new InternetHost;
-        if (ih.getHostByName("digitalmars.com"))
-        {
-            const ia = new InternetAddress(ih.addrList[0], 80);
-            assert(ia.toHostNameString() == "digitalmars.com");
+    version (CRuntime_WASI) {} // No DNS resolution in wasi-libc yet
+    else
+    {
+        softUnittest({
+            // test reverse lookup
+            auto ih = new InternetHost;
+            if (ih.getHostByName("digitalmars.com"))
+            {
+                const ia = new InternetAddress(ih.addrList[0], 80);
+                assert(ia.toHostNameString() == "digitalmars.com");
+
+                if (getnameinfoPointer)
+                {
+                    // test reverse lookup, via gethostbyaddr
+                    auto getnameinfoPointerBackup = getnameinfoPointer;
+                    cast() getnameinfoPointer = null;
+                    scope(exit) () @trusted { cast() getnameinfoPointer = getnameinfoPointerBackup; }();
+
+                    assert(ia.toHostNameString() == "digitalmars.com");
+                }
+            }
+        });
+
+        if (runSlowTests)
+        softUnittest({
+            // test failing reverse lookup
+            const InternetAddress ia = new InternetAddress("255.255.255.255", 80);
+            assert(ia.toHostNameString() is null);
 
             if (getnameinfoPointer)
             {
-                // test reverse lookup, via gethostbyaddr
+                // test failing reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
                 cast() getnameinfoPointer = null;
                 scope(exit) () @trusted { cast() getnameinfoPointer = getnameinfoPointerBackup; }();
 
-                assert(ia.toHostNameString() == "digitalmars.com");
+                assert(ia.toHostNameString() is null);
             }
-        }
-    });
-
-    if (runSlowTests)
-    softUnittest({
-        // test failing reverse lookup
-        const InternetAddress ia = new InternetAddress("255.255.255.255", 80);
-        assert(ia.toHostNameString() is null);
-
-        if (getnameinfoPointer)
-        {
-            // test failing reverse lookup, via gethostbyaddr
-            auto getnameinfoPointerBackup = getnameinfoPointer;
-            cast() getnameinfoPointer = null;
-            scope(exit) () @trusted { cast() getnameinfoPointer = getnameinfoPointerBackup; }();
-
-            assert(ia.toHostNameString() is null);
-        }
-    });
+        });
+    }
 }
 
 
@@ -1894,7 +1937,8 @@ public:
 }
 
 
-@safe unittest
+version (CRuntime_WASI) {} // No DNS resolution in wasi-libc yet
+else @safe unittest
 {
     softUnittest({
         const Internet6Address ia = new Internet6Address("::1", 80);
@@ -1970,6 +2014,11 @@ version (StdDdoc)
         override @property const(sockaddr)* name() const { return null; }
         override @property socklen_t nameLen() const { return 0; }
     }
+}
+else version (CRuntime_WASI)
+{
+    // WASI does not support UNIX domain sockets
+    // (despite defining bare-bones sockaddr_un)
 }
 else
 static if (is(sockaddr_un))
@@ -2143,15 +2192,26 @@ enum SocketShutdown: int
 
 
 /// Socket flags that may be OR'ed together:
-enum SocketFlags: int
+version (CRuntime_WASI)
 {
-    NONE =       0,                 /// no flags specified
+    enum SocketFlags: int
+    {
+        NONE =       0,                 /// no flags specified
 
-    OOB =        MSG_OOB,           /// out-of-band stream data
-    PEEK =       MSG_PEEK,          /// peek at incoming data without removing it from the queue, only for receiving
-    DONTROUTE =  MSG_DONTROUTE,     /// data should not be subject to routing; this flag may be ignored. Only for sending
+        PEEK =       MSG_PEEK,          /// peek at incoming data without removing it from the queue, only for receiving
+    }
 }
+else
+{
+    enum SocketFlags: int
+    {
+        NONE =       0,                 /// no flags specified
 
+        OOB =        MSG_OOB,           /// out-of-band stream data
+        PEEK =       MSG_PEEK,          /// peek at incoming data without removing it from the queue, only for receiving
+        DONTROUTE =  MSG_DONTROUTE,     /// data should not be subject to routing; this flag may be ignored. Only for sending
+    }
+}
 
 /// Duration timeout value.
 struct TimeVal
@@ -2227,6 +2287,64 @@ private:
             return cast(inout(socket_t)[])set[FD_SET_OFFSET .. FD_SET_OFFSET+count];
         }
     }
+    else version (CRuntime_WASI)
+    {
+        // On WASI, fd_set is an array of socket handles,
+        // following a size_t containing the fd_set instance size.
+        // We use one dynamic array for everything, and use its first
+        // element(s) for the count.
+        alias fd_set_count_type = typeof(fd_set.init.__nfds);
+        alias fd_set_type = typeof(fd_set.init.__fds[0]);
+        static assert(fd_set_type.sizeof == socket_t.sizeof);
+
+        // Number of fd_set_type elements at the start of our array that are
+        // used for the socket count and alignment
+
+        enum FD_SET_OFFSET = fd_set.__fds.offsetof / fd_set_type.sizeof;
+        static assert(FD_SET_OFFSET);
+        static assert(fd_set.__nfds.offsetof % fd_set_type.sizeof == 0);
+
+        fd_set_type[] set;
+
+        void resize(size_t size) pure nothrow
+        {
+            set.length = FD_SET_OFFSET + size;
+        }
+
+        // Make sure we can fit that many sockets
+
+        void setMinCapacity(size_t size) pure nothrow
+        {
+            auto length = lengthFor(size);
+            if (set.length < length)
+                set.length = length;
+        }
+
+        // Array size to fit that many sockets
+
+        static size_t lengthFor(size_t size) pure nothrow @nogc
+        {
+            return (size + (fd_set.__fds.length - 1)) / fd_set.__fds.length;
+        }
+
+        ref inout(fd_set_count_type) count() @trusted @property inout pure nothrow @nogc
+        {
+            assert(set.length);
+            return *cast(inout(fd_set_count_type)*)set.ptr;
+        }
+
+        size_t capacity() @property const pure nothrow @nogc
+        {
+            return set.length - FD_SET_OFFSET;
+        }
+
+        inout(socket_t)[] fds() @trusted inout @property pure nothrow @nogc
+        {
+            return cast(inout(socket_t)[])set[FD_SET_OFFSET .. FD_SET_OFFSET+count];
+        }
+
+        int maxfd;
+    }
     else
     version (Posix)
     {
@@ -2301,6 +2419,11 @@ public:
     {
         version (Windows)
             count = 0;
+        else version (CRuntime_WASI)
+        {
+            count = 0;
+            maxfd = -1;
+        }
         else
         {
             set[] = 0;
@@ -2320,6 +2443,20 @@ public:
             }
             ++count;
             fds[$-1] = s;
+        }
+        else version (CRuntime_WASI)
+        {
+            //assert(s != null);
+            if (count == capacity)
+            {
+                set.length *= 2;
+                set.length = set.capacity;
+            }
+            ++count;
+            fds[$-1] = s;
+
+            if (maxfd < s)
+                maxfd = s;
         }
         else
         {
@@ -2357,6 +2494,15 @@ public:
             if (p >= 0)
                 fds[p] = fds[--count];
         }
+        else version (CRuntime_WASI)
+        {
+            import std.algorithm.searching : countUntil;
+            auto fds = fds;
+            auto p = fds.countUntil(s);
+            if (p >= 0)
+                fds[p] = fds[--count];
+            // note: adjusting maxfd would require scanning the set, not worth it
+        }
         else
         {
             auto index = s / FD_NFDBITS;
@@ -2381,6 +2527,13 @@ public:
     {
         version (Windows)
         {
+            import std.algorithm.searching : canFind;
+            return fds.canFind(s) ? 1 : 0;
+        }
+        else version (CRuntime_WASI)
+        {
+            if (s > maxfd)
+                return 0;
             import std.algorithm.searching : canFind;
             return fds.canFind(s) ? 1 : 0;
         }
@@ -2458,7 +2611,14 @@ public:
     }
 }
 
-@safe unittest
+version (CRuntime_WASI)
+{
+    // Some strange bug(?) where `select` read availability becomes sticky
+    // after the first send, after even `recv`ing the data.
+    //
+    // Also, a very low limit on the number of pairs that can be reliably polled???
+}
+else @safe unittest
 {
     version (iOSDerived)
     {
@@ -2472,7 +2632,8 @@ public:
     }
 
     softUnittest({
-        version (Posix)
+        version (CRuntime_WASI) {}
+        else version (Posix)
         () @trusted
         {
             static assert(LIMIT > PAIRS*2);
@@ -2564,19 +2725,34 @@ public:
 }
 
 /// The level at which a socket option is defined:
-enum SocketOptionLevel: int
+version (CRuntime_WASI)
 {
-    SOCKET =  SOL_SOCKET,               /// Socket level
-    IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-    ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-    IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-    GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
-    TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-    PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-    UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-    IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-    RAW =     ProtocolType.RAW,         /// Raw IP packet level
-    IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    enum SocketOptionLevel: int
+    {
+        SOCKET =  SOL_SOCKET,               /// Socket level
+        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+        RAW =     ProtocolType.RAW,         /// Raw IP packet level
+        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    }
+}
+else
+{
+    enum SocketOptionLevel: int
+    {
+        SOCKET =  SOL_SOCKET,               /// Socket level
+        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+        GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
+        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+        RAW =     ProtocolType.RAW,         /// Raw IP packet level
+        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    }
 }
 
 /// _Linger information for use with SocketOption.LINGER.
@@ -2603,54 +2779,84 @@ struct Linger
 }
 
 /// Specifies a socket option:
-enum SocketOption: int
+version (CRuntime_WASI)
 {
-    DEBUG =                SO_DEBUG,            /// Record debugging information
-    BROADCAST =            SO_BROADCAST,        /// Allow transmission of broadcast messages
-    REUSEADDR =            SO_REUSEADDR,        /// Allow local reuse of address
-    /**
-     * Allow local reuse of port
-     *
-     * On Windows, this is equivalent to `SocketOption.REUSEADDR`.
-     * There is in fact no option named `REUSEPORT`.
-     * However, `SocketOption.REUSEADDR` matches the behavior of
-     * `SocketOption.REUSEPORT` on other platforms. Further details on this
-     * topic can be found here:
-     * $(LINK https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse)
-     *
-     * On Linux, this ensures fair distribution of incoming connections accross threads.
-     *
-     * See_Also:
-     *   https://lwn.net/Articles/542629/
-     */
-    REUSEPORT =            SO_REUSEPORT,
-    LINGER =               SO_LINGER,           /// Linger on close if unsent data is present
-    OOBINLINE =            SO_OOBINLINE,        /// Receive out-of-band data in band
-    SNDBUF =               SO_SNDBUF,           /// Send buffer size
-    RCVBUF =               SO_RCVBUF,           /// Receive buffer size
-    DONTROUTE =            SO_DONTROUTE,        /// Do not route
-    SNDTIMEO =             SO_SNDTIMEO,         /// Send timeout
-    RCVTIMEO =             SO_RCVTIMEO,         /// Receive timeout
-    ERROR =                SO_ERROR,            /// Retrieve and clear error status
-    KEEPALIVE =            SO_KEEPALIVE,        /// Enable keep-alive packets
-    ACCEPTCONN =           SO_ACCEPTCONN,       /// Listen
-    RCVLOWAT =             SO_RCVLOWAT,         /// Minimum number of input bytes to process
-    SNDLOWAT =             SO_SNDLOWAT,         /// Minimum number of output bytes to process
-    TYPE =                 SO_TYPE,             /// Socket type
+    enum SocketOption: int
+    {
+        REUSEADDR =            SO_REUSEADDR,        /// Allow local reuse of address
 
-    // SocketOptionLevel.TCP:
-    TCP_NODELAY =          .TCP_NODELAY,        /// Disable the Nagle algorithm for send coalescing
+        SNDBUF =               SO_SNDBUF,           /// Send buffer size
+        RCVBUF =               SO_RCVBUF,           /// Receive buffer size
+        SNDTIMEO =             SO_SNDTIMEO,         /// Send timeout
+        RCVTIMEO =             SO_RCVTIMEO,         /// Receive timeout
+        ERROR =                SO_ERROR,            /// Retrieve and clear error status
+        KEEPALIVE =            SO_KEEPALIVE,        /// Enable keep-alive packets
+        ACCEPTCONN =           SO_ACCEPTCONN,       /// Listen
+        TYPE =                 SO_TYPE,             /// Socket type
 
-    // SocketOptionLevel.IPV6:
-    IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit
-    IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface
-    IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback
-    IPV6_MULTICAST_HOPS =  .IPV6_MULTICAST_HOPS,        /// IP multicast hops
-    IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership
-    IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership
-    IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only
+        // SocketOptionLevel.TCP:
+        TCP_NODELAY =          .TCP_NODELAY,        /// Disable the Nagle algorithm for send coalescing
+
+        // SocketOptionLevel.IPV6:
+        IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit
+        IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface
+        IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback
+        IPV6_MULTICAST_HOPS =  .IPV6_MULTICAST_HOPS,        /// IP multicast hops
+        IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership
+        IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership
+        IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only
+    }
 }
+else
+{
+    enum SocketOption: int
+    {
+        DEBUG =                SO_DEBUG,            /// Record debugging information
+        BROADCAST =            SO_BROADCAST,        /// Allow transmission of broadcast messages
+        REUSEADDR =            SO_REUSEADDR,        /// Allow local reuse of address
+        /**
+        * Allow local reuse of port
+        *
+        * On Windows, this is equivalent to `SocketOption.REUSEADDR`.
+        * There is in fact no option named `REUSEPORT`.
+        * However, `SocketOption.REUSEADDR` matches the behavior of
+        * `SocketOption.REUSEPORT` on other platforms. Further details on this
+        * topic can be found here:
+        * $(LINK https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse)
+        *
+        * On Linux, this ensures fair distribution of incoming connections accross threads.
+        *
+        * See_Also:
+        *   https://lwn.net/Articles/542629/
+        */
+        REUSEPORT =            SO_REUSEPORT,
+        LINGER =               SO_LINGER,           /// Linger on close if unsent data is present
+        OOBINLINE =            SO_OOBINLINE,        /// Receive out-of-band data in band
+        SNDBUF =               SO_SNDBUF,           /// Send buffer size
+        RCVBUF =               SO_RCVBUF,           /// Receive buffer size
+        DONTROUTE =            SO_DONTROUTE,        /// Do not route
+        SNDTIMEO =             SO_SNDTIMEO,         /// Send timeout
+        RCVTIMEO =             SO_RCVTIMEO,         /// Receive timeout
+        ERROR =                SO_ERROR,            /// Retrieve and clear error status
+        KEEPALIVE =            SO_KEEPALIVE,        /// Enable keep-alive packets
+        ACCEPTCONN =           SO_ACCEPTCONN,       /// Listen
+        RCVLOWAT =             SO_RCVLOWAT,         /// Minimum number of input bytes to process
+        SNDLOWAT =             SO_SNDLOWAT,         /// Minimum number of output bytes to process
+        TYPE =                 SO_TYPE,             /// Socket type
 
+        // SocketOptionLevel.TCP:
+        TCP_NODELAY =          .TCP_NODELAY,        /// Disable the Nagle algorithm for send coalescing
+
+        // SocketOptionLevel.IPV6:
+        IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit
+        IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface
+        IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback
+        IPV6_MULTICAST_HOPS =  .IPV6_MULTICAST_HOPS,        /// IP multicast hops
+        IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership
+        IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership
+        IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only
+    }
+}
 
 /**
  * Class that creates a network communication endpoint using
@@ -3593,7 +3799,8 @@ public:
         Address result;
         switch (_family)
         {
-        static if (is(sockaddr_un))
+        version (CRuntime_WASI) {} // No UNIX sockets, despite `sockaddr_un`
+        else static if (is(sockaddr_un))
         {
             case AddressFamily.UNIX:
                 result = new UnixAddress;
@@ -3849,7 +4056,25 @@ class UdpSocket: Socket
  */
 Socket[2] socketPair() @trusted
 {
-    version (Posix)
+    version (CRuntime_WASI)
+    {
+        // We do not have socketpair() on WASI, just manually create a
+        // pair of sockets connected over some localhost port.
+        Socket[2] result;
+
+        auto listener = new TcpSocket();
+        listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        listener.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        auto addr = listener.localAddress;
+        listener.listen(1);
+
+        result[0] = new TcpSocket(addr);
+        result[1] = listener.accept();
+
+        listener.close();
+        return result;
+    }
+    else version (Posix)
     {
         int[2] socks;
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1)

@@ -135,6 +135,10 @@ else version (CRuntime_Musl)
 {
     version = GENERIC_IO;
 }
+else version (CRuntime_WASI)
+{
+    version = GENERIC_IO;
+}
 else version (CRuntime_UClibc)
 {
     version = GENERIC_IO;
@@ -246,7 +250,13 @@ else version (GENERIC_IO)
         pragma(mangle, core.stdc.wchar_.fgetwc.mangleof) int _FGETWC(_iobuf* fp);
     }
 
-    version (Posix)
+    version (CRuntime_WASI)
+    {
+        // no file locking/unlocking at the moment
+        private extern(D) void _FLOCK(FILE*) {}
+        private extern(D) void _FUNLOCK(FILE*) {}
+    }
+    else version (Posix)
     {
         private alias _FLOCK = core.sys.posix.stdio.flockfile;
         private alias _FUNLOCK = core.sys.posix.stdio.funlockfile;
@@ -545,7 +555,14 @@ Throws: `ErrnoException` in case of error.
         }
 
         FILE* handle;
-        version (Posix)
+        version (CRuntime_WASI) // wasi-libc has no preopens
+        {
+            assert(isPopened == false);
+            errnoEnforce(handle = _fopen(name, stdioOpenmode),
+                         text("Cannot open file `", name, "' in mode `",
+                              stdioOpenmode, "'"));
+        }
+        else version (Posix)
         {
             if (isPopened)
             {
@@ -579,7 +596,8 @@ Throws: `ErrnoException` in case of error.
         assert(_p);
         import std.exception : errnoEnforce;
 
-        version (Posix)
+        version (CRuntime_WASI) {} // wasi-libc has no pclose
+        else version (Posix)
         {
             import core.sys.posix.stdio : pclose;
             import std.format : format;
@@ -2181,7 +2199,8 @@ EOF
 /**
  Returns a temporary file by calling $(CSTDIO tmpfile).
  Note that the created file has no $(LREF name).*/
-    static File tmpfile() @safe
+    version (CRuntime_WASI) {}
+    else static File tmpfile() @safe
     {
         import std.exception : errnoEnforce;
 
@@ -2730,6 +2749,15 @@ $(REF readText, std,file)
             /* the C function tmpfile doesn't work when called from a shared
                library apk:
                https://code.google.com/p/android/issues/detail?id=66815 */
+            auto deleteme = testFilename();
+            auto file = File(deleteme, "w+");
+            scope(success) std.file.remove(deleteme);
+        }
+        else version (CRuntime_WASI)
+        {
+            static import std.file;
+
+            /* wasi-libc has no tmpfile */
             auto deleteme = testFilename();
             auto file = File(deleteme, "w+");
             scope(success) std.file.remove(deleteme);

@@ -4,6 +4,9 @@ Source: $(PHOBOSSRC std/experimental/allocator/building_blocks/ascending_page_al
 */
 module std.experimental.allocator.building_blocks.ascending_page_allocator;
 
+version (WebAssembly) {}
+else:
+
 import core.memory : pageSize;
 
 import std.experimental.allocator.common;

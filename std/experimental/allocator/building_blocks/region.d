@@ -898,6 +898,11 @@ version (CRuntime_Musl)
     // https://git.musl-libc.org/cgit/musl/commit/?id=7a995fe706e519a4f55399776ef0df9596101f93
     // https://git.musl-libc.org/cgit/musl/commit/?id=863d628d93ea341b6a32661a1654320ce69f6a07
 }
+version (CRuntime_WASI)
+{
+    // sbrk is very limited (only PAGE_SIZE increments, and only able to grow)
+    // brk has not been implemented
+}
 version (DragonFlyBSD)
 {
     // sbrk is deprecated in favor of mmap   (we could implement a mmap + MAP_NORESERVE + PROT_NONE version)
@@ -924,6 +929,7 @@ SbrkRegion) adversely.
 
 */
 version (CRuntime_Musl) {} else
+version (CRuntime_WASI) {} else
 version (DragonFlyBSD) {} else
 version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
@@ -1107,6 +1113,7 @@ version (Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 }
 
 version (CRuntime_Musl) {} else
+version (CRuntime_WASI) {} else
 version (DragonFlyBSD) {} else
 version (Posix) @system nothrow @nogc unittest
 {
@@ -1121,6 +1128,7 @@ version (Posix) @system nothrow @nogc unittest
 }
 
 version (CRuntime_Musl) {} else
+version (CRuntime_WASI) {} else
 version (DragonFlyBSD) {} else
 version (Posix) @system nothrow @nogc unittest
 {
@@ -1322,7 +1330,8 @@ shared struct SharedRegion(ParentAllocator,
     }
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -1387,7 +1396,8 @@ shared struct SharedRegion(ParentAllocator,
     testAlloc(a2, false);
 }
 
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 

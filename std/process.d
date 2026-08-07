@@ -84,7 +84,7 @@ Macros:
 
 Note:
 Most of the functionality in this module is not available on iOS, tvOS
-and watchOS. The only functions available on those platforms are:
+, watchOS, and WASI. The only functions available on those platforms are:
 $(LREF environment), $(LREF thisProcessID) and $(LREF thisThreadID).
 */
 module std.process;
@@ -148,7 +148,8 @@ private
     {
         import core.sys.posix.unistd : getEnvironPtr = environ;
 
-        @system unittest
+        version (WASI) {} // WASI is single-threaded
+        else @system unittest
         {
             import core.thread : Thread;
             new Thread({assert(getEnvironPtr !is null);}).start();
@@ -636,8 +637,8 @@ private:
     }
 }
 
-
-@system unittest
+version (WASI) {} // WASI is single-threaded
+else @system unittest
 {
     int pidA, pidB;
     ThreadID tidA, tidB;
@@ -667,6 +668,8 @@ package(std) string uniqueTempPath() @safe
         randomUUID().toString());
 }
 
+version (WASI) {}
+else:
 
 version (iOSDerived) {}
 else:

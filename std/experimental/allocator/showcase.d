@@ -8,6 +8,9 @@ Source: $(PHOBOSSRC std/experimental/allocator/_showcase.d)
 */
 module std.experimental.allocator.showcase;
 
+version (WebAssembly) {}
+else:
+
 import std.experimental.allocator.building_blocks.fallback_allocator,
     std.experimental.allocator.gc_allocator,
     std.experimental.allocator.building_blocks.region;
