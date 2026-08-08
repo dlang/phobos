@@ -2454,7 +2454,7 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
             destroy(e);
         }
     }
-    alloc.deallocate(array);
+    alloc.deallocate(cast(void[]) array);
     static if (__traits(isRef, array))
         array = null;
 }
@@ -2495,6 +2495,20 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+// https://github.com/dlang/phobos/issues/9824
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    const(int)[] ci = Mallocator.instance.makeArray!int(10);
+    Mallocator.instance.dispose(ci);
+    assert(ci is null);
+
+    immutable(int)[] ii = cast(immutable(int)[]) Mallocator.instance.makeArray!int(10);
+    Mallocator.instance.dispose(ii);
+    assert(ii is null);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=16512
