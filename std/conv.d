@@ -5571,7 +5571,7 @@ if (isIntegral!T && isOutputRange!(W, char))
     else
     {
         UnsignedStringBuf buf = void;
-        put(writer, unsignedToTempString(value, buf));
+        put(writer, unsignedToTempString(value.unsigned, buf));
     }
 }
 
@@ -6094,7 +6094,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 
                 char[] t = value < 0
                     ?   signedToTempString!(10, false, char)(value, buf)
-                    : unsignedToTempString!(10, false, char)(value, buf);
+                    : unsignedToTempString!(10, false, char)(value.unsigned, buf);
 
                 lwr = cast(uint) (buf.length - t.length);
                 upr = cast(uint) buf.length;
