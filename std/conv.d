@@ -6108,7 +6108,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 
                 char[] t = value < 0
                     ?   signedToTempString!(10, false, char)(value, buf)
-                    : unsignedToTempString!(10, false, char)(cast(Unsigned!UT)value, buf);
+                    : unsignedToTempString!(10, false, char)(cast(Unsigned!UT) value, buf);
 
                 lwr = cast(uint) (buf.length - t.length);
                 upr = cast(uint) buf.length;
