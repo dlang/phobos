@@ -5585,7 +5585,7 @@ if (isIntegral!T && isOutputRange!(W, char))
     else
     {
         UnsignedStringBuf buf = void;
-        put(writer, unsignedToTempString(cast(Unsigned!T)value, buf));
+        put(writer, unsignedToTempString(cast(Unsigned!T) value, buf));
     }
 }
 
