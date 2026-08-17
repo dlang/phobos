@@ -1,6 +1,0 @@
-variant: Support big structs with `@disable this()`
-
-std.variant didn't compile when the payload was a struct that was bigger than
-its internal buffer, had to be allocated on the heap, and had `@disable this()`.
-The new handling now always skips the constructor and just copies the payload
-directly to the allocated region.
