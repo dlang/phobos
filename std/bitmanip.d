@@ -110,23 +110,23 @@ private template createAccessors(
         {
             enum createAccessors =
             // getter
-                "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
+                "@property bool " ~ name ~ "() scope @safe pure nothrow @nogc const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
+                ~"@property void " ~ name ~ "(bool v) scope @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= cast(typeof("~store~"))(-1-cast(typeof("~store~"))"~myToString(maskAllElse)~");}\n";
         }
         else
         {
             // getter
-            enum createAccessors = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const {"
+            enum createAccessors = "@property "~T.stringof~" "~name~"() scope @safe pure nothrow @nogc const {"
                 ~ "auto result = cast("~T.stringof~") (" ~ store ~ " >>" ~ myToString(offset) ~ ");"
                 ~ "result <<= " ~ myToString(SignShift) ~ ";"
                 ~ "result " ~ RightShiftOp ~ myToString(SignShift) ~ ";"
                 ~ " return result;}\n"
             // setter
-                ~"@property void "~name~"("~T.stringof~" v) @safe pure nothrow @nogc { "
+                ~"@property void "~name~"("~T.stringof~" v) scope @safe pure nothrow @nogc { "
                 ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
                 ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
@@ -199,18 +199,18 @@ private ulong getBitsForAlign(ulong a)
 private template createReferenceAccessor(string store, T, ulong bits, string name)
 {
     enum storage = "private void* " ~ store ~ "_ptr;\n";
-    enum storage_accessor = "@property ref size_t " ~ store ~ "() return @trusted pure nothrow @nogc const { "
+    enum storage_accessor = "@property ref size_t " ~ store ~ "() scope return @trusted pure nothrow @nogc const { "
         ~ "return *cast(size_t*) &" ~ store ~ "_ptr;}\n"
-        ~ "@property void " ~ store ~ "(size_t v) @trusted pure nothrow @nogc { "
+        ~ "@property void " ~ store ~ "(size_t v) scope @trusted pure nothrow @nogc { "
         ~ "" ~ store ~ "_ptr = cast(void*) v;}\n";
 
     enum mask = (1UL << bits) - 1;
     // getter
-    enum ref_accessor = "@property "~T.stringof~" "~name~"() @trusted pure nothrow @nogc const { auto result = "
+    enum ref_accessor = "@property "~T.stringof~" "~name~"() scope @trusted pure nothrow @nogc const { auto result = "
         ~ "("~store~" & "~myToString(~mask)~"); "
         ~ "return cast("~T.stringof~") cast(void*) result;}\n"
     // setter
-        ~"@property void "~name~"("~T.stringof~" v) @trusted pure nothrow @nogc { "
+        ~"@property void "~name~"("~T.stringof~" v) scope @trusted pure nothrow @nogc { "
         ~"assert(((cast(typeof("~store~")) cast(void*) v) & "~myToString(mask)
         ~`) == 0, "Value not properly aligned for '`~name~`'"); `
         ~store~" = cast(typeof("~store~"))"
@@ -774,6 +774,31 @@ if (is(T == class))
     void bar(S s) {}
 
     static assert(!__traits(compiles, bar(s)));
+}
+
+// https://github.com/dlang/phobos/issues/9840
+@safe unittest
+{
+    struct S
+    {
+        mixin(taggedPointer!(
+            int*, "ptr",
+            bool, "flag", 1
+        ));
+    }
+
+    void foo(scope ref S s) @safe
+    {
+        // These should compile with -preview=dip1000
+        assert(s.ptr is null);
+        s.ptr = null;
+        assert(!s.flag);
+        s.flag = true;
+        assert(s.flag);
+    }
+
+    S s;
+    foo(s);
 }
 
 private struct FloatingPointRepresentation(T)
