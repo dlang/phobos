@@ -219,6 +219,9 @@ $(TR $(TDC3 GCAllocator, gc_allocator) $(TD The system-provided garbage-collecto
 This should be the default fallback allocator tapping into system memory. It
 offers manual `free` and dutifully collects litter.))
 
+$(TR $(TDC3 GCHeapMallocator, gc_allocator) $(TD Allocates GC-scanned memory
+that the caller releases manually.))
+
 $(TR $(TDC3 Mallocator, mallocator) $(TD The C heap _allocator, a.k.a. $(D
 malloc)/`realloc`/`free`. Use sparingly and only for code that is unlikely
 to leak.))
