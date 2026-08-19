@@ -1,0 +1,17 @@
+New `GCHeapMallocator` allocator in `std.experimental.allocator`
+
+$(REF_ALTTEXT `GCHeapMallocator`, GCHeapMallocator, std, experimental, allocator, gc_allocator)
+allocates from the D runtime's garbage-collected heap, but expects the memory to
+be released manually via `deallocate` instead of leaving it for the collector.
+The memory is still scanned for pointers by the GC.
+
+It offers the same allocation, reallocation and deallocation behaviour that
+$(REF_ALTTEXT `GCAllocator`, GCAllocator, std, experimental, allocator, gc_allocator)
+has today, under a name that says so explicitly.
+
+-------
+import std.experimental.allocator.gc_allocator : GCHeapMallocator;
+
+auto buffer = GCHeapMallocator.instance.allocate(1024 * 1024 * 4);
+scope(exit) GCHeapMallocator.instance.deallocate(buffer);
+-------
