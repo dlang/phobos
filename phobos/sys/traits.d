@@ -52,6 +52,7 @@
     $(TR $(TH Category) $(TH Templates))
     $(TR $(TD Categories of types) $(TD
               $(LREF isAggregateType)
+              $(LREF isCharacter)
               $(LREF isDynamicArray)
               $(LREF isFloatingPoint)
               $(LREF isInstantiationOf)
@@ -1258,6 +1259,136 @@ enum isNumeric(T) = is(immutable T == immutable byte) ||
             static assert(!isNumeric!(Q!T));
             static assert(!isNumeric!E);
             static assert(!isNumeric!(AliasThis!(Q!T)));
+        }
+    }
+}
+
+/++
+    Whether the given type is one of the built-in character types, ignoring all
+    qualifiers.
+
+    $(TABLE
+        $(TR $(TH Character Types))
+        $(TR $(TD char))
+        $(TR $(TD wchar))
+        $(TR $(TD dchar))
+    )
+
+    Note that this does not include implicit conversions or enum types. The
+    type itself must be one of the built-in character types.
+  +/
+enum isCharacter(T) = is(immutable T == immutable char) ||
+                      is(immutable T == immutable wchar) ||
+                      is(immutable T == immutable dchar);
+
+///
+@safe unittest
+{
+    // Some types which are character types.
+    static assert( isCharacter!char);
+    static assert( isCharacter!wchar);
+    static assert( isCharacter!dchar);
+
+    static assert( isCharacter!(const char));
+    static assert( isCharacter!(immutable wchar));
+    static assert( isCharacter!(inout dchar));
+    static assert( isCharacter!(shared char));
+    static assert( isCharacter!(const shared dchar));
+
+    static assert( isCharacter!(typeof('A')));
+    static assert( isCharacter!(typeof('月')));
+    static assert( isCharacter!(typeof("dlang"[0])));
+
+    char c;
+    static assert( isCharacter!(typeof(c)));
+
+    // Some types which aren't character types.
+    static assert(!isCharacter!bool);
+    static assert(!isCharacter!ubyte);
+    static assert(!isCharacter!short);
+    static assert(!isCharacter!int);
+    static assert(!isCharacter!(int[]));
+    static assert(!isCharacter!(ubyte[4]));
+    static assert(!isCharacter!(int*));
+    static assert(!isCharacter!double);
+    static assert(!isCharacter!string);
+
+    static struct S
+    {
+        char c;
+    }
+    static assert(!isCharacter!S);
+
+    // The struct itself isn't considered a character,
+    // but its member variable is when checked directly.
+    static assert( isCharacter!(typeof(S.c)));
+
+    enum E : char
+    {
+        c = 'D'
+    }
+
+    // Enums do not count.
+    static assert(!isCharacter!E);
+
+    static struct AliasThis
+    {
+        char c;
+        alias this = c;
+    }
+
+    // Other implicit conversions do not count.
+    static assert(!isCharacter!AliasThis);
+}
+
+@safe unittest
+{
+    import phobos.sys.meta : Alias, AliasSeq;
+
+    static struct AliasThis(T)
+    {
+        T member;
+        alias this = member;
+    }
+
+    // Unlike with integer types or floating point types, there are no __traits
+    // which consider the SIMD types to be characters, but this still tests
+    // them just for thoroughness.
+    template SIMDTypes()
+    {
+        import core.simd;
+
+        alias SIMDTypes = AliasSeq!();
+        static if (is(ubyte16))
+            SIMDTypes = AliasSeq!(SIMDTypes, ubyte16);
+        static if (is(int4))
+            SIMDTypes = AliasSeq!(SIMDTypes, int4);
+        static if (is(double2))
+            SIMDTypes = AliasSeq!(SIMDTypes, double2);
+        static if (is(void16))
+            SIMDTypes = AliasSeq!(SIMDTypes, void16);
+    }
+
+    foreach (Q; AliasSeq!(Alias, ConstOf, ImmutableOf, SharedOf))
+    {
+        foreach (T; AliasSeq!(char, wchar, dchar))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert( isCharacter!(Q!T));
+            static assert(!isCharacter!E);
+            static assert(!isCharacter!(AliasThis!(Q!T)));
+        }
+
+        foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long,
+                              ulong, float, double, real, SIMDTypes!(),
+                              int[], ubyte[8], dchar[], void[], long*))
+        {
+            enum E : Q!T { a = Q!T.init }
+
+            static assert(!isCharacter!(Q!T));
+            static assert(!isCharacter!E);
+            static assert(!isCharacter!(AliasThis!(Q!T)));
         }
     }
 }
