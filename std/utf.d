@@ -3737,7 +3737,7 @@ enum dchar replacementDchar = '\uFFFD';
  *      unchanged. This includes types that are both ranges and implicitly
  *      convertible to a string; no conversion is performed.
  *
- *      Otherwise, `r` is converted to its corresponding string type. 
+ *      Otherwise, `r` is converted to its corresponding string type.
  *      If the string is a array of `dchar`` it is returned as-is, otherwise it
  *      is wrapped in a range of its code units.
  * See_Also:
