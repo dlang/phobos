@@ -131,6 +131,7 @@ public import std.datetime.date;
 public import std.datetime.interval;
 public import std.datetime.systime;
 public import std.datetime.timezone;
+public import std.datetime.stopwatch;
 
 import core.exception : AssertError;
 import std.functional : unaryFun;

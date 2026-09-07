@@ -1,0 +1,6 @@
+`std.datetime.stopwatch` is now publicly imported when you import `std.datetime`
+
+This omission was in place since `std.datetime.stopwatch` was introduced, as
+`std.datetime.stopwatch.benchmark` conflicted with `std.datetime.benchmark`.
+
+The latter was removed in 2021 (2.075).
