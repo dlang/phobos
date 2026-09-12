@@ -7012,14 +7012,8 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
  */
 template isDynamicArray(T)
 {
-    static if (is(T == U[], U))
+    static if (is(T U : U[]))
         enum bool isDynamicArray = true;
-    else static if (is(T U == enum))
-        // BUG: isDynamicArray / isStaticArray considers enums
-        // with appropriate base types as dynamic/static arrays
-        // Retain old behaviour for now, see
-        // https://github.com/dlang/phobos/pull/7574
-        enum bool isDynamicArray = isDynamicArray!U;
     else
         enum bool isDynamicArray = false;
 }
