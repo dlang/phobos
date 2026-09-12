@@ -5,7 +5,7 @@ set -uexo pipefail
 HOST_DMD_VER=2.095.0
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-dub}
-N=${N:-2}
+N=${N:-$(nproc)}
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 BUILD="debug"
 PIC=1
@@ -40,7 +40,7 @@ install_deps() {
     env
 }
 
-# clone dmd and druntime
+# clone dmd and tools
 clone() {
     local url="$1"
     local path="$2"
@@ -89,8 +89,7 @@ setup_repos()
     source "$(CURL_USER_AGENT="$CURL_USER_AGENT" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
-    pushd ../dmd && ./src/build.d MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD PIC="$PIC" all && popd
-    pushd ../dmd && make -j"$N" -C druntime -f posix.mak MODEL=$MODEL HOST_DMD="$DMD" BUILD=$BUILD && popd
+    make -C ../dmd -j"$N" MODEL=$MODEL BUILD=$BUILD PIC="$PIC"
 }
 
 # run unittest with coverage

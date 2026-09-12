@@ -1,10 +1,10 @@
-version: 2
+version: 2.1
 jobs:
   build:
     working_directory: ~/phobos
-    docker:
-      - image: cimg/base:current-20.04
-    parallelism: 1
+    machine:
+      image: ubuntu-2604:current
+    resource_class: large.gen3
     steps:
       - checkout
       - run:
@@ -12,7 +12,7 @@ jobs:
           name: Install DMD
       - run:
           command: ./.circleci/run.sh setup-repos
-          name: Clone DMD & DRuntime
+          name: Clone DMD & tools and build DMD & druntime
       - run:
           command: ./.circleci/run.sh publictests
           name: Run all public unittests
