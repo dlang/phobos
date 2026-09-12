@@ -381,9 +381,16 @@ if (isSomeChar!Char)
         the presence of the sequence: it will not actually guarantee that
         $(D index + stride(str, index) <= str.length).
   +/
+uint stride(S)(auto ref S str, size_t index) @safe pure
+if (is(S : const char[]))
+{
+    return strideUTF8(cast(const(char)[]) str, index);
+}
+
+/// Ditto
 uint stride(S)(auto ref S str, size_t index)
-if (is(S : const char[]) ||
-    (isRandomAccessRange!S && is(immutable ElementType!S == immutable char)))
+if (isRandomAccessRange!S && is(immutable ElementType!S == immutable char) &&
+    !is(S : const char[]))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-8 sequence");
@@ -396,19 +403,34 @@ if (is(S : const char[]) ||
 }
 
 /// Ditto
-uint stride(S)(auto ref S str)
-if (is(S : const char[]) ||
-    (isInputRange!S && is(immutable ElementType!S == immutable char)))
+uint stride(S)(auto ref S str) @safe pure
+if (is(S : const char[]))
 {
-    static if (is(S : const char[]))
-        immutable c = str[0];
-    else
-        immutable c = str.front;
+    return strideUTF8(cast(const(char)[]) str, 0);
+}
+
+/// Ditto
+uint stride(S)(auto ref S str)
+if (isInputRange!S && is(immutable ElementType!S == immutable char) &&
+    !is(S : const char[]))
+{
+    immutable c = str.front;
 
     if (c < 0x80)
         return 1;
     else
         return strideImpl(c, 0);
+}
+
+private uint strideUTF8(const(char)[] str, size_t index) @safe pure
+{
+    assert(index < str.length, "Past the end of the UTF-8 sequence");
+    immutable c = str[index];
+
+    if (c < 0x80)
+        return 1;
+    else
+        return strideImpl(c, index);
 }
 
 @system unittest
@@ -494,9 +516,16 @@ if (is(S : const char[]) ||
 }
 
 /// Ditto
+uint stride(S)(auto ref S str, size_t index) @safe pure
+if (is(S : const wchar[]))
+{
+    return strideUTF16(cast(const(wchar)[]) str, index);
+}
+
+/// Ditto
 uint stride(S)(auto ref S str, size_t index)
-if (is(S : const wchar[]) ||
-    (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar)))
+if (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar) &&
+    !is(S : const wchar[]))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-16 sequence");
@@ -508,7 +537,7 @@ if (is(S : const wchar[]) ||
 uint stride(S)(auto ref S str) @safe pure
 if (is(S : const wchar[]))
 {
-    return stride(str, 0);
+    return strideUTF16(cast(const(wchar)[]) str, 0);
 }
 
 /// Ditto
@@ -518,6 +547,13 @@ if (isInputRange!S && is(immutable ElementType!S == immutable wchar) &&
 {
     assert(!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
+    return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+private uint strideUTF16(const(wchar)[] str, size_t index) @safe pure nothrow @nogc
+{
+    assert(index < str.length, "Past the end of the UTF-16 sequence");
+    immutable uint u = str[index];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
@@ -714,9 +750,16 @@ do
         even verify the presence of the sequence: it will not actually
         guarantee that $(D strideBack(str, index) <= index).
   +/
+uint strideBack(S)(auto ref S str, size_t index) @safe pure
+if (is(S : const char[]))
+{
+    return strideBackUTF8(cast(const(char)[]) str, index);
+}
+
+/// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
-if (is(S : const char[]) ||
-    (isRandomAccessRange!S && is(immutable ElementType!S == immutable char)))
+if (isRandomAccessRange!S && is(immutable ElementType!S == immutable char) &&
+    !is(S : const char[]))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
@@ -745,9 +788,43 @@ if (is(S : const char[]) ||
 }
 
 /// Ditto
+uint strideBack(S)(auto ref S str) @safe pure
+if (is(S : const char[]))
+{
+    return strideBackUTF8(cast(const(char)[]) str, str.length);
+}
+
+private uint strideBackUTF8(const(char)[] str, size_t index) @safe pure
+{
+    assert(index <= str.length, "Past the end of the UTF-8 sequence");
+    assert(index > 0, "Not the end of the UTF-8 sequence");
+
+    if ((str[index-1] & 0b1100_0000) != 0b1000_0000)
+        return 1;
+
+    if (index >= 4) //single verification for most common case
+    {
+        static foreach (i; 2 .. 5)
+        {
+            if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
+    }
+    else
+    {
+        static foreach (i; 2 .. 4)
+        {
+            if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
+                return i;
+        }
+    }
+    throw new UTFException("Not the end of the UTF sequence", index);
+}
+
+/// Ditto
 uint strideBack(S)(auto ref S str)
-if (is(S : const char[]) ||
-    (isRandomAccessRange!S && hasLength!S && is(immutable ElementType!S == immutable char)))
+if (isRandomAccessRange!S && hasLength!S && is(immutable ElementType!S == immutable char) &&
+    !is(S : const char[]))
 {
     return strideBack(str, str.length);
 }
@@ -840,9 +917,16 @@ if (isBidirectionalRange!S && is(immutable ElementType!S == immutable char) && !
 //UTF-16 is self synchronizing: The length of strideBack can be found from
 //the value of a single wchar
 /// Ditto
+uint strideBack(S)(auto ref S str, size_t index) @safe pure
+if (is(S : const wchar[]))
+{
+    return strideBackUTF16(cast(const(wchar)[]) str, index);
+}
+
+/// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
-if (is(S : const wchar[]) ||
-    (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar)))
+if (isRandomAccessRange!S && is(immutable ElementType!S == immutable wchar) &&
+    !is(S : const wchar[]))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
@@ -853,18 +937,29 @@ if (is(S : const wchar[]) ||
 }
 
 /// Ditto
+uint strideBack(S)(auto ref S str) @safe pure
+if (is(S : const wchar[]))
+{
+    return strideBackUTF16(cast(const(wchar)[]) str, str.length);
+}
+
+/// Ditto
 uint strideBack(S)(auto ref S str)
-if (is(S : const wchar[]) ||
-    (isBidirectionalRange!S && is(immutable ElementType!S == immutable wchar)))
+if (isBidirectionalRange!S && is(immutable ElementType!S == immutable wchar) &&
+    !is(S : const wchar[]))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
-
-    static if (is(S : const(wchar)[]))
-        immutable c2 = str[$ - 1];
-    else
-        immutable c2 = str.back;
-
+    immutable c2 = str.back;
     return 1 + (0xDC00 <= c2 && c2 <= 0xE000);
+}
+
+private uint strideBackUTF16(const(wchar)[] str, size_t index) @safe pure nothrow @nogc
+{
+    assert(index <= str.length, "Past the end of the UTF-16 sequence");
+    assert(index > 0, "Not the end of a UTF-16 sequence");
+
+    immutable c2 = str[index-1];
+    return 1 + (0xDC00 <= c2 && c2 < 0xE000);
 }
 
 @system unittest
@@ -2819,21 +2914,23 @@ if (isSomeChar!C)
     Returns:
         The number of code units in `input` when encoded to `C`
   +/
-size_t codeLength(C, InputRange)(InputRange input)
-if (isSomeFiniteCharInputRange!InputRange)
+size_t codeLength(C)(const(C)[] input) @safe pure nothrow @nogc
+if (isSomeChar!C)
 {
-    alias EncType = typeof(cast() ElementEncodingType!InputRange.init);
-    static if (isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
-        return input.length;
-    else
-    {
-        size_t total = 0;
+    return input.length;
+}
 
-        foreach (c; input.byDchar)
-            total += codeLength!C(c);
+/// Ditto
+size_t codeLength(C, InputRange)(InputRange input)
+if (isSomeFiniteCharInputRange!InputRange &&
+    !(isSomeString!InputRange && is(typeof(cast() ElementEncodingType!InputRange.init) == C)))
+{
+    size_t total = 0;
 
-        return total;
-    }
+    foreach (c; input.byDchar)
+        total += codeLength!C(c);
+
+    return total;
 }
 
 ///
@@ -2935,7 +3032,18 @@ if (isSomeChar!C)
 bool isValidUTF(S)(S str) @safe pure nothrow @nogc
 if (isSomeString!S)
 {
-    static if (is(immutable ElementEncodingType!S == immutable dchar))
+    static if (is(S : const char[]))
+        return isValidUTFImpl(cast(const(char)[]) str);
+    else static if (is(S : const wchar[]))
+        return isValidUTFImpl(cast(const(wchar)[]) str);
+    else
+        return isValidUTFImpl(cast(const(dchar)[]) str);
+}
+
+private bool isValidUTFImpl(C)(const(C)[] str) @safe pure nothrow @nogc
+if (is(C == char) || is(C == wchar) || is(C == dchar))
+{
+    static if (is(C == dchar))
     {
         foreach (c; str)
         {
@@ -2947,12 +3055,10 @@ if (isSomeString!S)
     }
     else
     {
-        static if (is(immutable ElementEncodingType!S == immutable char))
+        static if (is(C == char))
             enum replacementDcharString = "\uFFFD";
-        else static if (is(immutable ElementEncodingType!S == immutable wchar))
-            enum replacementDcharString = "\uFFFD"w;
         else
-            static assert(false, "The template constraint or static if is wrong.");
+            enum replacementDcharString = "\uFFFD"w;
 
         size_t i = 0;
         while (i < str.length)
@@ -3092,6 +3198,17 @@ if (isSomeString!S)
   +/
 void validate(S)(in S str) @safe pure
 if (isSomeString!S)
+{
+    static if (is(S : const char[]))
+        validateImpl(cast(const(char)[]) str);
+    else static if (is(S : const wchar[]))
+        validateImpl(cast(const(wchar)[]) str);
+    else
+        validateImpl(cast(const(dchar)[]) str);
+}
+
+private void validateImpl(C)(const(C)[] str) @safe pure
+if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
     immutable len = str.length;
     for (size_t i = 0; i < len; )
