@@ -36,10 +36,10 @@ module std.datetime.interval;
 
 import core.time : Duration, dur;
 import std.datetime.date : AllowDayOverflow, DateTimeException, daysToDayOfWeek,
-                           DayOfWeek, isTimePoint, Month;
+                           DayOfWeek, isTimePoint, Month, TimeOfDay;
 import std.exception : enforce;
 import std.range.primitives : isOutputRange;
-import std.traits : isIntegral;
+import std.traits : isIntegral, isSomeString;
 import std.typecons : Flag;
 
 version (StdUnittest) import std.exception : assertThrown;
@@ -1569,7 +1569,260 @@ public:
         put(w, ')');
     }
 
+    /++
+        Converts this $(LREF Interval) to a string consisting of the begin
+        and end time points in the basic ISO 8601 format separated by a
+        slash, e.g. $(D "20030115/20030215"). Per ISO 8601, the begin or end
+        point is omitted if it is the smallest or largest time point which
+        $(D_PARAM TP) can represent, e.g. $(D "20030115/"). The string can
+        be parsed back with $(LREF fromISOString).
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
+      +/
+    void toISOString(Writer)(ref Writer w) const
+    if (isOutputRange!(Writer, char))
+    {
+        import std.range.primitives : put;
+        if (_begin != TP.min)
+            _begin.toISOString(w);
+        put(w, '/');
+        if (_end != TP.max)
+            _end.toISOString(w);
+    }
+
+    /// ditto
+    string toISOString() const @safe nothrow
+    {
+        import std.array : appender;
+        auto w = appender!string();
+        try
+            toISOString(w);
+        catch (Exception e)
+            assert(0, "toISOString() threw.");
+        return w.data;
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15));
+        assert(interval.toISOString() == "20030115/20030215");
+    }
+
+    /++
+        Converts this $(LREF Interval) to a string consisting of the begin
+        and end time points in the extended ISO 8601 format separated by a
+        slash, e.g. $(D "2003-01-15/2003-02-15"). Per ISO 8601, the begin or
+        end point is omitted if it is the smallest or largest time point
+        which $(D_PARAM TP) can represent, e.g. $(D "2003-01-15/"). The
+        string can be parsed back with $(LREF fromISOExtString).
+
+        Params:
+            writer = A `char` accepting
+            $(REF_ALTTEXT output range, isOutputRange, std, range, primitives)
+        Returns:
+            A `string` when not using an output range; `void` otherwise.
+      +/
+    void toISOExtString(Writer)(ref Writer w) const
+    if (isOutputRange!(Writer, char))
+    {
+        import std.range.primitives : put;
+        if (_begin != TP.min)
+            _begin.toISOExtString(w);
+        put(w, '/');
+        if (_end != TP.max)
+            _end.toISOExtString(w);
+    }
+
+    /// ditto
+    string toISOExtString() const @safe nothrow
+    {
+        import std.array : appender;
+        auto w = appender!string();
+        try
+            toISOExtString(w);
+        catch (Exception e)
+            assert(0, "toISOExtString() threw.");
+        return w.data;
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15));
+        assert(interval.toISOExtString() == "2003-01-15/2003-02-15");
+    }
+
+    /++
+        Creates an $(LREF Interval) from an ISO 8601 interval string in the
+        basic format, e.g. $(D "20030115/P1M"). For the extended format,
+        e.g. $(D "2003-01-15/P1M"), use $(LREF fromISOExtString).
+
+        The string consists of two time points or of a time point and a
+        duration separated by a slash, where the duration may be on either
+        side of the slash. If the duration is on the left, then the interval
+        ends at the time point on the right, e.g. $(D "P1M/20030215")
+        represents the month which precedes February 15th, 2003. Per
+        ISO 8601, either side may be omitted to indicate that it is unknown,
+        in which case the interval begins at the smallest time point which
+        $(D_PARAM TP) can represent or ends at the largest one, e.g.
+        $(D "20030115/"); unlike $(LREF PosInfInterval) and
+        $(LREF NegInfInterval), the interval remains finite. Each value
+        in a duration must be within the range which its unit can hold
+        (e.g. hours are at most 23), so a larger span must be expressed with
+        the next larger designator, e.g. $(D "P1DT12H") rather than
+        $(D "PT36H").
+
+        Params:
+            isoString = The ISO 8601 interval string in the basic format.
+
+        Throws:
+            $(REF DateTimeException,std,datetime,date) if
+            $(D_PARAM isoString) is not a valid ISO 8601 interval, e.g. a
+            duration combined with an omitted time point, or if the
+            resulting interval would have an end point which precedes its
+            begin point.
+      +/
+    static Interval fromISOString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInterval!false(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = Interval!Date.fromISOString("20030115/P1M");
+        assert(interval == Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+
+        // An omitted side means that it is unknown and extends as far as
+        // the time point can represent.
+        auto open = Interval!Date.fromISOString("20030115/");
+        assert(open == Interval!Date(Date(2003, 1, 15), Date.max));
+    }
+
+    /++
+        Creates an $(LREF Interval) from an ISO 8601 interval string in the
+        extended format, e.g. $(D "2003-01-15/P1M"). For the basic format,
+        e.g. $(D "20030115/P1M"), use $(LREF fromISOString).
+
+        The string consists of two time points or of a time point and a
+        duration separated by a slash, where the duration may be on either
+        side of the slash. If the duration is on the left, then the interval
+        ends at the time point on the right, e.g. $(D "P1M/2003-02-15")
+        represents the month which precedes February 15th, 2003. Per
+        ISO 8601, either side may be omitted to indicate that it is unknown,
+        in which case the interval begins at the smallest time point which
+        $(D_PARAM TP) can represent or ends at the largest one, e.g.
+        $(D "2003-01-15/"); unlike $(LREF PosInfInterval) and
+        $(LREF NegInfInterval), the interval remains finite. Each value
+        in a duration must be within the range which its unit can hold
+        (e.g. hours are at most 23), so a larger span must be expressed with
+        the next larger designator, e.g. $(D "P1DT12H") rather than
+        $(D "PT36H").
+
+        Params:
+            isoString = The ISO 8601 interval string in the extended format.
+
+        Throws:
+            $(REF DateTimeException,std,datetime,date) if
+            $(D_PARAM isoString) is not a valid ISO 8601 interval, e.g. a
+            duration combined with an omitted time point, or if the
+            resulting interval would have an end point which precedes its
+            begin point.
+      +/
+    static Interval fromISOExtString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInterval!true(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = Interval!Date.fromISOExtString("2003-01-15/P1M");
+        assert(interval == Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+
+        auto open = Interval!Date.fromISOExtString("2003-01-15/");
+        assert(open == Interval!Date(Date(2003, 1, 15), Date.max));
+    }
+
 private:
+    /++
+        Implements fromISOString and fromISOExtString, with extended
+        selecting the format in which the time points are parsed.
+      +/
+    static Interval parseISOInterval(bool extended, S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        import std.conv : text, to;
+        import std.string : indexOf;
+
+        enum funcName = extended ? "Interval.fromISOExtString"
+                                 : "Interval.fromISOString";
+
+        auto str = to!string(isoString);
+
+        TP parseTimePoint(scope const string s)
+        {
+            static if (extended)
+                return TP.fromISOExtString(s);
+            else
+                return TP.fromISOString(s);
+        }
+
+        immutable slash = str.indexOf('/');
+        enforce!DateTimeException(slash != -1,
+            text("Invalid format for ", funcName, ": ", isoString,
+                 "; it contains no '/' separating the begin and end points."));
+
+        auto lhs = str[0 .. slash];
+        auto rhs = str[slash + 1 .. $];
+
+        // A duration may be on either side of the slash but not on both,
+        // since two durations do not identify an interval, and neither may
+        // it be combined with an omitted side, since there is no time point
+        // to which it could be applied.
+        if (lhs.length > 0 && lhs[0] == 'P')
+        {
+            enforce!DateTimeException(rhs.length > 0,
+                text("Invalid format for ", funcName, ": ", isoString,
+                     "; a duration cannot be combined with an omitted end point."));
+
+            immutable end = parseTimePoint(rhs);
+            return Interval(applyISODuration(end, parseISODuration(lhs), true), end);
+        }
+
+        if (rhs.length > 0 && rhs[0] == 'P')
+        {
+            enforce!DateTimeException(lhs.length > 0,
+                text("Invalid format for ", funcName, ": ", isoString,
+                     "; a duration cannot be combined with an omitted begin point."));
+
+            immutable begin = parseTimePoint(lhs);
+            return Interval(begin, applyISODuration(begin, parseISODuration(rhs)));
+        }
+
+        // Per ISO 8601, an omitted side means that it is unknown; it is
+        // represented by the smallest or largest time point which TP can
+        // represent, so that the interval extends as far as it can.
+        immutable begin = lhs.length == 0 ? TP.min : parseTimePoint(lhs);
+        immutable end = rhs.length == 0 ? TP.max : parseTimePoint(rhs);
+        return Interval(begin, end);
+    }
+
     /+
         Throws:
             $(REF DateTimeException,std,datetime,date) if this interval is
@@ -3146,6 +3399,601 @@ private:
     assert(iInterval.toString());
 }
 
+// Test Interval.fromISOString and Interval.fromISOExtString with ISO 8601
+// interval examples.
+@safe unittest
+{
+    import std.datetime.date;
+    import std.datetime.systime : SysTime;
+    import std.datetime.timezone : SimpleTimeZone;
+
+    // "P1M" is one month, whereas "PT1M" is one minute.
+    assert(Interval!Date.fromISOString("20030115/P1M") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOExtString("2003-01-15/P1M") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+    assert(Interval!DateTime.fromISOString("20030115T120000/PT1M") ==
+           Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 1)));
+    assert(Interval!DateTime.fromISOExtString("2003-01-15T12:00:00/PT1M") ==
+           Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 1)));
+
+    // Like TimeOfDay, hours are at most 23, so a span of thirty-six hours
+    // must be expressed as "P1DT12H" rather than as "PT36H".
+    assertThrown!DateTimeException(
+        Interval!DateTime.fromISOString("20070101T000000/PT36H"));
+    assertThrown!DateTimeException(
+        Interval!DateTime.fromISOExtString("2007-01-01T00:00:00/PT36H"));
+    assert(Interval!DateTime.fromISOString("20070101T000000/P1DT12H") ==
+           Interval!DateTime(DateTime(2007, 1, 1), DateTime(2007, 1, 2, 12, 0)));
+    assert(Interval!DateTime.fromISOExtString("2007-01-01T00:00:00/P1DT12H") ==
+           Interval!DateTime(DateTime(2007, 1, 1), DateTime(2007, 1, 2, 12, 0)));
+
+    // "P3Y6M4DT12H30M5S" is an example of the full duration format.
+    assert(Interval!DateTime.fromISOString("20000101T000000/P3Y6M4DT12H30M5S") ==
+           Interval!DateTime(DateTime(2000, 1, 1), DateTime(2003, 7, 5, 12, 30, 5)));
+    assert(Interval!DateTime.fromISOExtString("2000-01-01T00:00:00/P3Y6M4DT12H30M5S") ==
+           Interval!DateTime(DateTime(2000, 1, 1), DateTime(2003, 7, 5, 12, 30, 5)));
+
+    // "PT0S" and "P0D" both represent zero, rendering the interval empty.
+    assert(Interval!Date.fromISOString("20100101/PT0S").empty);
+    assert(Interval!Date.fromISOExtString("2010-01-01/PT0S").empty);
+    assert(Interval!Date.fromISOString("20100101/P0D").empty);
+    assert(Interval!Date.fromISOExtString("2010-01-01/P0D").empty);
+    assert(Interval!Date.fromISOString("P0D/20100101").empty);
+    assert(Interval!Date.fromISOExtString("P0D/2010-01-01").empty);
+
+    // The end point may be a time point instead of a duration.
+    assert(Interval!Date.fromISOString("20030115/20030215") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOExtString("2003-01-15/2003-02-15") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+
+    // A duration on the left side of the slash ends the interval at the time
+    // point on the right.
+    assert(Interval!Date.fromISOString("P1M/20030215") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOExtString("P1M/2003-02-15") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+
+    assert(Interval!DateTime.fromISOString("20030115T120000/20030115T121500") ==
+           Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 15)));
+    assert(Interval!DateTime.fromISOExtString("2003-01-15T12:00:00/2003-01-15T12:15:00") ==
+           Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 15)));
+
+    assert(Interval!SysTime.fromISOString("20030115T120000-0500/PT1M") ==
+           Interval!SysTime(SysTime(DateTime(2003, 1, 15, 12, 0),
+                                    new immutable SimpleTimeZone(dur!"hours"(-5))),
+                            SysTime(DateTime(2003, 1, 15, 12, 1),
+                                    new immutable SimpleTimeZone(dur!"hours"(-5)))));
+    assert(Interval!SysTime.fromISOExtString("2003-01-15T12:00:00+05:00/P1D") ==
+           Interval!SysTime(SysTime(DateTime(2003, 1, 15, 12, 0),
+                                    new immutable SimpleTimeZone(dur!"hours"(5))),
+                            SysTime(DateTime(2003, 1, 16, 12, 0),
+                                    new immutable SimpleTimeZone(dur!"hours"(5)))));
+
+    // Per ISO 8601, an omitted side means that it is unknown; the interval
+    // extends to the smallest or largest time point which TP can represent.
+    assert(Interval!Date.fromISOString("20030115/") ==
+           Interval!Date(Date(2003, 1, 15), Date.max));
+    assert(Interval!Date.fromISOExtString("2003-01-15/") ==
+           Interval!Date(Date(2003, 1, 15), Date.max));
+    assert(Interval!Date.fromISOString("/20030215") ==
+           Interval!Date(Date.min, Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOExtString("/2003-02-15") ==
+           Interval!Date(Date.min, Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOString("/") ==
+           Interval!Date(Date.min, Date.max));
+    assert(Interval!DateTime.fromISOExtString("/") ==
+           Interval!DateTime(DateTime.min, DateTime.max));
+
+    // Invalid strings.
+    assertThrown!DateTimeException(Interval!Date.fromISOString(""));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("20030115"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("/P1M"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("P1M/"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("x/P1M"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("P1M/P2M"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("20030115/PX"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("P1M/x"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("20030215/20030115"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("20030115/20030215/20030315"));
+
+    // Durations which would overflow a time point's year are rejected
+    // rather than wrapping around into a garbage interval.
+    assertThrown!DateTimeException(Interval!Date.fromISOString("30000101/P65535Y"));
+    assertThrown!DateTimeException(Interval!Date.fromISOString("P65535Y/30000101"));
+}
+
+// An ISO 8601 duration split into the parts which must be added to a time
+// point separately, since Duration cannot represent calendar months.
+private struct ISODuration
+{
+    long months;       // Includes years, since a year is always twelve months.
+    Duration duration; // The weeks, days, hours, minutes, and seconds.
+}
+
+/++
+    Parses an ISO 8601 duration (e.g. $(D "P3Y6M4DT12H30M5S")), returning its
+    calendar and absolute parts separately.
+
+    A designator is the letter which follows a number in a duration and
+    identifies its unit: 'Y' for years, 'M' for months or minutes, 'W' for
+    weeks, 'D' for days, 'H' for hours, and 'S' for seconds.
+
+    The designators must be in the order in which they appear in the format,
+    and each designator may occur at most once. $(D_PARAM 'M') indicates
+    months in the date portion but minutes in the time portion which begins
+    with $(D_PARAM 'T').
+
+    As with the date and time types in std.datetime, each value must be
+    within the range which its unit can hold (e.g. hours are at most 23), so
+    a larger span must be expressed with the next larger designator, e.g.
+    thirty-six hours must be written $(D "P1DT12H") rather than $(D "PT36H").
+
+    Params:
+        isoDuration = The ISO 8601 duration to parse.
+
+    Throws:
+        $(REF DateTimeException,std,datetime,date) if $(D_PARAM isoDuration)
+        is not a valid ISO 8601 duration.
+  +/
+private ISODuration parseISODuration(S)(scope const S isoDuration) @safe pure
+if (isSomeString!S)
+{
+    import std.conv : text, to;
+
+    auto str = to!string(isoDuration);
+
+    enforce!DateTimeException(str.length > 0 && str[0] == 'P',
+        text("Invalid ISO 8601 duration: ", isoDuration,
+             "; it does not begin with the 'P' which begins a duration."));
+
+    // The rank of each designator in the order in which ISO 8601 requires
+    // that it appear. Since the rank of each designator which is parsed must
+    // be greater than that of the one parsed before it, the designators are
+    // forced to be in the correct order with no duplicates.
+    enum : uint
+    {
+        rankYear = 1,
+        rankMonth = 2,
+        rankWeek = 3,
+        rankDay = 4,
+        rankTime = 5, // The 'T' which begins the time portion.
+        rankHour = 6,
+        rankMinute = 7,
+        rankSecond = 8
+    }
+
+    // Years are folded into the months, since a year is always twelve months,
+    // and everything but the months is tracked as a Duration.
+    long months;
+    Duration duration;
+    uint last;           // The rank of the previously parsed designator.
+    uint numDesignators;
+    bool timeReached;    // Whether the 'T' which begins the time portion was parsed.
+
+    for (size_t i = 1; i < str.length;)
+    {
+        if (str[i] == 'T')
+        {
+            enforce!DateTimeException(rankTime > last,
+                text("Invalid ISO 8601 duration: ", isoDuration,
+                     "; the 'T' which begins the time portion must come after the date",
+                     " portion and before the time designators, and it may occur only once."));
+
+            last = rankTime;
+            timeReached = true;
+            ++i;
+            continue;
+        }
+
+        // Each designator must be preceded by at least one digit.
+        long value;
+        size_t next = i;
+
+        while (next < str.length && str[next] >= '0' && str[next] <= '9')
+        {
+            // A longer value could overflow when converted to long.
+            enforce!DateTimeException(next - i < 18,
+                text("Invalid ISO 8601 duration: ", isoDuration,
+                     "; the value preceding a designator has too many digits to be represented."));
+
+            value = value * 10 + (str[next] - '0');
+            ++next;
+        }
+
+        enforce!DateTimeException(next > i,
+            text("Invalid ISO 8601 duration: ", isoDuration,
+                 "; a designator must be preceded by at least one digit."));
+        enforce!DateTimeException(next < str.length,
+            text("Invalid ISO 8601 duration: ", isoDuration,
+                 "; the digits are not followed by a designator."));
+
+        // The designator which follows the digits determines what they mean.
+        // Like the date and time types in std.datetime, each value is
+        // restricted to the range which its unit can hold (e.g. hours are at
+        // most 23), so a larger span must be expressed with the next larger
+        // designator (e.g. PT36H must be written P1DT12H).
+        uint rank;
+
+        switch (str[next])
+        {
+            // Date portion.
+            case 'Y':
+                // Date and DateTime represent years with 16 bits.
+                enforce!DateTimeException(value <= 65_535,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the number of years must be in the range 0 to 65,535."));
+
+                months += value * 12;
+                rank = rankYear;
+                break;
+
+            case 'M':
+                if (timeReached)
+                {
+                    enforce!DateTimeException(value <= TimeOfDay.maxMinute,
+                        text("Invalid ISO 8601 duration: ", isoDuration,
+                             "; the number of minutes must be in the range 0 to ",
+                             TimeOfDay.maxMinute, "."));
+
+                    duration += dur!"minutes"(value);
+                    rank = rankMinute;
+                }
+                else
+                {
+                    enforce!DateTimeException(value <= 12,
+                        text("Invalid ISO 8601 duration: ", isoDuration,
+                             "; the number of months must be in the range 0 to 12."));
+
+                    months += value;
+                    rank = rankMonth;
+                }
+                break;
+
+            case 'W':
+                enforce!DateTimeException(value <= 4,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the number of weeks must be in the range 0 to 4."));
+
+                duration += dur!"weeks"(value);
+                rank = rankWeek;
+                break;
+
+            case 'D':
+                enforce!DateTimeException(value <= 31,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the number of days must be in the range 0 to 31."));
+
+                duration += dur!"days"(value);
+                rank = rankDay;
+                break;
+
+            // Time portion.
+            case 'H':
+                enforce!DateTimeException(timeReached,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the 'H' designator belongs to the time portion and therefore",
+                         " requires a preceding 'T'."));
+                enforce!DateTimeException(value <= TimeOfDay.maxHour,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the number of hours must be in the range 0 to ",
+                         TimeOfDay.maxHour, "."));
+
+                duration += dur!"hours"(value);
+                rank = rankHour;
+                break;
+
+            case 'S':
+                enforce!DateTimeException(timeReached,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the 'S' designator belongs to the time portion and therefore",
+                         " requires a preceding 'T'."));
+                enforce!DateTimeException(value <= TimeOfDay.maxSecond,
+                    text("Invalid ISO 8601 duration: ", isoDuration,
+                         "; the number of seconds must be in the range 0 to ",
+                         TimeOfDay.maxSecond, "."));
+
+                duration += dur!"seconds"(value);
+                rank = rankSecond;
+                break;
+
+            default:
+                throw new DateTimeException(text("Invalid ISO 8601 duration: ",
+                    isoDuration, "; '", str[next],
+                    "' is not a valid ISO 8601 duration designator."));
+        }
+
+        enforce!DateTimeException(rank > last,
+            text("Invalid ISO 8601 duration: ", isoDuration,
+                 "; the rank of the '", str[next], "' designator (", rank,
+                 ") is not greater than the rank of the previously parsed designator (",
+                 last, ")."));
+
+        last = rank;
+        ++numDesignators;
+        i = next + 1;
+    }
+
+    // At least one designator is required, and if 'T' is present, then it must
+    // be followed by at least one designator in the time portion.
+    enforce!DateTimeException(numDesignators > 0,
+        text("Invalid ISO 8601 duration: ", isoDuration,
+             "; it contains no designators and values."));
+    enforce!DateTimeException(last != rankTime,
+        text("Invalid ISO 8601 duration: ", isoDuration,
+             "; the 'T' which begins the time portion is not followed by a time designator."));
+
+    // Date and  DateTime represent years as a 16-bit integer, so a duration
+    // exceeding that span could wrap silently and is rejected up front.
+    enum maxSpanMonths = 65_535 * 12 + 11;
+
+    enforce!DateTimeException(months <= maxSpanMonths,
+        text("Invalid ISO 8601 duration: ", isoDuration,
+             "; the duration exceeds the largest interval which a time point can represent."));
+
+    return ISODuration(months, duration);
+}
+
+/++
+    Adds an $(D ISODuration) to a time point, or subtracts it if
+    $(D_PARAM subtract) is $(D true).
+
+    Since $(REF Duration,core,time) cannot represent calendar months, the
+    months are added with $(D add!"months"), whereas the rest of the duration
+    is added or subtracted as a $(D Duration).
+
+    Params:
+        tp          = The time point to which the duration is applied.
+        isoDuration = The duration to add or subtract.
+        subtract    = Whether the duration is subtracted rather than added.
+  +/
+private TP applyISODuration(TP)(return scope const TP tp,
+                                const ISODuration isoDuration,
+                                bool subtract = false)
+{
+    auto retval = cast(TP) tp;
+    retval.add!"months"(subtract ? -isoDuration.months : isoDuration.months);
+    return subtract ? retval - isoDuration.duration : retval + isoDuration.duration;
+}
+
+// Test parseISODuration with ISO 8601 durations.
+@safe unittest
+{
+    import std.datetime.date;
+
+    assert(parseISODuration("P1M") == ISODuration(1, Duration.zero));
+    assert(parseISODuration("PT1M") == ISODuration(0, dur!"minutes"(1)));
+    assert(parseISODuration("P1M"w) == ISODuration(1, Duration.zero));
+
+    // Like TimeOfDay, hours are at most 23, so thirty-six hours must be
+    // expressed with a day designator rather than as PT36H.
+    assertThrown!DateTimeException(parseISODuration("PT36H"));
+    assert(parseISODuration("P1DT12H") == ISODuration(0, dur!"hours"(36)));
+
+    assert(parseISODuration("P3Y6M4DT12H30M5S") ==
+           ISODuration(42, dur!"days"(4) + dur!"hours"(12) +
+                           dur!"minutes"(30) + dur!"seconds"(5)));
+
+    assert(parseISODuration("P1W") == ISODuration(0, dur!"weeks"(1)));
+    assert(parseISODuration("P1DT1H1M1S") ==
+           ISODuration(0, dur!"days"(1) + dur!"hours"(1) +
+                           dur!"minutes"(1) + dur!"seconds"(1)));
+    assert(parseISODuration("P0001M") == ISODuration(1, Duration.zero));
+    assert(parseISODuration("PT0S") == ISODuration(0, Duration.zero));
+    assert(parseISODuration("P0D") == ISODuration(0, Duration.zero));
+
+    // The largest calendar span which Date and DateTime can represent is
+    // 65,535 years (a 16-bit year), so durations beyond it are rejected
+    // rather than wrapping around when they are applied.
+    assert(parseISODuration("P65535Y11M") == ISODuration(786_431, Duration.zero));
+    assertThrown!DateTimeException(parseISODuration("P65536Y"));
+    assertThrown!DateTimeException(parseISODuration("P786432M"));
+
+    // Each designator value must be within the range which its unit can hold.
+    foreach (invalid; ["P13M", "P5W", "P32D", "PT24H", "PT60M", "PT60S"])
+        assertThrown!DateTimeException(parseISODuration(invalid), invalid);
+
+    foreach (invalid; ["", "P", "PT", "X", "1M", "p1M", "P1M1M", "P1D1Y",
+                       "P1D1H", "P1S", "P1Y1S", "PT1M1H", "P1MT", "P1", "P.5D",
+                       "PT1.S", "P9999999999999999999D"])
+        assertThrown!DateTimeException(parseISODuration(invalid), invalid);
+
+    // The error message for an out-of-order designator includes the string
+    // and the ranks involved.
+    import std.exception : collectExceptionMsg;
+
+    assert(collectExceptionMsg!DateTimeException(parseISODuration("P1D1Y")) ==
+           "Invalid ISO 8601 duration: P1D1Y; the rank of the 'Y' designator" ~
+           " (1) is not greater than the rank of the previously parsed" ~
+           " designator (4).");
+
+    // The error messages explain the reason that each string is invalid.
+    assert(collectExceptionMsg!DateTimeException(parseISODuration("X")) ==
+           "Invalid ISO 8601 duration: X; it does not begin with the 'P'" ~
+           " which begins a duration.");
+
+    assert(collectExceptionMsg!DateTimeException(parseISODuration("P1X")) ==
+           "Invalid ISO 8601 duration: P1X; 'X' is not a valid ISO 8601" ~
+           " duration designator.");
+
+    assert(collectExceptionMsg!DateTimeException(parseISODuration("P1H")) ==
+           "Invalid ISO 8601 duration: P1H; the 'H' designator belongs to" ~
+           " the time portion and therefore requires a preceding 'T'.");
+
+    assert(collectExceptionMsg!DateTimeException(
+               Interval!Date.fromISOString("20030115")) ==
+           "Invalid format for Interval.fromISOString: 20030115; it contains" ~
+           " no '/' separating the begin and end points.");
+
+    assert(collectExceptionMsg!DateTimeException(
+               Interval!Date.fromISOString("P1M/")) ==
+           "Invalid format for Interval.fromISOString: P1M/; a duration" ~
+            " cannot be combined with an omitted end point.");
+
+    // applyISODuration adds or subtracts the parsed duration.
+    assert(applyISODuration(Date(2003, 1, 15), parseISODuration("P1M")) ==
+           Date(2003, 2, 15));
+    assert(applyISODuration(Date(2003, 2, 15), parseISODuration("P1M"), true) ==
+           Date(2003, 1, 15));
+    assert(applyISODuration(DateTime(2000, 1, 1),
+                            parseISODuration("P3Y6M4DT12H30M5S")) ==
+           DateTime(2003, 7, 5, 12, 30, 5));
+
+    const cDate = Date(2003, 2, 15);
+    immutable iDate = Date(2003, 2, 15);
+    assert(applyISODuration(cDate, parseISODuration("P1M"), true) == Date(2003, 1, 15));
+    assert(applyISODuration(iDate, parseISODuration("P1M"), true) == Date(2003, 1, 15));
+}
+
+// Test Interval.fromISOString and Interval.fromISOExtString with time
+// points which use signed years or UTC offsets.
+@safe unittest
+{
+    import std.datetime.date;
+    import std.datetime.systime : SysTime;
+    import std.datetime.timezone : SimpleTimeZone;
+
+    // A leading '-' is a signed year, not an extended-format separator.
+    assert(Interval!Date.fromISOString("-00040105/-00040205") ==
+           Interval!Date(Date(-4, 1, 5), Date(-4, 2, 5)));
+    assert(Interval!Date.fromISOExtString("-0004-01-05/-0004-02-05") ==
+           Interval!Date(Date(-4, 1, 5), Date(-4, 2, 5)));
+
+    // A '-' which follows the 'T' is the sign of a UTC offset. SysTime is
+    // the only time point which accepts UTC offsets.
+    assert(Interval!SysTime.fromISOString("20030115T120000-0500/PT1M") ==
+           Interval!SysTime(SysTime(DateTime(2003, 1, 15, 12, 0),
+                                    new immutable SimpleTimeZone(dur!"hours"(-5))),
+                            SysTime(DateTime(2003, 1, 15, 12, 1),
+                                    new immutable SimpleTimeZone(dur!"hours"(-5)))));
+    assert(Interval!SysTime.fromISOExtString("2003-01-15T12:00:00+05:00/PT1M") ==
+           Interval!SysTime(SysTime(DateTime(2003, 1, 15, 12, 0),
+                                    new immutable SimpleTimeZone(dur!"hours"(5))),
+                            SysTime(DateTime(2003, 1, 15, 12, 1),
+                                    new immutable SimpleTimeZone(dur!"hours"(5)))));
+
+    // Both halves of the string must use the same format.
+    assertThrown!DateTimeException(
+        Interval!Date.fromISOString("2003-01-15/20030215"));
+    assertThrown!DateTimeException(
+        Interval!Date.fromISOExtString("20030115/2003-02-15"));
+
+    // The underlying time point parsers accept leading and trailing
+    // whitespace.
+    assert(Interval!Date.fromISOString(" 20030115/20030215 ") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+    assert(Interval!Date.fromISOExtString(" 2003-01-15/2003-02-15 ") ==
+           Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)));
+
+    foreach (invalid; ["", "x", "2003_01_15", "20"])
+    {
+        assertThrown!DateTimeException(Interval!Date.fromISOString(invalid),
+                                       invalid);
+        assertThrown!DateTimeException(Interval!Date.fromISOExtString(invalid),
+                                       invalid);
+    }
+}
+
+// Test Interval's toISOString and toISOExtString.
+@safe unittest
+{
+    import std.datetime.date;
+    import std.datetime.systime : SysTime;
+    import std.datetime.timezone : SimpleTimeZone;
+
+    assert(Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)).toISOString() ==
+           "20030115/20030215");
+    assert(Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15)).toISOExtString() ==
+           "2003-01-15/2003-02-15");
+
+    assert(Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 1)).toISOString() ==
+           "20030115T120000/20030115T120100");
+    assert(Interval!DateTime(DateTime(2003, 1, 15, 12, 0),
+                             DateTime(2003, 1, 15, 12, 1)).toISOExtString() ==
+           "2003-01-15T12:00:00/2003-01-15T12:01:00");
+
+    // An empty interval has identical begin and end points.
+    assert(Interval!Date(Date(2003, 1, 15), Date(2003, 1, 15)).toISOString() ==
+           "20030115/20030115");
+
+    // A SysTime includes its UTC offset, which preserves the instant when
+    // the string is parsed again. Note that SysTime.toISOString emits the
+    // offset in the extended form (e.g. "-05:00") even in the basic format.
+    auto st = SysTime(DateTime(2003, 1, 15, 12, 0),
+                      new immutable SimpleTimeZone(dur!"hours"(-5)));
+    assert(Interval!SysTime(st, st + dur!"minutes"(1)).toISOString() ==
+           "20030115T120000-05:00/20030115T120100-05:00");
+    assert(Interval!SysTime(st, st + dur!"minutes"(1)).toISOExtString() ==
+           "2003-01-15T12:00:00-05:00/2003-01-15T12:01:00-05:00");
+
+    // const and immutable intervals can be converted.
+    const cInterval = Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15));
+    immutable iInterval = Interval!Date(Date(2003, 1, 15), Date(2003, 2, 15));
+    assert(cInterval.toISOString() == "20030115/20030215");
+    assert(iInterval.toISOExtString() == "2003-01-15/2003-02-15");
+
+    // Per ISO 8601, a begin or end point at TP.min or TP.max is omitted.
+    assert(Interval!Date(Date(2003, 1, 15), Date.max).toISOString() == "20030115/");
+    assert(Interval!Date(Date.min, Date(2003, 2, 15)).toISOString() == "/20030215");
+    assert(Interval!Date(Date.min, Date.max).toISOString() == "/");
+    assert(Interval!Date(Date(2003, 1, 15), Date.max).toISOExtString() == "2003-01-15/");
+    assert(Interval!Date(Date.min, Date(2003, 2, 15)).toISOExtString() == "/2003-02-15");
+    assert(Interval!Date(Date.min, Date.max).toISOExtString() == "/");
+
+    // Round-trip: parse, write, parse again, and compare. The open forms
+    // also round trip on the string level.
+    foreach (str; ["20030115/20030215", "P1M/20030215", "20030115/P1M",
+                   "20030115/20030315"])
+    {
+        auto interval = Interval!Date.fromISOString(str);
+        assert(Interval!Date.fromISOString(interval.toISOString()) == interval, str);
+    }
+
+    foreach (str; ["20030115/", "/20030215", "/"])
+    {
+        auto interval = Interval!Date.fromISOString(str);
+        assert(interval.toISOString() == str, str);
+        assert(Interval!Date.fromISOString(interval.toISOString()) == interval, str);
+    }
+
+    foreach (str; ["2003-01-15/", "/2003-02-15", "/"])
+    {
+        auto interval = Interval!Date.fromISOExtString(str);
+        assert(interval.toISOExtString() == str, str);
+        assert(Interval!Date.fromISOExtString(interval.toISOExtString()) == interval,
+               str);
+    }
+
+    foreach (str; ["2003-01-15/2003-02-15", "P1M/2003-02-15", "2003-01-15/P1M"])
+    {
+        auto interval = Interval!Date.fromISOExtString(str);
+        assert(Interval!Date.fromISOExtString(interval.toISOExtString()) == interval,
+               str);
+    }
+
+    foreach (str; ["20030115T120000/PT1M", "P1D/20030115T120000"])
+    {
+        auto interval = Interval!DateTime.fromISOString(str);
+        assert(Interval!DateTime.fromISOString(interval.toISOString()) == interval,
+               str);
+    }
+
+    // SysTime equality ignores the time zone, so the round trip preserves
+    // the instant even though the time zone becomes a SimpleTimeZone with
+    // the same offset.
+    foreach (str; ["20030115T120000-0500/PT1M", "P1D/20030115T120000+0500"])
+    {
+        auto interval = Interval!SysTime.fromISOString(str);
+        assert(Interval!SysTime.fromISOString(interval.toISOString()) == interval,
+               str);
+    }
+}
 
 /++
     Represents an interval of time which has positive infinity as its end point.
@@ -4153,7 +5001,121 @@ assert(!range.empty);
         return _toStringImpl();
     }
 
+    /++
+        Creates a $(LREF PosInfInterval) from an ISO 8601 interval string in
+        the basic format with an omitted end point, e.g. $(D "20030115/").
+        Per ISO 8601, an omitted end point means that the interval has no
+        known end, which is represented by positive infinity. For the
+        extended format, e.g. $(D "2003-01-15/"), use
+        $(D fromISOExtString).
+      +/
+    static PosInfInterval fromISOString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInfInterval!false(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = PosInfInterval!Date.fromISOString("20030115/");
+        assert(interval == PosInfInterval!Date(Date(2003, 1, 15)));
+    }
+
+    /++
+        Creates a $(LREF PosInfInterval) from an ISO 8601 interval string in
+        the extended format with an omitted end point, e.g.
+        $(D "2003-01-15/"). Per ISO 8601, an omitted end point means that
+        the interval has no known end, which is represented by positive
+        infinity. For the basic format, e.g. $(D "20030115/"), use
+        $(D fromISOString).
+      +/
+    static PosInfInterval fromISOExtString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInfInterval!true(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = PosInfInterval!Date.fromISOExtString("2003-01-15/");
+        assert(interval == PosInfInterval!Date(Date(2003, 1, 15)));
+    }
+
+    /++
+        Converts this $(LREF PosInfInterval) to a string consisting of the
+        begin time point in the basic ISO 8601 format followed by a slash,
+        e.g. $(D "20030115/"). Per ISO 8601, an omitted end point means that
+        the interval has no known end.
+      +/
+    string toISOString() const @safe nothrow
+    {
+        return _begin.toISOString() ~ "/";
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        assert(PosInfInterval!Date(Date(2003, 1, 15)).toISOString() == "20030115/");
+    }
+
+    /++
+        Converts this $(LREF PosInfInterval) to a string consisting of the
+        begin time point in the extended ISO 8601 format followed by a
+        slash, e.g. $(D "2003-01-15/"). Per ISO 8601, an omitted end point
+        means that the interval has no known end.
+      +/
+    string toISOExtString() const @safe nothrow
+    {
+        return _begin.toISOExtString() ~ "/";
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        assert(PosInfInterval!Date(Date(2003, 1, 15)).toISOExtString() == "2003-01-15/");
+    }
+
 private:
+
+    /++
+        Implements fromISOString and fromISOExtString, with extended
+        selecting the format in which the begin time point is parsed.
+      +/
+    static PosInfInterval parseISOInfInterval(bool extended, S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        import std.conv : text, to;
+        import std.string : indexOf;
+
+        enum funcName = extended ? "PosInfInterval.fromISOExtString"
+                                 : "PosInfInterval.fromISOString";
+
+        auto str = to!string(isoString);
+
+        immutable slash = str.indexOf('/');
+        enforce!DateTimeException(slash > 0,
+            text("Invalid format for ", funcName, ": ", isoString,
+                 "; it has no begin time point before the '/'."));
+        enforce!DateTimeException(slash == str.length - 1,
+            text("Invalid format for ", funcName, ": ", isoString,
+                 "; the end point must be omitted after the '/', since the",
+                 " interval has no known end."));
+
+        static if (extended)
+            return PosInfInterval(TP.fromISOExtString(str[0 .. slash]));
+        else
+            return PosInfInterval(TP.fromISOString(str[0 .. slash]));
+    }
 
     /+
         Since we have two versions of toString(), we have _toStringImpl()
@@ -5356,6 +6318,54 @@ private:
     assert(iPosInfInterval.toString());
 }
 
+// Test PosInfInterval's fromISOString, fromISOExtString, toISOString and
+// toISOExtString.
+@safe unittest
+{
+    import std.datetime.date;
+
+    assert(PosInfInterval!Date.fromISOString("20030115/") ==
+           PosInfInterval!Date(Date(2003, 1, 15)));
+    assert(PosInfInterval!Date.fromISOExtString("2003-01-15/") ==
+           PosInfInterval!Date(Date(2003, 1, 15)));
+
+    assert(PosInfInterval!Date(Date(2003, 1, 15)).toISOString() == "20030115/");
+    assert(PosInfInterval!Date(Date(2003, 1, 15)).toISOExtString() == "2003-01-15/");
+
+    const cInterval = PosInfInterval!Date(Date(2003, 1, 15));
+    immutable iInterval = PosInfInterval!Date(Date(2003, 1, 15));
+    assert(cInterval.toISOString() == "20030115/");
+    assert(iInterval.toISOExtString() == "2003-01-15/");
+
+    // Round-trip: parse, write, parse again, and compare.
+    foreach (str; ["20030115/", "-00040105/"])
+    {
+        auto interval = PosInfInterval!Date.fromISOString(str);
+        assert(PosInfInterval!Date.fromISOString(interval.toISOString()) ==
+               interval, str);
+    }
+
+    auto dtInterval = PosInfInterval!DateTime.fromISOString("20100101T120000/");
+    assert(PosInfInterval!DateTime.fromISOString(dtInterval.toISOString()) ==
+           dtInterval);
+
+    foreach (str; ["2003-01-15/"])
+    {
+        auto interval = PosInfInterval!Date.fromISOExtString(str);
+        assert(PosInfInterval!Date.fromISOExtString(interval.toISOExtString()) ==
+               interval, str);
+    }
+
+    auto dtExtInterval = PosInfInterval!DateTime.fromISOExtString("2010-01-01T12:00:00/");
+    assert(PosInfInterval!DateTime.fromISOExtString(dtExtInterval.toISOExtString()) ==
+           dtExtInterval);
+
+    foreach (invalid; ["", "20030115", "/20030115", "20030115/20030215",
+                       "2003-01-15/", "P1M/"])
+        assertThrown!DateTimeException(PosInfInterval!Date.fromISOString(invalid),
+                                       invalid);
+}
+
 
 /++
     Represents an interval of time which has negative infinity as its starting
@@ -6377,7 +7387,118 @@ assert(!range.empty);
         return _toStringImpl();
     }
 
+    /++
+        Creates a $(LREF NegInfInterval) from an ISO 8601 interval string in
+        the basic format with an omitted begin point, e.g.
+        $(D "/20030215"). Per ISO 8601, an omitted begin point means that
+        the interval has no known begin, which is represented by negative
+        infinity. For the extended format, e.g. $(D "/2003-02-15"), use
+        $(D fromISOExtString).
+      +/
+    static NegInfInterval fromISOString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInfInterval!false(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = NegInfInterval!Date.fromISOString("/20030215");
+        assert(interval == NegInfInterval!Date(Date(2003, 2, 15)));
+    }
+
+    /++
+        Creates a $(LREF NegInfInterval) from an ISO 8601 interval string in
+        the extended format with an omitted begin point, e.g.
+        $(D "/2003-02-15"). Per ISO 8601, an omitted begin point means that
+        the interval has no known begin, which is represented by negative
+        infinity. For the basic format, e.g. $(D "/20030215"), use
+        $(D fromISOString).
+      +/
+    static NegInfInterval fromISOExtString(S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        return parseISOInfInterval!true(isoString);
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        auto interval = NegInfInterval!Date.fromISOExtString("/2003-02-15");
+        assert(interval == NegInfInterval!Date(Date(2003, 2, 15)));
+    }
+
+    /++
+        Converts this $(LREF NegInfInterval) to a string consisting of the
+        end time point in the basic ISO 8601 format preceded by a slash,
+        e.g. $(D "/20030215"). Per ISO 8601, an omitted begin point means
+        that the interval has no known begin.
+      +/
+    string toISOString() const @safe nothrow
+    {
+        return "/" ~ _end.toISOString();
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        assert(NegInfInterval!Date(Date(2003, 2, 15)).toISOString() == "/20030215");
+    }
+
+    /++
+        Converts this $(LREF NegInfInterval) to a string consisting of the
+        end time point in the extended ISO 8601 format preceded by a slash,
+        e.g. $(D "/2003-02-15"). Per ISO 8601, an omitted begin point means
+        that the interval has no known begin.
+      +/
+    string toISOExtString() const @safe nothrow
+    {
+        return "/" ~ _end.toISOExtString();
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.datetime.date;
+
+        assert(NegInfInterval!Date(Date(2003, 2, 15)).toISOExtString() == "/2003-02-15");
+    }
+
 private:
+
+    /++
+        Implements fromISOString and fromISOExtString, with extended
+        selecting the format in which the end time point is parsed.
+      +/
+    static NegInfInterval parseISOInfInterval(bool extended, S)(scope const S isoString) @safe
+    if (isSomeString!S)
+    {
+        import std.conv : text, to;
+        import std.string : indexOf;
+
+        enum funcName = extended ? "NegInfInterval.fromISOExtString"
+                                 : "NegInfInterval.fromISOString";
+
+        auto str = to!string(isoString);
+
+        immutable slash = str.indexOf('/');
+        enforce!DateTimeException(slash == 0,
+            text("Invalid format for ", funcName, ": ", isoString,
+                 "; it must consist of '/' followed by the end time point,",
+                 " since the interval has no known begin."));
+
+        static if (extended)
+            return NegInfInterval(TP.fromISOExtString(str[1 .. $]));
+        else
+            return NegInfInterval(TP.fromISOString(str[1 .. $]));
+    }
 
     /+
         Since we have two versions of toString(), we have _toStringImpl()
@@ -7588,6 +8709,54 @@ private:
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     assert(cNegInfInterval.toString());
     assert(iNegInfInterval.toString());
+}
+
+// Test NegInfInterval's fromISOString, fromISOExtString, toISOString and
+// toISOExtString.
+@safe unittest
+{
+    import std.datetime.date;
+
+    assert(NegInfInterval!Date.fromISOString("/20030215") ==
+           NegInfInterval!Date(Date(2003, 2, 15)));
+    assert(NegInfInterval!Date.fromISOExtString("/2003-02-15") ==
+           NegInfInterval!Date(Date(2003, 2, 15)));
+
+    assert(NegInfInterval!Date(Date(2003, 2, 15)).toISOString() == "/20030215");
+    assert(NegInfInterval!Date(Date(2003, 2, 15)).toISOExtString() == "/2003-02-15");
+
+    const cInterval = NegInfInterval!Date(Date(2003, 2, 15));
+    immutable iInterval = NegInfInterval!Date(Date(2003, 2, 15));
+    assert(cInterval.toISOString() == "/20030215");
+    assert(iInterval.toISOExtString() == "/2003-02-15");
+
+    // Round-trip: parse, write, parse again, and compare.
+    foreach (str; ["/20030215", "/-00040205"])
+    {
+        auto interval = NegInfInterval!Date.fromISOString(str);
+        assert(NegInfInterval!Date.fromISOString(interval.toISOString()) ==
+               interval, str);
+    }
+
+    auto dtInterval = NegInfInterval!DateTime.fromISOString("/20100101T120000");
+    assert(NegInfInterval!DateTime.fromISOString(dtInterval.toISOString()) ==
+           dtInterval);
+
+    foreach (str; ["/2003-02-15"])
+    {
+        auto interval = NegInfInterval!Date.fromISOExtString(str);
+        assert(NegInfInterval!Date.fromISOExtString(interval.toISOExtString()) ==
+               interval, str);
+    }
+
+    auto dtExtInterval = NegInfInterval!DateTime.fromISOExtString("/2010-01-01T12:00:00");
+    assert(NegInfInterval!DateTime.fromISOExtString(dtExtInterval.toISOExtString()) ==
+           dtExtInterval);
+
+    foreach (invalid; ["", "20030215", "20030215/", "/20030115/20030215",
+                       "/2003-02-15", "/P1M"])
+        assertThrown!DateTimeException(NegInfInterval!Date.fromISOString(invalid),
+                                       invalid);
 }
 
 
