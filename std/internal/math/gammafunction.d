@@ -567,6 +567,11 @@ real logGamma(real x)
             {
                 if ( x == 0.0L )
                     return real.infinity;
+                // For subnormal x the correction to -log(|x|) is negligible,
+                // but forming the reciprocal can overflow. Keep the recurrence
+                // factor in logarithmic form as well.
+                if (fabs(x) < real.min_normal)
+                    return log(fabs(z)) - log(fabs(x));
                 if ( x < 0.0L )
                 {
                     x = -x;
@@ -608,8 +613,7 @@ real logGamma(real x)
     assert(logGamma(-50.0) == real.infinity);
     assert(isIdentical(0.0L, logGamma(1.0L)));
     assert(isIdentical(0.0L, logGamma(2.0L)));
-    assert(logGamma(real.min_normal*real.epsilon) == real.infinity);
-    assert(logGamma(-real.min_normal*real.epsilon) == real.infinity);
+    assert(logGamma(-0.0L) == real.infinity);
 
     // x, correct loggamma(x), correct d/dx loggamma(x).
     immutable static real[] testpoints = [
@@ -646,6 +650,28 @@ real logGamma(real x)
         assert(feqrel(logGamma(1500.0L),log(gamma(1500.0L))) > real.mant_dig-2);
     else static if (real.mant_dig >= 53) // incl. 64-bit reals
         assert(feqrel(logGamma(150.0L),log(gamma(150.0L))) > real.mant_dig-2);
+}
+
+
+@safe unittest
+{
+    // Gamma(x) can overflow for nonzero subnormal x even though logGamma(x)
+    // is finite. At these magnitudes logGamma(x) rounds to -log(|x|).
+    foreach (exponent; [real.min_exp - real.mant_dig,
+                       real.min_exp - real.mant_dig + 1,
+                       real.min_exp - 3, real.min_exp - 2, real.min_exp - 1])
+    {
+        const x = ldexp(1.0L, exponent);
+        const expected = -exponent * LN2;
+        assert(isClose(logGamma(x), expected, 4 * real.epsilon));
+        assert(isClose(logGamma(-x), expected, 4 * real.epsilon));
+    }
+    foreach (x; [nextDown(real.min_normal), real.min_normal,
+                 nextUp(real.min_normal), 1 / real.max])
+    {
+        assert(isClose(logGamma(x), -log(x), 4 * real.epsilon));
+        assert(isClose(logGamma(-x), -log(x), 4 * real.epsilon));
+    }
 }
 
 
