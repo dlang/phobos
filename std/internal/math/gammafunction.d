@@ -262,7 +262,29 @@ real igammaTemmeLarge(real a, real x, bool compl)
         return compl ? 1.0L : 0.0L;
 
     real sigma = (x - a) / a;
-    real phi = sigma - log1p(sigma);
+    real phi;
+    if (fabs(sigma) < sqrt(real.epsilon))
+    {
+        // The omitted terms contribute less than real.epsilon relative error.
+        phi = sigma*sigma*(0.5L - sigma/3);
+    }
+    else if (fabs(sigma) < 0.125L)
+    {
+        // With t = sigma/(2 + sigma), log1p(sigma) is
+        // 2*t*(1 + t*t/3 + t^^4/5 + ...). Since sigma - 2*t = sigma*t,
+        // evaluate the difference without subtracting nearly equal values.
+        // Here |t| < 1/15; each additional term gains more than seven bits.
+        static immutable coefficients = () {
+            real[(real.mant_dig + 7) / 7] c;
+            foreach (i, ref value; c)
+                value = 1.0L / (2*i + 3);
+            return c;
+        }();
+        const t = sigma / (2 + sigma);
+        phi = sigma*t - 2*t*t*t*poly(t*t, coefficients);
+    }
+    else
+        phi = sigma - log1p(sigma);
 
     real y = a * phi;
     real z = sqrt(2 * phi);
@@ -309,7 +331,74 @@ real igammaTemmeLarge(real a, real x, bool compl)
         feqrel(igammaTemmeLarge(1e6, 1e6 + 1.0, true), 0.49946_80772_57932_46L) >= double.mant_dig);
 }
 
+@safe unittest
+{
+    // Reference values from the incomplete-gamma power series, evaluated with
+    // 90 decimal digits. Exercise both sides of the |sigma| = 1/8 boundary
+    // and points close to the mean.
+    static immutable real[4][] cases = [
+        [128.0L, 112.0L - 0x1p-40L,
+            0.073799990396852125679272877708L, 0.926200009603147874320727122292L],
+        [128.0L, 112.0L,
+            0.073799990396864415822822315529L, 0.926200009603135584177177684471L],
+        [128.0L, 112.0L + 0x1p-40L,
+            0.073799990396876705966371754848L, 0.926200009603123294033628245152L],
+        [128.0L, 144.0L - 0x1p-40L,
+            0.917494862620685237892245148565L, 0.082505137379314762107754851435L],
+        [128.0L, 144.0L,
+            0.917494862620696548375251714729L, 0.082505137379303451624748285271L],
+        [128.0L, 144.0L + 0x1p-40L,
+            0.917494862620707858858258279679L, 0.082505137379292141141741720321L],
+        [1e6L, 999999.0L,
+            0.499734038380735538321168353054L, 0.500265961619264461678831646946L],
+        [1e6L, 1e6L,
+            0.500132980760872591244322817503L, 0.499867019239127408755677182497L],
+        [1e6L, 1000001.0L,
+            0.500531922742067563236931310351L, 0.499468077257932436763068689649L],
+        // Straddle the cubic-expansion cutoff for 64- and 53-bit mantissas.
+        [1e6L, 1e6L + 0x1p-12L,
+            0.500133078158882138983839857909L, 0.499866921841117861016160142091L],
+        [1e6L, 1e6L + 0x1p-11L,
+            0.500133175556891662938740608524L, 0.499866824443108337061259391476L],
+        [1e6L, 1e6L + 0x1p-7L,
+            0.500136097497166292944592413730L, 0.499863902502833707055407586270L],
+        [1e6L, 1e6L + 0x1p-6L,
+            0.500139214233435454912369485690L, 0.499860785766564545087630514310L],
+    ];
+    foreach (c; cases)
+    {
+        assert(isClose(igammaTemmeLarge(c[0], c[1], false), c[2], 4e-15L));
+        assert(isClose(igammaTemmeLarge(c[0], c[1], true), c[3], 4e-15L));
+    }
+}
+
 } // private
+
+@safe unittest
+{
+    // At one standard deviation from the mean, the first correction to the
+    // normal limit vanishes. For a = 2^100 the remaining error is O(2^-100),
+    // well below the tolerance. All inputs are exactly representable even
+    // when real has only a 53-bit mantissa.
+    enum real a = 0x1p100L;
+    enum real lower = 0.158655253931457051414767454368L;
+    enum real upper = 0.841344746068542948585232545632L;
+    assert(isClose(gammaIncomplete(a, a - 0x1p50L), lower, 4e-15L));
+    assert(isClose(gammaIncompleteCompl(a, a - 0x1p50L), upper, 4e-15L));
+    assert(isClose(gammaIncomplete(a, a + 0x1p50L), upper, 4e-15L));
+    assert(isClose(gammaIncompleteCompl(a, a + 0x1p50L), lower, 4e-15L));
+
+    // Regression for issue 11106: adjacent arguments must retain their
+    // displacement from the mean. The linear normal approximation with its
+    // leading skew correction is accurate well beyond this tolerance here.
+    enum real shape = 1e20L;
+    foreach (x; [nextDown(shape), shape, nextUp(shape)])
+    {
+        const q = 0.5L - (x - shape + 1.0L/3) / sqrt(2*PI*shape);
+        assert(isClose(gammaIncomplete(shape, x), 1 - q, 4e-15L));
+        assert(isClose(gammaIncompleteCompl(shape, x), q, 4e-15L));
+    }
+}
 
 public:
 /// The maximum value of x for which gamma(x) < real.infinity.
