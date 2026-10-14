@@ -1997,7 +1997,7 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     if (x < UF)
     {
         // Retain values above half the smallest subnormal that round up.
-        if (x < T.min_exp - T.mant_dig - 1)
+        if (x <= T.min_exp - T.mant_dig - 1)
             return 0.0;
 
         // Compute a normal intermediate, then round into the subnormal
@@ -2122,10 +2122,16 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
         const T halfExponent = minExponent - 1;
         assert(isIdentical(exp2Impl(nextDown(halfExponent)), cast(T) 0));
         assert(isIdentical(exp2Impl!T(halfExponent), cast(T) 0));
-        assert(exp2Impl(nextUp(halfExponent)) == smallest);
-        assert(exp2Impl(cast(T) (minExponent - 0.5L)) == smallest);
-        assert(exp2Impl(cast(T) (minExponent + 0.5L)) == smallest);
-        assert(exp2Impl(cast(T) (minExponent + 1.5L)) == 3 * smallest);
+        // Store the results in T before checking subnormal rounding;
+        // x87 registers can retain excess precision for float and double.
+        T[4] rounded = [exp2Impl(nextUp(halfExponent)),
+            exp2Impl(cast(T) (minExponent - 0.5L)),
+            exp2Impl(cast(T) (minExponent + 0.5L)),
+            exp2Impl(cast(T) (minExponent + 1.5L))];
+        assert(rounded[0] == smallest);
+        assert(rounded[1] == smallest);
+        assert(rounded[2] == smallest);
+        assert(rounded[3] == 3 * smallest);
     }}
 }
 
