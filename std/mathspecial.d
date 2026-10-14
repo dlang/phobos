@@ -315,6 +315,54 @@ do
     assert(betaIncomplete(1, NaN(0x3), -NaN(0x3)) is -NaN(0x3));
 }
 
+@safe unittest
+{
+    // https://github.com/dlang/phobos/issues/11111
+    import std.math : fabs, ldexp;
+
+    const quantum = real.min_normal * real.epsilon;
+    foreach (x; [quantum, real.min_normal / 16, 1 / real.max,
+                 real.min_normal / 2, real.min_normal])
+    {
+        assert(betaIncomplete(1, 1, x) == x);
+
+        // I_x(1, b) = 1 - (1-x)^^b = b*x + O(x^^2).
+        foreach (b; [0.5L, 2.0L, 10.0L])
+        {
+            const expected = b * x;
+            assert(fabs(betaIncomplete(1, b, x) - expected)
+                <= 32 * real.epsilon * expected + quantum);
+        }
+    }
+
+    // Exact powers of two avoid rounding the independent reference powers.
+    // I_x(2, 2) = 3*x^^2 - 2*x^^3; I_x(3, 2) = 4*x^^3 - 3*x^^4.
+    // The higher powers are negligible at these inputs.
+    foreach (a; [2, 3])
+    {
+        const exponent = (real.min_exp - 1) / a - 2;
+        const x = ldexp(1.0L, exponent);
+        const expected = ldexp(cast(real) (a + 1), a * exponent);
+        assert(fabs(betaIncomplete(a, 2, x) - expected)
+            <= 32 * real.epsilon * expected + quantum);
+    }
+
+    // x^^2 rounds to zero or loses precision before normalization, but
+    // I_x(2, 100) = 5050*x^^2 + O(x^^3) is still representable.
+    const exponent = (real.min_exp - real.mant_dig) / 2 - 1;
+    const x = ldexp(1.0L, exponent);
+    const expected = ldexp(5050.0L, 2 * exponent);
+    assert(expected > 0);
+    assert(fabs(betaIncomplete(2, 100, x) - expected) <= quantum);
+
+    // A nonintegral shape whose power is exactly representable and subnormal.
+    const halfExponent = (real.min_exp - 1) / 3 - 1;
+    const fractionalX = ldexp(1.0L, 2 * halfExponent);
+    const fractionalExpected = ldexp(1.0L, 3 * halfExponent);
+    assert(fabs(betaIncomplete(1.5L, 1, fractionalX) - fractionalExpected)
+        <= 8 * real.epsilon * fractionalExpected + quantum);
+}
+
 /** Regularized incomplete beta function complement $(SUB I$(SUP C), x)(a,b)
  *
  * Mathematically, if a $(GT) 0, b $(GT) 0, and 0 $(LE) x $(LE) 1, then
