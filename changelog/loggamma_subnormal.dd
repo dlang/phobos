@@ -1,0 +1,7 @@
+logGamma returns finite results for nonzero subnormal arguments
+
+$(REF logGamma, std, mathspecial) previously returned infinity for sufficiently
+small nonzero arguments because an intermediate reciprocal overflowed. The
+function now evaluates subnormal arguments in logarithmic form, preserving
+finite results for both positive and negative inputs. Positive and negative
+zero still return positive infinity.
