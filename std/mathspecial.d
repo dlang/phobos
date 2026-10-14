@@ -362,6 +362,8 @@ in
 out(i; isNaN(i) || (i >=0 && i <= 1))
 do
 {
+    if (x < 0.05L)
+        return std.internal.math.gammafunction.betaIncompleteComplSmallX(a, b, x);
     return std.internal.math.gammafunction.betaIncomplete(b, a, 1-x);
 }
 
@@ -369,6 +371,70 @@ do
 @safe unittest
 {
     assert(betaIncompleteCompl(.1, .2, 0) == betaIncomplete(.2, .1, 1));
+}
+
+@safe unittest
+{
+    // For b == 1, the complement is 1 - x^^a. Check inputs lost or
+    // distorted by forming 1-x, including both sides of its rounding boundary.
+    const a = 0.01L;
+    enum referenceEpsilon = real.epsilon > 0x1p-63L ? real.epsilon : 0x1p-63L;
+    foreach (x; [real.min_normal * real.epsilon, 1e-100L, 1e-30L,
+                 real.epsilon / 8, real.epsilon / 4,
+                 real.epsilon / 2, real.epsilon, 1e-10L, 0.01L])
+    {
+        const expected = -expm1(a * log(x));
+        assert(isClose(betaIncompleteCompl(a, 1, x), expected, 512 * referenceEpsilon));
+    }
+
+    // References evaluated with 180 decimal digits using the incomplete-beta
+    // power series and a shifted Stirling expansion for logGamma.
+    static immutable real[4][] cases = [
+        [0.01L, 0.5L, 1e-30L, 0.505632615534517097464020744032088104L],
+        [0.01L, 0.5L, 1e-20L, 0.377628336934186554965849581692762227L],
+        [0.01L, 0.5L, 1e-10L, 0.216480497785462240215496140298003502L],
+        // The transformed input and the mean can both round to one.
+        [0.01L, 1e20L, 1e-30L, 0.201138908566394783770830831549816836L],
+        [0.01L, 1e20L, 1e-21L, 0.018135316050987344068805569856691042L],
+        [0.01L, 1e20L, 1e-20L, 0.002216234623227990296526749055232600L],
+        // Exercise the continued fraction and prefactor for skewed shapes.
+        [0.01L, 1e12L, 1e-14L, 0.039652576478495461013137146480639865L],
+        [0.01L, 1e16L, 1e-17L, 0.018135316050987344464498599975438851L],
+        [0.01L, 1e20L, 1e-19L, 4.28170497740993878352128067406133011e-8L],
+        [0.01L, 1e20L, 1e-18L, 3.87959205880234420899720104289346068e-48L],
+        // Straddle the near-one continued-fraction selection boundary.
+        [0.01L, 10, 0.05L - 0x1p-50L, 0.005776351069808102114640835714643614L],
+        [0.01L, 10, 0.05L, 0.005776351069807990354960848603977487L],
+        [0.01L, 10, 0.05L + 0x1p-50L, 0.005776351069807878595280861496217140L],
+        // Small tails need the logarithmic series, including the shift at b=13.
+        [1e-20L, 12.999L, 0.001L / 12.999L, 6.37041986859738315487361881722059540e-20L],
+        [1e-20L, 13, 0.001L / 13, 6.37041683992317482850396552550777425e-20L],
+        [1e-20L, 13.001L, 0.001L / 13.001L, 6.37041381172069494852583577426087753e-20L],
+        [1e-20L, 1e12L, 1e-15L, 6.33153936413664833256022595351100000e-20L],
+        [0.001L, 1e12L, 1e-15L, 0.006312353291140205148469518114947949L],
+    ];
+    // Allow for the precision of the existing beta approximations.
+    enum tolerance = 8192 * referenceEpsilon;
+    foreach (c; cases)
+        assert(isClose(betaIncompleteCompl(c[0], c[1], c[2]), c[3], tolerance));
+
+    // For tiny a and x, Q/a approaches -log(x)-digamma(b)-EulerGamma.
+    // Avoid rounding b*x in the subnormal range before taking its logarithm.
+    const tinyX = real.min_normal * real.epsilon;
+    const tinyA = 1e-20L;
+    const expectedTiny = -tinyA * (log(tinyX) + digamma(13.5L)
+        + 0.577215664901532860606512090082402431L);
+    assert(isClose(betaIncompleteCompl(tinyA, 13.5L, tinyX), expectedTiny, tolerance));
+
+    assert(betaIncompleteCompl(0.01L, 1, 0) == 1);
+    assert(betaIncompleteCompl(0.01L, 1, 1) == 0);
+    assert(betaIncompleteCompl(0, 1, 1e-30L) == 0);
+    assert(betaIncompleteCompl(1, 0, 1e-30L) == 1);
+    assert(isNaN(betaIncompleteCompl(0, 0, 1e-30L)));
+    assert(betaIncompleteCompl(1, real.infinity, 1e-30L) == 0);
+    assert(betaIncompleteCompl(real.infinity, 1, 1e-30L) == 1);
+    assert(isNaN(betaIncompleteCompl(real.infinity, real.infinity, 1e-30L)));
+    assert(betaIncompleteCompl(1, 1, NaN(0x123)) is NaN(0x123));
 }
 
 /** Inverse of incomplete beta integral

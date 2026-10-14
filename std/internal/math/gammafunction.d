@@ -1202,6 +1202,18 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  */
 real betaIncomplete(real aa, real bb, real xx )
 {
+    return betaIncompleteImpl!false(aa, bb, xx, 1 - xx);
+}
+
+// Preserve x < 0.05 when computing the complement: 1 - (1 - x) can lose it.
+real betaIncompleteComplSmallX(real a, real b, real x)
+{
+    return betaIncompleteImpl!true(b, a, 1 - x, x);
+}
+
+pragma(inline, true)
+private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real xxc)
+{
     if (only(aa, bb, xx).any!isNaN) return largestNaNPayload(xx, aa, bb);
 
     // domain errors
@@ -1210,7 +1222,7 @@ real betaIncomplete(real aa, real bb, real xx )
 
     // edge cases
     if ( xx == 0.0L ) return 0.0L;
-    if ( xx == 1.0L )  return 1.0L;
+    if ( xxc == 0.0L ) return 1.0L;
 
     // degenerate cases
     if (aa is +0.0L || aa is real.infinity || bb is +0.0L || bb is real.infinity)
@@ -1228,6 +1240,22 @@ real betaIncomplete(real aa, real bb, real xx )
     {
         return betaDistPowerSeries(aa, bb, xx);
     }
+    static if (complement)
+    {
+        // The opposite tail's power series converges quickly in this region.
+        // Limit the amplification of relative error by subtraction to 31;
+        // use a logarithmic series or continued fraction for smaller tails.
+        if (aa * xxc <= 1.0L)
+        {
+            if (aa == 1)
+                return -expm1(bb * log(xxc));
+            const lower = betaDistPowerSeries(bb, aa, xxc);
+            if (lower <= 31.0L / 32)
+                return 1 - lower;
+            if (bb <= 0.125L)
+                return betaSmallShapeComplement(bb, aa, xxc);
+        }
+    }
     real x;
     real xc; // = 1 - x
 
@@ -1235,27 +1263,32 @@ real betaIncomplete(real aa, real bb, real xx )
     int flag = 0;
 
     /* Reverse a and b if x is greater than the mean. */
-    if ( xx > (aa/(aa+bb)) )
+    bool reverse;
+    static if (complement)
+        // Compare using the smaller coordinate, before rounding near one
+        // can erase the distinction between the argument and the mean.
+        reverse = xx > 0.5L ? xxc < bb / (aa + bb) : xx > aa / (aa + bb);
+    else
+        reverse = xx > aa / (aa + bb);
+    if (reverse)
     {
-        // here x > aa/(aa+bb) and (bb*x>1 or x>0.95)
         flag = 1;
         a = bb;
         b = aa;
         xc = xx;
-        x = 1.0L - xx;
+        x = xxc;
         if (x == 1.0L) x = nextDown(x);
     }
     else
     {
         a = aa;
         b = bb;
-        xc = 1.0L - xx;
+        xc = xxc;
         x = xx;
     }
 
     if ( flag == 1 && (b * x) <= 1.0L && x <= 0.95L)
     {
-        // here xx > aa/(aa+bb) and  ((bb*xx>1) or xx>0.95) and (aa*(1-xx)<=1) and xx > 0.05
         return 1.0 - betaDistPowerSeries(a, b, x); // note loss of precision
     }
 
@@ -1264,25 +1297,45 @@ real betaIncomplete(real aa, real bb, real xx )
     // One is for x * (a+b+2) < (a+1),
     // the other is for x * (a+b+2) > (a+1).
     real y = x * (a+b-2.0L) - (a-1.0L);
-    if ( y < 0.0L )
+    // Near one, expansion #1 can lose its initial denominator to rounding.
+    // Expansion #2 uses the separately retained complement instead.
+    if ( y < 0.0L && !(complement && x > 0.95L) )
     {
         w = betaDistExpansion1( a, b, x );
     }
     else
     {
-        w = betaDistExpansion2( a, b, x ) / xc;
+        static if (complement)
+            w = betaDistExpansion2(a, b, x, xc) / xc;
+        else
+            w = betaDistExpansion2(a, b, x) / xc;
     }
 
     /* Multiply w by the factor
          a      b
         x  (1-x)   Gamma(a+b) / ( a Gamma(a) Gamma(b) ) .   */
 
-    y = a * log(x);
-    real t = b * log(xc);
+    real t;
+    static if (complement)
+    {
+        // A large shape parameter can amplify rounding in x or xc.
+        y = a * (xc < 0.5L ? log1p(-xc) : log(x));
+        t = b * (x < 0.5L ? log1p(-x) : log(xc));
+    }
+    else
+    {
+        y = a * log(x);
+        t = b * log(xc);
+    }
     if ( (a+b) < MAXGAMMA && fabs(y) < MAXLOG && fabs(t) < MAXLOG )
     {
-        t = pow(xc,b);
-        t *= pow(x,a);
+        static if (complement)
+            t = exp(t) * exp(y);
+        else
+        {
+            t = pow(xc,b);
+            t *= pow(x,a);
+        }
         t /= a;
         t *= w;
         t /= beta(a, b);
@@ -1318,6 +1371,72 @@ real betaIncomplete(real aa, real bb, real xx )
         t = 1.0L - t;
     }
     return t;
+}
+
+// Direct complement of the power series for a <= 1/8, b*x <= 1.
+// Work with log(P)/a, avoiding both 1-P and cancellation in gamma ratios.
+private real betaSmallShapeComplement(real a, real b, real x)
+{
+    real term = (1 - b) * x;
+    real sum = term / (a + 1);
+    for (int n = 2; ; ++n)
+    {
+        term *= (n - b) * x / n;
+        const delta = term / (a + n);
+        sum += delta;
+        if (fabs(delta) <= real.epsilon * fabs(sum))
+            break;
+    }
+
+    // Shift b into the Stirling range, retaining the gamma-ratio recurrence.
+    real shift = 0;
+    while (b < LN_GAMMA_STIRLING_LB)
+    {
+        const ratio = a / b;
+        shift += isInfinity(ratio) ? log(a) - log(b) : log1p(ratio);
+        b += 1;
+    }
+
+    // log1p(r)/r - 1, without subtracting nearly equal numbers.
+    const r = a / b;
+    real power = -r;
+    real logRatioMinusOne = power / 2;
+    for (int n = 3; ; ++n)
+    {
+        power *= -r;
+        const delta = power / n;
+        logRatioMinusOne += delta;
+        if (fabs(delta) <= real.epsilon * fabs(logRatioMinusOne))
+            break;
+    }
+
+    // Difference of the Stirling corrections, divided by a. For p=2k+1,
+    // (b^^-p - (b+a)^^-p)/a = b^^-p/(b+a) * sum((b/(b+a))^^j, j=0..p-1).
+    const invB = 1 / b;
+    const ratio = 1 / (1 + r);
+    real invPower = invB;
+    real ratioPower = 1;
+    real geometricSum = 1;
+    real correction = 0;
+    foreach (coefficient; logGammaStirlingCoeffs)
+    {
+        correction += coefficient * invPower * (invB * ratio) * geometricSum;
+        invPower *= invB * invB;
+        ratioPower *= ratio;
+        geometricSum += ratioPower;
+        ratioPower *= ratio;
+        geometricSum += ratioPower;
+    }
+    // (logGamma(b+a) - logGamma(b))/a - log(b).
+    const gammaRatioCorrection = logRatioMinusOne
+        + ((a - 0.5L) / b) * (1 + logRatioMinusOne) - correction;
+    const logGammaOverA = a < real.epsilon / 8 ? -EULERGAMMA
+        : rationalPoly(a, logGammaNumerator, logGammaDenominator) - log1p(a) / a;
+    const scaledSum = a * sum;
+    const seriesOverA = fabs(scaledSum) < real.epsilon ? sum : log1p(scaledSum) / a;
+    const bx = b * x;
+    const logBx = bx < real.min_normal ? log(b) + log(x) : log(bx);
+    return -expm1(a * (logBx + gammaRatioCorrection - logGammaOverA + seriesOverA) - shift);
 }
 
 /** Inverse of incomplete beta integral
@@ -1789,6 +1908,11 @@ real betaDistExpansion1(real a, real b, real x )
 // Use when x > (a+1)/(a+b+2)
 real betaDistExpansion2(real a, real b, real x )
 {
+    return betaDistExpansion2(a, b, x, 1 - x);
+}
+
+private real betaDistExpansion2(real a, real b, real x, real xc)
+{
     real  xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
     real k1, k2, k3, k4, k5, k6, k7, k8;
     real r, t, ans, z;
@@ -1806,7 +1930,7 @@ real betaDistExpansion2(real a, real b, real x )
     qkm2 = 1.0L;
     pkm1 = 1.0L;
     qkm1 = 1.0L;
-    z = x / (1.0L-x);
+    z = x / xc;
     ans = 1.0L;
     r = 1.0L;
     int n = 0;
