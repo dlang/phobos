@@ -1995,7 +1995,17 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     if (x > OF)
         return real.infinity;
     if (x < UF)
-        return 0.0;
+    {
+        // Retain values above half the smallest subnormal that round up.
+        if (x < T.min_exp - T.mant_dig - 1)
+            return 0.0;
+
+        // Compute a normal intermediate, then round into the subnormal
+        // range with one multiplication. Some ldexp implementations
+        // truncate subnormals instead of rounding them.
+        enum T scale = core.math.ldexp(cast(T) 1, -T.mant_dig);
+        return exp2Impl!T(x + T.mant_dig) * scale;
+    }
 
     static if (realFormat == RealFormat.ieeeSingle) // special case for single precision
     {
@@ -2084,6 +2094,39 @@ private T exp2Impl(T)(T x) @nogc @safe pure nothrow
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(real, double, float))
         testExp2!T();
+}
+
+@safe @nogc nothrow unittest
+{
+    // https://github.com/dlang/phobos/issues/11114
+    import std.math.traits : isIdentical;
+    import std.math.operations : nextDown, nextUp;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        enum minExponent = T.min_exp - T.mant_dig;
+        const T smallest = T.min_normal * T.epsilon;
+
+        // Exercise the portable implementation even on targets where the
+        // public real overload uses assembly. Each integer power is exact.
+        T expected = T.min_normal;
+        for (int exponent = T.min_exp - 1; exponent >= minExponent; --exponent)
+        {
+            assert(exp2Impl(cast(T) exponent) == expected);
+            assert(exp2(cast(T) exponent) == expected);
+            expected /= 2;
+        }
+
+        // Round to nearest, ties to even, at half the smallest subnormal.
+        const T halfExponent = minExponent - 1;
+        assert(isIdentical(exp2Impl(nextDown(halfExponent)), cast(T) 0));
+        assert(isIdentical(exp2Impl!T(halfExponent), cast(T) 0));
+        assert(exp2Impl(nextUp(halfExponent)) == smallest);
+        assert(exp2Impl(cast(T) (minExponent - 0.5L)) == smallest);
+        assert(exp2Impl(cast(T) (minExponent + 0.5L)) == smallest);
+        assert(exp2Impl(cast(T) (minExponent + 1.5L)) == 3 * smallest);
+    }}
 }
 
 /*********************************************************************
