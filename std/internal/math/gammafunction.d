@@ -2001,6 +2001,87 @@ do
     return ans * ax/a;
 }
 
+// Evaluate Q directly for small a and x instead of subtracting P from one.
+private real gammaIncompleteComplSmall(real a, real x)
+{
+    // DLMF 8.7.3: P(a,x) = exp(t) * (1 + a*s), where
+    // t = a*log(x) - logGamma(1+a), s = sum((-x)^n / (n!*(a+n)), n=1..inf).
+    // Evaluate logGamma(1+a)/a without forming 1+a, which can round to one.
+    // The existing rational approximation gives logGamma(2+a)/a.
+    // For tiny a, the correction to -Euler's constant is negligible. Avoid
+    // evaluating the rational approximation with subnormal operands.
+    const logGammaOverA = a < real.epsilon/8 ? -EULERGAMMA
+        : rationalPoly(a, logGammaNumerator, logGammaDenominator) - log1p(a)/a;
+    const scaleOverA = log(x) - logGammaOverA;
+    const t = a * scaleOverA;
+
+    real term = -x;
+    real sum = term / (a + 1);
+    for (int n = 2; ; ++n)
+    {
+        term *= -x / n;
+        const delta = term / (a + n);
+        sum += delta;
+        if (fabs(delta) <= real.epsilon * fabs(sum))
+            break;
+    }
+
+    // Factor out a when t is tiny, preserving subnormal shape parameters
+    // whose individual contributions would otherwise round to zero.
+    if (fabs(t) < real.epsilon)
+        return a * (-scaleOverA - sum);
+    return -expm1(t) - a * exp(t) * sum;
+}
+
+@safe unittest
+{
+    // References from the lower-gamma power series and a shifted Stirling
+    // expansion for logGamma, evaluated with 100 decimal digits before
+    // subtracting from one. Check both sides of the new branch boundaries.
+    static immutable real[3][] cases = [
+        [1e-10L, 0.5L, 5.59773594805498790932050869584e-11L],
+        [1e-20L, 0.5L, 5.59773594776160811749729737234e-21L],
+        [1e-30L, 0.5L, 5.59773594776160811746795939315e-31L],
+        [1e-20L, 0.9L, 2.60183939325999640503670269967e-21L],
+        [1e-20L, 1e-100L, 2.29681293634503035277433374821e-18L],
+        [0.01L, 0.5L, 0.005626756193967184029252825447L],
+        [0.125L, 0.5L, 0.073945777714652877462152016943L],
+        [0.125L - 0x1p-50L, 0.5L, 0.073945777714652328050674670460L],
+        [0.125L + 0x1p-50L, 0.5L, 0.073945777714653426873629363427L],
+        [1e-20L, 1 - 0x1p-50L, 2.19383934395520600421989225685e-21L],
+        [1e-20L, 1, 2.19383934395520273679408525868e-21L],
+        [1e-20L, 1 + 0x1p-50L, 2.19383934395519946936827826051e-21L],
+        [0.125L, 1e-100L, 0.999999999999664210016103860781L],
+        [1e-30L, 1e-30L, 6.85003371249198376599332315481e-29L],
+        // Straddle the two tiny-argument shortcuts for 53- and 64-bit reals.
+        [0x1p-48L, 0.5L, 1.98871530719259885004104990902e-15L],
+        [0x1p-49L, 0.5L, 9.94357653596298499277132156714e-16L],
+        [0x1p-54L, 0.5L, 3.10736766748843000769756369951e-17L],
+        [0x1p-55L, 0.5L, 1.55368383374421498124762479903e-17L],
+        [0x1p-56L, 0.5L, 7.76841916872107484973523136833e-18L],
+        [0x1p-59L, 0.5L, 9.71052396090134350036900039983e-19L],
+        [0x1p-60L, 0.5L, 4.85526198045067174797735595668e-19L],
+        [0x1p-65L, 0.5L, 1.51726936889083492057474530345e-20L],
+        [0x1p-66L, 0.5L, 7.58634684445417460281984115976e-21L],
+        [0x1p-67L, 0.5L, 3.79317342222708730139644924050e-21L],
+    ];
+    // The existing logGamma coefficients have approximately 64-bit precision.
+    enum tolerance = 128 * (real.epsilon > 0x1p-63L ? real.epsilon : 0x1p-63L);
+    foreach (c; cases)
+        assert(isClose(gammaIncompleteCompl(c[0], c[1]), c[2], tolerance));
+
+    // Q(a, 1/2)/a approaches E1(1/2). Preserve representable subnormal tails.
+    const smallest = real.min_normal * real.epsilon;
+    foreach (k; [1, 2, 4, 16, 1024])
+    {
+        const a = k * smallest;
+        const expected = a * 0.559773594776160811746795939315L;
+        const actual = gammaIncompleteCompl(a, 0.5L);
+        assert(actual > 0);
+        assert(fabs(actual - expected) <= smallest);
+    }
+}
+
 /** ditto */
 real gammaIncompleteCompl(real a, real x )
 in
@@ -2025,6 +2106,9 @@ do
     if (x is real.infinity) return 0.0L;
     if (a is +0.0L) return 0.0L;
     if (a is real.infinity) return 1.0L;
+
+    if (a <= 0.125L && x < 1.0L)
+        return gammaIncompleteComplSmall(a, x);
 
     if ( (x < 1.0L) || (x < a) )
         return 1.0L - gammaIncomplete(a,x);
