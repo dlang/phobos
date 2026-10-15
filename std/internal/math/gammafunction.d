@@ -1411,7 +1411,7 @@ private real betaSmallShapeComplement(real a, real b, real x)
     }
 
     // Difference of the Stirling corrections, divided by a. For p=2k+1,
-    // (b^^-p - (b+a)^^-p)/a = b^^-p/(b+a) * sum((b/(b+a))^^j, j=0..p-1).
+    // (b^^-p - (b+a)^^-p)/a = b^^-p/(b+a) * sum((b/(b+a))^^j, j=0 .. p-1).
     const invB = 1 / b;
     const ratio = 1 / (1 + r);
     real invPower = invB;
@@ -2138,7 +2138,7 @@ do
 private real gammaIncompleteComplSmall(real a, real x)
 {
     // DLMF 8.7.3: P(a,x) = exp(t) * (1 + a*s), where
-    // t = a*log(x) - logGamma(1+a), s = sum((-x)^n / (n!*(a+n)), n=1..inf).
+    // t = a*log(x) - logGamma(1+a), s = sum((-x)^n / (n!*(a+n)), n=1 .. inf).
     // Evaluate logGamma(1+a)/a without forming 1+a, which can round to one.
     // The existing rational approximation gives logGamma(2+a)/a.
     // For tiny a, the correction to -Euler's constant is negligible. Avoid
