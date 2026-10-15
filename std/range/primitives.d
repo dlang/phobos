@@ -172,11 +172,14 @@ Params:
 Returns:
     `true` if R is an input range (possibly with element type `E`), `false` if not
  */
+// `R.sizeof` lays out a struct before the lambdas below infer its member functions' attributes,
+// as `R.init` did: a range trait evaluated inside the struct's own declaration (in a member's
+// return type, like `Chunks.opSlice`) would otherwise infer those members impure and `@system`.
 enum bool isInputRange(R) =
-    is(typeof(R.init) == R)
-    && is(typeof((R r) { return r.empty; } (R.init)) == bool)
+    is(typeof(lvalueOf!R) == R) && is(typeof(R.sizeof))
+    && is(typeof((R r) { return r.empty; } (rvalueOf!R)) == bool)
     && (is(typeof((return ref R r) => r.front)) || is(typeof(ref (return ref R r) => r.front)))
-    && !is(typeof((R r) { return r.front; } (R.init)) == void)
+    && !is(typeof((R r) { return r.front; } (rvalueOf!R)) == void)
     && is(typeof((R r) => r.popFront));
 
 /// ditto
@@ -1023,7 +1026,7 @@ Returns:
     `true` if R is a forward range (possibly with element type `E`), `false` if not
  */
 enum bool isForwardRange(R) = isInputRange!R
-    && is(typeof((R r) { return r.save; } (R.init)) == R);
+    && is(typeof((R r) { return r.save; } (rvalueOf!R)) == R);
 
 /// ditto
 enum bool isForwardRange(R, E) =
@@ -1091,7 +1094,7 @@ Returns:
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
     && (is(typeof((return ref R r) => r.back)) || is(typeof(ref (return ref R r) => r.back)))
-    && is(typeof(R.init.back.init) == ElementType!R);
+    && is(typeof(backOf(lvalueOf!R)) == ElementType!R);
 
 /// ditto
 enum bool isBidirectionalRange(R, E) =
@@ -1364,6 +1367,13 @@ enum bool hasMobileElements(R) =
     static assert( hasMobileElements!(dchar[]));
 }
 
+// `r.front` / `r.back` in a return statement, so a member function is called whether or not
+// it is a `@property` (in a bare `typeof(r.front)` it is not), a field or a `ref` result is
+// returned by reference (no copy, so a non-copyable element type is answered too), and no
+// `.init` of the element type is built.
+private auto ref frontOf(R)(return ref R r) { return r.front; }
+private auto ref backOf(R)(return ref R r) { return r.back; }
+
 /**
 The element type of `R`. `R` does not have to be a range. The
 element type is determined as the type yielded by `r.front` for an
@@ -1374,7 +1384,8 @@ object `r` of type `R`. For example, `ElementType!(T[])` is
  */
 template ElementType(R)
 {
-    static if (is(typeof(R.init.front.init) T))
+    // `R.sizeof`: see `isInputRange`.
+    static if (is(typeof(R.sizeof)) && is(typeof(frontOf(lvalueOf!R)) T))
         alias ElementType = T;
     else
         alias ElementType = void;
@@ -1451,6 +1462,44 @@ template ElementType(R)
         E front() { return E.init; }
     }
     static assert(is(ElementType!R == E));
+}
+
+// The range traits also work when no primitive is a `@property`
+@safe unittest
+{
+    static struct R
+    {
+        size_t i;
+        bool empty() const { return i >= 3; }
+        int front() const { return cast(int) i; }
+        void popFront() { ++i; }
+        R save() { return this; }
+        int back() const { return cast(int) i; }
+        void popBack() { ++i; }
+        size_t length() const { return 3 - i; }
+        R opSlice(size_t, size_t) { return this; }
+    }
+    static assert(isInputRange!R);
+    static assert(isForwardRange!R);
+    static assert(isBidirectionalRange!R);
+    static assert(hasSlicing!R);
+    static assert(is(ElementType!R == int));
+}
+
+// An element type with a member named `init`, here from a mixin template, hides the built-in `.init`
+@safe unittest
+{
+    mixin template SetUp()
+    {
+        void init(int v) { x = v; }
+    }
+    static struct S
+    {
+        int x;
+        mixin SetUp;
+    }
+    static assert(is(ElementType!(S[]) == S));
+    static assert(isRandomAccessRange!(S[]));
 }
 
 /**
@@ -1764,7 +1813,7 @@ The following expression must be true for `hasSlicing` to be `true`:
 ----
     isForwardRange!R
     && !(isAutodecodableString!R && !isAggregateType!R)
-    && is(typeof((R r) { return r[1 .. 1].length; } (R.init)) == size_t)
+    && is(typeof((R r) { return r[1 .. 1].length; } (rvalueOf!R)) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
     && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R
@@ -1777,7 +1826,7 @@ The following expression must be true for `hasSlicing` to be `true`:
  */
 enum bool hasSlicing(R) = isForwardRange!R
     && !(isAutodecodableString!R && !isAggregateType!R)
-    && is(typeof((R r) { return r[1 .. 1].length; } (R.init)) == size_t)
+    && is(typeof((R r) { return r[1 .. 1].length; } (rvalueOf!R)) == size_t)
     && (is(typeof(lvalueOf!R[1 .. 1]) == R) || isInfinite!R)
     && (!is(typeof(lvalueOf!R[0 .. $])) || is(typeof(lvalueOf!R[0 .. $]) == R))
     && (!is(typeof(lvalueOf!R[0 .. $])) || isInfinite!R

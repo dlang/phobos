@@ -9149,6 +9149,18 @@ if (isInputRange!Source)
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
+// Over an infinite sliceable source, `Chunks.opSlice` returns `typeof(takeExactly(this, 0))`,
+// so `isInputRange!Chunks` is evaluated while `Chunks` is still being analysed. That must not
+// leave `front` and `popFront` inferred `@system` or impure.
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto r = sequence!"a[0] + n * a[1]"(1, 2).chunks(2);
+    r.popFront();
+    assert(r.front.equal([5, 7]));
+}
+
 
 
 /**
