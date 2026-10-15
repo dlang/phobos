@@ -1528,7 +1528,8 @@ ihalve:
         if ( i != 0 )
         {
             x = x0  +  di * (x1 - x0);
-            if ( x == 1.0L )
+            // keep the cap the reflected path has: no result above 1 - epsilon
+            if ( x > 1.0L - real.epsilon )
             {
                 x = 1.0L - real.epsilon;
             }
@@ -1562,7 +1563,9 @@ ihalve:
             else
                 di = (y0 - y)/(yh - yl);
             dir += 1;
-            if ( x0 > 0.95L )
+            // Only switch to the complement when 1 - yy0 is exact. For a small
+            // yy0 it rounds and loses the target (it is 1 for yy0 = 1e-20).
+            if ( x0 > 0.95L && (rflg == 1 || yy0 > 0.5L) )
             {
                 if ( rflg == 1 )
                 {
@@ -1758,6 +1761,12 @@ done:
     assert(feqrel(betaIncomplete(0.01L, 498.437L, 0.0121433L), 0.99999664562033077636065L) >= real.mant_dig - 1);
     assert(feqrel(betaIncompleteInv(5, 10, 0.2000002972865658842L), 0.229121208190918L) >= real.mant_dig - 3);
     assert(feqrel(betaIncompleteInv(4, 7, 0.8000002209179505L), 0.483657360076904L) >= real.mant_dig - 3);
+
+    // https://github.com/dlang/phobos/issues/11103
+    // small lower-tail probabilities whose quantile is close to 1
+    assert(isClose(betaIncompleteInv(1000, 1, 1e-20L), pow(1e-20L, 1.0L / 1000), 1e-15L));
+    assert(isClose(betaIncompleteInv(1000, 1, 1e-10L), pow(1e-10L, 1.0L / 1000), 1e-15L));
+    assert(isClose(betaIncomplete(1000, 2, betaIncompleteInv(1000, 2, 1e-20L)), 1e-20L, 1e-10L));
 
     // Coverage tests. I don't have correct values for these tests, but
     // these values cover most of the code, so they are useful for
