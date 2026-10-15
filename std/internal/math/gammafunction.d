@@ -2016,10 +2016,19 @@ real betaDistPowerSeries(real a, real b, real x )
     s += t1;
     s += ai;
 
-    u = a * log(x);
-    if ( (a+b) < MAXGAMMA && fabs(u) < MAXLOG )
+    const logX = log(x);
+    u = a * logX;
+    enum logMinNormal = (real.min_exp - 1) * LN2;
+    // Avoid rounding x^^a to subnormal precision before normalization.
+    if ( (a+b) < MAXGAMMA && u > logMinNormal )
     {
         s = s * pow(x,a) / beta(a, b);
+    }
+    else if ((a+b) < MAXGAMMA && fabs((a - 1) * logX) < -logMinNormal)
+    {
+        // Keep one factor of x until after normalization: x^^a can lose
+        // precision or underflow even when the normalized result does not.
+        s = (s / beta(a, b)) * pow(x, a - 1) * x;
     }
     else
     {
