@@ -1528,8 +1528,7 @@ ihalve:
         if ( i != 0 )
         {
             x = x0  +  di * (x1 - x0);
-            // keep the cap the reflected path has: no result above 1 - epsilon
-            if ( x > 1.0L - real.epsilon )
+            if ( x == 1.0L )
             {
                 x = 1.0L - real.epsilon;
             }
@@ -1563,9 +1562,11 @@ ihalve:
             else
                 di = (y0 - y)/(yh - yl);
             dir += 1;
-            // Only switch to the complement when 1 - yy0 is exact. For a small
-            // yy0 it rounds and loses the target (it is 1 for yy0 = 1e-20).
-            if ( x0 > 0.95L && (rflg == 1 || yy0 > 0.5L) )
+            // Only switch to the complement while 1 - yy0 still holds yy0.
+            // For a tiny yy0 it rounds (to 1 for yy0 = 1e-20) and the target
+            // is lost.
+            if ( x0 > 0.95L && (rflg == 1
+                || fabs((1.0L - (1.0L - yy0)) - yy0) <= 8 * real.epsilon * yy0) )
             {
                 if ( rflg == 1 )
                 {
@@ -1767,6 +1768,8 @@ done:
     assert(isClose(betaIncompleteInv(1000, 1, 1e-20L), pow(1e-20L, 1.0L / 1000), 1e-15L));
     assert(isClose(betaIncompleteInv(1000, 1, 1e-10L), pow(1e-10L, 1.0L / 1000), 1e-15L));
     assert(isClose(betaIncomplete(1000, 2, betaIncompleteInv(1000, 2, 1e-20L)), 1e-20L, 1e-10L));
+    // a moderate probability whose quantile is very close to 1 (also with 64-bit reals)
+    assert(isClose(betaIncompleteInv(1e10L, 1, 0.01L), pow(0.01L, 1.0L / 1e10L), 1e-14L));
 
     // Coverage tests. I don't have correct values for these tests, but
     // these values cover most of the code, so they are useful for
@@ -1776,8 +1779,11 @@ done:
     // significant improvement over the original CEPHES code.
     static if (real.mant_dig == 64) // 80-bit reals
     {
-        assert(betaIncompleteInv(0.01L, 8e-48L, 5.45464e-20L) == 1-real.epsilon);
-        assert(betaIncompleteInv(0.01L, 8e-48L, 9e-26L) == 1-real.epsilon);
+        // The CDF at nextDown(1) is still below these probabilities, so the
+        // quantile lies above it and nextDown(1) is the closest result below 1.
+        assert(betaIncomplete(0.01L, 8e-48L, nextDown(1.0L)) < 9e-26L);
+        assert(betaIncompleteInv(0.01L, 8e-48L, 5.45464e-20L) == nextDown(1.0L));
+        assert(betaIncompleteInv(0.01L, 8e-48L, 9e-26L) == nextDown(1.0L));
 
         // Beware: a one-bit change in pow() changes almost all digits in the result!
         // scipy says that this is 0.99999_99995_89020_6 (0x1.ffff_fffc_783f_2a7ap-1)
