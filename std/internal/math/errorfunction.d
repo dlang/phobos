@@ -925,6 +925,11 @@ real erf(real x)
 
 real expx2(real x, int sign)
 {
+    return expx2Impl!false(x, sign);
+}
+
+private real expx2Impl(bool halfExponent)(real x, int sign)
+{
     /*
     Cephes Math Library Release 2.9:  June, 2000
     Copyright 2000 by Stephen L. Moshier
@@ -945,6 +950,13 @@ real expx2(real x, int sign)
     /* x^2 = m^2 + 2mf + f^2 */
     real u = m * m;
     real u1 = 2 * m * f  +  f * f;
+
+    static if (halfExponent)
+    {
+        // Scale the split square, rather than rounding x / sqrt(2).
+        u *= 0.5L;
+        u1 *= 0.5L;
+    }
 
     if (sign < 0)
     {
@@ -987,6 +999,11 @@ real normalDistributionImpl(real a)
     if (a is -real.infinity) return 0.0L;
     if (a is real.infinity) return 1.0L;
 
+    // Beyond this conservative bound the tail rounds to zero. Avoid
+    // overflowing the square for large finite arguments.
+    if (fabs(a) >= real.max_exp)
+        return a < 0 ? 0.0L : 1.0L;
+
     real x = a * SQRT1_2;
     real z = fabs(x);
 
@@ -995,9 +1012,9 @@ real normalDistributionImpl(real a)
     else
     {
         real y = 0.5L * erfce(z);
-        /* Multiply by exp(-x^2 / 2)  */
-        z = expx2(a, -1);
-        y = y * sqrt(z);
+        // Evaluate exp(-a*a/2) directly: exp(-a*a) can underflow
+        // even when its square root and the final tail are normal.
+        y *= expx2Impl!true(a, -1);
         if ( x > 0.0L )
             y = 1.0L - y;
         return y;
@@ -1010,6 +1027,52 @@ assert(fabs(normalDistributionImpl(1L) - (0.841344746068543L)) < 0.0000000000000
 assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
 assert(normalDistributionImpl(-real.infinity) == 0.0L);
 assert(normalDistributionImpl(real.infinity) == 1.0L);
+}
+
+// https://github.com/dlang/phobos/issues/11120
+@safe unittest
+{
+    // Reference values from a high-precision normal-tail expansion.
+    // Include the onset of intermediate underflow as well as zero results.
+    static immutable real[2][3] tails = [
+        [-27.0L, 7.38948100688501825751794400521600224e-161L],
+        [-28.0L, 8.12386946965942659359835703105041595e-173L],
+        [-30.0L, 4.90671392714818705953380925658019047e-198L]];
+    foreach (test; tails)
+    {
+        assert(fabs(normalDistributionImpl(test[0]) / test[1] - 1)
+            <= 8 * real.epsilon * test[0] * test[0]);
+    }
+
+    static if (real.max_exp == 16384)
+    {
+        static immutable real[2][2] extendedTails = [
+            [-107.0L, 2.83613375184800292900413823146820925e-2489L],
+            [-110.0L, 1.19637128675614559133782901102312791e-2630L]];
+        foreach (test; extendedTails)
+        {
+            // Allow for the underlying exponential's argument-dependent error.
+            assert(fabs(normalDistributionImpl(test[0]) / test[1] - 1)
+                <= 8 * real.epsilon * test[0] * test[0]);
+        }
+        static if (real.mant_dig == 64)
+        {
+            assert(fabs(normalDistributionImpl(-150.75L)
+                - 4.26027553306983434569702127828568383e-4938L)
+                <= 4 * real.min_normal * real.epsilon);
+            assert(normalDistributionImpl(-151.0L) == 0);
+        }
+    }
+    else static if (real.mant_dig == 53)
+    {
+        assert(fabs(normalDistributionImpl(-38.0L)
+            - 2.88542836006878430835097048156690409e-316L)
+            <= 2 * real.min_normal * real.epsilon);
+        assert(normalDistributionImpl(-38.5L) == 0);
+    }
+
+    assert(normalDistributionImpl(-real.max) == 0);
+    assert(normalDistributionImpl(real.max) == 1);
 }
 
 /*
