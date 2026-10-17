@@ -10447,13 +10447,13 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
     import std.traits : EnumMembers, isArray;
     import std.typecons : Rebindable;
 
-    void stripAndCheckLen(R valueBefore, size_t minLen, size_t line = __LINE__)
+    void stripAndCheckLen(size_t start, size_t minLen, size_t line = __LINE__)
     {
-        value = _stripCFWS(valueBefore);
+        value = _stripCFWS(value[start .. value.length]);
         if (value.length < minLen)
             throw new DateTimeException("date-time value too short", __FILE__, line);
     }
-    stripAndCheckLen(value, "7Dec1200:00A".length);
+    stripAndCheckLen(0, "7Dec1200:00A".length);
 
     static if (isArray!R && (is(ElementEncodingType!R == char) || is(ElementEncodingType!R == ubyte)))
     {
@@ -10488,10 +10488,10 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
             }
             default: throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
         }
-afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
+afterDoW: stripAndCheckLen(3, ",7Dec1200:00A".length);
         if (value[0] != ',')
             throw new DateTimeException("day-of-week missing comma");
-        stripAndCheckLen(value[1 .. value.length], "7Dec1200:00A".length);
+        stripAndCheckLen(1, "7Dec1200:00A".length);
     }
 
     // day
@@ -10499,7 +10499,7 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
     immutable day = _convDigits!short(value[0 .. digits]);
     if (day == -1)
         throw new DateTimeException("Invalid day");
-    stripAndCheckLen(value[digits .. value.length], "Dec1200:00A".length);
+    stripAndCheckLen(digits, "Dec1200:00A".length);
 
     // month
     Month month;
@@ -10518,7 +10518,7 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
             }
             default: throw new DateTimeException(format("Invalid month: %s", monStr));
         }
-afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
+afterMon: stripAndCheckLen(3, "1200:00A".length);
     }
 
     // year
@@ -10545,29 +10545,29 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
         else
             throw new DateTimeException("Invalid year. Cannot be earlier than 1900.");
     }
-    stripAndCheckLen(value[yearLen .. value.length], "00:00A".length);
+    stripAndCheckLen(yearLen, "00:00A".length);
 
     // hour
     immutable hour = _convDigits!short(value[0 .. 2]);
-    stripAndCheckLen(value[2 .. value.length], ":00A".length);
+    stripAndCheckLen(2, ":00A".length);
     if (value[0] != ':')
         throw new DateTimeException("Invalid hour");
-    stripAndCheckLen(value[1 .. value.length], "00A".length);
+    stripAndCheckLen(1, "00A".length);
 
     // minute
     immutable minute = _convDigits!short(value[0 .. 2]);
-    stripAndCheckLen(value[2 .. value.length], "A".length);
+    stripAndCheckLen(2, "A".length);
 
     // second
     short second;
     if (value[0] == ':')
     {
-        stripAndCheckLen(value[1 .. value.length], "00A".length);
+        stripAndCheckLen(1, "00A".length);
         second = _convDigits!short(value[0 .. 2]);
         // this is just if/until SysTime is sorted out to fully support leap seconds
         if (second == 60)
             second = 59;
-        stripAndCheckLen(value[2 .. value.length], "A".length);
+        stripAndCheckLen(2, "A".length);
     }
 
     immutable(TimeZone) parseTZ(int sign)
