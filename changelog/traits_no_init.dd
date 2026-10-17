@@ -1,0 +1,29 @@
+Range traits and `std.traits` no longer build the `.init` of the type they inspect
+
+For a struct or a static array, `T.init` makes the compiler build the type's whole
+default-initializer literal, with one entry per static-array element. Traits such as
+$(REF isInputRange, std, range, primitives), $(REF ElementType, std, range, primitives),
+$(REF CommonType, std, traits), $(REF isIterable, std, traits) and
+$(REF hasElaborateAssign, std, traits), and the constraints of
+$(REF map, std, algorithm, iteration), $(REF each, std, algorithm, iteration) and
+$(REF minElement, std, algorithm, searching), used `T.init` only to form an expression
+of type `T`. They now use $(REF lvalueOf, std, traits) and $(REF rvalueOf, std, traits),
+so their compile-time memory and time no longer grow with the size of `T`.
+
+Answers are unchanged, except in these cases:
+
+$(UL
+    $(LI `each` accepts a function with a `ref` parameter on a forward range whose
+        `front` is an lvalue (for example a field), as it already did on arrays and
+        input ranges.)
+    $(LI `ElementType` of an `enum` whose base type is a non-string array, such as
+        `enum E : int[]`, is `void`; it was `inout(int)`, a type no variable of `E`
+        produces.)
+    $(LI `ElementType` of a range whose element type has a member named `init`, such
+        as a function `void init(int)`, is that element type; it was the type of the
+        member. So `isRandomAccessRange` of an array of such elements is now `true`.)
+    $(LI `ifTestable!(S, pred)` for a struct or union `S` with indirections is `false` when `pred`
+        takes `S` with a qualifier that `S` does not convert to, such as `immutable` for
+        a mutable `S` or mutable for a `const S`. The unique literal `S.init` converted
+        there; a variable of type `S` does not.)
+)

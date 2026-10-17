@@ -3756,13 +3756,13 @@ if (isDynamicArray!A)
         enum bool canPutConstRange =
             isInputRange!(Unqual!Range) &&
             !isInputRange!Range &&
-            is(typeof(Appender.init.put(Range.init.front)));
+            is(typeof(Appender.init.put(rvalueOf!Range.front)));
     }
     private template canPutRange(Range)
     {
         enum bool canPutRange =
             isInputRange!Range &&
-            is(typeof(Appender.init.put(Range.init.front)));
+            is(typeof(Appender.init.put(rvalueOf!Range.front)));
     }
 
     /**
