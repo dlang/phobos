@@ -1439,6 +1439,26 @@ private real betaSmallShapeComplement(real a, real b, real x)
     return -expm1(a * (logBx + gammaRatioCorrection - logGammaOverA + seriesOverA) - shift);
 }
 
+// Solve betaIncomplete(aa, bb, 1 - t) = yy0 for t in [tlo, thi] by bisection
+// and return 1 - t. The CDF near 1 comes from betaIncompleteComplSmallX, so
+// neither yy0 nor the CDF is ever subtracted from 1.
+private real betaIncompleteInvTail(real aa, real bb, real yy0, real tlo, real thi)
+{
+    for (int i = 0; i < 200; i++)
+    {
+        const t = tlo + 0.5L * (thi - tlo);
+        if (t <= tlo || t >= thi || 1.0L - tlo == 1.0L - thi)
+            break;
+        if (betaIncompleteComplSmallX(bb, aa, t) > yy0)
+            tlo = t;
+        else
+            thi = t;
+    }
+    const x = 1.0L - (tlo + 0.5L * (thi - tlo));
+    // The quantile of a probability below 1 is below 1.
+    return x < 1.0L ? x : nextDown(1.0L);
+}
+
 /** Inverse of incomplete beta integral
  *
  * Given y, the function finds x such that
@@ -1562,11 +1582,15 @@ ihalve:
             else
                 di = (y0 - y)/(yh - yl);
             dir += 1;
-            // Only switch to the complement while 1 - yy0 still holds yy0.
-            // For a tiny yy0 it rounds (to 1 for yy0 = 1e-20) and the target
-            // is lost.
-            if ( x0 > 0.95L && (rflg == 1
-                || fabs((1.0L - (1.0L - yy0)) - yy0) <= 8 * real.epsilon * yy0) )
+            if ( x0 > 0.95L && rflg == 0
+                && fabs((1.0L - (1.0L - yy0)) - yy0) > 8 * real.epsilon * yy0 )
+            {
+                // 1 - yy0 has lost part of yy0 (all of it for yy0 = 1e-20),
+                // so do not switch to the complement: solve for 1 - x instead.
+                x = betaIncompleteInvTail(aa, bb, yy0, 1.0L - x1, 1.0L - x0);
+                goto done;
+            }
+            if ( x0 > 0.95L )
             {
                 if ( rflg == 1 )
                 {
@@ -1770,6 +1794,8 @@ done:
     assert(isClose(betaIncomplete(1000, 2, betaIncompleteInv(1000, 2, 1e-20L)), 1e-20L, 1e-10L));
     // a moderate probability whose quantile is very close to 1 (also with 64-bit reals)
     assert(isClose(betaIncompleteInv(1e10L, 1, 0.01L), pow(0.01L, 1.0L / 1e10L), 1e-14L));
+    assert(isClose(betaIncompleteInv(1e11L, 1, 1e-6L), pow(1e-6L, 1.0L / 1e11L), 1e-15L));
+    assert(isClose(betaIncompleteInv(1e12L, 1, 0.007L), pow(0.007L, 1.0L / 1e12L), 1e-15L));
 
     // Coverage tests. I don't have correct values for these tests, but
     // these values cover most of the code, so they are useful for
