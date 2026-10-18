@@ -1514,7 +1514,7 @@ private int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
  * Returns:
  *    unique memory
  */
-BigDigit [] sub(const scope BigDigit [] x, const scope BigDigit [] y, bool *negative)
+BigDigit [] sub(const scope BigDigit [] x, const scope BigDigit [] y, scope bool *negative)
 pure nothrow @safe
 {
     if (x.length == y.length)
@@ -1606,7 +1606,7 @@ BigDigit [] add(const scope BigDigit [] a, const scope BigDigit [] b) pure nothr
 
 /**  return x + y
  */
-BigDigit [] addInt(const BigDigit[] x, ulong y) @safe pure nothrow
+BigDigit [] addInt(const scope BigDigit[] x, ulong y) @safe pure nothrow
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y& 0xFFFF_FFFF);
@@ -1633,7 +1633,7 @@ BigDigit [] addInt(const BigDigit[] x, ulong y) @safe pure nothrow
 /** Return x - y.
  *  x must be greater than y.
  */
-BigDigit [] subInt(const BigDigit[] x, ulong y) pure nothrow @safe
+BigDigit [] subInt(const scope BigDigit[] x, ulong y) pure nothrow @safe
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y & 0xFFFF_FFFF);

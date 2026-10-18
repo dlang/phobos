@@ -155,7 +155,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             if (leftover >= Node.sizeof)
             {
                 // There's room for another node
-                auto newNode = (() @trusted => cast(Node*) ((cast(ubyte*) &this) + bytes))();
+                auto newNode = (() @trusted => cast(Node*) (cast(size_t) &this + bytes))();
                 newNode.size = leftover;
                 newNode.next = next == &this ? newNode : next;
                 assert(next);

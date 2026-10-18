@@ -1037,7 +1037,7 @@ if (Ranges.length > 0 &&
                 frontIndex = source.length;
                 static if (bidirectional) backIndex = 0;
 
-                foreach (i, ref v; input) source[i] = v;
+                static foreach (i; 0 .. R.length) source[i] = input[i];
 
                 // We do this separately to avoid invoking `empty` needlessly.
                 // While not recommended, a range may depend on side effects of
@@ -1096,10 +1096,7 @@ if (Ranges.length > 0 &&
                     // TODO: this has the constructor needlessly refind
                     // frontIndex and backIndex. It'd be better to just copy
                     // those from `.this`.
-                    auto saveResult =
-                        Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
-
-                    return saveResult;
+                    return Result(staticMap!(saveI, aliasSeqOf!(R.length.iota)));
                 }
             }
 

@@ -2108,10 +2108,10 @@ version (StdUnittest)
 
     void test(A)(auto ref A alloc)
     {
+        auto arr2 = arr;
         ForcedInputRange!int r;
         long[] a = alloc.makeArray!long(r);
         assert(a.length == 0 && a.ptr is null);
-        auto arr2 = arr;
         r.array = () @trusted { return &arr2; } ();
         a = alloc.makeArray!long(r);
         assert(a.length == 10);
