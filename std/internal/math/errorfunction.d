@@ -711,11 +711,24 @@ real erfc(real a)
         }
     }
 
-    if (-a * a < -MAXLOG)
+    // erfc(x) < exp(-x*x) for x >= 1. Keep subnormal results until
+    // even the exponential is below half the smallest subnormal.
+    enum real zeroLimit = (real.mant_dig - real.min_exp + 1) * LN2;
+    if (a * a > zeroLimit)
     {
         // underflow
         if (a < 0.0) return 2.0;
         else return 0.0;
+    }
+
+    enum real normalLimit = (1 - real.min_exp) * LN2;
+    if (a * a > normalLimit)
+    {
+        // Keep the exponential factors normal and round only the final
+        // product into the subnormal range.
+        immutable z = expx2Impl!true(a, -1);
+        immutable y = (z * erfce(x)) * z;
+        return a < 0.0 ? 2.0L - y : y;
     }
 
     real y;
@@ -747,6 +760,35 @@ real erfc(real a)
     return y;
 }
 
+
+// https://github.com/dlang/phobos/issues/11123
+@safe unittest
+{
+    immutable tiny = real.min_normal * real.epsilon;
+    static if (real.mant_dig == 64 && real.max_exp == 16384)
+    {
+        // High-precision erfc references, rounded to the result format.
+        assert(fabs(erfc(106.625L)
+            - 1.89270584079788685451574187664254661e-4940L) <= 2 * tiny);
+        assert(fabs(erfc(106.734375L)
+            - 1.38631837314538507294802618619747970e-4950L) <= tiny);
+        assert(erfc(106.7421875L) == tiny);
+        assert(erfc(106.75L) == 0);
+        assert(erfc(-106.625L) == 2);
+    }
+    else static if (real.mant_dig == 53)
+    {
+        assert(fabs(erfc(26.625L)
+            - 2.87437187806423350551465681501619572e-310L) <= 2 * tiny);
+        assert(fabs(erfc(27.0L)
+            - 5.23704892378925568501606768284954709e-319L) <= tiny);
+        assert(erfc(27.2255859375L) == tiny);
+        assert(erfc(27.2265625L) == 0);
+        assert(erfc(-27.0L) == 2);
+    }
+    assert(erfc(real.max) == 0);
+    assert(erfc(-real.max) == 2);
+}
 
 private {
 /* Exponentially scaled erfc function
