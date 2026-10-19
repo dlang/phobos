@@ -1196,8 +1196,9 @@ private F _sinh(F)(F x)
         return copysign(F(0.5) * exp(fabs(x)), x);
     }
 
-    const y = expm1(x);
-    return F(0.5) * y / (y+1) * (y+2);
+    // Use |x|: for x < 0, expm1(x) is close to -1 and y+1 would cancel.
+    const y = expm1(fabs(x));
+    return copysign(F(0.5) * y / (y+1) * (y+2), x);
 }
 
 @safe @nogc nothrow unittest
@@ -1206,6 +1207,21 @@ private F _sinh(F)(F x)
     import std.math.operations : isClose;
 
     assert(isClose(sinh(1.0L), real((E - 1.0 / E) / 2), real.sizeof > double.sizeof ? 1e-15 : 1e-14));
+}
+
+// Negative arguments are as accurate as positive ones
+@safe @nogc nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.meta : AliasSeq;
+
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        // A tolerance, not ==: on x87 (32-bit) one side can keep extra precision
+        assert(isClose(sinh(F(-0.5)), -sinh(F(0.5)), 2 * F.epsilon));
+        assert(isClose(sinh(F(-20.5)), -sinh(F(20.5)), 2 * F.epsilon));
+    }
+    assert(isClose(sinh(-20.5), -399_951_088.737_752_702_7, 1e-15));
 }
 /***********************************
  * Calculates the hyperbolic tangent of x.
@@ -1393,9 +1409,13 @@ private F _asinh(F)(F x)
 real atanh(real x) @safe pure nothrow @nogc
 {
     import std.math.exponential : log1p;
+    import std.math.traits : copysign;
+    import core.math : fabs;
 
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
-    return  0.5 * log1p( 2 * x / (1 - x) );
+    // Use |x|: for x close to -1, the argument of log1p is close to -1 and would cancel.
+    const ax = fabs(x);
+    return copysign(0.5 * log1p( 2 * ax / (1 - ax) ), x);
 }
 
 /// ditto
@@ -1421,4 +1441,19 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
     import std.math.operations : isClose;
 
     assert(isClose(atanh(tanh(0.5L)), 0.5, real.sizeof > double.sizeof ? 1e-15 : 1e-14));
+}
+
+// Arguments close to -1 are as accurate as those close to 1
+@safe @nogc nothrow unittest
+{
+    import std.math.operations : isClose;
+    import std.meta : AliasSeq;
+
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        // A tolerance, not ==: on x87 (32-bit) one side can keep extra precision
+        assert(isClose(atanh(F(-0.5)), -atanh(F(0.5)), 2 * F.epsilon));
+        assert(isClose(atanh(F(-0.999999)), -atanh(F(0.999999)), 2 * F.epsilon));
+    }
+    assert(isClose(atanh(-0.999999), -7.254_328_619_247_669_367, 1e-15));
 }
