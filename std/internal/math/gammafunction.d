@@ -641,6 +641,30 @@ real logGamma(real x)
 
     if ( x < LN_GAMMA_STIRLING_LB )
     {
+        // Near one, recurrence rounds away information needed for the small
+        // result. Evaluate logGamma(1+h) directly, where h is exact.
+        const h = x - 1;
+        if (fabs(h) <= 0x1p-13L)
+        {
+            if (h == 0)
+                return 0.0L;
+            // logGamma(1+h) = -EulerGamma*h + sum((-1)^n*zeta(n)*h^n/n).
+            // At |h| <= 2^-13, the degree-ten remainder is below 2^-146,
+            // also sufficient relative to the result for binary128.
+            static immutable real[9] coefficients = [
+                0.8224670334241132182362075833230125946L,
+                -0.4006856343865314284665793871704833303L,
+                0.2705808084277845478790009241352919757L,
+                -0.2073855510286739852662730972914068336L,
+                0.1695571769974081899524196549651534213L,
+                -0.144049896768846118119971078549970965657L,
+                0.1255096695247430424223356548135815582L,
+                -0.111334265869564690490872529914712451165L,
+                0.1000994575127818085337145958900319017L,
+            ];
+            return h * (-EULERGAMMA + h * poly(h, coefficients));
+        }
+
         z = 1.0L;
         nx = floor( x +  0.5L );
         f = x - nx;
@@ -691,6 +715,30 @@ real logGamma(real x)
     real p = 1.0L / (x*x);
     q += poly( p, logGammaStirlingCoeffs ) / x;
     return q ;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    // Regression for https://github.com/dlang/phobos/issues/11128.
+    foreach (x; [nextDown(1.0L), nextUp(1.0L)])
+    {
+        const h = x - 1;
+        assert(isClose(logGamma(x), -EULERGAMMA * h, 8 * real.epsilon));
+    }
+
+    // Independent high-precision references from recurrence and Stirling's
+    // expansion. Include both endpoints of the near-one approximation.
+    static immutable real[2][] cases = [
+        [1 - 0x1p-13L, 0.00007047315303717008615499045661742960649129L],
+        [1 + 0x1p-13L, -0.00007044864160936656733821449407577769386531L],
+        [1 - 0x1p-20L, 5.504765026737052437975868352636020011575e-7L],
+        [1 + 0x1p-20L, -5.504750066148866790922434423491111098145e-7L],
+        [1 - 0x1p-40L, 5.249745890089624390528065763412892202040e-13L],
+        [1 + 0x1p-40L, -5.249745890076017814837817174241475433141e-13L],
+    ];
+    foreach (test; cases)
+        assert(isClose(logGamma(test[0]), test[1], 8 * real.epsilon));
+    assert(isIdentical(logGamma(1.0L), 0.0L));
 }
 
 @safe unittest
