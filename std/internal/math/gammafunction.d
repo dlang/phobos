@@ -1952,7 +1952,7 @@ real betaDistExpansion2(real a, real b, real x )
     return betaDistExpansion2(a, b, x, 1 - x);
 }
 
-private real betaDistExpansion2(real a, real b, real x, real xc)
+real betaDistExpansion2(real a, real b, real x, real xc)
 {
     real  xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
     real k1, k2, k3, k4, k5, k6, k7, k8;
