@@ -1217,8 +1217,9 @@ private F _sinh(F)(F x)
 
     static foreach (F; AliasSeq!(float, double, real))
     {
-        assert(sinh(F(-0.5)) == -sinh(F(0.5)));
-        assert(sinh(F(-20.5)) == -sinh(F(20.5)));
+        // A tolerance, not ==: on x87 (32-bit) one side can keep extra precision
+        assert(isClose(sinh(F(-0.5)), -sinh(F(0.5)), 2 * F.epsilon));
+        assert(isClose(sinh(F(-20.5)), -sinh(F(20.5)), 2 * F.epsilon));
     }
     assert(isClose(sinh(-20.5), -399_951_088.737_752_702_7, 1e-15));
 }
@@ -1450,8 +1451,9 @@ float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real) x); }
 
     static foreach (F; AliasSeq!(float, double, real))
     {
-        assert(atanh(F(-0.5)) == -atanh(F(0.5)));
-        assert(atanh(F(-0.999999)) == -atanh(F(0.999999)));
+        // A tolerance, not ==: on x87 (32-bit) one side can keep extra precision
+        assert(isClose(atanh(F(-0.5)), -atanh(F(0.5)), 2 * F.epsilon));
+        assert(isClose(atanh(F(-0.999999)), -atanh(F(0.999999)), 2 * F.epsilon));
     }
     assert(isClose(atanh(-0.999999), -7.254_328_619_247_669_367, 1e-15));
 }
