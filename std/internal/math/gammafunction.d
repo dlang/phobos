@@ -666,36 +666,50 @@ real logGamma(real x)
         }
 
         z = 1.0L;
-        nx = floor( x +  0.5L );
-        f = x - nx;
-        while ( x >= 3.0L )
+        if ( x < 2.0L )
         {
-            nx -= 1.0L;
-            x = nx + f;
-            z *= x;
-        }
-        while ( x < 2.0L )
-        {
-            if ( fabs(x) <= 0.03125L )
+            // Below two, recurrence otherwise cancels terms near +/-log(2).
+            // Reuse the near-one expansion with exact x-1 and x-2, keeping
+            // logGamma(x) = logGamma(x-1) + log(x-1) in terms of small values.
+            if (x >= 2 - 0x1p-13L)
+                return logGamma(x - 1) + log1p(x - 2);
+
+            nx = floor( x +  0.5L );
+            f = x - nx;
+            do
             {
-                if ( x == 0.0L )
-                    return real.infinity;
-                // For subnormal x the correction to -log(|x|) is negligible,
-                // but forming the reciprocal can overflow. Keep the recurrence
-                // factor in logarithmic form as well.
-                if (fabs(x) < real.min_normal)
-                    return log(fabs(z)) - log(fabs(x));
-                if ( x < 0.0L )
+                if ( fabs(x) <= 0.03125L )
                 {
-                    x = -x;
-                    q = z / (x * poly( x, GammaSmallNegCoeffs));
-                } else
-                    q = z / (x * poly( x, GammaSmallCoeffs));
-                return log( fabs(q) );
+                    if ( x == 0.0L )
+                        return real.infinity;
+                    // For subnormal x the correction to -log(|x|) is negligible,
+                    // but forming the reciprocal can overflow. Keep the recurrence
+                    // factor in logarithmic form as well.
+                    if (fabs(x) < real.min_normal)
+                        return log(fabs(z)) - log(fabs(x));
+                    if ( x < 0.0L )
+                    {
+                        x = -x;
+                        q = z / (x * poly( x, GammaSmallNegCoeffs));
+                    } else
+                        q = z / (x * poly( x, GammaSmallCoeffs));
+                    return log( fabs(q) );
+                }
+                z /= nx +  f;
+                nx += 1.0L;
+                x = nx + f;
+            } while ( x < 2.0L );
+        }
+        else
+        {
+            nx = floor( x +  0.5L );
+            f = x - nx;
+            while ( x >= 3.0L )
+            {
+                nx -= 1.0L;
+                x = nx + f;
+                z *= x;
             }
-            z /= nx +  f;
-            nx += 1.0L;
-            x = nx + f;
         }
         z = fabs(z);
         if ( x == 2.0L )
@@ -715,6 +729,30 @@ real logGamma(real x)
     real p = 1.0L / (x*x);
     q += poly( p, logGammaStirlingCoeffs ) / x;
     return q ;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    // Regression for https://github.com/dlang/phobos/issues/11136.
+    const x = nextDown(2.0L);
+    const expected = (1 - EULERGAMMA) * (x - 2);
+    assert(logGamma(x) < 0);
+    assert(isClose(logGamma(x), expected, 8 * real.epsilon));
+    assert(isIdentical(logGamma(2.0L), 0.0L));
+
+    // Independent high-precision recurrence/Stirling references, including
+    // the lower endpoint and points on the unchanged side above two.
+    static immutable real[2][] cases = [
+        [2 - 0x1p-13L, -0.00005160461064981215542788033369454594603258L],
+        [2 + 0x1p-13L, 0.00005161422091631080428484087308642550680092L],
+        [2 - 0x1p-20L, -4.031982684801847634526569010155612520095e-7L],
+        [2 + 0x1p-20L, 4.031988550443015548161720726142250337887e-7L],
+        [2 - 0x1p-40L, -3.845201127643793891685092507682746597344e-13L],
+        [2 + 0x1p-40L, 3.845201127649128661249810820105449275901e-13L],
+        [2 - 0x1p-52L, -9.387698065543116760865391332868876956843e-17L],
+    ];
+    foreach (test; cases)
+        assert(isClose(logGamma(test[0]), test[1], 8 * real.epsilon));
 }
 
 @safe pure nothrow @nogc unittest
