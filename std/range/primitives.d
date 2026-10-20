@@ -1114,7 +1114,7 @@ Returns:
 enum bool isBidirectionalRange(R) = isForwardRange!R
     && is(typeof((R r) => r.popBack))
     && (is(typeof((return ref R r) => r.back)) || is(typeof(ref (return ref R r) => r.back)))
-    && is(typeof(lvalueOf!R.back.init) == ElementType!R);
+    && is(typeof(backOf(lvalueOf!R)) == ElementType!R);
 
 /// ditto
 enum bool isBidirectionalRange(R, E) =
@@ -1387,6 +1387,13 @@ enum bool hasMobileElements(R) =
     static assert( hasMobileElements!(dchar[]));
 }
 
+// `r.front` / `r.back` in a return statement, so a member function is called whether or not
+// it is a `@property` (in a bare `typeof(r.front)` it is not), a field or a `ref` result is
+// returned by reference (no copy, so a non-copyable element type is answered too), and no
+// `.init` of the element type is built.
+private auto ref frontOf(R)(return ref R r) { return r.front; }
+private auto ref backOf(R)(return ref R r) { return r.back; }
+
 /**
 The element type of `R`. `R` does not have to be a range. The
 element type is determined as the type yielded by `r.front` for an
@@ -1397,11 +1404,8 @@ object `r` of type `R`. For example, `ElementType!(T[])` is
  */
 template ElementType(R)
 {
-    // An enum's `.init` is its first member, not a new literal, and only that expression gives
-    // an enum whose base type is an array a `front`. `R.sizeof`: see `isInputRange`.
-    static if (is(R == enum) && is(typeof(R.init.front.init) T))
-        alias ElementType = T;
-    else static if (!is(R == enum) && is(typeof(R.sizeof)) && is(typeof(lvalueOf!R.front.init) T))
+    // `R.sizeof`: see `isInputRange`.
+    static if (is(typeof(R.sizeof)) && is(typeof(frontOf(lvalueOf!R)) T))
         alias ElementType = T;
     else
         alias ElementType = void;
@@ -1500,6 +1504,31 @@ template ElementType(R)
     static assert(isBidirectionalRange!R);
     static assert(hasSlicing!R);
     static assert(is(ElementType!R == int));
+}
+
+// An element type with a member named `init`, here from a mixin template, hides the built-in `.init`
+@safe unittest
+{
+    mixin template SetUp()
+    {
+        void init(int v) { x = v; }
+    }
+    static struct S
+    {
+        int x;
+        mixin SetUp;
+    }
+    static assert(is(ElementType!(S[]) == S));
+    static assert(isRandomAccessRange!(S[]));
+}
+
+// A variable of an enum type whose base type is a non-string array has no `front`
+@safe unittest
+{
+    enum E : int[] { a = [1, 2] }
+    E e = E.a;
+    static assert(!__traits(compiles, e.front));
+    static assert(is(ElementType!E == void));
 }
 
 /**

@@ -1072,10 +1072,10 @@ private:
     alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
     enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!fun(R.init.front)));
+        is(typeof(unaryFun!fun(lvalueOf!R.front)));
 
     enum isRangeBinaryIterable(R) =
-        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
+        is(typeof(binaryFun!BinaryArgs(0, lvalueOf!R.front)));
 
     enum isRangeIterable(R) =
         isInputRange!R &&
@@ -1326,6 +1326,23 @@ public:
 
     assert(a == [ 2, 3, 4 ]);
     assert(b == [ 3, 4, 5 ]);
+}
+
+// A `ref` parameter binds to a forward range's `front` when `front` is an lvalue
+@safe unittest
+{
+    static struct Fwd
+    {
+        int front;
+        int left = 3;
+        bool empty() const { return left == 0; }
+        void popFront() { --left; }
+        Fwd save() { return this; }
+    }
+
+    int[] seen;
+    Fwd(1).each!((ref e) { seen ~= e; e *= 2; });
+    assert(seen == [1, 2, 4]);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15358
