@@ -1487,22 +1487,52 @@ private real betaSmallShapeComplement(real a, real b, real x)
     return -expm1(a * (logBx + gammaRatioCorrection - logGammaOverA + seriesOverA) - shift);
 }
 
-// Solve betaIncomplete(aa, bb, 1 - t) = yy0 for t in [tlo, thi] by bisection
-// and return 1 - t. The CDF near 1 comes from betaIncompleteComplSmallX, so
-// neither yy0 nor the CDF is ever subtracted from 1.
-private real betaIncompleteInvTail(real aa, real bb, real yy0, real tlo, real thi)
+// Solve betaIncomplete(aa, bb, 1 - t) = yy0 using bracketed Newton steps and bisection
+// and return 1 - t, or t for a reflected quantile. Evaluate the CDF using
+// betaIncompleteComplSmallX so neither yy0 nor the CDF is subtracted from 1.
+private real betaIncompleteInvTail(real aa, real bb, real yy0, real tlo, real thi, bool complement)
 {
-    for (int i = 0; i < 200; i++)
+    const normalizer = logBeta(aa, bb);
+    real t = bb / (aa + bb);
+    if (!(t > tlo && t < thi))
+        t = tlo + 0.5L * (thi - tlo);
+    real previousStep = thi - tlo;
+    // A reflected result must converge in t, including tiny representable values.
+    for (int i = 0; i < (complement ? real.max_exp + real.mant_dig + 16 : 200); i++)
     {
-        const t = tlo + 0.5L * (thi - tlo);
-        if (t <= tlo || t >= thi || 1.0L - tlo == 1.0L - thi)
+        if (t <= tlo || t >= thi || (!complement && 1.0L - tlo == 1.0L - thi))
+        {
+            t = tlo + 0.5L * (thi - tlo);
             break;
-        if (betaIncompleteComplSmallX(bb, aa, t) > yy0)
+        }
+        const y = betaIncompleteComplSmallX(bb, aa, t);
+        if (y == yy0)
+            break;
+        if (y > yy0)
             tlo = t;
         else
             thi = t;
+
+        real next = tlo + 0.5L * (thi - tlo);
+        // The tail decreases with t. Accept Newton steps only inside the
+        // bracket and while their size shrinks; otherwise bisect.
+        if (i < 16)
+        {
+            const density = exp((bb - 1) * log(t) + (aa - 1) * log1p(-t) - normalizer);
+            const step = (y - yy0) / density;
+            const proposed = t + step;
+            if (density > 0 && isFinite(density)
+                && fabs(step) <= 8 * real.epsilon * t)
+                break;
+            if (proposed > tlo && proposed < thi && fabs(step) < previousStep / 2)
+                next = proposed;
+        }
+        previousStep = fabs(next - t);
+        t = next;
     }
-    const x = 1.0L - (tlo + 0.5L * (thi - tlo));
+    if (complement)
+        return t;
+    const x = 1.0L - t;
     // The quantile of a probability below 1 is below 1.
     return x < 1.0L ? x : nextDown(1.0L);
 }
@@ -1527,6 +1557,9 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
         return 0.0L;
     if ( yy0 >= 1.0L )
         return 1.0L;
+    // For a = 1, use the exact inverse without subtracting a near-one power.
+    if (aa == 1.0L)
+        return bb == 1.0L ? yy0 : -expm1(log1p(-yy0) / bb);
     x0 = 0.0L;
     yl = 0.0L;
     x1 = 1.0L;
@@ -1534,10 +1567,10 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
     if ( aa <= 1.0L || bb <= 1.0L )
     {
         dithresh = 1.0e-7L;
-        rflg = 0;
-        a = aa;
-        b = bb;
-        y0 = yy0;
+        rflg = yy0 > 0.5L;
+        a = rflg ? bb : aa;
+        b = rflg ? aa : bb;
+        y0 = rflg ? 1.0L - yy0 : yy0;
         x = a/(a+b);
         y = betaIncomplete( a, b, x );
         nflg = 0;
@@ -1630,47 +1663,19 @@ ihalve:
             else
                 di = (y0 - y)/(yh - yl);
             dir += 1;
-            if ( x0 > 0.95L && rflg == 0
-                && fabs((1.0L - (1.0L - yy0)) - yy0) > 8 * real.epsilon * yy0 )
+            if (x0 > 0.95L)
             {
-                // 1 - yy0 has lost part of yy0 (all of it for yy0 = 1e-20),
-                // so do not switch to the complement: solve for 1 - x instead.
-                x = betaIncompleteInvTail(aa, bb, yy0, 1.0L - x1, 1.0L - x0);
+                // Keep the small target even when 1-y0 is exactly representable:
+                // evaluating a CDF near one can still lose its tail accuracy.
+                x = betaIncompleteInvTail(a, b, y0, 1.0L - x1, 1.0L - x0, rflg != 0);
+                rflg = 0;
                 goto done;
-            }
-            if ( x0 > 0.95L )
-            {
-                if ( rflg == 1 )
-                {
-                    rflg = 0;
-                    a = aa;
-                    b = bb;
-                    y0 = yy0;
-                }
-                else
-                {
-                    rflg = 1;
-                    a = bb;
-                    b = aa;
-                    y0 = 1.0 - yy0;
-                }
-                x = 1.0L - x;
-                y = betaIncomplete( a, b, x );
-                x0 = 0.0;
-                yl = 0.0;
-                x1 = 1.0;
-                yh = 1.0;
-                goto ihalve;
             }
         }
         else
         {
             x1 = x;
-            if ( rflg == 1 && x1 < real.epsilon )
-            {
-                x = 0.0L;
-                goto done;
-            }
+
             yh = y;
             if ( dir > 0 )
             {
@@ -1774,13 +1779,43 @@ newt:
 
 done:
     if ( rflg )
-    {
-        if ( x <= real.epsilon )
-            x = 1.0L - real.epsilon;
-        else
-            x = 1.0L - x;
-    }
+        x = 1.0L - x;
     return x;
+}
+
+// https://github.com/dlang/phobos/issues/11134
+@safe unittest
+{
+    import std.math : expm1, log1p, nextDown;
+
+    // The small complementary probability must survive both initialization
+    // (a <= 1) and reflection during the search (both shapes > 1).
+    const real p = cast(real) (1.0 - 0x1p-53);
+    foreach (real b; [1000.0L, 1e20L, 1e100L])
+    {
+        const expected = -expm1(log1p(-p) / b);
+        assert(fabs(betaIncompleteInv(1, b, p) / expected - 1) < 256 * real.epsilon);
+    }
+
+    // A fractional shape exercises the iterative initialization rather than
+    // the exact a = 1 inverse above. Reference computed at 100-digit precision.
+    const halfShapeExpected = 0.0338055760009337782753633L;
+    assert(fabs(betaIncompleteInv(0.5L, 1000, p) / halfShapeExpected - 1)
+        < 256 * real.epsilon);
+
+    // The exact a = 1 path must preserve small lower-tail probabilities too.
+    assert(fabs(betaIncompleteInv(1, 2, 1e-30L) / 5e-31L - 1) < 8 * real.epsilon);
+    assert(betaIncompleteInv(1, 1, 1e-30L) == 1e-30L);
+
+    // Independent high-precision root of (1-x)^1000 * (1+1000*x) = 1-p.
+    const expected = 0.039634578902036241379L;
+    assert(fabs(betaIncompleteInv(2, 1000, p) / expected - 1) < 256 * real.epsilon);
+
+    // The exact quantile is closer to one than its preceding representable value.
+    assert(betaIncompleteInv(5, 1, nextDown(1.0L)) == 1.0L);
+    // Other near-one quantiles must retain their displacement from one.
+    assert(betaIncompleteInv(0.75L, 1, nextDown(1.0L)) == nextDown(1.0L));
+    assert(betaIncompleteInv(0.6L, 1, nextDown(1.0L)) == nextDown(nextDown(1.0L)));
 }
 
 @safe unittest { // also tested by the normal distribution
@@ -1877,11 +1912,12 @@ done:
             0,
             1e-40));
 
-        // scipy says that this is 8.068764506083944e-20 to double precision. Since this is a
-        // regression test where the original value isn't a known good value, I' updating the
-        // test value to the current generated value, which is closer to the scipy value.
+        // Independent high-precision inverse reference. Compare accuracy rather
+        // than requiring the exact bits produced by the previous iteration.
         real a1 = 3.40483L;
-        assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113L) == 0x1.2a867b1e12b9bdf0p-64L);
+        const expected = 8.0687645060839454613e-20L;
+        assert(fabs(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113L)
+            / expected - 1) < 128 * real.epsilon);
 
         real b1 = 2.82847e-25L;
         assert(feqrel(betaIncompleteInv(0.01L, b1, 9e-26L), 0x1.549696104490aa9p-830L) >= real.mant_dig-10);
