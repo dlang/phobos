@@ -1560,6 +1560,14 @@ real betaIncompleteInv(real aa, real bb, real yy0 )
     // For a = 1, use the exact inverse without subtracting a near-one power.
     if (aa == 1.0L)
         return bb == 1.0L ? yy0 : -expm1(log1p(-yy0) / bb);
+    // A rounded subnormal CDF cannot resolve the relative error in the
+    // target. Keep the probability in logarithmic form on this rare path.
+    if (yy0 < real.min_normal)
+    {
+        const result = betaIncompleteInvSubnormal(aa, bb, yy0);
+        if (!isNaN(result))
+            return result;
+    }
     x0 = 0.0L;
     yl = 0.0L;
     x1 = 1.0L;
@@ -1781,6 +1789,138 @@ done:
     if ( rflg )
         x = 1.0L - x;
     return x;
+}
+
+// Evaluate the small lower tail without rounding its probability to a
+// subnormal. Retain logX separately when exp(logX) rounds to zero.
+private real betaIncompleteLog(real a, real b, real logX)
+{
+    const x = exp(logX);
+    if (x == 0)
+        return a * logX - log(a) - logBeta(a, b);
+    if (x == 1)
+        return 0;
+    if (b * x <= 1 && x <= 0.95L)
+    {
+        // exp(logX) may itself be subnormal. Keep the unrounded power x^^a;
+        // rounding x in the series correction has only a negligible effect.
+        return betaDistPowerSeries!true(a, b, x) + a * (logX - log(x));
+    }
+    if (x > a / (a + b))
+        return log(betaIncomplete(a, b, x));
+
+    const xc = 1 - x;
+    const w = x * (a + b - 2) - (a - 1) < 0
+        ? betaDistExpansion1(a, b, x)
+        : betaDistExpansion2(a, b, x, xc) / xc;
+    return a * logX + b * log1p(-x) - logBeta(a, b) + log(w / a);
+}
+
+private real betaIncompleteInvSubnormal(real a, real b, real p)
+{
+    const target = log(p);
+    const normalizer = logBeta(a, b);
+    // Include the rounding boundary below the smallest subnormal quantile.
+    real lo = MINLOG - LN2;
+    real hi = 0;
+    const lower = betaIncompleteLog(a, b, lo);
+    if (isNaN(lower))
+        return real.nan;
+    if (lower >= target)
+        return 0;
+    // Invert the leading term x^^a / (a * beta(a, b)) for the initial guess.
+    real z = (target + log(a) + normalizer) / a;
+    // If the initial quantile rounds to one, use the existing near-one solver.
+    if (exp(z) == 1)
+        return real.nan;
+    if (!(z > lo && z < hi))
+        z = lo + (hi - lo) / 2;
+    real previousStep = hi - lo;
+    for (int i = 0; i < 2 * (real.mant_dig + 32); ++i)
+    {
+        const value = betaIncompleteLog(a, b, z);
+        if (isNaN(value))
+            return real.nan;
+        const residual = value - target;
+        if (fabs(residual) <= 4 * real.epsilon * fabs(target))
+            return exp(z);
+        if (residual < 0)
+            lo = z;
+        else
+            hi = z;
+        const x = exp(z);
+        // Derivative of log(CDF(exp(z))) with respect to z.
+        const derivative = exp(a * z + (b - 1) * log1p(-x)
+            - normalizer - value);
+        const step = residual / derivative;
+        const candidate = z - step;
+        // Require bracketed, shrinking Newton steps; otherwise bisect.
+        if (candidate > lo && candidate < hi && fabs(step) < previousStep / 2)
+        {
+            if (exp(candidate) == x)
+                return x;
+            previousStep = fabs(step);
+            z = candidate;
+        }
+        else
+        {
+            const midpoint = lo + (hi - lo) / 2;
+            previousStep = fabs(midpoint - z);
+            z = midpoint;
+            if (z == lo || z == hi)
+                return exp(z);
+        }
+    }
+    return real.nan;
+}
+
+// https://github.com/dlang/phobos/issues/11135
+@safe unittest
+{
+    import std.math : nextUp;
+
+    // Use native real subnormals as well as the original double reproducer.
+    const p = nextUp(0.0L);
+    const tolerance = 8 * real.epsilon * fabs(log(p));
+    foreach (real probability; [p, 16 * p, real.min_normal / 2])
+    {
+        const root = sqrt(probability);
+        assert(fabs(betaIncompleteInv(2, 1, probability) / root - 1) < tolerance);
+
+        // At these tiny quantiles, the leading x^^2 term gives the result
+        // to far more precision than real can represent.
+        foreach (real b; [2.0L, 10.0L, 1000.0L])
+        {
+            const expected = root * sqrt(2 / (b * (b + 1)));
+            assert(fabs(betaIncompleteInv(2, b, probability) / expected - 1)
+                < tolerance);
+        }
+        assert(betaIncompleteInv(0.5L, 1, probability) == 0);
+    }
+
+    // A tiny second shape can give an ordinary-sized quantile. As b tends
+    // to zero, I_x(1/2, b) / b tends to 2 * atanh(sqrt(x)).
+    assert(fabs(betaIncompleteInv(0.5L, p, p)
+        / 0.21355226703407258985030106565636389751L - 1) < tolerance);
+
+    // An initial estimate rounded to one must defer to the near-one solver.
+    assert(isNaN(betaIncompleteInvSubnormal(1e300L, 2, p)));
+
+    // A subnormal quantile must not lose its rounding boundary in exp(logX).
+    static if (real.mant_dig == 53)
+    {
+        const expected = sqrt(p) * sqrt(2.0L) / 1e150L;
+        assert(fabs(betaIncompleteInv(2, 1e150L, p) - expected) <= 2 * p);
+    }
+
+    // Independent high-precision roots of x^^2000 * (2001 - 2000*x) = p.
+    // The double case exercises the continued fraction on 53-bit real.
+    const doubleP = cast(real) 0x1p-1074;
+    assert(fabs(betaIncompleteInv(2000, 2, doubleP)
+        / 0.68698657348243911035891003386003426569L - 1) < 1e-12L);
+    static if (real.mant_dig == 64 && real.min_exp == -16381)
+        assert(fabs(betaIncompleteInv(2000, 2, p)
+            / 0.00333526973196368954550724726202728030L - 1) < tolerance);
 }
 
 // https://github.com/dlang/phobos/issues/11134
@@ -2120,7 +2260,7 @@ real betaDistExpansion2(real a, real b, real x, real xc)
 
 /* Power series for incomplete gamma integral.
    Use when b*x is small.  */
-real betaDistPowerSeries(real a, real b, real x )
+real betaDistPowerSeries(bool logarithmic = false)(real a, real b, real x )
 {
     real ai = 1.0L / a;
     real u = (1.0L - b) * x;
@@ -2145,11 +2285,11 @@ real betaDistPowerSeries(real a, real b, real x )
     u = a * logX;
     enum logMinNormal = (real.min_exp - 1) * LN2;
     // Avoid rounding x^^a to subnormal precision before normalization.
-    if ( (a+b) < MAXGAMMA && u > logMinNormal )
+    if (!logarithmic && (a+b) < MAXGAMMA && u > logMinNormal)
     {
         s = s * pow(x,a) / beta(a, b);
     }
-    else if ((a+b) < MAXGAMMA && fabs((a - 1) * logX) < -logMinNormal)
+    else if (!logarithmic && (a+b) < MAXGAMMA && fabs((a - 1) * logX) < -logMinNormal)
     {
         // Keep one factor of x until after normalization: x^^a can lose
         // precision or underflow even when the normalized result does not.
@@ -2186,6 +2326,9 @@ real betaDistPowerSeries(real a, real b, real x )
         {
             t = u + log(s) - logBeta(a, b);
         }
+
+        static if (logarithmic)
+            return t;
 
         if ( t < MINLOG )
         {
