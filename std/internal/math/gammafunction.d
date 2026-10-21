@@ -1804,7 +1804,7 @@ private real betaIncompleteLog(real a, real b, real logX)
     {
         // exp(logX) may itself be subnormal. Keep the unrounded power x^^a;
         // rounding x in the series correction has only a negligible effect.
-        return betaDistPowerSeries!true(a, b, x) + a * (logX - log(x));
+        return betaDistPowerSeries(a, b, x, true) + a * (logX - log(x));
     }
     if (x > a / (a + b))
         return log(betaIncomplete(a, b, x));
@@ -2260,7 +2260,7 @@ real betaDistExpansion2(real a, real b, real x, real xc)
 
 /* Power series for incomplete gamma integral.
    Use when b*x is small.  */
-real betaDistPowerSeries(bool logarithmic = false)(real a, real b, real x )
+real betaDistPowerSeries(real a, real b, real x, bool logarithmic = false)
 {
     real ai = 1.0L / a;
     real u = (1.0L - b) * x;
@@ -2327,7 +2327,7 @@ real betaDistPowerSeries(bool logarithmic = false)(real a, real b, real x )
             t = u + log(s) - logBeta(a, b);
         }
 
-        static if (logarithmic)
+        if (logarithmic)
             return t;
 
         if ( t < MINLOG )
