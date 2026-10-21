@@ -1250,17 +1250,46 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  */
 real betaIncomplete(real aa, real bb, real xx )
 {
-    return betaIncompleteImpl!false(aa, bb, xx, 1 - xx);
+    // Near one, use the direct complementary series and retain both
+    // coordinates for the continued fraction when the lower tail is small.
+    return betaIncompleteImpl(aa, bb, xx, 1 - xx, xx > 0.95L);
+}
+
+// https://github.com/dlang/phobos/issues/11133
+@safe unittest
+{
+    // Exact shape-one identity, including the last representable real below 1.
+    foreach (real x; [0.96L, 0.999999L, nextDown(1.0L)])
+    foreach (real b; [1e-20L, 1e-10L, 0.125L, 2.0L])
+    {
+        const expected = -expm1(b * log1p(-x));
+        assert(fabs(betaIncomplete(1, b, x) / expected - 1) < 256 * real.epsilon);
+    }
+
+    // Independent 100-digit references for fractional and larger first shapes.
+    // Keep the same exactly representable coordinate on all real formats.
+    const x = 1 - cast(real) 0x1p-53;
+    const real[4] shapes = [0.5L, 2.0L, 10.0L, 1000.0L];
+    const real[4] expected = [
+        3.8123094930796991955153314272760603122e-19L,
+        3.5736800569677101503755010325014644115e-19L,
+        3.3907832315708848424319049722860454915e-19L,
+        2.9252329709126867393466669983791671539e-19L];
+    foreach (i, a; shapes)
+        assert(fabs(betaIncomplete(a, 1e-20L, x) / expected[i] - 1)
+            < 256 * real.epsilon);
 }
 
 // Preserve x < 0.05 when computing the complement: 1 - (1 - x) can lose it.
 real betaIncompleteComplSmallX(real a, real b, real x)
 {
-    return betaIncompleteImpl!true(b, a, 1 - x, x);
+    return betaIncompleteImpl(b, a, 1 - x, x, true);
 }
 
+// Both callers evaluate the lower tail at xx, with xxc retained separately.
+// nearOne selects the stable opposite-tail series and coordinate arithmetic.
 pragma(inline, true)
-private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real xxc)
+private real betaIncompleteImpl(real aa, real bb, real xx, real xxc, bool nearOne)
 {
     if (only(aa, bb, xx).any!isNaN) return largestNaNPayload(xx, aa, bb);
 
@@ -1288,7 +1317,7 @@ private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real
     {
         return betaDistPowerSeries(aa, bb, xx);
     }
-    static if (complement)
+    if (nearOne)
     {
         // The opposite tail's power series converges quickly in this region.
         // Limit the amplification of relative error by subtraction to 31;
@@ -1312,7 +1341,7 @@ private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real
 
     /* Reverse a and b if x is greater than the mean. */
     bool reverse;
-    static if (complement)
+    if (nearOne)
         // Compare using the smaller coordinate, before rounding near one
         // can erase the distinction between the argument and the mean.
         reverse = xx > 0.5L ? xxc < bb / (aa + bb) : xx > aa / (aa + bb);
@@ -1347,13 +1376,13 @@ private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real
     real y = x * (a+b-2.0L) - (a-1.0L);
     // Near one, expansion #1 can lose its initial denominator to rounding.
     // Expansion #2 uses the separately retained complement instead.
-    if ( y < 0.0L && !(complement && x > 0.95L) )
+    if ( y < 0.0L && !(nearOne && x > 0.95L) )
     {
         w = betaDistExpansion1( a, b, x );
     }
     else
     {
-        static if (complement)
+        if (nearOne)
             w = betaDistExpansion2(a, b, x, xc) / xc;
         else
             w = betaDistExpansion2(a, b, x) / xc;
@@ -1364,7 +1393,7 @@ private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real
         x  (1-x)   Gamma(a+b) / ( a Gamma(a) Gamma(b) ) .   */
 
     real t;
-    static if (complement)
+    if (nearOne)
     {
         // A large shape parameter can amplify rounding in x or xc.
         y = a * (xc < 0.5L ? log1p(-xc) : log(x));
@@ -1377,7 +1406,7 @@ private real betaIncompleteImpl(bool complement)(real aa, real bb, real xx, real
     }
     if ( (a+b) < MAXGAMMA && fabs(y) < MAXLOG && fabs(t) < MAXLOG )
     {
-        static if (complement)
+        if (nearOne)
             t = exp(t) * exp(y);
         else
         {
