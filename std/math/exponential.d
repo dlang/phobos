@@ -1602,9 +1602,13 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
 
     static if (realFormat == RealFormat.ieeeDouble) // special case for double precision
     {
+        import std.math.algebraic : fabs;
+
         if (x < -0.5 || x > 0.5)
             return exp(x) - 1.0;
-        if (x == 0.0)
+        // The quadratic correction is below half an ULP in round-to-nearest.
+        // Avoid losing subnormal bits when the approximation halves x.
+        if (fabs(x) < T.epsilon / 4)
             return x;
 
         const T xx = x * x;
@@ -1671,6 +1675,36 @@ private T expm1Impl(T)(T x) @safe pure nothrow @nogc
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(real, double))
         testExpm1!T();
+}
+
+@safe @nogc nothrow unittest
+{
+    // https://github.com/dlang/phobos/issues/11140
+    import std.math.traits : isIdentical;
+    import std.math.operations : nextDown, nextUp;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double))
+    {{
+        const T smallest = T.min_normal * T.epsilon;
+        foreach (T x; [T(0), smallest, 3 * smallest, 5 * smallest,
+            nextDown(T.min_normal), T.min_normal, nextUp(T.min_normal)])
+        {
+            assert(isIdentical(expm1(x), x));
+            assert(isIdentical(expm1(-x), -x));
+            assert(isIdentical(expm1Impl(cast(double) x), cast(double) x));
+            assert(isIdentical(expm1Impl(-cast(double) x), -cast(double) x));
+        }
+    }}
+
+    // Check both sides of the shortcut boundary. At this scale the positive
+    // correction still rounds away, including for negative inputs.
+    const double cutoff = double.epsilon / 4;
+    foreach (double x; [nextDown(cutoff), cutoff, nextUp(cutoff)])
+    {
+        assert(isIdentical(expm1Impl(x), x));
+        assert(isIdentical(expm1Impl(-x), -x));
+    }
 }
 
 /**
