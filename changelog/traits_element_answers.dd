@@ -1,0 +1,24 @@
+`ElementType` and `each` no longer build the `.init` of the element or range type
+
+$(REF ElementType, std, range, primitives) and
+$(REF isBidirectionalRange, std, range, primitives) read the element type as
+`typeof(R.init.front.init)` and `typeof(R.init.back.init)`, and the constraint of
+$(REF each, std, algorithm, iteration) tested its function on `R.init.front`. For a struct
+or a static array, `.init` builds the type's whole default-initializer literal. They now use
+$(REF lvalueOf, std, traits) and a function that returns `r.front` or `r.back`, so their
+compile-time memory and time no longer grow with the size of the range or of its elements.
+
+This changes these answers:
+
+$(UL
+    $(LI `each` accepts a function with a `ref` parameter on a forward range whose
+        `front` is an lvalue (for example a field), as it already did on arrays and
+        input ranges. `R.init.front` was an rvalue only because `R.init` is a literal.)
+    $(LI `ElementType` of an `enum` whose base type is a non-string array, such as
+        `enum E : int[]` or `enum E : int[3]`, is `void`, since a variable of `E` has no
+        `front`. It was `inout(int)`, a type no variable of `E` produces.)
+    $(LI Where the element type, or the range type for `each`, declares a member named
+        `init`, `.init` named that member, so the answers were about the member. They are
+        now about the type: for example `ElementType` of an array of such elements is the
+        element type, so `isRandomAccessRange` of the array is `true`.)
+)
