@@ -629,6 +629,160 @@ else
 }
 }
 
+// Adapted from Cephes ndtr.c (Release 2.9) and ndtrf.c (Release 2.2).
+// Preserve their approximations and underflow cutoffs.
+private immutable double[] PD = [
+    5.57535335369399327526E2,
+    1.02755188689515710272E3,
+    9.34528527171957607540E2,
+    5.26445194995477358631E2,
+    1.96520832956077098242E2,
+    4.86371970985681366614E1,
+    7.46321056442269912687E0,
+    5.64189564831068821977E-1,
+    2.46196981473530512524E-10
+];
+
+private immutable double[] QD = [
+    5.57535340817727675546E2,
+    1.65666309194161350182E3,
+    2.24633760818710981792E3,
+    1.82390916687909736289E3,
+    9.75708501743205489753E2,
+    3.54937778887819891062E2,
+    8.67072140885989742329E1,
+    1.32281951154744992508E1,
+    1.0
+];
+
+private immutable double[] RD = [
+    2.97886665372100240670E0,
+    7.40974269950448939160E0,
+    6.16021097993053585195E0,
+    5.01905042251180477414E0,
+    1.27536670759978104416E0,
+    5.64189583547755073984E-1
+];
+
+private immutable double[] SD = [
+    3.36907645100081516050E0,
+    9.60896809063285878198E0,
+    1.70814450747565897222E1,
+    1.20489539808096656605E1,
+    9.39603524938001434673E0,
+    2.26052863220117276590E0,
+    1.0
+];
+
+private immutable double[] TD = [
+    5.55923013010394962768E4,
+    7.00332514112805075473E3,
+    2.23200534594684319226E3,
+    9.00260197203842689217E1,
+    9.60497373987051638749E0
+];
+
+private immutable double[] UD = [
+    4.92673942608635921086E4,
+    2.26290000613890934246E4,
+    4.59432382970980127987E3,
+    5.21357949780152679795E2,
+    3.35617141647503099647E1,
+    1.0
+];
+
+private immutable float[] PF = [
+    5.638259427386472E-001,
+    -2.741127028184656E-001,
+    3.404879937665872E-001,
+    -4.944515323274145E-001,
+    6.210004621745983E-001,
+    -5.824733027278666E-001,
+    3.687424674597105E-001,
+    -1.387039388740657E-001,
+    2.326819970068386E-002
+];
+
+private immutable float[] RF = [
+    5.641895067754075E-001,
+    -2.820767439740514E-001,
+    4.218463358204948E-001,
+    -1.015265279202700E+000,
+    2.921019019210786E+000,
+    -7.495518717768503E+000,
+    1.297719955372516E+001,
+    -1.047766399936249E+001
+];
+
+private immutable float[] TF = [
+    1.128379165726710E+000,
+    -3.761262582423300E-001,
+    1.128358514861418E-001,
+    -2.685381193529856E-002,
+    5.188327685732524E-003,
+    -8.010193625184903E-004,
+    7.853861353153693E-005
+];
+
+double erfDouble(double x)
+{
+    if (fabs(x) > 1.0)
+        return 1.0 - erfcDouble(x);
+    const z = x * x;
+    return x * poly(z, TD) / poly(z, UD);
+}
+
+double erfcDouble(double a)
+{
+    const x = fabs(a);
+    if (x < 1.0)
+        return 1.0 - erfDouble(a);
+    enum double maxlog = 7.09782712893383996732E2;
+    if (-a * a < -maxlog)
+        return a < 0.0 ? 2.0 : 0.0;
+    const z = cephesExpMinusSquare(a);
+    const p = x < 8.0 ? poly(x, PD) : poly(x, RD);
+    const q = x < 8.0 ? poly(x, QD) : poly(x, SD);
+    const y = (z * p) / q;
+    return a < 0.0 ? 2.0 - y : y;
+}
+
+// Cephes expx2.c, with sign fixed to -1.
+private double cephesExpMinusSquare(double x)
+{
+    x = -fabs(x);
+    const m = 0.0078125 * floor(128.0 * x + 0.5);
+    const f = x - m;
+    const u = -m * m;
+    const u1 = -(2 * m * f + f * f);
+    return exp(u) * exp(u1);
+}
+
+float erfFloat(float x)
+{
+    if (fabs(x) > 1.0)
+        return 1.0f - erfcFloat(x);
+    const z = x * x;
+    return x * poly(z, TF);
+}
+
+float erfcFloat(float a)
+{
+    const x = fabs(a);
+    if (x < 1.0)
+        return 1.0f - erfFloat(a);
+    float z = -a * a;
+    enum float maxlog = 88.72283905206835;
+    if (z < -maxlog)
+        return a < 0.0 ? 2.0f : 0.0f;
+    z = exp(z);
+    const q = 1.0f / x;
+    const y = q * q;
+    const p = x < 2.0 ? poly(y, PF) : poly(y, RF);
+    const result = z * q * p;
+    return a < 0.0 ? 2.0f - result : result;
+}
+
 /**
  *  Complementary error function
  *
