@@ -685,13 +685,13 @@ real erf(real x)
 /// ditto
 double erf(double x)
 {
-    return std.internal.math.errorfunction.erfDouble(x);
+    return std.internal.math.errorfunction.erf(x);
 }
 
 /// ditto
 float erf(float x)
 {
-    return std.internal.math.errorfunction.erfFloat(x);
+    return std.internal.math.errorfunction.erf(x);
 }
 
 // Preserve the real result of existing integral calls.
@@ -725,13 +725,13 @@ real erfc(real x)
 /// ditto
 double erfc(double x)
 {
-    return std.internal.math.errorfunction.erfcDouble(x);
+    return std.internal.math.errorfunction.erfc(x);
 }
 
 /// ditto
 float erfc(float x)
 {
-    return std.internal.math.errorfunction.erfcFloat(x);
+    return std.internal.math.errorfunction.erfc(x);
 }
 
 // Preserve the real result of existing integral calls.

@@ -627,11 +627,9 @@ else
        0x1.6a0fed103f1c68a6p+5L, 1.0L
     ];
 }
-}
 
-// Adapted from Cephes ndtr.c (Release 2.9) and ndtrf.c (Release 2.2).
-// Preserve their approximations and underflow cutoffs.
-private immutable double[] PD = [
+// Double-precision erfc(x) = exp(-x*x) PD(x)/QD(x), for 1 <= x < 8.
+immutable double[] PD = [
     5.57535335369399327526E2,
     1.02755188689515710272E3,
     9.34528527171957607540E2,
@@ -643,7 +641,7 @@ private immutable double[] PD = [
     2.46196981473530512524E-10
 ];
 
-private immutable double[] QD = [
+immutable double[] QD = [
     5.57535340817727675546E2,
     1.65666309194161350182E3,
     2.24633760818710981792E3,
@@ -655,7 +653,8 @@ private immutable double[] QD = [
     1.0
 ];
 
-private immutable double[] RD = [
+// Double-precision erfc(x) = exp(-x*x) RD(x)/SD(x), for x >= 8.
+immutable double[] RD = [
     2.97886665372100240670E0,
     7.40974269950448939160E0,
     6.16021097993053585195E0,
@@ -664,7 +663,7 @@ private immutable double[] RD = [
     5.64189583547755073984E-1
 ];
 
-private immutable double[] SD = [
+immutable double[] SD = [
     3.36907645100081516050E0,
     9.60896809063285878198E0,
     1.70814450747565897222E1,
@@ -674,7 +673,8 @@ private immutable double[] SD = [
     1.0
 ];
 
-private immutable double[] TD = [
+// Double-precision erf(x) = x TD(x*x)/UD(x*x), for abs(x) <= 1.
+immutable double[] TD = [
     5.55923013010394962768E4,
     7.00332514112805075473E3,
     2.23200534594684319226E3,
@@ -682,7 +682,7 @@ private immutable double[] TD = [
     9.60497373987051638749E0
 ];
 
-private immutable double[] UD = [
+immutable double[] UD = [
     4.92673942608635921086E4,
     2.26290000613890934246E4,
     4.59432382970980127987E3,
@@ -691,7 +691,8 @@ private immutable double[] UD = [
     1.0
 ];
 
-private immutable float[] PF = [
+// Single-precision erfc(x) = exp(-x*x)/x PF(1/(x*x)), for 1 <= x < 2.
+immutable float[] PF = [
     5.638259427386472E-001,
     -2.741127028184656E-001,
     3.404879937665872E-001,
@@ -703,7 +704,8 @@ private immutable float[] PF = [
     2.326819970068386E-002
 ];
 
-private immutable float[] RF = [
+// Single-precision erfc(x) = exp(-x*x)/x RF(1/(x*x)), for x >= 2.
+immutable float[] RF = [
     5.641895067754075E-001,
     -2.820767439740514E-001,
     4.218463358204948E-001,
@@ -714,7 +716,8 @@ private immutable float[] RF = [
     -1.047766399936249E+001
 ];
 
-private immutable float[] TF = [
+// Single-precision erf(x) = x TF(x*x), for abs(x) <= 1.
+immutable float[] TF = [
     1.128379165726710E+000,
     -3.761262582423300E-001,
     1.128358514861418E-001,
@@ -724,53 +727,51 @@ private immutable float[] TF = [
     7.853861353153693E-005
 ];
 
-double erfDouble(double x)
+}
+
+double erf(double x)
 {
     if (fabs(x) > 1.0)
-        return 1.0 - erfcDouble(x);
+        return 1.0 - erfc(x);
     const z = x * x;
     return x * poly(z, TD) / poly(z, UD);
 }
 
-double erfcDouble(double a)
+double erfc(double a)
 {
     const x = fabs(a);
     if (x < 1.0)
-        return 1.0 - erfDouble(a);
+        return 1.0 - erf(a);
     enum double maxlog = 7.09782712893383996732E2;
     if (-a * a < -maxlog)
         return a < 0.0 ? 2.0 : 0.0;
-    const z = cephesExpMinusSquare(a);
+    // Split -abs(a) into a multiple of 1/128 and a small residual so that
+    // the leading square is exact, reducing error in exp(-a*a).
+    const t = -x;
+    const m = 0.0078125 * floor(128.0 * t + 0.5);
+    const f = t - m;
+    const u = -m * m;
+    const u1 = -(2 * m * f + f * f);
+    const z = exp(u) * exp(u1);
     const p = x < 8.0 ? poly(x, PD) : poly(x, RD);
     const q = x < 8.0 ? poly(x, QD) : poly(x, SD);
     const y = (z * p) / q;
     return a < 0.0 ? 2.0 - y : y;
 }
 
-// Cephes expx2.c, with sign fixed to -1.
-private double cephesExpMinusSquare(double x)
-{
-    x = -fabs(x);
-    const m = 0.0078125 * floor(128.0 * x + 0.5);
-    const f = x - m;
-    const u = -m * m;
-    const u1 = -(2 * m * f + f * f);
-    return exp(u) * exp(u1);
-}
-
-float erfFloat(float x)
+float erf(float x)
 {
     if (fabs(x) > 1.0)
-        return 1.0f - erfcFloat(x);
+        return 1.0f - erfc(x);
     const z = x * x;
     return x * poly(z, TF);
 }
 
-float erfcFloat(float a)
+float erfc(float a)
 {
     const x = fabs(a);
     if (x < 1.0)
-        return 1.0f - erfFloat(a);
+        return 1.0f - erf(a);
     float z = -a * a;
     enum float maxlog = 88.72283905206835;
     if (z < -maxlog)
@@ -1093,15 +1094,15 @@ real erf(real x)
     // Test point from Mathematica 11.0.
     assert(feqrel(erfc(4.1L), 6.70002765408489837272673380763418472e-9L) >= real.mant_dig-5);
 
-    assert(isIdentical(erf(0.0),0.0));
-    assert(isIdentical(erf(-0.0),-0.0));
+    assert(isIdentical(erf(0.0L),0.0L));
+    assert(isIdentical(erf(-0.0L),-0.0L));
     assert(erf(real.infinity) == 1.0);
     assert(erf(-real.infinity) == -1.0);
     assert(isNaNWithPayload(erf(NaN(0xDEF)), 0xDEF));
     assert(isNaNWithPayload(erfc(NaN(0xDEF)), 0xDEF));
     assert(isIdentical(erfc(real.infinity),0.0));
     assert(erfc(-real.infinity) == 2.0);
-    assert(erfc(0) == 1.0);
+    assert(erfc(0.0L) == 1.0L);
 }
 
 /*
