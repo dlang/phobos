@@ -188,6 +188,92 @@ public:
         opAssign(x);
     }
 
+    /// Construct `BigInt` from `Int128`
+    import std.int128 : Int128;
+    this(Int128 x) pure nothrow @safe {
+        data = data.init;
+        opAssign(x);
+    }
+
+    /// Assignment from `Int128`.
+    BigInt opAssign(T : Int128)(T x) @safe
+    {
+        sign = false;
+
+        ulong lo = x.data.lo;
+        long  hi = x.data.hi;
+
+        // Determine sign and get absolute value
+        if (hi < 0)
+        {
+            sign = true;
+
+            // Two's complement negate
+            lo = ~lo + 1;
+            hi = ~hi + (lo == 0);
+        }
+
+        // Now (hi, lo) is the positive magnitude
+        if (hi != 0)
+        {
+            ulong[2] mag = [cast(ulong) hi, lo];
+            data.fromMagnitude(mag[]);
+        }
+        else
+        {
+            data = lo;
+        }
+
+        if (data.isZero)
+            sign = false;
+
+        return this;
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.int128;
+        Int128 x;
+        BigInt b;
+        BigInt re;
+
+        x = Int128(0L);
+        b = x;
+        re = BigInt(0L);
+        assert(b == re);
+
+        x = Int128(42L);
+        b = x;
+        re = BigInt(42L);
+        assert(b == re);
+
+        x = Int128(-42L);
+        b = x;
+        re = BigInt(-42L);
+        assert(b == re);
+
+        x = Int128(-1L);
+        b = x;
+        re = BigInt(-1L);
+        assert(b == re);
+
+        x = (Int128(1L) << 100) + Int128(12345L);
+        b = x;
+        re = (BigInt(1L) << 100) + BigInt(12345L);
+        assert(b == re);
+
+        x = -((Int128(1L) << 100) + Int128(12345L));
+        b = x;
+        re = -((BigInt(1L) << 100) + BigInt(12345L));
+        assert(b == re);
+
+        x = Int128.min;
+        b = x;
+        re = -(BigInt(1L) << 127);
+        assert(b == re);
+    }
+
     ///
     @safe unittest
     {
