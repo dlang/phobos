@@ -3114,11 +3114,24 @@ if (is(typeof(replace(array, from, to, stuff))))
         }
         else
         {
-            // replacement increases length
-            // @@@TODO@@@: optimize this
-            immutable replaceLen = to - from;
-            array[from .. to] = stuff[0 .. replaceLen];
-            insertInPlace(array, to, stuff[replaceLen .. $]);
+            immutable rangeLength = to - from;
+            immutable oldLength = array.length;
+            array.length = oldLength + stuff.length - rangeLength;
+
+            immutable tailLength = oldLength - (from + rangeLength);
+
+            T[] src = array[from + rangeLength .. oldLength];
+            T[] dst = array[from + stuff.length .. $];
+
+            pragma(inline, true) static void _memmove(T[] dst, T[] src, size_t size) @trusted
+            {
+              import core.stdc.string : memmove;
+              memmove(dst.ptr, src.ptr, size);
+            }
+
+            _memmove(dst, src, tailLength * T.sizeof);
+
+            array[from .. from + stuff.length] = stuff[];
         }
     }
     else
