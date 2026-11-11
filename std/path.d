@@ -3988,7 +3988,7 @@ string expandTilde(return scope const string inputPath) @safe nothrow
     version (Posix)
     {
         import core.exception : onOutOfMemoryError;
-        import core.stdc.errno : errno, EBADF, ENOENT, EPERM, ERANGE, ESRCH;
+        import core.stdc.errno : EBADF, ENOENT, EPERM, ERANGE, ESRCH;
         import core.stdc.stdlib : malloc, free, realloc;
 
         /*  Joins a path from a C string to the remainder of path.
@@ -4108,7 +4108,6 @@ string expandTilde(return scope const string inputPath) @safe nothrow
 
                     // Obtain info from database.
                     passwd *verify;
-                    errno = 0;
                     auto passResult = () @trusted { return getpwnam_r(
                         &username[0],
                         &result,
@@ -4125,11 +4124,9 @@ string expandTilde(return scope const string inputPath) @safe nothrow
                         break;
                     }
 
-                    switch (errno)
+                    switch (passResult)
                     {
                         case ERANGE:
-                        // On BSD and OSX, errno can be left at 0 instead of set to ERANGE
-                        case 0:
                             break;
 
                         case ENOENT:
