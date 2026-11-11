@@ -994,6 +994,32 @@ public:
         assert(cast(double) BigInt(0x1fff_ffff_ffff_fff0) == 0x1.000000p+61);
     }
 
+    @safe unittest
+    {
+        // The top 64-bit word has its highest bit set, so no bits of the
+        // next word belong to the leading 64 bits.
+        auto x = BigInt("0x8000_0000_0000_0000_4000_0000_0000_0000");
+        assert(cast(double) x == 0x1p+127);
+        assert(cast(float) x == 0x1p+127f);
+        assert(x < 0x1.4p+127);
+        assert(x < 0x1.4p+127L);
+        assert(cast(double) BigInt("0x8000_0000_0000_0000_7fff_ffff_ffff_ffff_0000_0000_0000_0000") == 0x1p+191);
+
+        // The largest binades below infinity are finite.
+        assert(cast(float) (BigInt(1) << 126) == 0x1p+126f);
+        assert(cast(float) BigInt("340282346638528859811704183484516925440") == float.max);
+        assert(cast(double) (BigInt(1) << 1022) == 0x1p+1022);
+        assert(cast(double) (BigInt(1) << 1023) == 0x1p+1023);
+        assert((BigInt(1) << 1022) < double.max);
+        assert(cast(double) ((BigInt(1) << 1024) - (BigInt(1) << 971)) == double.max);
+        assert(cast(float) ((BigInt(1) << 128) - (BigInt(1) << 103) - 1) == float.max);
+        assert(cast(float) ((BigInt(1) << 128) - (BigInt(1) << 103)) == float.infinity);
+        assert(cast(float) -(BigInt(1) << 127) == -0x1p+127f);
+        assert(cast(double) -(BigInt(1) << 1024) == -double.infinity);
+        assert(cast(float) (BigInt(1) << 128) == float.infinity);
+        assert(cast(double) (BigInt(1) << 1024) == double.infinity);
+    }
+
     private T toFloat(T, string roundingMode)() @safe nothrow @nogc const
     if (__traits(isFloating, T) && (roundingMode == "nearest" || roundingMode == "truncate"))
     {
@@ -1012,7 +1038,8 @@ public:
                 return T(0); // Special: exponent should be all zero bits, plus bsr(w1) is undefined.
             const ulong w2 = ulongLength < 2 ? 0 : data.peekUlong(ulongLength - 2);
             const uint w1BitCount = bsr(w1) + 1;
-            ulong sansExponent = (w1 << (64 - w1BitCount)) | (w2 >>> (w1BitCount));
+            // Shifting a ulong by 64 is undefined, and no bits of w2 are needed then.
+            ulong sansExponent = (w1 << (64 - w1BitCount)) | (w1BitCount == 64 ? 0 : w2 >>> w1BitCount);
             size_t exponent = (ulongLength - 1) * 64 + w1BitCount + 1;
             static if (performRounding)
             {
@@ -1027,7 +1054,7 @@ public:
             }
             static if (T.mant_dig == float.mant_dig)
             {
-                if (exponent >= T.max_exp)
+                if (exponent - 2 >= T.max_exp) // exponent - 2 is the unbiased exponent
                     return isNegative ? -T.infinity : T.infinity;
                 uint resultBits = (uint(isNegative) << 31) | // sign bit
                     ((0xFF & (exponent - float.min_exp)) << 23) | // exponent
@@ -1037,7 +1064,7 @@ public:
             }
             else static if (T.mant_dig == double.mant_dig)
             {
-                if (exponent >= T.max_exp)
+                if (exponent - 2 >= T.max_exp) // exponent - 2 is the unbiased exponent
                     return isNegative ? -T.infinity : T.infinity;
                 ulong resultBits = (ulong(isNegative) << 63) | // sign bit
                     ((0x7FFUL & (exponent - double.min_exp)) << 52) | // exponent
