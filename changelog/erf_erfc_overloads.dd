@@ -1,0 +1,22 @@
+Float and double overloads for erf and erfc
+
+$(REF erf, std, mathspecial) and $(REF erfc, std, mathspecial) now return
+`float` or `double` for arguments of those types, using the corresponding
+Cephes single- and double-precision implementations.
+Integral arguments continue to return `real`.
+
+This changes the type inferred by `auto` and the precision and range of
+intermediate results. In particular, tails representable in an extended
+`real` may underflow when returned as `float` or `double`. Code that needs
+the previous precision or range should explicitly cast the argument:
+-------
+auto extendedTail = erfc(cast(real) x);
+-------
+The existing `real` overloads are retained.
+
+Floating-point enum arguments can become ambiguous between these overloads;
+cast them explicitly to the desired floating-point type. Integer enums retain
+the real-returning integral overloads.
+
+The new `erfc` overloads inherit Cephes underflow cutoffs: some representable
+subnormal results are returned as zero, including `erfc(10.0f)` and `erfc(27.0)`.
