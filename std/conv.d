@@ -264,6 +264,41 @@ template to(T)
     assert(to!int(-3.99) == -3);
 }
 
+// https://github.com/dlang/phobos/issues/11131
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    import std.meta : AliasSeq;
+
+    static foreach (F; AliasSeq!(float, double, real))
+    {
+        assert(to!uint(F(-0.5)) == 0);
+        assert(to!ubyte(F(255.5)) == 255);
+        assert(to!byte(F(-128.5)) == byte.min);
+        assert(to!byte(F(127.5)) == byte.max);
+        assertThrown!ConvOverflowException(to!uint(F(-1)));
+        assertThrown!ConvOverflowException(to!ubyte(F(256)));
+        assertThrown!ConvOverflowException(to!byte(F(-129)));
+        assertThrown!ConvOverflowException(to!byte(F(128)));
+        assertThrown!ConvOverflowException(to!int(F.infinity));
+        assertThrown!ConvOverflowException(to!int(-F.infinity));
+        assert(to!long(cast(F) long.min) == long.min);
+    }
+    assert(to!int(-2147483648.5) == int.min);
+    assert(to!int(2147483647.5) == int.max);
+}
+
+// https://github.com/dlang/phobos/issues/10509
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    // 2^63 does not fit in a long
+    assertThrown!ConvOverflowException(to!long(9223372036854775296.0));
+    assertThrown!ConvOverflowException(to!long(9223372036854775808.0f));
+    assert(to!long(9223372036854774784.0) == 9223372036854774784);
+}
+
 /**
  * When converting strings _to numeric types, note that D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
@@ -1598,7 +1633,17 @@ if (!is(S : T) &&
 
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
-    static if (sSmallest < 0)
+    static if (isFloatingPoint!S && isIntegral!T)
+    {
+        // The cast truncates towards zero, so values in (T.min - 1, T.max + 1) fit.
+        // S(T.max) + 1 is exactly T.max + 1 (a power of two). T.min - 1 can round
+        // to T.min in S, so T.min itself is accepted by the first test.
+        if (!(value >= tSmallest || value > cast(S) tSmallest - 1))
+            throw new ConvOverflowException("Conversion negative overflow");
+        if (!(value < cast(S) T.max + 1))
+            throw new ConvOverflowException("Conversion positive overflow");
+    }
+    else static if (sSmallest < 0)
     {
         // possible underflow converting from a signed
         static if (tSmallest == 0)
@@ -1614,7 +1659,7 @@ if (!is(S : T) &&
         if (!good)
             throw new ConvOverflowException("Conversion negative overflow");
     }
-    static if (S.max > T.max)
+    static if (S.max > T.max && !(isFloatingPoint!S && isIntegral!T))
     {
         // possible overflow
         if (value > T.max)
@@ -1895,9 +1940,11 @@ if (!is(S : T) && isAssociativeArray!S &&
                 || Floating.sizeof <= Integral.sizeof
                 || floatTraits!Floating.realFormat == RealFormat.ieeeExtended53);
         a = 0.0L + Integral.max;
-        assert(to!Integral(a) == Integral.max
-                || Floating.sizeof <= Integral.sizeof
-                || floatTraits!Floating.realFormat == RealFormat.ieeeExtended53);
+        // a rounds up to Integral.max + 1 when Floating cannot hold Integral.max
+        if (convFails!(Floating, Integral, ConvOverflowException)(a))
+            assert(Floating.mant_dig < Integral.sizeof * 8 - (Integral.min < 0));
+        else
+            assert(to!Integral(a) == Integral.max);
         ++a; // no more representable as an Integral
         assert(convFails!(Floating, Integral, ConvOverflowException)(a)
                 || Floating.sizeof <= Integral.sizeof
