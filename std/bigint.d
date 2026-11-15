@@ -686,7 +686,8 @@ public:
         {
             if (data.ulongLength > 1)
                 return 0;
-            return cast(T)(x / data.peekUlong(0));
+            immutable q = absUnsign(x) / data.peekUlong(0);
+            return cast(T)(((x<0) != sign) ? -q : q);
         }
     }
 
@@ -1793,6 +1794,18 @@ unittest
 
     assert(toDecimalString(BigInt("0000000000000000000000000000000000000000001234567"))
         == "1234567");
+}
+
+// https://github.com/dlang/phobos/issues/11154
+@safe unittest
+{
+    assert(-1000 / BigInt(10) == -100);
+    assert(1000 / BigInt(-10) == -100);
+    assert(-1000 / BigInt(-10) == 100);
+    assert(-7L / BigInt(2) == -3);
+    assert(long.min / BigInt(2) == long.min / 2);
+    assert(-3 / BigInt(5) == 0);
+    assert(10u / BigInt(-5) == cast(uint) -2);
 }
 
 @safe unittest // Minimum signed value bug tests.
