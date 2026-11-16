@@ -113,7 +113,7 @@ if (isFloatingPoint!(X))
         assert(!isNaN(cast(T)-53.6));
 
         // Runtime tests
-        shared T f;
+        T f;
         f = T.init;
         assert(isNaN(f));
         assert(isNaN(-f));
@@ -411,7 +411,7 @@ if (isFloatingPoint!(X))
     assert(isInfinity(-1.0L / 0.0L));
 
     // Runtime tests
-    shared float f;
+    float f;
     f = float.init;
     assert(!isInfinity(f));
     assert(!isInfinity(-f));
@@ -424,7 +424,7 @@ if (isFloatingPoint!(X))
     f = (-1.0f / 0.0f);
     assert(isInfinity(f));
 
-    shared double d;
+    double d;
     d = double.init;
     assert(!isInfinity(d));
     assert(!isInfinity(-d));
@@ -437,7 +437,7 @@ if (isFloatingPoint!(X))
     d = (-1.0 / 0.0);
     assert(isInfinity(d));
 
-    shared real e;
+    real e;
     e = real.init;
     assert(!isInfinity(e));
     assert(!isInfinity(-e));
