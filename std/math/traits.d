@@ -103,14 +103,14 @@ if (isFloatingPoint!(X))
     static foreach (T; AliasSeq!(float, double, real))
     {{
         // CTFE-able tests
-        assert(isNaN(T.init));
-        assert(isNaN(-T.init));
-        assert(isNaN(T.nan));
-        assert(isNaN(-T.nan));
-        assert(!isNaN(T.infinity));
-        assert(!isNaN(-T.infinity));
-        assert(!isNaN(cast(T) 53.6));
-        assert(!isNaN(cast(T)-53.6));
+        static assert(isNaN(T.init));
+        static assert(isNaN(-T.init));
+        static assert(isNaN(T.nan));
+        static assert(isNaN(-T.nan));
+        static assert(!isNaN(T.infinity));
+        static assert(!isNaN(-T.infinity));
+        static assert(!isNaN(cast(T) 53.6));
+        static assert(!isNaN(cast(T)-53.6));
 
         // Runtime tests
         T f;
@@ -394,21 +394,21 @@ if (isFloatingPoint!(X))
 @safe pure nothrow @nogc unittest
 {
     // CTFE-able tests
-    assert(!isInfinity(double.init));
-    assert(!isInfinity(-double.init));
-    assert(!isInfinity(double.nan));
-    assert(!isInfinity(-double.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-double.infinity));
-    assert(isInfinity(-1.0 / 0.0));
+    static assert(!isInfinity(double.init));
+    static assert(!isInfinity(-double.init));
+    static assert(!isInfinity(double.nan));
+    static assert(!isInfinity(-double.nan));
+    static assert(isInfinity(double.infinity));
+    static assert(isInfinity(-double.infinity));
+    static assert(isInfinity(-1.0 / 0.0));
 
-    assert(!isInfinity(real.init));
-    assert(!isInfinity(-real.init));
-    assert(!isInfinity(real.nan));
-    assert(!isInfinity(-real.nan));
-    assert(isInfinity(real.infinity));
-    assert(isInfinity(-real.infinity));
-    assert(isInfinity(-1.0L / 0.0L));
+    static assert(!isInfinity(real.init));
+    static assert(!isInfinity(-real.init));
+    static assert(!isInfinity(real.nan));
+    static assert(!isInfinity(-real.nan));
+    static assert(isInfinity(real.infinity));
+    static assert(isInfinity(-real.infinity));
+    static assert(isInfinity(-1.0L / 0.0L));
 
     // Runtime tests
     float f;
