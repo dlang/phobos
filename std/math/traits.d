@@ -103,17 +103,17 @@ if (isFloatingPoint!(X))
     static foreach (T; AliasSeq!(float, double, real))
     {{
         // CTFE-able tests
-        assert(isNaN(T.init));
-        assert(isNaN(-T.init));
-        assert(isNaN(T.nan));
-        assert(isNaN(-T.nan));
-        assert(!isNaN(T.infinity));
-        assert(!isNaN(-T.infinity));
-        assert(!isNaN(cast(T) 53.6));
-        assert(!isNaN(cast(T)-53.6));
+        static assert(isNaN(T.init));
+        static assert(isNaN(-T.init));
+        static assert(isNaN(T.nan));
+        static assert(isNaN(-T.nan));
+        static assert(!isNaN(T.infinity));
+        static assert(!isNaN(-T.infinity));
+        static assert(!isNaN(cast(T) 53.6));
+        static assert(!isNaN(cast(T)-53.6));
 
         // Runtime tests
-        shared T f;
+        T f;
         f = T.init;
         assert(isNaN(f));
         assert(isNaN(-f));
@@ -394,24 +394,24 @@ if (isFloatingPoint!(X))
 @safe pure nothrow @nogc unittest
 {
     // CTFE-able tests
-    assert(!isInfinity(double.init));
-    assert(!isInfinity(-double.init));
-    assert(!isInfinity(double.nan));
-    assert(!isInfinity(-double.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-double.infinity));
-    assert(isInfinity(-1.0 / 0.0));
+    static assert(!isInfinity(double.init));
+    static assert(!isInfinity(-double.init));
+    static assert(!isInfinity(double.nan));
+    static assert(!isInfinity(-double.nan));
+    static assert(isInfinity(double.infinity));
+    static assert(isInfinity(-double.infinity));
+    static assert(isInfinity(-1.0 / 0.0));
 
-    assert(!isInfinity(real.init));
-    assert(!isInfinity(-real.init));
-    assert(!isInfinity(real.nan));
-    assert(!isInfinity(-real.nan));
-    assert(isInfinity(real.infinity));
-    assert(isInfinity(-real.infinity));
-    assert(isInfinity(-1.0L / 0.0L));
+    static assert(!isInfinity(real.init));
+    static assert(!isInfinity(-real.init));
+    static assert(!isInfinity(real.nan));
+    static assert(!isInfinity(-real.nan));
+    static assert(isInfinity(real.infinity));
+    static assert(isInfinity(-real.infinity));
+    static assert(isInfinity(-1.0L / 0.0L));
 
     // Runtime tests
-    shared float f;
+    float f;
     f = float.init;
     assert(!isInfinity(f));
     assert(!isInfinity(-f));
@@ -424,7 +424,7 @@ if (isFloatingPoint!(X))
     f = (-1.0f / 0.0f);
     assert(isInfinity(f));
 
-    shared double d;
+    double d;
     d = double.init;
     assert(!isInfinity(d));
     assert(!isInfinity(-d));
@@ -437,7 +437,7 @@ if (isFloatingPoint!(X))
     d = (-1.0 / 0.0);
     assert(isInfinity(d));
 
-    shared real e;
+    real e;
     e = real.init;
     assert(!isInfinity(e));
     assert(!isInfinity(-e));
