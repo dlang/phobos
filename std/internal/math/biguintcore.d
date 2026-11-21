@@ -197,8 +197,16 @@ else alias multibyteSquare = std.internal.math.biguintnoasm.multibyteSquare;
 // Half the size of the data cache.
 @nogc nothrow pure @safe size_t getCacheLimit()
 {
-    import core.cpuid : dataCaches;
-    return dataCaches[0].size * 1024 / 2;
+    if (__ctfe)
+    {
+        // Chosen arbitrarily.
+        return 8192;
+    }
+    else
+    {
+        import core.cpuid : dataCaches;
+        return dataCaches[0].size * 1024 / 2;
+    }
 }
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
@@ -1265,6 +1273,12 @@ public:
     BigUint a = [3];
     int b = 5;
     assert(BigUint.mulInt(a,b) == 15);
+}
+
+// https://github.com/dlang/phobos/issues/11047
+@safe pure nothrow unittest
+{
+    enum ctfeLargeMultiplication = BigUint.mul(BigUint(ulong(1)) << ulong(33), BigUint(ulong(1)) << ulong(32));
 }
 
 // Remove leading zeros from x, to restore the BigUint invariant
