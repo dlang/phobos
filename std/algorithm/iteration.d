@@ -658,7 +658,7 @@ if (fun.length >= 1)
         // this validation loop can be moved into a template.
         foreach (f; _funs)
         {
-            static assert(!is(typeof(f(RE.init)) == void),
+            static assert(!is(typeof(f(rvalueOf!RE)) == void),
                     "Mapping function(s) must not return void. " ~
                     " Consider using `each` instead of `map!(" ~ _funs.stringof ~ ")`");
         }
@@ -771,7 +771,7 @@ private struct MapResult(alias fun, Range)
 
     static if (isRandomAccessRange!R)
     {
-        static if (is(typeof(Range.init[ulong.max])))
+        static if (is(typeof(lvalueOf!Range[ulong.max])))
             private alias opIndex_t = ulong;
         else
             private alias opIndex_t = uint;
@@ -1072,10 +1072,10 @@ private:
     alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
     enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!fun(R.init.front)));
+        is(typeof(unaryFun!fun(lvalueOf!R.front)));
 
     enum isRangeBinaryIterable(R) =
-        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
+        is(typeof(binaryFun!BinaryArgs(0, lvalueOf!R.front)));
 
     enum isRangeIterable(R) =
         isInputRange!R &&
@@ -1326,6 +1326,23 @@ public:
 
     assert(a == [ 2, 3, 4 ]);
     assert(b == [ 3, 4, 5 ]);
+}
+
+// A `ref` parameter binds to a forward range's `front` when `front` is an lvalue
+@safe unittest
+{
+    static struct Fwd
+    {
+        int front;
+        int left = 3;
+        bool empty() const { return left == 0; }
+        void popFront() { --left; }
+        Fwd save() { return this; }
+    }
+
+    int[] seen;
+    Fwd(1).each!((ref e) { seen ~= e; e *= 2; });
+    assert(seen == [1, 2, 4]);
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=15358
@@ -7123,10 +7140,10 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 
             private
             {
-                typeof(R.init.drop(0)) rest;
+                typeof(rvalueOf!R.drop(0)) rest;
                 Ins needles;
 
-                typeof(R.init.take(0)) skip; // skip before next hit
+                typeof(rvalueOf!R.take(0)) skip; // skip before next hit
                 alias Hit = size_t; // 0 iff no hit, otherwise hit in needles[index-1]
                 alias E = Tuple!(typeof(skip), Hit);
                 Hit hitNr; // hit number: 0 means no hit, otherwise index+1 to needles that matched
