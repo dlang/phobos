@@ -152,6 +152,7 @@ else static assert(0, "unsupported platform");
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
+pragma(inline, true)
 bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
