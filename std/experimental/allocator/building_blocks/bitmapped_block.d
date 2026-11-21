@@ -324,10 +324,6 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
                     {
                         _control.rep[i] |= (1UL << 63) >> j;
                     }
-                    if (i == _startIdx)
-                    {
-                        adjustStartIdx();
-                    }
                     result = blocksFor(i, j, 1);
                     break Lswitch;
                 }
@@ -343,6 +339,7 @@ private mixin template BitmappedBlockImpl(bool isShared, bool multiBlock)
             }
             if (result)
             {
+                adjustStartIdx();
                 adjustFreshBit((result.ptr - _payload.ptr) / blockSize + blocks);
             }
             return result.ptr ? result.ptr[0 .. s] : null;
@@ -1962,6 +1959,46 @@ version (StdUnittest)
     testAllocateAll!(1, false)(0, 128);
     testAllocateAll!(1, false)(128 * 1, 128);
     testAllocateAll!(128 * 20, false)(13 * 128, 128);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    static void testStartIdx(Allocator)()
+    {
+        enum bitsPerWord = ulong.sizeof * 8;
+        foreach (blocksPerAllocation; [2, bitsPerWord + 1])
+        {
+            auto pool = Allocator(4 * bitsPerWord * Allocator.blockSize);
+            const size = blocksPerAllocation * Allocator.blockSize;
+            const allocationsPerPrefix = bitsPerWord.divideRoundUp(blocksPerAllocation);
+            auto first = pool.allocate(size);
+            assert(first.length == size);
+            foreach (i; 1 .. allocationsPerPrefix)
+            {
+                auto next = pool.allocate(size);
+                assert(next.ptr == first.ptr + i * size);
+            }
+            assert(pool._startIdx == 1);
+
+            auto next = pool.allocate(size);
+            assert(next.ptr == first.ptr + allocationsPerPrefix * size);
+            assert(pool.deallocate(first));
+            assert(pool._startIdx == 0);
+
+            auto single = pool.allocate(Allocator.blockSize);
+            assert(single.ptr == first.ptr);
+            auto later = pool.allocate(size);
+            assert(later.ptr == next.ptr + size);
+            assert(pool._startIdx == 0);
+            auto hole = pool.allocate(Allocator.blockSize);
+            assert(hole.ptr == first.ptr + Allocator.blockSize);
+        }
+    }
+
+    testStartIdx!(BitmappedBlock!(64, 8, Mallocator))();
+    testStartIdx!(SharedBitmappedBlock!(64, 8, Mallocator))();
 }
 
 @system unittest
