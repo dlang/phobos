@@ -1,38 +1,53 @@
 /**
-This module contains some common utilities used by containers.
+This module contains common utilities used by containers.
 
 This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/util.d)
 
-Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu.
 
 License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
-boost.org/LICENSE_1_0.txt)).
 
-Authors: $(HTTP erdani.com, Andrei Alexandrescu)
-
-$(SCRIPT inhibitQuickIndex = 1;)
+Authors: Andrei Alexandrescu
 */
+
 module std.container.util;
 
+import std.algorithm.mutation : forward;
+
 /**
-Returns an initialized object. This function is mainly for eliminating
-construction differences between structs and classes. It allows code to not
-worry about whether the type it's constructing is a struct or a class.
- */
+Creates and returns an initialized instance of type `T`.
+
+This utility abstracts the difference between constructing
+structs and classes.
+
+Structs are constructed using:
+---
+T(args)
+---
+
+Classes are constructed using:
+---
+new T(args)
+---
+
+This allows generic container code to construct objects
+without worrying about whether `T` is a struct or class.
+*/
 template make(T)
 if (is(T == struct) || is(T == class))
 {
-    T make(Args...)(Args arguments)
-    if (is(T == struct) && __traits(compiles, T(arguments)))
+    @safe T make(Args...)(Args arguments)
+    if (is(T == struct))
     {
-        // constructing an std.container.Array without arguments,
+        static assert(__traits(compiles, T(arguments)),
+            "Cannot construct "~T.stringof~" with given arguments");
+
+        // constructing an std.container.Array without arguments
         // does not initialize its payload and is equivalent
         // to a null reference. We therefore construct an empty container
         // by passing an empty array to its constructor.
-        // https://issues.dlang.org/show_bug.cgi?id=13872.
         static if (arguments.length == 0)
         {
             import std.range.primitives : ElementType;
@@ -40,16 +55,20 @@ if (is(T == struct) || is(T == class))
             return T(ET[].init);
         }
         else
-            return T(arguments);
+        {
+            return T(forward!arguments);
+        }
     }
 
-    T make(Args...)(Args arguments)
-    if (is(T == class) && __traits(compiles, new T(arguments)))
+    @safe T make(Args...)(Args arguments)
+    if (is(T == class))
     {
-        return new T(arguments);
+        static assert(__traits(compiles, new T(arguments)),
+            "Cannot construct "~T.stringof~" with given arguments");
+
+        return new T(forward!arguments);
     }
 }
-
 
 ///
 @system unittest
@@ -75,11 +94,13 @@ if (is(T == struct) || is(T == class))
 
     auto arr1 = make!(Array!dchar)();
     assert(arr1.empty);
+
     auto arr2 = make!(Array!dchar)("hello"d);
     assert(equal(arr2[], "hello"d));
 
     auto rtb1 = make!(RedBlackTree!dchar)();
     assert(rtb1.empty);
+
     auto rtb2 = make!(RedBlackTree!dchar)('h', 'e', 'l', 'l', 'o');
     assert(equal(rtb2[], "ehlo"d));
 }
@@ -94,14 +115,15 @@ if (is(T == struct) || is(T == class))
     auto b = make!(DList!int)(1,2,3,4);
     auto c = make!(DList!int)(1,2,3,5);
     auto d = make!(DList!int)(1,2,3,4,5);
-    assert(a == b); // this better terminate!
+
+    assert(a == b);
     assert(a != c);
     assert(a != d);
 }
 
 /**
- * Convenience function for constructing a generic container.
- */
+Convenience function for constructing a generic container.
+*/
 template make(alias Container, Args...)
 if (!is(Container))
 {
@@ -127,7 +149,7 @@ if (!is(Container))
 {
     import std.container.array : Array;
     import std.range : only, repeat;
-    import std.range.primitives : isInfinite;
+
     static assert(__traits(compiles, { auto arr = make!Array(only(5)); }));
     static assert(!__traits(compiles, { auto arr = make!Array(repeat(5)); }));
 }
@@ -186,4 +208,16 @@ if (!is(Container))
     auto refToDList = dlist;
     refToDList.insert(1);
     assert(!dlist.empty);
+}
+
+/// Additional edge case tests
+@safe unittest
+{
+    import std.container.array;
+
+    auto arr = make!(Array!int)();
+    assert(arr.empty);
+
+    auto arr2 = make!(Array!int)(1);
+    assert(arr2.front == 1);
 }
