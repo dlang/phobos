@@ -351,7 +351,7 @@ dll: $(ROOT)/libphobos2.so
 ifeq ($(USE_IMPORTC),1)
 # the druntime dependency makes sure DMD has been built
 $(ROOT)/zlib$(DOTOBJ): $(C_FILES) $(DRUNTIME)
-	$(DMD) -c $(DFLAGS) $(addprefix -P=,$(CPPFLAGS) -Ietc/c/zlib) -of$@ $(C_FILES)
+	$(DMD) -c $(DFLAGS) -visibility=public $(addprefix -P=,$(CPPFLAGS) -Ietc/c/zlib) -of$@ $(C_FILES)
 else
 $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
@@ -367,7 +367,7 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
-$(LIBSO): override PIC:=-fPIC
+$(LIBSO): override PIC:=-fPIC -visibility=public
 $(LIBSO): $(C_OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared $(NODEFAULTLIB) -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(C_OBJS)
 
@@ -418,8 +418,9 @@ else
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_D_OBJS): $(DRUNTIMESO)
+$(UT_D_OBJS): override PIC:=-fPIC -visibility=public
 
-$(UT_LIBSO): override PIC:=-fPIC
+$(UT_LIBSO): override PIC:=-fPIC -visibility=public
 $(UT_LIBSO): $(UT_D_OBJS) $(C_OBJS) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared $(UDFLAGS) -of$@ $(UT_D_OBJS) $(C_OBJS) $(DRUNTIMESO) $(LINKDL) $(NODEFAULTLIB)
 
