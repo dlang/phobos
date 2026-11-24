@@ -64,6 +64,7 @@ module std.mathspecial;
 import std.internal.math.errorfunction;
 import std.internal.math.gammafunction;
 public import std.math;
+private import std.meta : AliasSeq;
 
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *
@@ -671,10 +672,36 @@ do
  *
  * The magnitude of x is limited to about 106.56 for IEEE 80-bit
  * arithmetic; 1 or -1 is returned outside this range.
+ *
+ * Floating-point arguments return the same type. Integral arguments return real.
+ * Cast the argument to real explicitly when extended precision or range is needed.
+ * Floating-point enum arguments require an explicit cast to a floating-point type.
  */
 real erf(real x)
 {
     return std.internal.math.errorfunction.erf(x);
+}
+
+/// ditto
+double erf(double x)
+{
+    return std.internal.math.errorfunction.erf(x);
+}
+
+/// ditto
+float erf(float x)
+{
+    return std.internal.math.errorfunction.erf(x);
+}
+
+// Preserve the real result of existing integral calls.
+static foreach (I; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+{
+    /// ditto
+    real erf(I x)
+    {
+        return erf(cast(real) x);
+    }
 }
 
 /** Complementary error function
@@ -685,12 +712,103 @@ real erf(real x)
  *
  * This function has high relative accuracy for
  * values of x far from zero. (For values near zero, use erf(x)).
+ *
+ * Floating-point arguments return the same type. Integral arguments return real.
+ * Cast the argument to real explicitly when extended precision or range is needed.
+ * Floating-point enum arguments require an explicit cast to a floating-point type.
  */
 real erfc(real x)
 {
     return std.internal.math.errorfunction.erfc(x);
 }
 
+/// ditto
+double erfc(double x)
+{
+    return std.internal.math.errorfunction.erfc(x);
+}
+
+/// ditto
+float erfc(float x)
+{
+    return std.internal.math.errorfunction.erfc(x);
+}
+
+// Preserve the real result of existing integral calls.
+static foreach (I; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+{
+    /// ditto
+    real erfc(I x)
+    {
+        return erfc(cast(real) x);
+    }
+}
+
+
+@safe pure nothrow @nogc unittest
+{
+    import std.traits : Unqual;
+    foreach (F; AliasSeq!(float, double, real, const(float), immutable(double)))
+    {
+        F x = 0.5;
+        enum E : Unqual!F { half = 0.5 }
+        static assert(is(typeof(erf(cast(Unqual!F) E.half)) == Unqual!F));
+        static assert(is(typeof(erfc(cast(Unqual!F) E.half)) == Unqual!F));
+        static assert(is(typeof(erf(x)) == Unqual!F));
+        static assert(is(typeof(erfc(x)) == Unqual!F));
+    }
+    foreach (I; AliasSeq!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    {
+        enum E : I { zero = 0 }
+        static assert(is(typeof(erf(I.init)) == real));
+        static assert(is(typeof(erfc(I.init)) == real));
+        static assert(is(typeof(erf(E.zero)) == real));
+        static assert(is(typeof(erfc(E.zero)) == real));
+        assert(erf(I(0)) == 0);
+        assert(erfc(I(0)) == 1);
+    }
+    foreach (F; AliasSeq!(float, double))
+    {
+        assert(erf(F(0.0)) is F(0.0));
+        assert(erf(F(-0.0)) is F(-0.0));
+        assert(erfc(F(0.0)) == 1);
+        assert(erfc(F(-0.0)) == 1);
+        assert(erf(F.infinity) == 1);
+        assert(erf(-F.infinity) == -1);
+        assert(erfc(F.infinity) == 0);
+        assert(erfc(-F.infinity) == 2);
+        assert(isNaN(erf(F.nan)));
+        assert(isNaN(erfc(F.nan)));
+        assert(erf(F.max) == 1);
+        assert(erfc(F.max) == 0);
+        foreach (F x; [F(0.5), F(1.0), F(2.0), F(8.0)])
+            assert(isClose(erf(-x), -erf(x), 2 * F.epsilon));
+    }
+
+    static assert(erf(0.0f) is 0.0f);
+    static assert(erfc(0.0) == 1.0);
+
+    // Independent high-precision reference values.
+    assert(isClose(erf(0.5), 0.52049987781304653768274665389196453, 4 * double.epsilon));
+    assert(isClose(erfc(1.0), 0.15729920705028513065877936491739074, 4 * double.epsilon));
+    assert(isClose(erfc(2.0), 0.0046777349810472658379307436327470714, 4 * double.epsilon));
+    assert(isClose(erfc(8.0), 1.1224297172982927079967888443170279e-29, 4 * double.epsilon));
+    // Single-precision Cephes approximations have a wider error tolerance.
+    assert(isClose(erfc(0.9999999403953552f), 1.57299231792621563e-01f, 8e-6f));
+    assert(isClose(erfc(1.0f), 1.57299207050285106e-01f, 8e-6f));
+    assert(isClose(erfc(1.0000001192092896f), 1.57299157565621212e-01f, 8e-6f));
+    assert(isClose(erfc(1.9999998807907104f), 4.67773744474449509e-03f, 8e-6f));
+    assert(isClose(erfc(2.0f), 4.67773498104726536e-03f, 8e-6f));
+    assert(isClose(erfc(2.000000238418579f), 4.67773005365633258e-03f, 8e-6f));
+    assert(isClose(erfc(8.0f), 1.12242971729829292e-29f, 8e-6f));
+    assert(isClose(erfc(9.0f), 4.13703174651381011e-37f, 8e-6f));
+
+    // The Cephes kernels underflow before exhausting the subnormal range.
+    assert(erfc(27.0) == 0);
+    assert(erfc(10.0f) is 0.0f);
+    assert(isClose(erf(0.5f), 0.5204998778130465f, 2 * float.epsilon));
+
+}
 
 /** Standard normal distribution function.
  *
