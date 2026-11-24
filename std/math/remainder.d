@@ -62,8 +62,13 @@ real fmod(real x, real y) @trusted nothrow @nogc
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
  * the same sign as x. The integral part is stored in i.
+ *
+ * Params:
+ *     x = Value to split.
+ *     i = Receives the integral part, rounded toward zero.
  * Returns:
- * The fractional part of x.
+ * The fractional part in the type of i, with the sign of x.
+ * An infinite input yields a signed zero fractional part.
  *
  * $(TABLE_SV
  *  $(TR $(TH x)              $(TH i (on input))  $(TH modf(x, i))   $(TH i (on return)))
@@ -95,6 +100,44 @@ real modf(real x, ref real i) @trusted nothrow @nogc
     frac = modf(3.14159, intpart);
     assert(intpart.feqrel(3.0) > 16);
     assert(frac.feqrel(0.14159) > 16);
+}
+
+/// ditto
+double modf(double x, ref double i) @trusted nothrow @nogc
+{
+    return core.stdc.math.modf(x, &i);
+}
+
+/// ditto
+float modf(float x, ref float i) @trusted nothrow @nogc
+{
+    return core.stdc.math.modff(x, &i);
+}
+
+///
+@safe unittest
+{
+    float whole;
+    auto fraction = modf(-2.75f, whole);
+    static assert(is(typeof(fraction) == float));
+    assert(whole == -2 && fraction == -0.75f);
+}
+
+@safe unittest
+{
+    import std.math.traits : isIdentical, isNaN;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double))
+    {{
+        T whole;
+        static assert(is(typeof(modf(T.init, whole)) == T));
+        assert(isIdentical(modf(-T.infinity, whole), -T(0)));
+        assert(whole == -T.infinity);
+        assert(isIdentical(modf(-T(0), whole), -T(0)));
+        assert(isIdentical(whole, -T(0)));
+        assert(isNaN(modf(T.nan, whole)) && isNaN(whole));
+    }}
 }
 
 /****************************************************
