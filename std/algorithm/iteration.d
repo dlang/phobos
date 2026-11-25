@@ -658,7 +658,7 @@ if (fun.length >= 1)
         // this validation loop can be moved into a template.
         foreach (f; _funs)
         {
-            static assert(!is(typeof(f(RE.init)) == void),
+            static assert(!is(typeof(f(rvalueOf!RE)) == void),
                     "Mapping function(s) must not return void. " ~
                     " Consider using `each` instead of `map!(" ~ _funs.stringof ~ ")`");
         }
@@ -771,7 +771,7 @@ private struct MapResult(alias fun, Range)
 
     static if (isRandomAccessRange!R)
     {
-        static if (is(typeof(Range.init[ulong.max])))
+        static if (is(typeof(lvalueOf!Range[ulong.max])))
             private alias opIndex_t = ulong;
         else
             private alias opIndex_t = uint;
@@ -7123,10 +7123,10 @@ if (isInputRange!R && Substs.length >= 2 && !is(CommonType!(Substs) == void))
 
             private
             {
-                typeof(R.init.drop(0)) rest;
+                typeof(rvalueOf!R.drop(0)) rest;
                 Ins needles;
 
-                typeof(R.init.take(0)) skip; // skip before next hit
+                typeof(rvalueOf!R.take(0)) skip; // skip before next hit
                 alias Hit = size_t; // 0 iff no hit, otherwise hit in needles[index-1]
                 alias E = Tuple!(typeof(skip), Hit);
                 Hit hitNr; // hit number: 0 means no hit, otherwise index+1 to needles that matched

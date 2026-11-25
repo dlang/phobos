@@ -1,0 +1,16 @@
+Range traits and `std.traits` no longer build the `.init` of the type they inspect
+
+For a struct or a static array, `T.init` makes the compiler build the type's whole
+default-initializer literal, with one entry per static-array element. Traits such as
+$(REF isInputRange, std, range, primitives), $(REF ElementType, std, range, primitives),
+$(REF CommonType, std, traits), $(REF isIterable, std, traits) and
+$(REF hasElaborateAssign, std, traits), and the constraints of
+$(REF map, std, algorithm, iteration) and $(REF minElement, std, algorithm, searching),
+used `T.init` only to form an expression of type `T`. They now use
+$(REF lvalueOf, std, traits) and $(REF rvalueOf, std, traits), so their compile-time
+memory and time no longer grow with the size of `T`.
+
+Their answers are unchanged, except for a type that declares a member named `init`. There,
+`T.init` named that member, so the traits answered for the member; they now answer for the
+type. For example, a range type with a member function `init` is now an input range when its
+primitives make it one.
