@@ -787,11 +787,96 @@ long lround(real x) @trusted nothrow @nogc
 }
 
 /**
- Returns the integer portion of x, dropping the fractional portion.
- This is also known as "chop" rounding.
- `pure` on all platforms.
+ Rounds x toward zero, also known as "chop" rounding.
+
+ Params:
+    T = Input type. Floating-point enums use their underlying type.
+    x = Value to round.
+
+ Returns:
+    The integral part of x in its floating-point type, or as a `real` for
+    other inputs that implicitly convert to `real`. The result has the
+    sign of x, including when it is zero. Infinities are preserved and
+    a NaN yields a NaN.
  */
-real trunc(real x) @trusted nothrow @nogc pure
+auto trunc(T)(T x) @safe pure nothrow @nogc
+if (isFloatingPoint!T)
+{
+    import std.traits : OriginalType;
+
+    alias F = Unqual!(OriginalType!T);
+    static if (is(F == float))
+        return core.stdc.math.truncf(x);
+    else static if (is(F == double))
+        return core.stdc.math.trunc(x);
+    else
+        return truncReal(x);
+}
+
+///
+@safe pure unittest
+{
+    assert(trunc(0.01) == 0);
+    assert(trunc(0.49) == 0);
+    assert(trunc(0.5) == 0);
+    assert(trunc(1.5) == 1);
+    assert(trunc(-1.75f) == -1.0f);
+    assert(trunc(1.5L) == 1.0L);
+    static assert(is(typeof(trunc(2.75)) == double));
+}
+
+/// ditto
+real trunc(T)(auto ref T x)
+if (!isFloatingPoint!T && is(T : real))
+{
+    return truncReal(x);
+}
+
+///
+@safe pure unittest
+{
+    static assert(is(typeof(trunc(1)) == real));
+    assert(trunc(1) == 1.0L);
+}
+
+@safe pure unittest
+{
+    import std.math.traits : isIdentical, isNaN;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double, real))
+    {{
+        const T x = -0.5;
+        static assert(is(typeof(trunc(x)) == T));
+        assert(isIdentical(trunc(x), -T(0)));
+        assert(isIdentical(trunc(-T(0)), -T(0)));
+        assert(trunc(T.max) == T.max);
+        assert(trunc(-T.infinity) == -T.infinity);
+        assert(isNaN(trunc(T.nan)));
+    }}
+
+    enum Count : int { one = 1 }
+    enum Fraction : float { half = 0.5f }
+    static assert(is(typeof(trunc(Count.one)) == real));
+    static assert(is(typeof(trunc(Fraction.half)) == float));
+    static assert(is(typeof(trunc('a')) == real));
+    static assert(is(typeof(trunc(true)) == real));
+
+    struct Wrapped
+    {
+        double value;
+        alias value this;
+        @disable this(this);
+    }
+    Wrapped wrapped;
+    wrapped.value = -2.75;
+    assert(trunc(wrapped) == -2.0L);
+
+    auto fp = &trunc!real;
+    assert(fp(-1.75L) == -1.0L);
+}
+
+private real truncReal(real x) @trusted nothrow @nogc pure
 {
     version (InlineAsm_X87_MSVC)
     {
@@ -837,15 +922,6 @@ real trunc(real x) @trusted nothrow @nogc pure
     {
         return core.stdc.math.truncl(x);
     }
-}
-
-///
-@safe pure unittest
-{
-    assert(trunc(0.01) == 0);
-    assert(trunc(0.49) == 0);
-    assert(trunc(0.5) == 0);
-    assert(trunc(1.5) == 1);
 }
 
 /*****************************************
