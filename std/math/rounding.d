@@ -722,14 +722,92 @@ static if (real.mant_dig >= long.sizeof * 8)
 }
 
 /*******************************************
- * Return the value of x rounded to the nearest integer.
- * If the fractional part of x is exactly 0.5, the return value is
- * rounded away from zero.
+ * Rounds x to the nearest integer, with halfway cases rounded away from
+ * zero regardless of the current rounding mode.
+ *
+ * Params:
+ *     T = Input type. Floating-point enums use their underlying type.
+ *     x = Value to round.
  *
  * Returns:
- *     A `real`.
+ *     The rounded value in the floating-point type of x, or as a `real`
+ *     for other inputs that implicitly convert to `real`. Infinities
+ *     are preserved and a NaN yields a NaN. For `float` and `double`,
+ *     a zero result has the sign of x.
  */
-auto round(real x) @trusted nothrow @nogc
+auto round(T)(T x) @safe nothrow @nogc
+if (isFloatingPoint!T)
+{
+    import std.traits : OriginalType;
+
+    alias F = Unqual!(OriginalType!T);
+    static if (is(F == float))
+        return core.stdc.math.roundf(x);
+    else static if (is(F == double))
+        return core.stdc.math.round(x);
+    else
+        return roundReal(x);
+}
+
+///
+@safe nothrow @nogc unittest
+{
+    assert(round(4.5) == 5);
+    assert(round(5.4) == 5);
+    assert(round(-4.5f) == -5);
+    assert(round(-5.1L) == -5);
+    static assert(is(typeof(round(-4.5f)) == float));
+}
+
+/// ditto
+real round(T)(auto ref T x)
+if (!isFloatingPoint!T && is(T : real))
+{
+    return roundReal(x);
+}
+
+///
+@safe nothrow @nogc unittest
+{
+    static assert(is(typeof(round(1)) == real));
+    assert(round(1) == 1.0L);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.math.traits : isIdentical, isNaN;
+    import std.meta : AliasSeq;
+
+    static foreach (T; AliasSeq!(float, double))
+    {{
+        const T half = 0.5;
+        static assert(is(typeof(round(half)) == T));
+        assert(round(-half) == -1 && round(half) == 1);
+        const belowHalf = half - T.epsilon / 4;
+        assert(isIdentical(round(belowHalf), T(0)));
+        assert(isIdentical(round(-belowHalf), -T(0)));
+        assert(isIdentical(round(-T(0)), -T(0)));
+        assert(round(T.max) == T.max);
+        assert(round(-T.infinity) == -T.infinity);
+        assert(isNaN(round(T.nan)));
+    }}
+
+    enum Fraction : double { half = 0.5 }
+    enum Count : int { one = 1 }
+    static assert(is(typeof(round(Fraction.half)) == double));
+    static assert(is(typeof(round(Count.one)) == real));
+}
+
+// Assure purity of the real path on Posix.
+version (Posix)
+{
+    @safe pure nothrow @nogc unittest
+    {
+        assert(round(4.5L) == 5);
+    }
+}
+
+private auto roundReal(real x) @trusted nothrow @nogc
 {
     version (CRuntime_Microsoft)
     {
@@ -746,24 +824,6 @@ auto round(real x) @trusted nothrow @nogc
     else
     {
         return core.stdc.math.roundl(x);
-    }
-}
-
-///
-@safe nothrow @nogc unittest
-{
-    assert(round(4.5) == 5);
-    assert(round(5.4) == 5);
-    assert(round(-4.5) == -5);
-    assert(round(-5.1) == -5);
-}
-
-// assure purity on Posix
-version (Posix)
-{
-    @safe pure nothrow @nogc unittest
-    {
-        assert(round(4.5) == 5);
     }
 }
 
