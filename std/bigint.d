@@ -331,6 +331,8 @@ public:
             {
                 checkDivByZero();
                 data = cast(ulong) (data == 1);
+                if (data.isZero())
+                    sign = false;
             }
             else
             {
@@ -456,6 +458,9 @@ public:
         assert(BigInt(1) ^^ -1 == BigInt(1));
         assert(BigInt(-1) ^^ -1 == BigInt(-1));
         assert(BigInt(-1) ^^ -2 == BigInt(1));
+        // https://github.com/dlang/phobos/issues/11164
+        assert(BigInt(-100) ^^ -1 == BigInt(0));
+        assert(!(BigInt(-2) ^^ -3 < 0));
         assertThrown!AssertError(BigInt(0) ^^ -1);
     }
 
