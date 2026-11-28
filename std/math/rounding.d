@@ -430,16 +430,34 @@ if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 }
 
 /******************************************
- * Rounds x to the nearest integer value, using the current rounding
- * mode.
+ * Rounds x to an integer using the current rounding mode.
  *
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
+ *
+ * Params:
+ *     T = Input type. Floating-point enums use their underlying type.
+ *     x = Value to round.
+ *
+ * Returns:
+ *     The rounded value in the floating-point type of x, or as a `real`
+ *     for other inputs that implicitly convert to `real`. A zero result
+ *     has the sign of x. Infinities are preserved and a NaN yields a NaN.
  */
-pragma(inline, true)
-real nearbyint(real x) @safe pure nothrow @nogc
+// Inlining can fold constant arguments using the default rounding mode.
+pragma(inline, false)
+auto nearbyint(T)(T x) @safe pure nothrow @nogc
+if (isFloatingPoint!T)
 {
-    return core.stdc.math.nearbyintl(x);
+    import std.traits : OriginalType;
+
+    alias F = Unqual!(OriginalType!T);
+    static if (is(F == float))
+        return core.stdc.math.nearbyintf(x);
+    else static if (is(F == double))
+        return core.stdc.math.nearbyint(x);
+    else
+        return core.stdc.math.nearbyintl(x);
 }
 
 ///
@@ -451,10 +469,65 @@ real nearbyint(real x) @safe pure nothrow @nogc
     assert(nearbyint(0.5) == 0);
     assert(nearbyint(0.6) == 1);
     assert(nearbyint(100.0) == 100);
+    static assert(is(typeof(nearbyint(0.5f)) == float));
 
     assert(isNaN(nearbyint(real.nan)));
     assert(nearbyint(real.infinity) == real.infinity);
     assert(nearbyint(-real.infinity) == -real.infinity);
+}
+
+/// ditto
+pragma(inline, true)
+real nearbyint(T)(auto ref T x)
+if (!isFloatingPoint!T && is(T : real))
+{
+    real value = x;
+    return nearbyint(value);
+}
+
+///
+@safe pure unittest
+{
+    static assert(is(typeof(nearbyint(1)) == real));
+    assert(nearbyint(1) == 1.0L);
+}
+
+unittest
+{
+    import core.stdc.fenv;
+    import std.math.traits : isIdentical;
+    import std.meta : AliasSeq;
+
+    enum Fraction : double { half = 0.5 }
+    static assert(is(typeof(nearbyint(Fraction.half)) == double));
+
+    struct Wrapped
+    {
+        double value;
+        alias value this;
+        T opCast(T : real)() { return 17.0L; }
+    }
+    auto wrapped = Wrapped(2.0);
+    assert(nearbyint(wrapped) == 2.0L);
+
+    static if (is(typeof(FE_INEXACT)) && is(typeof(FE_TOWARDZERO)))
+    {
+        fenv_t saved;
+        if (feholdexcept(&saved) != 0)
+            return;
+        scope (exit) fesetenv(&saved);
+        if (fesetround(FE_TOWARDZERO) == 0)
+        {
+            static foreach (T; AliasSeq!(float, double))
+            {{
+                const T x = 0.75;
+                static assert(is(typeof(nearbyint(x)) == T));
+                assert(isIdentical(nearbyint(x), T(0)));
+                assert(isIdentical(nearbyint(-x), -T(0)));
+                assert(fetestexcept(FE_INEXACT) == 0);
+            }}
+        }
+    }
 }
 
 /**********************************
